@@ -11,6 +11,7 @@ Module lookup (char *modname);  /* return ptr to module or NULL */
 void apply_each_module(void (*fun)(Module));
      /* apply [[fun]] to each module in the tree */
 <<*>>= 
+static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -95,3 +96,4 @@ void apply_each_module(void (*fun)(Module)) {
     apply_to_tree(root,fun);
 }
 @ %def apply_each_module
+
