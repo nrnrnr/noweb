@@ -668,7 +668,7 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
   <<add range to range list>>\def\\##1{\@nwhyperpagenum##1}%
-  \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+  \ifnum\@nwpagecount=1 \nwpageword \else \nwpagesword\fi~\commafy{\nw@pages}}
 \def\@nwhyperpagenum#1#2{\nwhyperreference{#2}{#1}}
 
 \def\@pagenumsl#1{%  list of labels -- doesn't include word `pages', commas, or `and'
@@ -683,13 +683,14 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
   \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1{}}\@tempa
             \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
   <<add range to range list>>\def\\##1{\@firstoftwo##1}%
-  \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+  \ifnum\@nwpagecount=1 \nwpageword \else \nwpagesword\fi~\commafy{\nw@pages}}
 \def\@nwaddrange{<<add range to range list>>}
 @
-[[\nwpageword]] and [[\nwpageprep]] let you change the wording of the cross-reference 
-information.
+[[\nwpageword]], [[\nwpagesword]], and [[\nwpageprep]] let you change
+the wording of the cross-reference  information.
 <<noweb.sty>>=
 \def\nwpageword{\@nwlangdepchk}  % chunk, was page
+\def\nwpagesword{\@nwlangdepchks}  % chunk, was page
 \def\nwpageprep{\@nwlangdepin}     % in, was on
 <<warn of undefined reference to [[#1]] and add page ??>>=
 <<warn of undefined reference to [[#1]]>>%
@@ -972,7 +973,7 @@ and we use standard integer-conversion methods to encode $n-B_{k-1}$.
 The following Icon implementation may be more perspicuous than the
 {\TeX} code actually used.
 Here the variable [[bound]] is $26^k$, with $k=1$ initially, and
-[[n]]~is $n-B_{k-1}.
+[[n]]~is $n-B_{k-1}$.
 The first loop finds the right~$k$, and the second does the usual
 string conversion.
 <<Icon code for subpage numbering>>=
@@ -1049,7 +1050,10 @@ Since the numbers are all distinct, no sub-page number is ever used.
    \expandafter}\@tempa
    \global\advance\nw@chunkcount by \@ne
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-\def\nwopt@webnumbering{\let\sublabel=\weblabel\def\nwpageword{chunk}\def\nwpageprep{in}}
+\def\nwopt@webnumbering{%
+  \let\sublabel=\weblabel
+  \def\nwpageword{chunk}\def\nwpagesword{chunks}%
+  \def\nwpageprep{in}}
 @ %def \weblabel webnumbering
 \iffalse
 <<man page: [[\noweboptions]]>>=
@@ -1530,11 +1534,11 @@ macro. There must be a more elegant way of coding the tests below\ldots
 <<noweb.sty>>=
 <<language support>>
 \ifx\languagename\undefined % default is English
-  \nwoptions{english}
+  \noweboptions{english}
 \else
   \@ifundefined{nwopt@\languagename}
-     {\nwoptions{english}}
-     {\expandafter\nwoptions\expandafter{\languagename}}
+     {\noweboptions{english}}
+     {\expandafter\noweboptions\expandafter{\languagename}}
 \fi
 @ 
 \subsubsection{Support for English}
@@ -1547,6 +1551,7 @@ This describes the original English text.
   \def\@nwlangdeprtc{Root chunk (not used in this document)}%
   \def\@nwlangdepcwf{This code is written to file}%
   \def\@nwlangdepchk{chunk}%
+  \def\@nwlangdepchks{chunks}%
   \def\@nwlangdepin{in}%
   \def\@nwlangdepand{and}%
   \def\@nwlangdepuss{Uses}%
@@ -1574,6 +1579,8 @@ This contains the text in Portuguese.
   % This code is written to file
   \def\@nwlangdepchk{fragmento}%
   % chunk
+  \def\@nwlangdepchks{fragmentos}%
+  % chunks
   \def\@nwlangdepin{no(s)}%
   % in
   \def\@nwlangdepand{e}%
@@ -1592,8 +1599,9 @@ This contains the text in Portuguese.
 @
 \subsubsection{Support for French}
 
-This is a tentative translation to French that should probably be
-corrected by some French native speaker\ldots
+This is a tentative translation to French.
+Although NR has made some corrections, it should probably be
+reviewed by a native speaker.
 
 There are problems with using accents: on the [[\@nwlangdepnvd]] macro
 (which apparently is not used in the context of [[\nwcodecomment]]),
@@ -1602,17 +1610,19 @@ and in some other macros (\LaTeX{} complains about missing
 using \TeX\ldots
 <<language support>>=
 \def\nwopt@frenchb{%
-  \def\@nwlangdepdef{Cette d\'efinition suit dans}%
+  \def\@nwlangdepdef{Cette d\'efinition suit}%
   % This definition is continued
-  \def\@nwlangdepcud{Ce code est employ\'e dans}%
+  \def\@nwlangdepcud{Ce code est employ\'e}%
   % This code is used
   \def\@nwlangdeprtc{Morceau racine (pas employ\'e dans ce document)}%
   % Root chunk (not used in this document)
-  \def\@nwlangdepcwf{Ce code est \'ecrit dans le fichier}%
+  \def\@nwlangdepcwf{Ce code est \'ecrit aux fichier}%
   % This code is written to file
-  \def\@nwlangdepchk{morceau}%
+  \def\@nwlangdepchk{le morceau}%
   % chunk
-  \def\@nwlangdepin{dans le(s)}%
+  \def\@nwlangdepchks{les morceaux}%
+  % chunks
+  \def\@nwlangdepin{dans}%
   % in
   \def\@nwlangdepand{et}%
   % and
@@ -1646,6 +1656,8 @@ Universidade do Porto).
   % This code is written to file
   \def\@nwlangdepchk{Teil}%
   % chunk
+  \def\@nwlangdepchks{Teils}%
+  % chunks
   \def\@nwlangdepin{im}%
   % in
   \def\@nwlangdepand{und}%
