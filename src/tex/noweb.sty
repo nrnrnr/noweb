@@ -3,10 +3,26 @@
 \codemargin=10pt
 \advance\codehsize by \codemargin	% make room for indentation of code
 
+\def\nowebshift{%
+  \dimen0=-0.8in
+  \if@twoside                 % Values for two-sided printing:
+     \advance\evensidemargin by \dimen0
+  \else                       % Values for one-sided printing:
+     \advance\evensidemargin by \dimen0
+     \advance\oddsidemargin by \dimen0
+  \fi
+}
+
+\@ifundefined{chapter}{\let\nowebchunks@start=\section}%
+                      {\let\nowebchunks@start=\chapter}
+\def\nowebchunkssection{\nowebchunks@start*{List of chunk names}}
+
+\let\nowebsize=\normalsize
+
 \def\@begincode{\par\linewidth\codehsize\hsize\codehsize\textwidth\codehsize
   \parindent\z@\parfillskip\@flushglue\parskip\z@
   \item[]\if@minipage\else\vskip\parskip\fi
-  \def\baselinestretch{1.0}\small\normalsize
+  \def\baselinestretch{1.0}\small\nowebsize
   \leftskip\@totalleftmargin\rightskip\z@
   \advance\leftskip\codemargin
   \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
@@ -17,10 +33,40 @@
 \def\webcode{\begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}
 \def\endwebcode{\end{trivlist}}
 
+
+\def\@begincode{\parindent\z@\parfillskip\@flushglue\parskip\z@
+  \item[]\vskip\parskip
+  \def\baselinestretch{1.0}\small\nowebsize
+  \leftskip\@totalleftmargin\rightskip\z@
+  \advance\leftskip\codemargin
+  \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
+  \obeylines \tt \catcode``=13 \@noligs \setupcode}
+
+% \noindent puts into horizontal mode so that lines can follow without
+% indentation if there is no following \par.  The \hfil afterwards is
+% some glue so that it there are lines following immediately, it will
+% be possible to break there.  If I forced a break with \break, that
+% would be wrong because a following \par would leave us with an
+% underfull (empty!) hbox.
+
+\def\begincode#1{\par\vskip3pt
+    \penalty500
+    \noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
+    \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces\parskip=\z@}
+\def\endcode{\end{trivlist}\vskip0.1pt\@endparenv\end{minipage}\hss\egroup\hfil}
+\def\webcode{\par\vskip3pt\noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
+             \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}
+\def\endwebcode{\strut\end{trivlist}\vskip0.1pt\end{minipage}\hss\egroup\hfil}
+
+
+
 \def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
 \def\edoc{\endgroup}
 
-\def\begindocs#1{\relax}
+\def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1}
+\newcommand{\maybreak}{\@maybreak}
+\def\begindocs#1{\relax\ifvmode\@maybreak{1in}\fi}
+\def\nwdocspar{\par\@maybreak{1in}}
 \def\enddocs{\relax}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,16 +83,40 @@
 \newdimen\@original@textwidth
 \@original@textwidth=\textwidth
 
+\def\ps@noweb{%
+  \let\@mkboth\@gobbletwo
+  \def\@oddfoot{}\def\@evenfoot{}%       No feet.
+  \if@twoside         % If two-sided printing.
+    \def\@evenhead{\hbox to \@original@textwidth{%
+           \rm \thepage\qquad{\tt\leftmark}\hfil\today}}%        Left heading.
+    \def\@oddhead{\hbox to \@original@textwidth{%
+           \rm \today\hfil{\tt\leftmark}\qquad\thepage}}% Right heading.
+  \else               % If one-sided printing.
+    \def\@oddhead{\hbox to \@original@textwidth{%
+           \rm \today\hfil{\tt\leftmark}\qquad\thepage}}% Right heading.
+    \let\@evenhead\@oddhead
+  \fi
+  \def\chaptermark##1{}%
+  \def\sectionmark##1{}%
+  \def\subsectionmark##1{}%
+  \def\subsubsectionmark##1{}%
+  \def\paragraphmark##1{}%
+  \def\subparagraphmark##1{}%
+  \def\filename##1{\vfil\eject\markboth{##1}{##1}}%
+}
+\def\filename#1{\relax}
 
 %%%%%%%%%%%%%%%% following code supports cross-referencing
 % lists of page references cause all the trouble
 
-\def\alsodefined#1{\hspace{-\parindent}{\footnotesize\rm 
-	This definition is continued on \pages{#1}.}}
-\def\used#1{\hspace{-\parindent}{\footnotesize\rm 
-	This code is used on \pages{#1}.}}
-\def\notused{\hspace{-\parindent}{\footnotesize\rm 
-	Root module (not used in this document).}}
+\def\alsodefined#1{\break\hspace{-\codemargin}{\footnotesize\rm 
+	This definition is continued on \pages{#1}.}\hfil}
+\def\used#1{\break\hspace{-\codemargin}{\footnotesize\rm 
+	This code is used on \pages{#1}.}\hfil}
+\def\notused#1{\break\hspace{-\codemargin}{\footnotesize\rm 
+	Root chunk (not used in this document).}\hfil}
+\def\nwoutput#1{\break\hspace{-\codemargin}{\footnotesize\rm 
+	This code is written to file {\tt #1}.}\hfil}
 
 
 \def\empty{}
@@ -108,3 +178,38 @@
     \advance\pagesout by 1
     \lastpage=\thispage  
   \repeat}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\subpageref}[1]{%
+  \pageref{#1}%
+  \@ifundefined{r@#1}%
+    {}%
+    {\@ifundefined{2on\@pageref{#1}}%
+      {}%
+      {\ref{#1}}}}
+\def\@pageref#1{\expandafter\expandafter\expandafter
+                \@cdr\csname r@#1\endcsname\@nil}
+\newcommand{\sublabel}[1]{%
+  \@bsphack\if@filesw {\let\thepage\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \newsublabel{#1}{{}{\thepage}}}}%
+   \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+\newcommand{\newsublabel}[2]{%
+  \edef\this@page{\@cdr#2\@nil}%
+  \ifnum\this@page>\last@page
+    \sub@page=0\relax
+  \fi
+  \last@page=\this@page
+  \advance\sub@page by 1
+  \ifnum\sub@page=2
+    \global\@namedef{2on\this@page}{}%
+  \fi
+  \edef\@tempa{\noexpand\newlabel{#1}%
+    {{\@alph{\number\sub@page}}{\this@page}}}%
+  \@tempa}
+\newcount\last@page
+\newcount\sub@page
+
