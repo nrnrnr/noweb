@@ -76,6 +76,9 @@
 (defconst noweb-mode-RCS-Id
   "$Id: noweb-mode.el,v 1.17 1995/06/25 17:27:36 ohl Exp $")
 
+(defconst noweb-mode-RCS-Name
+  "$Name$")
+
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.
 The value of this variable is checked as part of loading noweb mode.
