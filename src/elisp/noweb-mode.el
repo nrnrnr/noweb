@@ -18,8 +18,8 @@
 ;; 
 ;; See bottom of this file for information on language-dependent highlighting
 ;;
-;; $Id: noweb-mode.el,v 1.8 2000/07/31 18:28:52 nr Exp nr $
-;; $Name: v2_10 $
+;; $Id: noweb-mode.el,v 1.9 2001/03/28 18:48:12 nr Exp nr $
+;; $Name: v2_10a $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; THIS IS UNRELEASED CODE: IT IS MISSING FUNCTIONALITY AND IT NEEDS CLEANUP ;;
@@ -76,10 +76,10 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.8 2000/07/31 18:28:52 nr Exp nr $")
+  "$Id: noweb-mode.el,v 1.9 2001/03/28 18:48:12 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
-  "$Name: v2_10 $")
+  "$Name: v2_10a $")
 
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.
@@ -930,7 +930,9 @@ and and update the chunk vector."
 (defun noweb-insert-mode-line (arg)
   "Insert line that will set the noweb mode of this file in emacs"
   (interactive "CNoweb code mode for this file: ")
-  (insert "% -*- mode: Noweb; noweb-code-mode: " (symbol-name arg) " -*-\n"))
+  (save-excursion
+    (goto-char (point-min))
+    (insert "% -*- mode: Noweb; noweb-code-mode: " (symbol-name arg) " -*-\n")))
 
 
 ;;; Debugging

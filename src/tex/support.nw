@@ -442,6 +442,20 @@ vmode; if it does start a new one, it's only indented by the use of
 \let\nwenddocs=\relax
 \let\nwdocspar=\filbreak
 @ 
+Some people don't like it that noweb leaves so much white space.
+The secret, undocument style option [[breakcode]] will break up code
+in order to use less white space.
+The parameter [[\nwbreakcodespace]] controls how much white space to
+leave.
+<<noweb.sty>>=
+\def\@nwsemifilbreak#1{\vskip0pt plus#1\penalty-200\vskip0pt plus -#1}
+\newdimen\nwbreakcodespace
+\nwbreakcodespace=0.2in  % by default, leave no more than this on a page
+\def\nwopt@breakcode{%
+  \def\nwdocspar{\@nwsemifilbreak{0.2in}}%
+  \def\nwendcode{\endtrivlist\endgroup} % ditches filbreak
+}
+@ 
 The page-breaking strategy implies ragged bottom pages, so we should
 turn it on in general (this is relevant for the {\tt report} style):
 <<noweb.sty>>=
@@ -1229,9 +1243,26 @@ definitions.
 <<noweb.sty>>=
 \def\nwix@id@defs#1{% index pair
   {{\Tt \@car#1\@nil}%
-  \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
+  \def\\##1{\nwix@defs@space\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
+  % useful above to change ~ into something that can break
+% this option is undocumented because I think breakdefs is always right
+\def\nwopt@breakdefs{\def\nwix@defs@space{\penalty200\ }}
+\def\nwopt@nobreakdefs{\def\nwix@defs@space{~}} % old code
+\nwopt@breakdefs
 \def\nwidentuses#1{% list of index pairs
   \nwcodecomment{\@nwlangdepuss\ \let\\=\nwix@id@defs\commafy{#1}.}}
+@ 
+\iffalse
+<<undocumented -- man page: [[\noweboptions]]>>=
+.TP
+.B breakdefs, nobreakdefs
+.BR breakdefs ,
+which is the default,
+permits long lists of definitions to be broken in identifier cross-reference.
+Useful if identifier cross-reference produces lots of overfull hboxes.
+.B nobreakdefs
+is the old behavior, which should never be needed.
+@ \fi 
 @ 
 The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
@@ -1661,7 +1692,7 @@ Universidade do Porto).
   % in
   \def\@nwlangdepand{und}%
   % and
-  \def\@nwlangdepuss{Benutztt}%
+  \def\@nwlangdepuss{Benutzt}%
   % Uses
   \def\@nwlangdepusd{benutzt}%
   % used

@@ -97,6 +97,7 @@ end
 @ 
 Finally, here's how we get the database.
 <<let [[db]] be an open file giving the database pipeline from [[args]]>>=
+db := "markup"
 every db ||:= " " || !args
 db := open(db, "rp") | stop("cannot pipe from ", image(db))
 @

@@ -14,9 +14,10 @@ To build noweb:
      code speeds up noweave by a factor of 3.  The Icon versions have
      fewer bugs and provide more filters (e.g., convert LaTeX to HTML
      in documentation chunks).  Not all of the examples will work with
-     the awk library.  If you have the Icon translator but not the
-     Icon compiler set ICONC=icont in the Makefile.  (Icon is freely
-     available from the University of Arizona.)
+     the awk library.  If you have an Icon compiler and believe it
+     works, set `ICONC=iconc -f l' in the Makefile.  (Icon is freely
+     available from the University of Arizona, but the compiler is no
+     longer maintained.)
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:

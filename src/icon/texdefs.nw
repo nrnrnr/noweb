@@ -1,8 +1,8 @@
 \section{Finding {\TeX} definitions}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: texdefs.nw,v 1.7 2000/07/31 18:28:50 nr Exp nr $" ||
-         "$Name: v2_10 $"
+  return "$Id: texdefs.nw,v 1.8 2001/03/28 18:44:46 nr Exp nr $" ||
+         "$Name: v2_10a $"
 end
 procedure main(args)
   go()
