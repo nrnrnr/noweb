@@ -1,6 +1,6 @@
 \documentstyle[noweb,twoside]{article}
 \pagestyle{noweb}\raggedbottom
-\noweboptions{longchunks}
+\noweboptions{longchunks,webnumbering}
 \title{{\TeX} support for {\tt noweb}}
 \author{Norman Ramsey}
 \begin{document}
@@ -58,7 +58,8 @@ think {\tt noweave} ever emits them.
 }
 %%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
 \def\startline{\noindent\hskip\parindent\ignorespaces}
-@ %def \startline \eatline
+\def\nwnewline{\ifvmode\else\hfil\break\fi}
+@ %def \startline \eatline \nwnewline
 
 Within a code environment, it may be necessary to restore the 
 category codes in order to set a module (chunk) name.
@@ -118,13 +119,11 @@ I'll try to avoid such incompatible changes in the future.}%
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % plain
 \else\ifx\selectfont\undefined
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
+  \let\reset@font=\relax
 \else                                       % LaTeX NFSS
-  \def\Rm{\fontfamily\rmdefault \fontseries\default@series
-    \fontshape\default@shape \selectfont}
-  \def\It{\fontfamily\itdefault \fontseries\default@series
-    \fontshape\default@shape \selectfont}
-  \def\Tt{\fontfamily\ttdefault \fontseries\default@series
-    \fontshape\default@shape \selectfont}
+  \def\Rm{\reset@font\rm}
+  \def\It{\reset@font\it}
+  \def\Tt{\reset@font\tt}
 \fi
 \fi
 @
@@ -250,7 +249,13 @@ left margin. (Default)
 .B nomargintag
 Don't use margin tags.
 @ \fi
-
+[[\nwtagstyle]] determines the style in which tags are displayed.
+<<noweb.sty>>=
+\ifx\reset@font\undefined
+  \let\reset@font=\relax
+\fi
+\def\nwtagstyle{\reset@font\footnotesize\rm}
+@
 {\tt noweave} uses [[\begindocs{nnn}]] and [[\enddocs]] to bracket
 documentation chunks.
 If a documentation chunk does not continue the current paragraph, 
@@ -266,6 +271,9 @@ same page as the code chunk that follows it.
 \def\nwdocspar{\par\@maybreak{2in}}
 \def\raggedbottom{\def\@textbottom{\vskip \z@ plus2in }\let\@texttop\relax}
 @ %def \@maybreak \maybreak \begindocs \nwdocspar \enddocs
+<<nwmac.tex>>=
+\def\nwdocspar{\par\semifilbreak}
+@
 
 {\tt noweave} brackets quoted code with [[\code]] and [[\edoc]], which handle
 font and environment for code.
@@ -326,10 +334,11 @@ Fiddling with it can change the appearance of the output.
         \hsize=\@current@textwidth\textwidth=\@current@textwidth
         \advance\rightskip by 0pt plus1in
         \let\\\relax\footnotesize\Rm #1\hfil\@@par}}
-\def\nwalsodefined#1{\nwcodecomment{This definition is continued on \@pagesl{#1}.}}
-\def\nwused#1{\nwcodecomment{This code is used on \@pagesl{#1}.}}
+\def\nwalsodefined#1{\nwcodecomment{This definition is continued \nwpageprep\ \@pagesl{#1}.}}
+\def\nwused#1{\nwcodecomment{This code is used \nwpageprep\ \@pagesl{#1}.}}
 \def\nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
-\def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt #1}.}}
+\def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt \@stripstar#1*\stripped}.}}
+\def\@stripstar#1*#2\stripped{#1}
 @ %def \@current@textwidth \nwcodecomment \nwalsodefined \nwused \nwnotused
 @ %def \nwoutput
 
@@ -400,21 +409,27 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 <<noweb.sty>>=
 \newcount\@nwpagecount
 \def\@nwfirstpagel#1{% label
-  \edef\@tempa{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempa}
+  \@ifundefined{r@#1}{<<warn of undefined reference to [[#1]] and add page ??>>}{%
+    \edef\@tempa{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempa}}
 \def\@nwnextpagel#1{% label
-  \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}}\@tempa}
+  \@ifundefined{r@#1}{<<warn of undefined reference to [[#1]] and add page ??>>}{%
+    \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}}\@tempa}}
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
   <<add range to range list>>\let\\=\relax
-  \ifnum\@nwpagecount=1 page \else pages \fi\commafy{\nw@pages}}
+  \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
 \def\subpages#1{% list of {{subpage}{page}}
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1}\@tempa
             \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
   <<add range to range list>>\let\\=\relax
-  \ifnum\@nwpagecount=1 page \else pages \fi\commafy{\nw@pages}}
-@ %def \@nwlopage \@nwhipage
+  \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+\def\nwpageword{page}
+\def\nwpageprep{on}
+<<warn of undefined reference to [[#1]] and add page ??>>=
+<<warn of undefined reference to [[#1]]>>%
+\nwix@cons\nw@pages{\\{\bf ??}}
 @
 \subsection{Sub-page references}
 This is the wonderful code that Dave Love provided to make page
@@ -442,7 +457,7 @@ might want to strip this off, e.g.\ for sorting lists.
 
 There are various ways we could attack this task (which is made
 non-trivial by the well-known asynchrony of (La)\TeX's output
-routine).  There are various ways we might tackle the problem, but
+routine), but
 they all must depend on hacks in the [[.aux]] file or a similar one.
 Joachim Schrod's [[fnpag.sty]] does the same sort of thing differently
 to this \LaTeX-specific approach.  See [[latex.tex]] for enlightenment
@@ -468,7 +483,7 @@ defining the [[2on]] bit appropriately.
 <<noweb.sty>>=
 \newcommand{\subpagepair}[1]{%  % produces {subpage}{page}
   \@ifundefined{r@#1}%
-    {{0}{0}<<warn of undefined reference to [[#1]]>>}%
+    {{0}{0}}%
     {\@ifundefined{2on\@pageref{#1}}%
       {{0}{\expandafter\expandafter\expandafter\@cdr\csname r@#1\endcsname\@nil}}%
       {\@nameuse{r@#1}}}}
@@ -517,22 +532,22 @@ First we extract the page number into [[\this@page]].
   \edef\this@page{\@cdr#2\@nil}%
 @ %def \newsublabel
 @
-Then we see whether it's greater than the value of [[\last@page]]
-which was stashed away by the last [[\newsublabel]] (or is zero if
+Then we see whether it's changed from the value of [[\last@page]]
+which was stashed away by the last [[\newsublabel]] (or is [[\relax]] if
 this is the first one).  If the page has changed, we reset the
 counter [[\sub@page]] telling us how many sub-labels there have been
 on the page.
 <<definition of [[\newsublabel]]>>=
-  \ifnum\this@page>\last@page
-    \sub@page=0\relax
+  \ifx\this@page\last@page\else
+    \sub@page=\z@
   \fi
-  \last@page=\this@page
-  \advance\sub@page by 1
+  \edef\last@page{\this@page}
+  \advance\sub@page by \@ne
 @
 If we've had at least two on the page, we define the 
 [[2on]]\LA{}{page no.}\RA{} macro to indicate the fact.
 <<definition of [[\newsublabel]]>>=
-  \ifnum\sub@page=2
+  \ifnum\sub@page=\tw@
     \global\@namedef{2on\this@page}{}%
   \fi
 @
@@ -543,10 +558,9 @@ normal reference value in the second argument.
     {{\number\sub@page}{\this@page}}}%
   \@tempa}
 @
-We need to define these counters.  [[\last@page]] could be a
-suitably-initialised macro instead.
+We need to define these.
 <<noweb.sty>>=
-\newcount\last@page
+\def\last@page{\relax}
 \newcount\sub@page
 @ %def \last@page \sub@page
 @
@@ -565,6 +579,30 @@ We use Rainer's new expandable definitions of [[\ref]] and
 <<warn of undefined reference to [[#1]]>>=
 \@warning{Reference `#1' on page \thepage \space undefined}
 @ %def \ref \pageref
+@
+
+\subsection{{\tt WEB}-like chunk numbering}
+<<noweb.sty>>=
+\newcount\nw@chunkcount
+\nw@chunkcount=\@ne
+\newcommand{\weblabel}[1]{%
+  \@bsphack\if@filesw {\let\thepage\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \newsublabel{#1}{{}{\number\nw@chunkcount}}}}%
+   \expandafter}\@tempa
+   \global\advance\nw@chunkcount by \@ne
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+\def\nwopt@webnumbering{\let\sublabel=\weblabel\def\nwpageword{chunk}\def\nwpageprep{in}}
+@ %def \weblabel webnumbering
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B webnumbering
+Number chunks consecutively, in 
+.I WEB
+style, instead of using sub-page numbers.
+@ \fi
 @
 \subsection{Indexing (identifier cross-reference) support}
 
@@ -596,7 +634,7 @@ documentation chunk.
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
 @ %def \nwixadd
 [[\nwbs]] is used in the printable form of identifiers to represent a backslash.
-<<noweb.sty>>=
+<<kernel>>=
 \chardef\nwbs=`\\
 @
 \subsubsection{Writing lists with commas and ``and''}
@@ -675,42 +713,42 @@ if none of the identifiers defined is ever used.
 \def\nwix@id@uses#1#2{% {ident}{label}
   \nwix@usecount{#2}\ifnum\nwix@counter>0
     {\advance\leftskip by \codemargin
-     \nwcodecomment{{\Tt #1}, used on \@pagesl{\nwix@uses{#2}}.}}%
+     \nwcodecomment{{\Tt #1}, used \nwpageprep\ \@pagesl{\nwix@uses{#2}}.}}%
+  \else
+    \ifnw@hideunuseddefs\else
+      {\advance\leftskip by \codemargin \nwcodecomment{{\Tt #1}, never used.}}%
+    \fi
   \fi}
 \def\nwidentdefs#1{% list of index pairs
-  \nwix@totaluses{#1}\ifnum\nwix@counter>0
+  \ifnw@hideunuseddefs\nwix@totaluses{#1}\else\nwix@listcount{#1}\fi
+  \ifnum\nwix@counter>0
     \nwcodecomment{Defines:}%
     {\def\\##1{\nwix@id@uses ##1}#1}%
   \fi}
 <<noweb.sty>>=
+\newif\ifnw@hideunuseddefs\nw@hideunuseddefsfalse
+\def\nwopt@hideunuseddefs{\nw@hideunuseddefstrue}
+@ 
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B hideunuseddefs
+Omit identifiers that are defined but never used from
+the identifier cross-reference after each code chunk.
+(As suggested by Preston Briggs.)
+@ \fi
+<<noweb.sty>>=
 \def\nwopt@noidentxref{%
   \let\nwidentdefs\@gobble
   \let\nwidentuses\@gobble}
-@ \iffalse
+@ 
+\iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
 .B noidentxref
 Omit the identifier cross-reference after each code chunk.
 @ \fi
 
-\subsubsection{Alternate formatting for identifier cross-reference}
-<<noweb.sty>>=  
-\def\nwix@id@defs@par#1{% index pair
-  {{\Tt \@car#1\@nil}%
-  \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}\par}}
-\def\nwopt@xrefcols{%
-  \makeatletter\input{multicol.sty}\makeatother
-  \def\nwidentuses##1{% list of index pairs
-    \nwcodecomment{Uses\hfil\break{\advance\hsize by -\codemargin
-       \vbox{\begin{multicols}{5}\let\\=\nwix@id@defs@par ##1\end{multicols}}}}}}
-@ \iffalse
-<<man page: [[\noweboptions]]>>=
-.TP
-.B xrefcols
-Format identifier cross-reference in columns (requires \fBmulticol.sty\fP).
-@ \fi
-
-@
 \subsubsection{Support for chunk and identifier indices}
 The index in the back shows absolutely all the pages.
 <<noweb.sty>>=
@@ -761,7 +799,7 @@ The information comes from the list [[nwisx@i]].
 
 \def\nw@onechunk#1#2#3{% {name}{label of first definition}{list with \nwixd, \nwixu}
   \@ifundefined{r@#2}{}{%
-    \indent\LA #1~{\footnotesize\Rm\subpageref{#2}}\RA 
+    \indent\LA #1~{\nwtagstyle\subpageref{#2}}\RA 
     \if@nwlongchunks{~\nw@chunkunderlinedefs#3}\fi\par}}
 
 \def\thenowebchunks#1{\vskip3pt{%
@@ -891,8 +929,9 @@ show page numbers of definitions and uses of each chunk.
 \def\begindocs#1{\filbreak}
 \def\enddocs{\par}
 \def\begincode#1{\par\nobreak
-  \@current@textwidth=\hsize
   \begingroup\setupcode\newlines\parindent=0pt\parskip=0pt
+  \let\oendmoddef=\endmoddef \let\oplusendmoddef=\plusendmoddef
+  \def\endmoddef{\oendmoddef\par}\def\plusendmoddef{\oplusendmoddef\par}%
   \hsize=\codehsize\noindent\bchack}
 \def\endcode{\endgroup}
 {\catcode`\^^M=\active % make CR an active character
@@ -948,9 +987,8 @@ show page numbers of definitions and uses of each chunk.
 @ %def \listlevel \itemwidth \itemize \enditemize
 @
 \section{Chunks} \nowebchunks
-\twocolumn
-\section{Index}
-   \nowebindex
+\twocolumn[\section{Index}]
+\nowebindex
 @
 \end{document}
 
