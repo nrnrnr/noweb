@@ -2,7 +2,9 @@
 4/17/97
 <<AUTHOR section>>=
 .SH VERSION
-The RCS version name of this software is $Name$.
+This man page is from 
+.I noweb
+version $Name: v2_8a $.
 .SH AUTHOR
 Norman Ramsey, University of Virginia.
 Internet address \fBnr@cs.virginia.edu\fP.
