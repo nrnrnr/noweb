@@ -8,11 +8,11 @@ MACROS=nwmac
 latex=0
 tex=1
 
-if [ "$1" = -l ]; then
+if [ "X$1" = X-l ]; then
   latex=1
   tex=0
   shift
-elsif [ "$1" = -n ]; then
+elif [ "X$1" = X-n ]; then
   latex=0
   tex=0
   shift
