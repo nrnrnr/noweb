@@ -1,6 +1,10 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
-@ [[getline]] is reads in the next line, no matter
+@ 
+\section{Utility functions}
+
+\subsection{Line-oriented input}
+[[getline]] is reads in the next line, no matter
 how long it is, expanding tabs.
 I allocate more and more space for the line, until I've
 read a whole line or until I run out of space, whichever comes first.
@@ -15,7 +19,6 @@ calls destroy the results of previous calls.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 #include "columns.h"
 #include "errors.h"
 #include "getline.h"
@@ -24,7 +27,7 @@ static char *buf1 = NULL, *buf2 = NULL;	/* lines without, with tabs expanded */
 static buf_size = START_SIZE;		/* size of both buffers if non-NULL */
 
 <<C functions>>
-@
+@ %def START_SIZE buf_size buf1 buf2
 <<header>>=
 char *getline_expand (FILE *fp);
   /* grab a line in buffer, return new buffer or NULL for eof
@@ -38,7 +41,7 @@ void new_buffers(void) {
     checkptr(buf1 = (char *) realloc(buf1, buf_size));
     checkptr(buf2 = (char *) realloc(buf2, buf_size));
 }
-
+<<C functions>>=
 char *getline (FILE *fp) {
 
     <<if [[buf1==NULL]], allocate initial buffers>>
@@ -53,7 +56,7 @@ char *getline (FILE *fp) {
     }
     return buf1;
 }
-
+@ %def getline
 <<C functions>>=
 char *getline_expand (FILE *fp) {
     char *s, *t;
@@ -74,6 +77,7 @@ char *getline_expand (FILE *fp) {
     *t='\0';
     return buf2;
 }
+@ %def getline_expand
 <<if [[buf1==NULL]], allocate initial buffers>>=
 if (buf1==NULL) {
     checkptr(buf1 = (char *) malloc (buf_size));

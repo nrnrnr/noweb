@@ -1,6 +1,8 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
-@ Trees of modules.
+@ 
+\subsection{Support for looking up modules by name}
+Trees of modules.
 A table of modules with insert and lookup, but no delete.
 The key is the module name.
 <<header>>=
@@ -25,7 +27,7 @@ typedef struct tnode {          /* tree node */
 static struct tnode *root=NULL;
         
 <<Function declarations>>
-
+<<*>>= 
 Module insert (char *modname) {
     return insert_tree (&root, modname);
 }
@@ -45,8 +47,9 @@ insert_tree(TNODE **rootptr, char *modname) {
      }
 
 }
-@
-Node allocation is perfectly standard...
+@ %def insert
+
+Node allocation is perfectly standard.
 <<Allocate new tnode in **rootptr>>=
        checkptr(*rootptr=(struct tnode *) malloc (sizeof(struct tnode)));
        (*rootptr)->left = (*rootptr)->right = NULL;
@@ -73,7 +76,8 @@ lookup_tree(TNODE **rootptr, char *modname) {
          return lookup_tree(&((*rootptr)->right),modname);
      }
 }
-@
+@ %def lookup
+
 [[apply_each_module]] takes as argument a function and applies
 it to each module in the tree.
 This makes it easy to, for example, remove trailing newlines
@@ -90,3 +94,4 @@ void apply_to_tree(TNODE *p, void (*fun)(Module)) {
 void apply_each_module(void (*fun)(Module)) {
     apply_to_tree(root,fun);
 }
+@ %def apply_each_module
