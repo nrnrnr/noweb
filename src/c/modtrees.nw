@@ -19,7 +19,6 @@ void apply_each_module(void (*fun)(Module));
 
 typedef struct tnode {          /* tree node */
   struct tnode *left, *right;
-  char *modname;
   Module data;
 } TNODE;
 
@@ -35,12 +34,11 @@ static Module
 insert_tree(TNODE **rootptr, char *modname) {
      if (*rootptr==NULL) {
          <<Allocate new tnode in **rootptr>>
-         (*rootptr)->modname = strsave(modname);
-         return (*rootptr)->data = newmodule();
+         return (*rootptr)->data = newmodule(modname);
      } 
-     if (strcmp((*rootptr)->modname,modname)==0) {
+     if (strcmp((*rootptr)->data->name,modname)==0) {
          return (*rootptr)->data;
-     } else if (strcmp((*rootptr)->modname,modname)<0) {
+     } else if (strcmp((*rootptr)->data->name,modname)<0) {
          return insert_tree(&((*rootptr)->left),modname);
      } else /* >0 */ {
          return insert_tree(&((*rootptr)->right),modname);
@@ -67,9 +65,9 @@ lookup_tree(TNODE **rootptr, char *modname) {
      if (*rootptr==NULL) {
         return NULL;
      } 
-     if (strcmp((*rootptr)->modname,modname)==0) {
+     if (strcmp((*rootptr)->data->name,modname)==0) {
          return (*rootptr)->data;
-     } else if (strcmp((*rootptr)->modname,modname)<0) {
+     } else if (strcmp((*rootptr)->data->name,modname)<0) {
          return lookup_tree(&((*rootptr)->left),modname);
      } else /* >0 */ {
          return lookup_tree(&((*rootptr)->right),modname);
