@@ -12,7 +12,8 @@ Here's the organization of the source:
 <<initialization>>
 <<scan options and arguments>>
 <<emit markup on standard output>> |
-$LIB/totex $delay
+$backend $noindex $delay
+if [ -n "$verbose" ]; then echo $backend $noindex $delay 1>&2; fi
 exit $?
 @
 The first item of initialization is to locate the {\tt noweb} library.
@@ -20,7 +21,9 @@ The first item of initialization is to locate the {\tt noweb} library.
 LIB=|LIBDIR|
 @
 <<initialization>>=
-wrapper= delay= args= markopts= noweboptions= autodefs=
+markup=$LIB/markup backend=$LIB/totex
+wrapper= delay= args= markopts= noweboptions= autodefs= verbose=
+noquote="-noquote" docanchor= noindex="-noindex"
 filtera= filterb= filterc= filterd=
 @
 I make two passes over the arguments so as not to require that options
@@ -51,15 +54,25 @@ if [ -z "$noweboptions" ] ; then noweboptions="$newopt"
 else noweboptions="$noweboptions,$newopt"
 fi
 <<first pass {\tt noweave} options>>=
--latex) wrapper=latex ;;
--tex)   wrapper=tex ;;
--n)     wrapper=none ;;
+-latex)      wrapper=latex ;;
+-tex)        wrapper=tex ;;
+-html)       if [ "$wrapper" != "none" ]; then wrapper=html; fi; 
+             backend="$LIB/tohtml -localindex";        
+             noquote=""; docanchor="-docanchor 10"; noindex= ;;
+-latex+html) if [ "$wrapper" != "none" ]; then wrapper=latex; fi; 
+             backend="$LIB/tohtml -localindex -raw"
+             noquote=""; docanchor="-docanchor 10"; noindex= ;;
+-n)          wrapper=none ;;
+-backend)    backend="$2" ; noindex= ; shift ;;
+-markup)     markup="$2"  ; shift ;;
 @
 Note some versions of echo break on [[echo "-n..."]], echoing nothing 
 at all.  The leading space is claimed to prevent this problem.
 <<option printout for usage>>=
 echo "-latex		Use LaTeX headers and trailers (default)." 1>&2
 echo "-tex		Use TeX headers and trailers." 1>&2
+echo "-html		Use HTML headers and trailers." 1>&2
+echo "-latex+html	Assume LaTeX in documentation, but use HTML in code." 1>&2
 echo " -n		Don't use any header or trailer." 1>&2
 @ \iffalse
 <<noweave man page option table>>=
@@ -76,6 +89,18 @@ Use plain TeX wrapper and the
 .B nwmac
 macros.
 .TP
+.B \-html
+Format the program for HTML, not TeX or LaTeX. 
+If \fB-n\fP is not given, use HTML wrapper as well.
+The output is uninteresting without \fB-index\fP.
+.TP
+.B \-latex+html
+Assume documentation chunks are LaTeX, but generate HTML for code chunks,
+suitably marked so conversion with 
+.I latex2html(1)
+yields reasonable output.
+A LaTeX wrapper is implied, but can be turned off with \fB-n\fP.
+.TP
 .B \-n
 Don't use any wrapper (header or trailer).
 This option is useful when \fInoweave\fP's output will be
@@ -84,19 +109,21 @@ See also
 .B \-delay.
 @ \fi
 <<first pass {\tt noweave} options>>=
--filter)    shift                                               ;;
--x|-index)         if [ -z "$wrapper" ]; then wrapper=latex; fi ;;
--indexfrom) shift; if [ -z "$wrapper" ]; then wrapper=latex; fi ;;
+-filter)    shift                                                               ;;
+-x)	           if [ "$wrapper" != none ]; then wrapper=latex; fi            ;;
+-index)            if [ "$wrapper" != none ]; then wrapper=latex; fi ; noindex= ;;
+-indexfrom) shift; if [ "$wrapper" != none ]; then wrapper=latex; fi ; noindex= ;;
 <<second pass {\tt noweave} options>>=
--filter) newfilter="$2" ; shift ;             <<add [[$newfilter]] (could overflow)>> ;;
--x)      newfilter="$LIB/noidx -noindex $delay"
-                                              <<add [[$newfilter]] (could overflow)>> ;;
--index)  newfilter="$LIB/finduses -noquote" ; <<add [[$newfilter]] (could overflow)>>
-         newfilter="$LIB/noidx $delay"      ; <<add [[$newfilter]] (could overflow)>> ;;
+-filter) 
+    newfilter="$2" ; shift ;                  <<add [[$newfilter]] (could overflow)>> ;;
+-x) newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
+-index)  
+    newfilter="$LIB/finduses $noquote" ;      <<add [[$newfilter]] (could overflow)>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
 -indexfrom)
-         newfilter="$LIB/finduses -noquote $2" ; <<add [[$newfilter]] (could overflow)>>
-         newfilter="$LIB/noidx $delay"         ; <<add [[$newfilter]] (could overflow)>>
-         shift ;;
+    newfilter="$LIB/finduses $noquote $2";    <<add [[$newfilter]] (could overflow)>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>>
+    shift ;;
 <<option printout for usage>>=
 echo "-x		Use the default cross-referencer (needs LaTeX)." 1>&2
 echo "-index		Create index using identifiers defined in input files." 1>&2
@@ -107,39 +134,45 @@ echo "			or perform other functions." 1>&2
 <<noweave man page indexing options>>=
 .TP
 .B \-x
-Add a page number to each chunk name identifying the location of that
+For 
+.I LaTeX,
+add a page number to each chunk name identifying the location of that
 chunk's definition, and emit cross-reference information relating definitions and uses.
-Requires
-.I LaTeX.
+For 
+.I HTML,
+create hypertext links between uses and definitions of chunks.
 When
 .B noweave -x
-is used, the 
-.I LaTeX
-control sequence
+is used with
+.I LaTeX,
+the control sequence
 .B "\\\\nowebchunks"
 expands to a sorted list of all code chunks.
 .TP
 .B \-index
-Build cross-reference information for identifiers defined by
+Build cross-reference information (or hypertext links) for identifiers defined by
 .br
 .B "@ %def" 
 .I identifiers
 .br
 Definitions are those found in input files.
 Requires
-.I LaTeX.
+.I LaTeX
+or
+.I HTML.
 .B \-index
-and implies
+implies
 .B \-x;
 including both will generate strange-looking output.
 .I noweave
 does not generate
-cross-references to identifiers that appear in quoted code (\fB@[[\fP...\fB@]]\fP).
+cross-references to identifiers that appear in quoted code (\fB@[[\fP...\fB@]]\fP),
+but it does generate hypertext links.
 When
 .B noweave -index
-is used, the 
-.I LaTeX
-control sequence
+is used with
+.I LaTeX, 
+the control sequence
 .B "\\\\nowebindex"
 expands to an index of identifiers.
 .TP
@@ -292,13 +325,26 @@ Expand tabs with stops every \fIk\fP columns.
 Copy tabs to the output.
 @ \fi
 \iffalse
+<<first pass {\tt noweave} options>>=
+-v) verbose=1 ;;
+<<option printout for usage>>=
+echo "-v		Print pipeline on standard error" 1>&2
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-v
+Print the pipeline on standard error.
+@ \fi
+\iffalse
 <<man page: WEAVING section>>=
 Output from \fInoweave\fP can
 be used in \fITeX\fP documents that 
-.B "\\\\input nwmac"
-and in  \fILaTeX\fP documents that  use the
+.B "\\\\input nwmac,"
+in \fILaTeX\fP documents that  use the
 .B noweb
-document-style option (see\fInowebstyle(1)\fP).
+document-style option (see \fInowebstyle(1)\fP),
+and in \fIHTML\fP documents to be browsed with 
+.I Mosaic(1).
 .I Noweave
 treats code chunks somewhat like
 .I LaTeX list environments.
@@ -316,7 +362,7 @@ The documentation chunk immediately preceding a code chunk appears on
 the same page as that code chunk unless doing so would violate the previous rule.
 .PP
 .I Noweave
-inserts no extra newlines in its output, so the line numbers given
+inserts no extra newlines in its \fITeX\fP output, so the line numbers given
 in
 .I TeX
 error messages are the same as those in the input file.
@@ -324,9 +370,7 @@ error messages are the same as those in the input file.
 .I noweave
 has
 options that dictate choice of 
-.I TeX
-or 
-.I LaTeX
+formatter
 and that support different formatting idioms and tools.
 Basic options are described here; options related to index
 and cross-reference information are described in the 
@@ -351,7 +395,7 @@ else
 fi
 <<show usage>>=
 echo "Usage: $0 [options] [files]" 1>&2
-echo "Options recogized are:" 1>&2
+echo "Options recognized are:" 1>&2
 <<option printout for usage>>
 @
 To avoid inserting any extra newlines into the output, 
@@ -360,67 +404,32 @@ The altered [[PATH]] provides a convenience to people who want to
 use simple names to refer to filters in [[$LIB]].
 <<emit markup on standard output>>=
 (
-<<write header literals>>
+case $wrapper in
+  none) ;;
+  latex)  echo "@header $wrapper $noweboptions" ;;
+  *)  echo "@header $wrapper $arg" ;;
+esac
 PATH="$PATH:$LIB" 
 export PATH
+<<if verbose, make noise about pipeline>>
 if   [ -z "$filtera" ]; then
-  $LIB/markup $markopts $arg
+  $markup $markopts $arg
 elif [ -z "$filterb" ]; then
-  $LIB/markup $markopts $arg | $filtera
+  $markup $markopts $arg | $filtera
 elif [ -z "$filterc" ]; then
-  $LIB/markup $markopts $arg | $filtera | $filterb
+  $markup $markopts $arg | $filtera | $filterb
 elif [ -z "$filterd" ]; then
-  $LIB/markup $markopts $arg | $filtera | $filterb | $filterc
+  $markup $markopts $arg | $filtera | $filterb | $filterc
 else
-  $LIB/markup $markopts $arg | $filtera | $filterb | $filterc | $filterd
+  $markup $markopts $arg | $filtera | $filterb | $filterc | $filterd
 fi
-<<write trailer literals>>
+if [ "$wrapper" != "none" ]; then echo "@trailer $wrapper"; fi
 )
-@ \subsection{The header and trailer mess}
-Shell implementations don't agree on backslash conventions, so I resort to the 
-laborious method of using [[cat @<<EOF]]. 
-It makes a royal mess of the code compared to using [[echo '\mumble']],
-but it's portable.
-The stuff has to appear in the first column or it won't work.
-<<write header literals>>=
-case "$wrapper" in
-  tex)   
-<<write literal saying [[\input nwmac]]>> ;;
-  latex) 
-<<write literal {\LaTeX} preamble>> ;;
-esac
-<<write trailer literals>>=
-case "$wrapper" in
-  tex)   
-<<write literal saying [[\bye]]>> ;;
-  latex) 
-<<write literal saying [[\end{document}]]>> ;;
-esac
-@
-I include extra trailing newlines to ensure
-that [[EOF]] appears on a line by itself.
-<<write literal saying [[\input nwmac]]>>=
-cat <<EOF
-@literal \input nwmac 
-EOF
-
-@
-<<write literal {\LaTeX} preamble>>=
-cat <<EOF
-@literal \documentstyle[noweb]{article}\pagestyle{noweb}\noweboptions{$noweboptions}
-@literal \begin{document}
-EOF
-
-<<write literal saying [[\bye]]>>=
-cat <<EOF
-@literal \bye
-@nl
-EOF
-
-<<write literal saying [[\end{document}]]>>=
-cat <<EOF
-@literal \end{document}
-@nl
-EOF
-  
-@
+<<if verbose, make noise about pipeline>>=
+if [ -n "$verbose" ]; then
+  echo $markup $arkopts $arg '|' 1>&2
+  if   [ -n "$filtera" ]; then echo $filtera '|' 1>&2; fi
+  if   [ -n "$filterb" ]; then echo $filterb '|' 1>&2; fi
+  if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
+  if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
+fi
