@@ -1,5 +1,5 @@
 \documentstyle[noweb]{article}
-\pagestyle{noweb}
+\pagestyle{noweb}\noweboptions{shortxref}
 \begin{document}
 Missing ``{\tt @xref tag} {\it label tag},'' where {\it label} is the name of 
 a label and {\it tag} is a chunk number, page number, sub-page number, or
@@ -29,7 +29,7 @@ end
 while case(a := get(args)) of {
   "-delay"     : delay := 1
   "-docanchor" : anchordist := integer(get(args))
-  default      : write(&errout, "noidx: unknown argument ", image(a))
+  default      : fatal("unknown argument ", image(a))
 }
 @
 <<*>>=
@@ -75,12 +75,15 @@ procedure pass1(name, arg)
         addud(chunkud, "defn", arg, lastanchorlabel)
         thisusecount := 0
       }
-    "use"   : {
-        insert(allchunks, arg)
-        slipin("@xref label " || lastdefnlabel || "-u" || (thisusecount +:= 1))
-        addlabel(uses, arg, lastanchorlabel)
-        addud(chunkud, "use", arg, lastanchorlabel)
-      }
+    "use"   : 
+        if match ("code ", lastbeginarg) then {
+          insert(allchunks, arg)
+          slipin("@xref label " || lastdefnlabel || "-u" || (thisusecount +:= 1))
+          addlabel(uses, arg, lastanchorlabel)
+          addud(chunkud, "use", arg, lastanchorlabel)
+        } else {
+          /textnonblank := upto(nonblank, arg)   # could appear in quoted code
+        }
     "index" : {
         <<shift [[name]] and [[arg]]>>
         case name of {
@@ -176,6 +179,7 @@ procedure pass2(name, arg)
            default : <<copy [[name]] and [[arg]] to output>>
        	 }
        else <<copy [[name]] and [[arg]] to output>>
+    "fatal" : { <<copy [[name]] and [[arg]] to output>>; exit(1) }
     default : <<copy [[name]] and [[arg]] to output>>
   }
   return
@@ -256,15 +260,39 @@ end
 <<initialization>>=
 every chunkud | indexud := table();
 @
+Because it's silly to have both a use and a definition point to the same chunk, 
+I strip out uses that list the same chunk as their definitions.
+<<*>>=
+procedure strip_extra_uses(udlista)
+  local old, new, item
+  old := copy(udlista)
+  new := []
+  while item := get(old) do
+    item ? 
+      if ="defn " then 
+        <<add item if needed>>
+      else if ="use " then 
+        if "defn " || tab(0) == !(old|new) then
+          &null # write(&errout, "Stripped extra ", item)
+        else
+          <<add item if needed>>
+  return new
+end
+<<add item if needed>>=
+{ new[-1] == item | put(new, item) }
+@
 [[uniqueid]] eliminates both {\TeX} and HTML specials.
 <<*>>=      
 procedure uniqueid(name)
   local key
-  static idtable, keycounts
-  initial { idtable := table() ; keycounts := table(0) }
+  static idtable, keycounts, badchars, badstars
+  initial { idtable := table() ; keycounts := table(0) 
+            badchars := ~ (&letters ++ &digits ++ '!$()*+,./:;=?@|')
+            badstars := repl("*", *badchars)
+          }
 
   if not member(idtable, name) then {
-    key := make_key(map(name, " \\{}-[]`#%&~_^<>\"", "*****************"))
+    key := make_key(map(name, badchars, badstars))
     keycounts[key] +:= 1
     idtable[name] := key 
     if keycounts[key] > 1 then idtable[name] ||:= "." || alphacode(keycounts[key])
@@ -312,7 +340,7 @@ procedure lognowebindex()
   write("@index beginindex")
   while name := get(l) do {
     write("@index entrybegin ", (\indexanchorlabel[name] | "nw@notdef"), " ", name)
-    every write("@index entry", !\indexud[name])
+    every write("@index entry", !strip_extra_uses(\indexud[name]))
     write("@index entryend")
   }
   write("@index endindex")
@@ -346,6 +374,18 @@ procedure alphacode(n)
            alphacode(n / *codes) || alphacode(n % *codes)
          else
            codes[n+1]
+end
+@ 
+<<*>>=
+procedure fatal(L[])
+  write!(["@fatal noidx "] ||| L)
+  write!([&errout, "noweb error in noidx: "] ||| L)
+  exit(1)
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
 end
 @
 \section{List of chunks}
