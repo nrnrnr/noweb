@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 \subsection{Expanding multiple files from a single source}
@@ -5,6 +6,7 @@ This main program is used to make the monolithic {\tt noweb}
 script efficient.
 Tips of the hat to Ross Williams and Preston Briggs.
 <<*>>=
+static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -27,13 +29,15 @@ main(int argc, char **argv) {
 
     tabsize = 0;  /* default for nt is not to use tabs */
 
+    progname = argv[0];
+    finalstage = 1;
     <<read standard input into tree>>
     for (i=1; i<argc; i++) 
       switch (*argv[i]) {
         case '-': <<handle option in [[argv[i]]]>>                 break;
         default:  emitfile(argv[i]);                               break;
       }
-    exit(errorlevel);
+    nowebexit(NULL);
     return errorlevel;          /* slay warning */
 }
 @
@@ -68,7 +72,11 @@ void emit_if_unused_and_conforming(Module mp) {
     if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL)
         if (index = strpbrk(mp->name, "[](){}!$&<>*?;|^`'\\\""),
             index == NULL || index[0] == '*' && index[1] == 0)
-            emitfile(mp->name);
+	    if (index == mp->name)
+	        errormsg(Error, "@<<*@>> is not a good chunk name for noweb; "
+	                        "use notangle instead");
+	    else
+	        emitfile(mp->name);
         else 
             errormsg(Error, "@<<%s@>> cannot be an output chunk; "
                             "it contains a metacharacter", mp->name);
@@ -177,3 +185,4 @@ extern char *tempnam (const char *dir, const char *pfx);        /* temp file in 
 #define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
 #endif
 @ %def tempnam
+
