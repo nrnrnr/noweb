@@ -225,6 +225,7 @@ substitution("Diamond", "&lt;&gt;")
 substitution("langle",  "&lt;")
 substitution("rangle",  "&gt;")
 substitution("le",      "&lt;=")
+substitution("ne",      "!=")
 substitution("ge",      "&gt;=")
 substitution("times",   "&times;")
 substitution("divide",  "&divide;")
@@ -271,7 +272,7 @@ envblock("center", "blockquote")
 envblock("flushleft", "blockquote")
 envblock("flushright", "blockquote")
 envblock("verse", "blockquote")
-verbatim("verbatim", escape_HTML_specials, "\\end{verbatim}", "pre")
+verbatim("verbatim", escape_HTML_specials, "pre")
 cstab["verb"] := Cverb
 cstab["verb*"] := Cverb
 csclosure["verb*"] := 1
@@ -291,6 +292,7 @@ ignore("documentstyle", "[{")
 ignore("documentclass", "[{")
 ignore("usepackage", "[{")
 ignore("pagestyle", "{")
+ignore("thispagestyle", "{")
 ignore("pagenumbering", "{")
 ignore("newcounter", "{")
 ignore("global")
@@ -329,7 +331,7 @@ I can find one.
 ignore("bibliographystyle", "{")
 auxfile("bibliography", "bbl", "<b>[BibTeX bibliography]</b>", &null, &null, "{")
 envblock("thebibliography", "<h2>References</h2>", "", "{")
-cstab["cite"] := Ccite
+every cstab["cite" | "citeN" | "opencite" | "openciteN" | "citeyear"] := Ccite
 cstab["bibitem"] := Cbibitem
 ignore("newblock")
 ignore("nocite", "{")
@@ -426,11 +428,13 @@ cstab["span"] := Cspan
 cstab["noalign"] := Cnoalign
 cstab["hline"] := Chline
 ignore("cline", "{")
+ignore("newcolumntype", "{{")
 @
 \subsubsection{Definitions}
 <<control-sequence assignments>>=
 ignore("newcommand", "A[[{")
 ignore("renewcommand", "A[[{")
+ignore("providecommand", "A[[{")
 ignore("newenvironment", "{[{{")
 ignore("renewenvironment", "{[{{")
 ignore("newtheorem", "{{")
@@ -477,6 +481,13 @@ every ignore("leftmargini" | "leftmarginii" | "labelsep" | "fboxsep", "=")
 every ignore("tabcolsep", "=")
 every ignore("evensidemargin" | "marginparsep" | "marginparwidth" | 
              "oddsidemargin" | "textheight" | "textwidth" | "topmargin", "=")
+<<control-sequence assignments>>=
+ignore("DeclareMathVersion", "{")
+ignore("mathversion", "{")
+ignore("setpapersize", "{")
+ignore("setmarginsrb", "{{{{{{{{")
+ignore("marginparwidth", "=")
+ignore("marginparsep", "=")
 @
 \subsection{Control sequences from various {\LaTeX} packages}
 <<control-sequence assignments>>=
@@ -484,6 +495,7 @@ ignoreenv("multicols", "{C")
 cstab["citeN"] := Ccite
 ignore("afterpage", "{")
 every cstab["psfig"|"epsfig"] := Cepsfig
+cstab["includegraphics"] := Cincludegraphics
 ignore("newcolumntype", "{{")
 @
 A (perhaps vain) attempt to implement \verb+\kill+.
@@ -498,6 +510,7 @@ substitution("cr", "<br>")
 substitution("hrule", "<hr>")
 substitution("vrule", "|")
 substitution("hrulefill", "------")
+ignore("hyphenation", "{")
 ignore("hbox")
 ignore("rlap")
 ignore("llap")
@@ -577,15 +590,21 @@ Also gobble any trailing whitespace.
 cstab["char"] := asciiCharCode
 <<*>>=
 procedure asciiCharCode(S)
-   return emit_text(S, char(2(optwhite(), tab(many(&digits)), optwhite())))
+   return emit_text(S, char(2(optwhite(), TeXnumber(), optwhite())))
+end
+procedure TeXnumber()
+  return integer(
+    (="'",   "8r" || tab(many(&digits))) |
+    (="\"", "16r" || tab(many(&digits))) |
+    tab(many(&digits)))
 end
 @
 \subsection{HTML support}
 <<control-sequence assignments>>=
 macro("nwanchorto",   2, "<a href=\"#$1\">#2</a>")
 macro("nwanchorname", 2, "<a name=\"#$1\">#2</a>")
-verbatim("latexonly", do_nothing, "\\end{latexonly}")
-verbatim("rawhtml", emit_text, "\\end{rawhtml}")
+verbatim("latexonly", do_nothing)
+verbatim("rawhtml", emit_text)
 @
 \subsection{Other control sequences}
 Here's some stuff that might be plain {\TeX}.
@@ -1054,13 +1073,16 @@ and possibly  tag for an HTML wrapper around the environment.
 <<*>>=
 record verbatim_cl(output, terminator, html, translate_blank)
 
-procedure verbatim(name, output, terminator, html)
+procedure verbatim(name, output, html)
   begintab[name] := Cverbatim
-  begincl [name] := verbatim_cl(output, terminator, html)
+  begincl [name] := verbatim_cl(output, &null, html)
   return
 end
 
 procedure Cverbatim(S, cs, cl)
+  if cl === begincl[cs] & /cl.terminator then
+    cl := begincl[cs] :=
+      verbatim_cl(cl.output, "\\end{" || cs || "}", cl.html, cl.translate_blank)
   emit_text(S, tag(\cl.html))
   delay_newtext(S)
   do_verbatim(S, cl)
@@ -1568,11 +1590,19 @@ end
 @
 The double backslash is the end of a row, unless it's buried in braces
 or there's no table.
+We have to be careful about ignoring a square bracket, because if the
+[[\\]] is at the end of a line, we won't know until we see the newline
+that it's not a bracket, and we don't see the newline until we get the
+next text.
+We therefore must use a continuation-passing style for this ignore.
 <<*>>=
 procedure Cbackback(S, cs, cl)
   local this
   this := S.tables[1]
-  cs_ignore(S, cs, "[")
+  cs_ignore(S, cs, "[", Cbackback_continue, [S, this])
+end
+
+procedure Cbackback_continue(S, this)
 #if /(\this).brace_depth then write(&errout, image(this), " has null brace depth")
   if /this | *S.closes > this.brace_depth then { # ordinary \\
     S.text(S, "<br>")
@@ -1864,6 +1894,8 @@ procedure Caccent(S, cs, cl)
   static warned
   initial warned := table()
   arg := csarg(S) | return
+  if arg == "\\i" then arg := "i"
+  if arg == "\\j" then arg := "j"
   if *arg = 1 & any(accent_valid[cs], arg) then
     S.text(S, "&" || arg || accent_name[cs] || ";")
   else {
@@ -2186,8 +2218,14 @@ procedure Cblock(S, cs, cl, done_ignoring)
     S.text(S, cl.left)
     after_next_open(S, before_next_close, [S, emit_text, [S, cl.right]])
   } else {
-    S.text(S, cl.left || csarg(S) || cl.right)
+#    S.text(S, cl.left || csarg(S) || cl.right)
+    apply_args(S, Cblock_continue, [S, cl], 1)
   }
+  return
+end
+
+procedure Cblock_continue(S, cl, title)
+  S.text (S, cl.left || title || cl.right)
   return
 end
 <<*>>=
@@ -2400,6 +2438,20 @@ procedure eqsplit(s)
   s ? (p.name := tab(upto('=')), ="=", p.value := tab(0))
   return p
 end
+@ 
+<<*>>=
+procedure Cincludegraphics(S, cs, cl)
+  apply_args(S, do_includegraphics, [S], 1)
+end
+
+procedure do_includegraphics(S, arg) 
+  local base, ext
+  if arg ? (base := tab(find(ext := ".ps" | ".eps" | ".epsi")), =ext, pos(0)) then
+    emit_text(S, "<a href=" || image(arg) || "><b>[</b>PostScript figure " ||
+	          arg || "<b>]</b></a>")
+  else
+    emit_text(S, "<b>[</b>Ill-understood graphics<b>]</b>")
+end
 @
 \subsection{Control-sequence assignment}
 This procedure is available to be used for dynamic assignment.
@@ -2412,6 +2464,13 @@ end
 
 procedure let_closure(lhs, cl[])
   csclosure[lhs] := if *cl = 1 then cl[1] else cl
+end
+
+procedure letenv(lhs, rhs)
+  begintab[lhs] := begintab[rhs]
+  endtab[lhs] := endtab[rhs]
+  begincl[lhs] := begincl[rhs]
+  endcl[lhs] := endcl[rhs]
 end
 @
 \section{HTML formatting}
@@ -2508,6 +2567,7 @@ csfunctions["fontchange"] := fontchange
 csfunctions["ignore"] := ignore
 csfunctions["ignoreenv"] := ignoreenv
 csfunctions["let"] := let
+csfunctions["letenv"] := letenv
 csfunctions["listenv"] := listenv
 csfunctions["substitution"] := substitution
 csfunctions["activesubst"] := activesubst
@@ -2701,8 +2761,8 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: l2h.nw,v 1.6 1997/09/13 20:13:41 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 @
 \section{Chunks}
