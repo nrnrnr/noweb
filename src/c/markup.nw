@@ -21,6 +21,7 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
+static char rcsid[] = "$Id$";
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -172,34 +173,6 @@ void getmodname(char *dest, int size, char *source) {
         ("I couldn't manage to extract a module name, but I'm sure I saw one");
 }
 @
-Finding code-quoting brackets is a simple application of 
-[[find_escaped]].
-<<header>>=
-char *quote_start (char *s, int mark);    /* find open code quote ([[) */
-char *quote_end (char *s, int mark);      /* find close code quote (]]) */
-<<C functions>>=
-char *quote_start(char *s, int mark) {
-    return find_escaped(s,"[[",NULL, mark);
-}
-@ %def quote_start
-To find the end of a quote, I must take the last pair in a series of
-two or more right brackets.
-<<C functions>>=
-char *quote_end(char *s, int mark) {
-    char *t = find_escaped(s, "]]", NULL, 0);
-    if (t == NULL) 
-        return t;
-    else {
-        t -= 2;         /* subtract length of ]] */
-        assert(t[0] == ']' && t[1] == ']');
-        while (t[2] == ']') t++;
-        assert(t[0] == ']' && t[1] == ']');
-        if (mark) *t = 0;
-        return t+2;
-    }
-}
-@ %def quote_end
-
 Here we do the magic [[find_escaped]].
 Find an arbitrary character seqence, skipping an escaped sequence (if any),
 replacing the beginning with [['\0']] if [[mark]] is set.
@@ -240,28 +213,3 @@ char *find_escaped(register char *s, char *search, char *escape, int mark) {
 }
 @ %def find_escaped
 
-Finally, here with the other character stuff, we put a routine to
-translate the escape sequences.
-It's used by {\em notangle} after the module names have been extracted,
-so we can put things like [[@<<]] into program source.
-At the moment, only the module name delimiters can be escaped or need escaping.
-
-[[unescape]] returns a fresh string, allocated with [[malloc]].
-<<header>>=
-char *unescape (char *s); /* returns fresh copy of s with escapes translated */
-<<C functions>>=
-char *unescape (char *s) {
-    char *t = malloc(strlen(s)+1);
-    char *r = t;
-    checkptr(t);
-    while (*s != '\0') {
-        if (*s == at_sign) {
-            if (!strncmp(s+1,"@<<",2) || !strncmp(s+1,"@>>",2)) s++;
-        }
-        *t++ = *s++;
-    }
-    *t = '\0';
-
-    return r;
-}
-@ %def unescape
