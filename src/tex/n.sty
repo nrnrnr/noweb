@@ -1,0 +1,159 @@
+\def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
+\let\filbreak=\semifilbreak
+\raggedbottom
+\def\begindocument{\begin{document}}
+
+\def\LL{<<}
+\def\GG{>>}
+\def\LLS{[[}
+\def\RRS{]]}
+
+% make \hsize in code sufficient for 88 columns
+\setbox0=\hbox{\tt m}
+\newdimen\codehsize
+\codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
+\newdimen\codemargin
+\codemargin=10pt
+\advance\codehsize by \codemargin
+
+\begingroup \catcode `|=0 \catcode `[= 1
+\catcode`]=2 \catcode `\{=12 \catcode `\}=12
+\catcode`\\=12 |gdef|@xbegincode#1|endcode[#1|@xendcode]
+|gdef|@xwebcode#1\end{webcode}[#1|end[webcode]]
+|endgroup
+
+
+\def\@gobble#1{}
+
+\def\@begincode{\par\linewidth\codehsize\hsize\codehsize\textwidth\codehsize
+\trivlist \item[]\if@minipage\else\vskip\parskip\fi
+\leftskip\@totalleftmargin\rightskip\z@
+\advance\leftskip\codemargin
+\parindent\z@\parfillskip\@flushglue\parskip\z@
+\@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}
+\obeylines \tt \catcode``=13 \@noligs \setupcode}
+
+\def\begincode#1{\begingroup\@begincode \frenchspacing\@vobeyspaces \@xbegincode}
+\def\@xendcode{\endtrivlist\endgroup}
+
+\def\webcode{\@webcode \frenchspacing\@vobeyspaces \@xwebcode}
+\let\endwebcode=\endtrivlist
+
+
+\chardef\other=12
+\def\setupcode{
+  \chardef\\=`\\
+  \chardef\{=`\{
+  \chardef\}=`\}
+  \catcode`\$=\other
+  \catcode`\&=\other
+  \catcode`\#=\other
+  \catcode`\%=\other
+  \catcode`\~=\other
+  \catcode`\_=\other
+  \catcode`\^=\other
+  \obeyspaces \@vobeyspaces\tt
+}
+\def\setupmodname{%
+  \catcode`\$=3
+  \catcode`\&=4
+  \catcode`\#=6
+  \catcode`\%=14
+  \catcode`\~=13
+  \catcode`\_=8
+  \catcode`\^=7
+  \catcode`\ =10
+  \catcode`\^^M=5
+  \rm}
+\def\LA{\begingroup\setupmodname\it$\langle${}}
+\def\RA{\/$\rangle$\endgroup}
+\def\code{\leavevmode\begingroup\setupcode}
+\def\edoc{\endgroup}
+
+\def\begindocs#1{\relax}
+\def\enddocs{\relax}
+\newbox\equivbox
+\setbox\equivbox=\hbox{$\equiv$}
+\newbox\plusequivbox
+\setbox\plusequivbox=\hbox{$\mathord{+}\mathord{\equiv}$}
+% \moddef can't have an argument because there might be \code...\edoc
+\def\moddef{\leavevmode\kern-\codemargin\LA}
+\def\endmoddef{\RA\unhcopy\equivbox}
+\def\plusendmoddef{\RA\unhcopy\plusequivbox}
+
+\def\filename#1{\vfil\eject\mark{#1}}
+
+
+\let\chunklist=\relax
+
+%%%%%%%%%%%%%%%% following code supports cross-referencing
+% lists of page references cause all the trouble
+
+
+\def\alsodefined#1{\hspace{-\parindent}{\footnotesize\rm 
+	This definition is continued on \pages{#1}.}}
+\def\used#1{\hspace{-\parindent}{\footnotesize\rm 
+	This code is used on \pages{#1}.}}
+\def\notused{\hspace{-\parindent}{\footnotesize\rm 
+	Root module (not used in this document).}}
+
+
+\def\empty{}
+\def\lop#1\to#2{\expandafter\lopoff#1\lopoff#1#2}
+\long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
+\def\loop#1\repeat{\def\iterate{#1\expandafter\iterate\fi}%
+	\iterate \let\iterate\relax}
+
+\def\thepageref#1{\@ifundefined{r@#1}{0\@warning
+   {Reference `#1' on page \thepage \space 
+    undefined}}{\@nameuse{r@#1}}}
+
+\newcount\lastpage
+\newcount\thispage
+\newcount\pagesout
+
+\def\dosetpage#1#2#3\@nil{\thispage=#2\relax}
+
+\def\setthispage#1\done{%
+   \@ifundefined{r@#1}{{\bf ??}\@warning
+   {Reference `#1' on page \thepage \space 
+    undefined}\thispage=0}{\edef\@tempa{\@nameuse{r@#1}}\expandafter
+    \dosetpage\@tempa\@nil}}
+
+\def\setpagenumbers#1{%
+  \def\thepages{#1}%
+  \def\pagenumbers{}%
+  \lastpage=-1
+  \loop\ifx\thepages\empty\else
+     \lop\thepages\to\lastref
+    \expandafter\setthispage\lastref\done
+    \ifnum\thispage=\lastpage \else
+      \edef\pagenumbers{\pagenumbers\noexpand\\{\the\thispage}}%
+      \lastpage=\thispage  
+    \fi
+  \repeat}
+
+\def\pages#1{%
+  \setpagenumbers{#1}%
+  \expandafter\dopages\pagenumbers\done
+}
+
+\def\dopages#1\done{%
+  \def\thepages{#1}%
+  \lop\thepages\to\lastref
+  \lastpage=\lastref
+  \ifx\thepages\empty page \else pages \fi
+  \the\lastpage
+  \pagesout=1
+  \loop\ifx\thepages\empty\else
+    \lop\thepages\to\lastref
+    \thispage=\lastref
+    \ifx\thepages\empty 
+       \ifnum\pagesout>1 , \else{} \fi
+       and 
+    \else ,
+    \fi 
+    \the\thispage
+    \advance\pagesout by 1
+    \lastpage=\thispage  
+  \repeat}
