@@ -14,7 +14,6 @@ details later.
 void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
 <<*>>=
 #define MAX_MODNAME 255
-#define MAX_EXPANSION_LEVEL 50
 @
 <<*>>=
 #include <stdio.h>
@@ -38,7 +37,7 @@ void notangle (FILE* in, FILE *out, char *rootname, char *locformat) {
 
     root = lookup(rootname);
     <<quit if we couldn't find the root>>
-    (void) expand(root,0,0,MAX_EXPANSION_LEVEL,locformat,out);
+    (void) expand(root,0,0,0,locformat,out);
     putc('\n',out);                     /* make output end with newline */
 }
 @
