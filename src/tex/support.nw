@@ -656,7 +656,7 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
   <<add range to range list>>%
   \def\\##1{\@nwhyperpagenum##1\let\\=\@nwpagenumslrest}\nw@pages}
-\def\@pagenumslrest#1{~\@nwhyperpagenum#1}
+\def\@nwpagenumslrest#1{~\@nwhyperpagenum#1}
 <<noweb.sty>>=
 \def\subpages#1{% list of {{subpage}{page}}
   \gdef\nw@pages{}\@nwpagecount=0
