@@ -1,10 +1,12 @@
 \section{Finding definitions in ANSI C}
 <<*>>=
+global decls_ok
 procedure main(args)
+  decls_ok := !args == "-decl"
   go()
 end
 <<*>>=
-global typespecs, storespecs, typequals, specifiers, structlike
+global typespecs, storespecs, typequals, otherspecs, structlike
 procedure postpass(name, arg)
   local tok, stat
   static kind
@@ -14,7 +16,7 @@ procedure postpass(name, arg)
     typespecs := set(["void", "char", "float", "short", "signed", 
                       "int", "double", "long", "unsigned"])
     typequals := set(["const", "volatile"])
-    specifiers := storespecs ++ typespecs ++ typequals
+    otherspecs := storespecs ++ typequals
     structlike := set(["struct", "union", "enum"])
   }
   case name of {
@@ -30,19 +32,23 @@ procedure postpass(name, arg)
         } else {
 	  specifier_count := 0
           stat := &null		# haven't seen static yet
+          seenType := &null
           while (
-            (c_ident_token() == "extern", return)         |
-            (member(specifiers, tok := c_ident_token(), 
-                          stat := look_for_static(stat, tok))) | # swallow a specifier
+            (/decls_ok & c_ident_token() == "extern", return)         |
+            (member(typespecs, c_ident_token()), seenType := 1) | # swallow type
+            (member(otherspecs, tok := c_ident_token()), 
+                          stat := look_for_static(stat, tok)) | # swallow a specifier
             (member(structlike, c_ident_token()),          # struct with optional tag
              c_ident_token() | &null) |
-            (any(&ucase, c_ident_token()))           # assume a typedef'd type, skip
+            (/seenType, any(&ucase, c_ident_token()), seenType := 1)
+         	                                        # assume a typedef'd type, skip
           ) do
             specifier_count +:= 1
+## write(&errout, "skipped ", specifier_count, " specifiers")
           if f := scan_function() then
-            if c_token() == (";"|",") then fail else {
-#	      write(&errout, "function ", image(f), " followed by ", 
-#                    image(c_token()) | "<EOL>")
+            if /decls_ok & c_token() == (";"|",") then fail else {
+##		write(&errout, "function ", image(f), " followed by ", 
+##		      image(c_token()) | "<EOL>")
               wd(f, stat)
               return
             }
@@ -90,12 +96,12 @@ end
 
 procedure scan_function()
   (f := c_ident_token(),
-##write(&errout, "  try function ", image(f)),
+#write(&errout, "  try function ", image(f)),
    tab(many(' \t')) | &null,
    any('('),
    *tab(bal()) > 0 |
       (="(", *tab(bal(',', '[{(', ')}]')) > 0, =",", optwhite(), pos(0)),
-##write(&errout, "  caught function trailing ", image(&subject[&pos:0])),
+#write(&errout, "  caught function trailing ", image(&subject[&pos:0])),
    suspend f
   )
 end
@@ -120,7 +126,7 @@ procedure look_for_static(stat, tok)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: cdefs.nw,v 1.2 1997/09/13 20:11:58 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 @
