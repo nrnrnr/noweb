@@ -46,12 +46,16 @@ Notes:
   unless you know what you're doing.
 
   tose.* contains a paper that has been submitted to the IEEE
-  Transactions on Software Engineering.  The representation discussed
-  in that paper (and emitted by markup) is not yet documented anywhere.
+  Transactions on Software Engineering.  You must `make install'
+  before attempting to format the paper, since it uses the noweb
+  document style option.
 
-  If you're interested in other tools (e.g. prettyprinters, index
-  generators), let me know.
-
+  representation.tex documents the representation of noweb files that
+  is used by the noweb tools, in case you want to write any tools of
+  your own.  Simple one-off tools (e.g. count the number of lines of
+  interleaved documentation) are trivial.  If you write any tools, or
+  you want tools written (e.g. prettyprinters, index generators), let
+  me know.
 
 Comments or questions to nr@princeton.edu.  I enjoy hearing from noweb
 users; if you have enjoyed noweb, why not send me a local postcard for
