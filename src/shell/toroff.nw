@@ -1,0 +1,617 @@
+.nr N 4
+.nr O 1i
+.nr P 2
+.nr W 6.5i
+.fp 1 PR
+.fp 2 PI
+.fp 3 PB
+@ .ft 1
+.S 18 18
+'ce
+Converting noweb markup to troff markup
+.sp 0.5i
+.S 12 15
+.PH "'Converting noweb markup to troff markup''%'"
+.P
+Toroff is a noweb backend for formatting text with troff
+markup.  Toroff was written by Phil Bewig ([[pbewig@netcom.com]])
+during April, 1996, and contributed to Norman Ramsey's noweb
+literate programming system.  Liam Quin ([[lee@sq.com]]) provided technical
+assistance with troff.
+Norman Ramsey made the code easier to port and made it conform with
+his idea of the noweb philosophy.
+.P
+The high-level view of toroff is that it comes in two parts.
+The first part is an ordinary back end, which produces 
+troff augmented with special comments, using the [[.tm]] macro.
+The second part, [[noroff]], runs troff, with all of its
+pre-processors and post-processors.
+[[noroff]] also processes the
+comments in to a [[tags]] file.
+Moreover, [[noroff]] gathers from the tags file the
+cross-referencing information gathered on the previous formatting run.
+The trick that makes the whole thing work is that the
+troff markup added by toroff causes cross-referencing
+information to be written to standard error during the formatting run;
+the [[noroff]] script cleverly gathers this material into 
+the [[tags]] file, 
+which can be used as input to the next
+formatting run.
+As with LaTeX,  the cross-referencing information is always one
+formatter run behind, and to get a consistent document you must keep
+running [[noroff]] until you reach a fixed point.
+([[noroff]] ought to provide some help for this, to show when the tags
+file has changed, for example.)
+.HU "The shell wrapper"
+Toroff is implemented as an awk program in a shell wrapper, and
+uses a macro package to control the final formatting.  In the following
+discussion, a sample macro package, suitable for use with either [[-mm]]
+or [[-ms]], is presented alongside the awk code which calls the
+macros.  Users may wish to modify the sample macros to suit local
+preferences.  Many do-nothing macros are provided as user exits so
+knowledgeable users can modify document formatting without changing
+the awk program.
+<<toroff>>=
+#!/bin/sh
+<<process arguments>>
+<<invoke awk program>>
+@ .P
+Processing arguments is simple.
+<<process arguments>>=
+delay=0 noindex=0
+for i do
+    case $i in
+        -delay)    delay=1   ;;
+        -noindex)  noindex=1 ;;
+        *) echo "This can't happen -- $i passed to toroff" 1>&2;
+           exit 1;;
+    esac
+done
+@ %def delay noindex
+.P
+Invoking the awk program is hard, because the program uses both
+single quotes and double quotes, so neither can be used to protect the
+other, and quoting each quote is ugly.  The pragmatic solution is to
+copy the awk program into a temporary file, using a shell here-document.
+<<invoke awk program>>=
+export awkfile="/tmp/noweb$$.awk"
+trap 'rm -f $awkfile' 0 1 2 10 14 15
+cat > $awkfile << 'EOF'
+<<awk program>>
+EOF
+awk -f $awkfile -v tagsfile=$tagsfile delay=$delay noindex=$noindex macrodir=|LIBDIR|
+@ %def awkfile tagsfile
+.HU "The main program"
+The overall structure of the awk program is simple.  The [[tags]]
+file is processed in the [[BEGIN]] action, and the noweb source is
+processed by awk's pattern-action loop.
+<<awk program>>=
+<<read and process noweb source>>
+<<functions>>
+@ .HU "Beginning and ending the document"
+The [[-delay]] option allows the initial document chunk to be processed
+before reading the macro packages, so that necessary initialization may
+be performed.  The only commands which are useful in such an initial chunk
+are bare troff commands.  The delay is handled by special patterns for
+the initial document chunk.  Because several noweb files can be
+processed in the same formatting run, there can be several document
+chunks numbered zero.  The later ones are not treated specially, by the
+simple expedient of turning off [[delay]] after the first one.  This
+code also handles the [[trailer]] at the end of the document.
+<<read and process noweb source>>=
+/^@begin docs 0$/ { if (delay) next }
+/^@end docs 0$/ { if (delay) { <<load macro package>>; delay = 0; next } }
+/^@header m/ { macros = substr($0, 10)
+               if (!delay) { <<load macro package>> } }
+/^@trailer/ { print ".ENDOFDOCUMENT" }
+@ %def macros
+<<tmac.w>>=
+.de ENDOFDOCUMENT
+..
+@ .P
+The location of [[macrodir]] is likely to require customization.
+<<load macro package>>=
+printf ".so %s/tmac.%s\n", macrodir, macros
+printf ".so %s/tmac.w\n", macrodir
+printf ".BEGINNINGOFDOCUMENT\n"
+@ %def macrodir
+<<tmac.w>>=
+.de BEGINNINGOFDOCUMENT
+..
+@ .HU "Labels, references, and section numbers"
+Here is the code to number code chunks in the page-number-and-letter
+style used by noweb.  The current page number is always stored in
+troff's [[%]] number register, and we will arrange an
+auto-incrementing number register [[SECTIONLETTER]] which is
+reset at each top-of-page and is formatted as lower-case alphabetic
+characters using troff's [[.af]] request.  The top-of-page trap is
+sprung one unit below the top of the page in order not to interfere with
+the top-of-page macros of [[-mm]] or [[-ms]].
+<<read and process noweb source>>=
+/^@xref label/ { lastxreflabel = $3 }
+/^@xref ref/ { lastxrefref = tag(substr($0, 11)) }
+@ %def lastxreflabel lastxrefref
+<<tmac.w>>=
+.de RESETLETTER                     \" reset letter at top of page
+.nr SECTIONLETTER 0 1               \" count code sections on same page
+.af SECTIONLETTER a                 \" ... formatted as lower-case alpha
+..
+.wh 1u RESETLETTER                  \" trap just below top of page
+@ .P
+Note that the link information on the previous chunk shows that this
+chunk uses the [[code]] variable, when in fact [[code]] only appears
+as text within a comment.  This error is an artifact of the language
+independence of noweb.
+@ .HU "Beginning and ending chunks"
+Except for the initial document chunk, which was processed above, all
+beginnings and endings of documentation and code chunks are processed
+here.  Variable [[code]] is [[0]] in text chunks, [[1]] in code
+chunks and [[2]] in quoted code.  The argument to
+the [[.ENDCODECHUNK]] macro is the label which was in effect when the
+code chunk was started, which is stored in the variable [[lastdefnlabel]].
+<<read and process noweb source>>=
+/^@begin docs/ { printf ".BEGINDOCCHUNK\n" }
+/^@end docs/ { printf ".ENDDOCCHUNK\n" }
+/^@begin code/ { code = 1; printf ".BEGINCODECHUNK\n" }
+/^@end code/ { code = 0; printf ".ENDCODECHUNK %s\n", lastdefnlabel }
+@ %def code
+.P
+The macros related to document chunks are simple:  [[.BEGINDOCCHUNK]] does
+nothing, and [[.ENDDOCCHUNK]] merely flushes any unprinted output.
+<<tmac.w>>=
+.de BEGINDOCCHUNK
+..
+.de ENDDOCCHUNK
+.br
+..
+@ .P
+A code chunk uses a font, type size, leading, fill and adjust modes,
+indent and tab stops which are distinct from those in the documentation.
+These environment variables must be saved on entering a code chunk,
+appropriate values for a code chunk must be established, and the
+original values restored at the end of a code chunk.
+<<tmac.w>>=
+.de BEGINCODECHUNK
+.sp 0.4v
+<<save environment>>
+<<set local environment>>
+.di CODECHUNK
+..
+.de ENDCODECHUNK
+<<read back code chunk from diversion>>
+<<restore environment>>
+..
+@ .P
+The code below replaces the built-in [[.ta]] tab-setting command with a
+custom tab-setting command that allows tab stops to be reset and later
+recalled.
+<<tmac.w>>=
+.rn ta real_ta
+.de ta
+.ds ta_saved \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.real_ta \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+..
+@ .P
+The font, type size and leading require two saved values, so
+that both the current value and the previous value can be restored.
+<<save environment>>=
+.nr OLDft \\n(.f
+.ft P
+.nr PREVft \\n(.f
+.nr OLDps \\n(.s
+.ps
+.nr PREVps \\n(.s
+.nr OLDvs \\n(.v
+.vs
+.nr PREVvs \\n(.v
+.nr OLDfi \\n(.u
+.nr OLDad \\n(.j
+.nr OLDin \\n(.in
+@ .P
+Code is printed in a constant-width font at 80% the size of document text.
+Code is collected in fill mode with explicit breaks after each line;
+although it might seem more natural to collect lines of code in no-fill
+mode, that is not possible here because uses of code chunks must be able
+to appear on the same line as actual code.
+<<set local environment>>=
+.ft CW
+.ps \\n(.s*4/5
+.vs \\n(.vu*4u/5u
+.in +0.5i
+.real_ta 0.5i 1i 1.5i 2i 2.5i 3i 3.5i 4i
+.fi
+@ .P
+In order to prevent page breaks within code chunks, each code chunk
+is read into a diversion and a page break is issued if the code chunk
+is too big to fit on the current page.  After the diversion is read back
+in, when it is known what page the code is printed on, the location of
+the code chunk is written using a [[.tm]] command.
+<<read back code chunk from diversion>>=
+.br                        \" flush last line of code
+.di                        \" end diversion
+.if \\n(dn>\\n(.t .bp      \" force form feed if too big
+.nf                        \" no fill mode -- already formatted
+.in -0.5i                  \" don't re-indent when re-reading text
+.CODECHUNK                 \" output body of diversion
+.tm ###TAG### \\$1 \\n[%]\\n+[SECTIONLETTER] \" write tag info
+.rm CODECHUNK              \" reset diversion for next code chunk
+@ .P
+Finally, here is the code to restore the environment that existed before
+the beginning of the code chunk.
+<<restore environment>>=
+.ft \\n[PREVft]
+.ft \\n[OLDft]
+.ps \\n[PREVps]
+.ps \\n[OLDps]
+.vs \\n[PREVvs]u
+.vs \\n[OLDvs]u
+.if \\n[OLDfi] .fi
+.ad \\n[OLDad]u
+.in \\n[OLDin]u
+.real_ta \\*[ta_saved]
+@ .HU "Text, code, and quoted code"
+In text chunks, text is copied from input to output basically unchanged.
+However, when quoted code is included in a line of text, the quoted code
+is processed by separate macros and it is possible that the continuation
+of the line of text after the quoted code begins with a character which
+is special to troff at the beginning of a line:  a space, period, or
+single quote.  To prevent problems in this case, variable [[text]] is
+set to [[0]] at the beginning of each line and incremented whenever text
+is written, and each text after the first is guarded by a non-printing
+null character.
+<<read and process noweb source>>=
+/^@text/ && code == 0 { s = substr($0, 7)
+                        if (text++) printf "\\&"
+                        printf "%s", substr($0, 7) }
+/^@nl/ && code != 1 { text = 0; printf "\n" }
+@ %def text
+.P
+In code chunks, backslashes are replaced with troff's [[\e]] escape
+sequence and a non-printing null character is added at the beginning of
+each text to guard leading periods.  If your macro package issues a [[.ec]]
+command, this code will have to change; fortunately, both [[-mm]] and
+[[-ms]] are nicely-behaved with respect to escape characters.
+<<read and process noweb source>>=
+/^@text/ && code != 0 { s = substr($0, 7)
+                        gsub(/\\/, "\\e", s)
+                        printf "\\&%s\\c\n", s }
+@ .P
+Dealing with newlines in code chunks is surprisingly hard.  We would like
+to print lines of code in [[nofill]] mode, but since noweb's markup
+and filter programs may split lines of code, we are forced to use
+[[fill]] mode and deal with newlines ourselves.  Further, if a line is
+too long to print on a single line, it must be split, and the continuation
+line right-justified instead of left-justified.  All of this processing is
+accomplished by calling a macro at each newline; the macro plants a
+page-position trap at the next line so that any continuation line will be
+right-justified.
+<<read and process noweb source>>=
+/^@nl/ && code == 1 { printf ".NEWLINE\n" }
+<<tmac.w>>=
+.de LINETRAP
+.dt \\n[TRAPplace]u    \"cancel current trap
+'ad r                  \" right-adjust continuation lines
+..
+.de NEWLINE
+.dt \\n[TRAPplace]u    \" cancel current trap
+\&                     \" end continued word
+.br                    \" flush output
+<<plant newline trap>>
+..
+@ .P
+The newline trap is planted after each definition line, for the first
+line of code in the code chunk, and again after each newline in the
+code chunk.
+<<plant newline trap>>=
+.nr TRAPplace \\n(.du+1u       \" location of next trap
+.dt \\n[TRAPplace]u LINETRAP   \" plant trap at next line
+.ad l                          \" left-adjust first line
+@ .P
+Quoted code in a documentation chunk is printed within its own macros,
+which must not cause a break.
+<<read and process noweb source>>=
+/^@quote/ { code = 2; printf "\\c\n.BEGINQUOTEDCODE\n" }
+/^@endquote/ { code = 0; text++; printf ".ENDQUOTEDCODE\n" }
+<<tmac.w>>=
+.de BEGINQUOTEDCODE
+.nr SAVEft \\n(.f
+.ft P
+.nr SAVEftP \\n(.f
+.ft CW
+..
+.de ENDQUOTEDCODE
+.ft \\n[SAVEftP]
+.ft \\n[SAVEft]
+..
+@ .HU "Definitions and uses of code chunks"
+Definitions and uses of code chunks are handled below.  Variable
+[[defn[name]]] is set to a plus sign after a definition is printed, so
+that continuations of the definition are properly identified.  Variable
+[[lastxrefref]] is the tag associated with the most-recently-seen
+cross-reference label, and refers to the section number of the original
+definition of the code chunk.
+<<read and process noweb source>>=
+/^@defn/ { name = convquote(substr($0, 7))
+           lastdefnlabel = lastxreflabel
+           printf ".DEFINITION %s \"%s\" %s %s\n",
+                  tag(lastdefnlabel), name, lastxrefref, defn[name]
+           defn[name] = "\\(pl" }
+/^@use/ { name = convquote(substr($0, 6))
+          printf "\c\n"
+          printf ".USE \"%s\" %s\n", name, lastxrefref }
+@ %def name defn lastdefnlabel
+<<tmac.w>>=
+.de DEFINITION
+.ti -0.5i
+\\fR\\(sc\\$1	\\(oG\\$2 \\$3\\(cG \\$4\\(==\\fP
+<<plant newline trap>>
+..
+.de USE
+\\fR\\(oG\\$1 \\$2\\(cG\\fP\c   \" section name and original number
+..
+@ .P
+Processing of quoted code within definitions and uses is performed by the
+[[convquote]] function.  This must be processed differently than quoted
+code within text because the noweb markup program doesn't emit
+[[@quote]] .\|.\|. [[@endquote]] markers within definitions and uses.  And,
+because the subject string is used as an argument to a macro, it would not
+possible to call the [[.BEGINQUOTEDCODE]] and [[.ENDQUOTEDCODE]] macros,
+even if noweb did emit the markers within definitions and uses.
+<<functions>>=
+function convquote(s) {
+    gsub(/\[\[/, "\\*[BEGINCONVQUOTE]", s)
+    gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s); return s }
+@ %def convquote
+<<tmac.w>>=
+.ds BEGINCONVQUOTE \f[CW]
+.ds ENDCONVQUOTE   \fP
+@ .HU "Cross-referencing and indexing"
+The code for producing the \(odhypertext links\(cd at the end of each
+code section is given below: for each type, the beginning of the message
+is printed, items are accumulated in a list, and the list is printed
+after the number of items in the list is known.  The first time any of
+the cross-reference or identifier-index messages appears, it is necessary
+to reset the point size and leading to the small font used for this
+material, which is 80% of the size of code and 64% of the size of text.
+All of these lines are part of the diversion which collects a
+code chunk.  First is the code to report definitions and uses of code.
+<<read and process noweb source>>=
+/^@xref begindefs/     { <<checkcode>>; printf ".XREFDEFS\n" }
+/^@xref beginuses/     { <<checkcode>>; printf ".XREFUSES\n" }
+/^@xref notused/       { <<checkcode>>; printf ".XREFNOTUSED\n" }
+/^@xref (def|use)item/ { printf ".ADDLIST %s\n", tag($3) }
+/^@xref end(def|use)s/ { printf ".PRINTLIST\n" }
+<<tmac.w>>=
+.de XREFDEFS
+This definition continued in
+..
+.de XREFUSES
+This code used in
+..
+.de XREFNOTUSED
+This code not used in this document.
+.br
+..
+@ .P
+The code to report the definitions of identifiers appears below.  The
+[[if]] in [[@index isused]] prevents index definitions from pointing
+to themselves.
+<<read and process noweb source>>=
+/^@index begindefs/ && !noindex { <<checkcode>>; printf ".INDEXDEF\n" }
+/^@index isused/ && !noindex {
+    if (tag($3) != lastxrefref) printf ".ADDLIST %s\n", tag($3) }
+/^@index defitem/ && !noindex { printf ".DEFITEM %s\n.PRINTLIST\n", $3 }
+<<tmac.w>>=
+.de INDEXDEF
+Defines:
+.br
+..
+.de DEFITEM
+.ti +1m
+\\*[BEGINCONVQUOTE]\\$1\\*[ENDCONVQUOTE],
+.if \\n[NLIST]>0 used in
+..
+@ .P
+Finally, here is the code to report uses of identifiers.
+<<read and process noweb source>>=
+/^@index beginuses/ && !noindex { <<checkcode>>; printf ".INDEXUSE\n" }
+/^@index isdefined/ && !noindex { lastuse = tag($3) }
+/^@index useitem/   && !noindex {
+    printf ".ADDLIST \"\\*[BEGINCONVQUOTE]%s\\*[ENDCONVQUOTE] %s\"\n",
+            $3, lastuse }
+/^@index enduses/   && !noindex { printf ".PRINTLIST\n" }
+@ %def lastuse
+<<tmac.w>>=
+.de INDEXUSE
+Uses
+..
+@ .P
+The macros [[.ADDLIST s]], which adds string [[s]] to a queued list
+waiting to be printed, and [[.PRINTLIST]], which prints the list,
+appropriately formatted with commas, are described below.  These macros
+make use of some interesting troff idioms.  [[LIST]] is an array of
+strings; the [[n]]-th string in [[LIST]] can be set to [[s]] by 
+[[.ds LISTn s]].  The expression [[.nr n \\$1]] converts the string
+passed as the first argument to a macro to the number [[n]].  Loops
+are implemented in troff as recursive macros, as in [[.PRINTITEM]].
+<<tmac.w>>=
+.nr NLIST 0 1 \" initialize list index to 0 with auto-increment 1
+.de ADDLIST
+.ds LIST\\n+[NLIST] \\$1
+..
+.de PRINTITEM
+.nr PLIST \\$1
+.nr PLISTPLUS \\n[PLIST]+1
+.if \\n[NLIST]-\\n[PLIST]<0 not used in this document.
+.if \\n[NLIST]-\\n[PLIST]=0 \\*[LIST\\n[PLIST]].
+.if \\n[NLIST]-\\n[PLIST]=1 \
+        \\*[LIST\\n[PLIST]] and \\*[LIST\\n[PLISTPLUS]].
+.if \\n[NLIST]-\\n[PLIST]>1 \{ \\*[LIST\\n[PLIST]],
+.                        PRINTITEM 1+\\n[PLIST] \}
+..
+.de PRINTLIST
+.PRINTITEM 1
+.br
+.nr NLIST 0 1 \" re-initialize for next list
+..
+@ .P
+This code and macro reduces the font size in which the cross-reference
+and identifier index information is printed at the end of a code chunk.
+The [[code]] variable is set to [[0]] to ensure that [[.STARTXREF]]
+is performed only once at the end of each code chunk.  This code also
+resets the adjustment mode, which was changed to left-adjustment or
+right-adjustment by the [[LINETRAP]] macro, and cancels the [[NEWLINE]]
+trap at [[TRAPplace]].
+<<checkcode>>=
+if (code) { code = 0; printf ".STARTXREF\n" }
+<<tmac.w>>=
+.de STARTXREF
+.ps \\n(.s*4/5
+.vs \\n(.vu*4u/5u
+.ft \\n[OLDft]
+.ad \\n[OLDad]u
+.dt \\n[TRAPplace]u
+.sp 0.4v
+..
+@ .HU "Collecting the lists of chunks and identifiers"
+Collecting the lists of chunks and identifiers takes two passes over the
+file, because the section numbers which tags refer to aren't known on
+the first pass.  Therefore, the strategy on the first pass is to write
+the chunk and identifier index entries to the [[tags]] file on standard
+error, and actually prepare the lists when reading the [[tags]] file on
+the second pass.  Thus, the first pass code shown here merely copies
+the chunk and identifier index entries from the noweb intermediate
+file to the [[tags]] file using troff's [[.tm]] command.  The
+first section below handles chunks, the second section handles
+identifiers.
+<<read and process noweb source>>=
+/^@xref beginchunks/ { printf ".tm ###BEGINCHUNKS###\n" }
+/^@xref chunkbegin/  { printf ".tm ###CHUNKBEGIN### %s\n",
+                           substr($0, length($3) + 19) }
+/^@xref chunkuse/    { printf ".tm ###CHUNKUSE### %s\n", $3 }
+/^@xref chunkdefn/   { printf ".tm ###CHUNKDEFN### %s\n", $3 }
+/^@xref chunkend/    { printf ".tm ###CHUNKEND###\n" }
+/^@xref endchunks/   { printf ".tm ###ENDCHUNKS###\n" }
+<<read and process noweb source>>=
+/^@index beginindex/ { printf ".tm ###BEGININDEX###\n" }
+/^@index entrybegin/ { printf ".tm ###ENTRYBEGIN### %s\n",
+                           substr($0, length($3) + 20) }
+/^@index entryuse/   { printf ".tm ###ENTRYUSE### %s\n", $3 }
+/^@index entrydefn/  { printf ".tm ###ENTRYDEFN### %s\n", $3 }
+/^@index entryend/   { printf ".tm ###ENTRYEND###\n" }
+/^@index endindex/   { printf ".tm ###ENDINDEX###\n" }
+@ .HU "The \f[CW]tags\fP file"
+The [[tags]] file is re-created at each formatter run by the troff
+idiom (some people would call it a trick) of capturing the output of
+troff's [[.tm]] command, which writes to the standard error, in a
+file via command-line redirection.  The code below uses an awk idiom; the
+[[sub]] simultaneously tests for a match and deletes the matched text.
+<<process [[tags]] file>>=
+{
+    if      (sub(/^###TAG### /       , "")) tags[$1] = $2
+    else if (sub(/^###BEGINCHUNKS###/, "")) printf ".de CLIST\n.CLISTBEGIN\n"
+    else if (sub(/^###CHUNKBEGIN### /, "")) { name = convquote($0)
+                                              chunkuse = chunkdefn = "" }
+    else if (sub(/^###CHUNKUSE### /  , "")) chunkuse = chunkuse " " tag($0)
+    else if (sub(/^###CHUNKDEFN### / , "")) chunkdefn = chunkdefn " " tag($0)
+    else if (sub(/^###CHUNKEND###/   , ""))
+       printf ".CITEM \"%s\" \"%s\" \"%s\"\n", name, chunkdefn, chunkuse
+    else if (sub(/^###ENDCHUNKS###/  , "")) printf ".CLISTEND\n..\n"
+    else if (sub(/^###BEGININDEX###/ , "")) printf ".de ILIST\n.ILISTBEGIN\n"
+    else if (sub(/^###ENTRYBEGIN### /, "")) { name = convquote($0)
+                                              entryuse = entrydefn = "" }
+    else if (sub(/^###ENTRYUSE### /  , "")) entryuse = entryuse " " tag($0)
+    else if (sub(/^###ENTRYDEFN### / , "")) entrydefn = entrydefn " " tag($0)
+    else if (sub(/^###ENTRYEND###/   , "")) {
+        for (i = 1; i <= split(entrydefn, entryarray); i++)
+            sub(entryarray[i], "\\*[BEGINDEFN]&\\*[ENDDEFN]", entryuse)
+        printf ".IITEM \"%s\" \"%s\"\n", name, entryuse }
+    else if (sub(/^###ENDINDEX###/   , "")) printf ".ILISTEND\n..\n" 
+}
+<<tag functions>>
+@ %def tags chunkuse chunkdefn entryuse entrydefn entryarray
+.P
+The [[sub]] within the [[ENTRYEND]] causes definitions of identifiers
+to be italicized, according to the following defined strings.
+<<tmac.w>>=
+.ds BEGINDEFN  \fI
+.ds ENDDEFN    \fP
+@ .P
+Lookup of the section number corresponding to a particular tag is
+performed by the [[tag]] function.
+<<tag functions>>=
+function tag(s) { if (s in tags) return tags[s]; else return "???" }
+@ %def tag
+.HU "Using \\f[CW]toroff\fP"
+Toroff is one element of the normal noweave pipeline.  Using
+toroff in its full generality is hard.  The sample program shown
+below was used by the author during the development of toroff and
+is an example of the use of toroff.  A real noweave should
+allow the user to specify the macro package rather than defaulting to
+[[-mm]], allow the user to select the noweb filters which are used,
+allow the user to specify the [[-delay]] and [[-noindex]] switches to
+toroff, allow the user to specify troff pre-processors,
+post-processors and options, and eliminate the temp output from tee
+which allowed the author to peek at the pipeline and find out why
+toroff wasn't acting as expected.  Given the shell script shown
+below, toroff could be woven by issuing the command [[xweave toroff.nw]]
+twice in succession and printed by copying [[toroff.ps]] to a PostScript
+printer.
+<<noroff>>=
+#!/bin/sh
+#
+# noroff -- run troff using tags file trick
+
+ROFF="psroff -t"        # produce postscript on stdout
+AWK=nawk
+
+if [ $# -ne 1 ]; then
+  echo "Usage: noroff file" 1>&2
+  exit 1
+fi
+base="`echo $1 | sed '/\./s/\.[^.]*$//'`"
+tagsfile="$base.nwt"
+(if [ -r "$tagsfile" ] then $AWK '<<process [[tags]] file>>' $tagsfile; fi
+ cat $1) |
+($ROFF -Tps 2>$tagsfile)
+sed '/^###[A-Z][A-Z]*###/d' $tagsfile >&2
+@ .HU "Index of chunks and identifiers"
+Toroff creates macros [[.CLIST]] and [[.ILIST]] which insert the
+lists of chunks and identifiers, respectively, in the output.  These
+macros, in turn, call other macros which format the lists.  The macros
+below cause each item to be written on a separate line, with continuation
+lines indented one-quarter inch.
+<<tmac.w>>=
+.de CLISTBEGIN
+.in +0.25i
+..
+.de CITEM
+.ti -0.25i
+.ie '\\$3'' \\(oG\\$1 \\$2\\(cG Not used in this document.
+.el         \\(oG\\$1 \\$2\\(cG \\$3
+.br
+..
+.de CLISTEND
+.in -0.25i
+..
+<<tmac.w>>=
+.de ILISTBEGIN
+.in +0.25i
+..
+.de IITEM
+.ti -0.25i
+\\f[CW]\\$1\\fP: \\$2
+.br
+..
+.de ILISTEND
+.in -0.25i
+..
+@ .P
+The automatically-generated index of chunks and identifiers for
+toroff is shown below.
+.S 10 12
+.sp
+.CLIST
+.sp
+.2C
+.ILIST
