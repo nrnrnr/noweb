@@ -1,0 +1,1331 @@
+\documentstyle[noweb,multicol]{article}
+
+\title{Converting {\LaTeX} to HTML}
+\author{Norman Ramsey\\{\tt norman@bellcore.com}}
+
+\noweboptions{smallcode}
+\setcounter{secnumdepth}{1}
+
+\begin{document}
+@
+\pagenumbering{roman}
+\maketitle
+\tableofcontents
+\pagenumbering{arabic}
+@
+This program provides an infrastructure for converting {\LaTeX} to
+HTML.
+That infrastructure can be used to make a {\tt noweb} filter or to
+make a standalone conversion program.
+The program is roughly divided into three parts.
+Section~\ref{cs-decls} assigns a meaning (treatment) to each control
+sequence.
+It is roughly declarative, and the hope is that one day it can
+be replaced by a data file, which could be augmented dynamically.
+(The central flaw in this program is that all {\TeX} control
+sequences must be hard-wired.)
+Section~\ref{engine} describes the engine used to do the conversion,
+and
+Section~\ref{procs} gives the procedures that do the individual conversions.
+
+@
+\section{Descriptions of control sequences}
+\label{cs-decls}
+
+This section defines behavior for each control sequence we know how to
+convert.
+The definitions have a declarative flavor, since most are done by
+procedure calls.
+These calls initialize the machinery descriped in Section~\ref{cs-tables}.
+
+{\LaTeX} control sequences come first, using
+ the same organization as the quick reference card from the 
+second edition of the {\LaTeX} manual.
+Other control sequences follow.
+@
+\subsection{{\LaTeX} control sequences}
+\subsubsection{Sentences and paragraphs}
+<<control-sequence assignments>>=
+substitution(",", " ")
+substitution(" ", " ")
+substitution("\n", "\n")
+substitution("\t", " ")
+ignore("@")
+ignore("/")			# no italic correction
+ignore("")			# \<newline> is ignored
+every c := !"$%#{}_" do
+  substitution(c, c)
+substitution("&", "&amp;")
+argblock("emph", "em")
+argblock("footnote",     "<b>[</b>", "<b>]</b>")   # put footnotes in bold brackets
+argblock("footnotetext", "<b>[</b>", "<b>]</b>")
+substitution("today", &date)
+@
+\subsubsection{Type style}
+<<control-sequence assignments>>=
+ignore("textrm")		# html can't switch to default font!
+argblock("textit", "i")     
+argblock("textbf", "b")     
+argblock("textsl", "i")     
+ignore("textsc")
+argblock("texttt", "tt")
+ignore("textsf")
+ignore("boldmath")
+# \boldmath could be done by introducing S.mathfont, but I don't want to!
+<<control-sequence assignments>>=
+ignore("mathrm")		# html can't switch to default font!
+argblock("mathit", "i")     
+argblock("mathbf", "b")     
+argblock("mathtt", "tt")
+ignore("mathsf")
+argblock("mathcal", "i")
+@ HTML has only one size.
+<<control-sequence assignments>>=
+every ignore("tiny" | "scriptsize" | "footnotesize" | "small" | "normalsize" | 
+             "large" | "Large" | "LARGE" | "huge" | "Huge")
+@
+\subsubsection{Accents and symbols}
+I couldn't find an official way to do symbols.
+Maybe when CERN comes back up I can find the ISO Latin~1 character set.
+<<control-sequence assignments>>=
+every accent(key(accent_name))
+every ignore("dag" | "ddag" | "S" | "P" | "copyright" | "pounds")
+@
+\subsubsection{Sectioning and table of contents}
+<<control-sequence assignments>>=
+argblockv("part",          "h1", &null, "*[")
+argblockv("chapter",       "h1", &null, "*[")
+argblockv("section",       "h2", &null, "*[")     
+argblockv("subsection",    "h3", &null, "*[")     
+argblockv("subsubsection", "h4", &null, "*[")     
+argblockv("paragraph",     "h5", &null, "*[")     
+argblockv("subparagraph",  "h6", &null, "*[")     
+ignore("appendix")
+substitution("tableofcontents", "<!--table of contents here-->")
+@
+\subsubsection{Mathematical formulas}
+Here we see our first assignments to [[cstab]], which is the real
+technology underlying these seemingly declarative calls.
+I'll assign to [[cstab]] directly when some really special behavior is
+called for.  In this case, it's going in and out of math mode.
+<<control-sequence assignments>>=
+cstab["("] := Cmath
+cstab[")"] := Cmath_end
+cstab["["] := Cdisplaymath
+cstab["]"] := Cdisplaymath_end
+ignoreenv("equation")
+every table_env(star("eqnarray"), 0, " ", "blockquote")  # also lame
+substitution("frac", "<b>frac</b>")
+substitution("sqrt", "<b>frac</b>")
+every substitution("ldots" | "cdots" | "vdots", "...")
+ignore("left")
+ignore("right")
+ignore("overline")
+substitution(":", " ")
+substitution(";", " ")
+ignore("!")
+@ The [[star]] procedure lets us define \verb+eqnarray+ and
+\verb+eqnarray*+ in one fell swoop.
+<<*>>=
+procedure star(cs)
+  suspend cs | (cs || "*")
+end
+@
+There are a gazillion symbols.  I'll add them on demand.
+<<control-sequence assignments>>=
+substitution("Diamond", "&lt;&gt;")
+substitution("langle",  "&lt;")
+substitution("rangle",  "&gt;")
+substitution("le",      "&lt;=")
+substitution("ge",      "&gt;=")
+substitution("bmod", "</i>mod<i>") # better hook in with math
+substitution("equiv", "===")
+@
+\subsubsection{Displayed paragraphs}
+HTML really has only one kind of displayed paragraph---the block quotation.
+<<control-sequence assignments>>=
+envblock("quote", "blockquote")
+envblock("quotation", "blockquote")
+envblock("center", "blockquote")
+envblock("flushleft", "blockquote")
+envblock("flushright", "blockquote")
+envblock("verse", "blockquote")
+begintab["verbatim"] := Cverbatim
+begincl["verbatim"] := verbatim_cl("pre", "\\end{verbatim}")
+cstab["verb"] := Cverb
+@
+\subsubsection{Lists}
+<<control-sequence assignments>>=
+cstab["item"] := Citem
+csclosure["item"] := [item_cl("<li>", "", "<li>")]
+listenv("itemize", "ul")
+listenv("enumerate", "ol")
+listenv("description", "dl")
+@
+\subsubsection{???}
+<<control-sequence assignments>>=
+ignore("documentstyle", "[{")
+ignore("documentclass", "[{")
+ignore("usepackage", "[{")
+ignore("pagestyle", "{")
+ignore("pagenumbering", "{")
+@
+\subsubsection{Title page and abstract}
+I could be clever and have \verb+\title+ have a side effect
+that sticks in the right boilerplate when we see \verb+\begin{document}+,
+but for now it's not worth the hassle.
+<<control-sequence assignments>>=
+argblockv("title", "h1")
+argblockv("author","address")
+argblockv("date",  "b")
+substitution("maketitle", "<!--title goes here>")
+ignoreenv("titlepage")
+envblock("abstract", "<h2>Abstract</h2><blockquote>", "</blockquote>")
+@
+\subsubsection{Cross-reference}
+A more ambitious scheme would make labels anchor at preceding
+sectioning commands, but it's hard to see how to do that in one pass.
+Instead, I just use some conventional glyphs.
+I use special procedures for the cross-references so I can have an
+arrow pointing either forward or backward, depending on the direction
+of the reference.
+<<control-sequence assignments>>=
+cstab["label"] := Clabel
+cstab["ref"] := Cref
+@
+\subsubsection{Bibliography and citation}
+For the bibliography, I actually go grubbing for a {\tt .bbl} file if
+I can find one.
+<<control-sequence assignments>>=
+ignore("bibliographystyle", "{")
+cstab["bibliography"] := Cbibliography
+envblock("thebibliography", "<h2>References</h2>", "", "{")
+cstab["cite"] := Ccite
+cstab["bibitem"] := Cbibitem
+ignore("newblock")
+ignore("nocite", "{")
+@
+\subsubsection{Splitting the input}
+All input is ignored.  Those things are in their own files.
+<<control-sequence assignments>>=
+every ignore("input" | "include" | "includeonly", "{")
+# filecontents not done yet
+@
+\subsubsection{Line breaking}
+<<control-sequence assignments>>=
+substitution("\\", "<br>", "[")
+substitution("linebreak", "<br>")
+ignore("-")
+ignoreenv("sloppypar")
+ignore("sloppy")
+@
+\subsubsection{Page breaking}
+I simulate forced page breaks by horizontal rules.
+<<control-sequence assignments>>=
+substitution("pagebreak", "<hr>")
+substitution("newpage", "<hr>")
+substitution("clearpage", "<hr>")
+ignore("enlargethispage", "*{")
+@
+\subsubsection{Boxes}
+<<control-sequence assignments>>=
+ignore("mbox")
+ignore("makebox", "([[")  # ( comes from picture area
+ignore("fbox")
+ignore("framebox", "[[")  # could insert horizontal rules, but why?
+ignore("newsavebox", 1)
+ignore("sbox", 2)
+ignore("savebox", "{[[{")
+ignore("usebox", 1)
+envblock("minipage", "blockquote", &null, "[{")
+argblock("parbox",   "blockquote", &null, "[{")
+@
+\subsubsection{Space}
+<<control-sequence assignments>>=
+ignore("hspace", "*{")
+ignore("hfil")
+ignore("hfill")
+ignore("vspace", "*{")
+ignore("vfil")
+ignore("vfill")
+@
+\subsubsection{Length}
+<<control-sequence assignments>>=
+ignore("newlength", "{")
+ignore("setlength", "{{")
+ignore("addtolength", "{{")
+@
+\subsubsection{Pictures}
+<<control-sequence assignments>>=
+envblock("picture", "<b>[picture]</b>", "<b>[end picture]</b>", "((")
+ignore("put", "({")
+ignore("multiput", "(({{")
+ignore("dashbox", "{([")
+ignore("line", "({")
+ignore("vector", "({")
+ignore("shortstack", "[")
+ignore("circle", "*{")
+ignore("oval", "([")
+ignore("frame")
+ignore("thinlines")
+ignore("thicklines")
+@
+\subsubsection{Figures and Tables}
+I surround figures and tables with horizontal rules.
+<<control-sequence assignments>>=
+envblock("figure", "<hr>", "<hr>")
+envblock("table", "<hr>", "<hr>")
+argblock("caption", "b")  # captions in bold
+@
+\subsubsection{{\tt tabbing} environment}
+I can't see how to do anything sensible with {\tt tabbing}.
+<<control-sequence assignments>>=
+envblock("tabbing", "blockquote")
+# \= is accent
+ignore(">")
+ignore("kill")
+@
+\subsubsection{{\tt array} and {\tt tabular} environment}
+<<control-sequence assignments>>=
+envblock("array",    "blockquote", &null, "[{")
+envblock("tabular",  "blockquote", &null, "[{")
+envblock("tabularx", "blockquote", &null, "[{")
+ignore("multicolumn", "{{")
+substitution("hline", "<hr>")
+ignore("cline", "{")
+@
+\subsubsection{Definitions}
+<<control-sequence assignments>>=
+ignore("newcommand", "{[[{")
+ignore("renewcommand", "{[[{")
+ignore("newenvironment", "{[{{")
+ignore("renewenvironment", "{[{{")
+ignore("newtheorem", "{{")
+@
+\subsubsection{Numbering}
+<<control-sequence assignments>>=
+ignore("setcounter", "{{")
+ignore("addtocounter", "{{")
+@
+\subsubsection{Other {\LaTeX} control sequences}
+<<control-sequence assignments>>=
+cstab["makeatletter"] := Cmakeatletter
+cstab["makeatother"] := Cmakeatother
+@
+Here are all the old-style font changes.
+<<control-sequence assignments>>=
+fontchange("tt", "tt")
+fontchange("bf", "b")
+fontchange("it", "i")
+fontchange("sl", "i")
+fontchange("em", "em")
+ignore("rm")		# html can't switch to default font!
+ignore("sf")
+<<control-sequence assignments>>=
+ignoreenv("document")
+ignoreenv("multicols", "{[")
+<<control-sequence assignments>>=
+substitution("LaTeX", "LaTeX")
+<<control-sequence assignments>>=
+ignore("protect")
+@
+\subsection{Plain {\TeX} control sequences}
+<<control-sequence assignments>>=
+argblock("noalign", "<br>", "<br>")	# not clear what else to do...
+<<control-sequence assignments>>=
+cstab["par"] := implicit_paragraph
+cstab["smallskip"] := implicit_paragraph
+cstab["medskip"] := implicit_paragraph
+cstab["bigskip"] := implicit_paragraph
+
+@ 
+Lots of assignable things:
+<<control-sequence assignments>>=
+ignore("let", "A=")
+every ignore("hfuzz" | "parindent" | "parskip" | "baselineskip", "=")
+every ignore("clubpenalty" | "widowpenalty", "=")
+<<control-sequence assignments>>=
+substitution("TeX", "TeX")
+@
+\subsection{Other control sequences}
+I get to include my favorite {\TeX} hacks.
+We define ignoring loosely; the count denotes the number of balanced-brace pairs.
+We also ignore everything before an ignored balanced-brace pair, which means
+it works for \verb+\def+.
+<<control-sequence assignments>>=
+ignore("noweboptions", 1)
+every ignore("expandafter" | "noindent" | "strut")
+ignore("def", 1)
+@
+Now, here are a couple of righteous hacks!
+The idea is that most views will ignore this stuff, but the indexer might
+use it to get clever about dumping chunks and all in the right places.
+<<control-sequence assignments>>=
+substitution("nowebindex", "<nowebindex>")
+substitution("nowebchunks", "<nowebchunks>")
+<<control-sequence assignments>>=
+envblock("fields", "blockquote", &null, "[")     # lame; could try to <tt> 1st col
+@
+
+
+\section{The conversion engine}
+\label{engine}
+
+The converter doesn't have the luxury of working on the whole text at
+once;  instead it has to accept and convert a piece at a time.
+If I really understood co-expressions, I would surely make them sit up
+and beg.
+Since I don't, I keep some state around, and I pass continuations and
+closures like there's no tomorrow.
+
+
+@
+\subsection{Basic conversion}
+Here's the basic engine, which works by string scanning.
+The initial boilerplate sets up the second argument (if any) as
+[[&subject]].
+<<*>>=
+procedure convert(S, optstring)
+  static specials
+  initial { 
+    <<initialization>>
+    <<control-sequence assignments>>
+    specials := '\\{}<>"%$&~\n' 
+  }
+
+  if \optstring then return optstring ? convert(S)
+  else {
+    <<scan, convert, and return result>>
+  }
+end
+@
+If I were a good dog, I would make a state diagram.
+Since I'm not, I'll just say that we either
+accumulate text using the function [[S.text]], which exists for that
+purpose, or else we do something special upon encountering a special character.
+
+The [[<<take actions appropriate to new text>>]] 
+chunk may do something special with the text in
+case we're not in the default state (for example, we may be scanning
+for the end of a comment).
+
+Encountering a non-threatening character throws the converter into
+horizontal mode.
+<<scan, convert, and return result>>=
+<<take actions appropriate to new text>>
+if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
+S.text(S, tab(upto(specials) | 0))
+while not pos(0) do {
+  case move(1) of {
+    "\\" : {<<control sequence>>}
+    "{"  : {<<take open-group actions>>}
+    "}"  : {<<take close-group actions>>}
+    "%"  : {<<comment>>}
+    "~"  : S.text(S, " ") # should be &nbsp; but netscape doesn't support it
+    "\n" : {<<newline>>}
+    "$"  : {<<dollar sign>>}
+    "&"  : {<<ampersand>>}
+    # remaining cases simply escape HTML specials
+    "<"  : S.text(S, "&lt;")
+    ">"  : S.text(S, "&gt;")
+    "\"" : S.text(S, "&quot;")
+  }
+  S.text(S, tab(upto(specials) | 0))
+}
+return 1(. S.the_text, S.the_text := "")  # what's been converted
+@
+The definition of a converter's state is distributed.
+We've already seen the use of [[mode]].
+<<*>>=
+record state(mode <<other fields of state>>)
+	# mode is H, V, or M
+@
+To create a new state, the default mode is vertical
+<<*>>=
+procedure converter(mode)
+  /mode := "V"
+  return state(mode <<initial values for other fields of state>>)
+end
+@
+To avoid repeated memory allocation, we provide a routine to reset a
+converter to its initial state.
+<<*>>=
+procedure reset(S)
+  <<code to reset [[S]]>>
+  return S
+end
+@
+The basic action performed by the
+[[S.text]] function is to accumulate converted text in [[S.the_text]].
+[[S.text]] is usually [[accumulate_text]].
+<<*>>=
+procedure accumulate_text(S, text)
+  S.the_text ||:= text
+  return
+end
+<<other fields of state>>=
+, text, the_text
+<<initial values for other fields of state>>=
+, accumulate_text, ""
+<<code to reset [[S]]>>=
+S.text := accumulate_text
+S.the_text := ""
+@
+[[emit_text]] just uses the current value of [[S.text]].
+Its primary use is to appear in closures, when we don't know what
+[[S.text]] will be when the closure is executed.
+<<*>>=
+procedure emit_text(S, text)
+  return S.text(S, text)
+end
+@
+\subsection{Action and continuation hooks}
+We provide hooks so that actions can be taken at various points.
+The major ones are:
+\begin{description}
+\item[\tt newtext]
+When the next string is passed in for conversion.
+\item[open brace]
+After the next open brace or begin environment.
+\item[close brace]
+Before the next close brace or end environment.
+\end{description}
+@
+\subsubsection{{\tt newtext}}
+[[newtext]] is a list of closures to be executed (actions to take)
+ when the next input comes.
+<<other fields of state>>=
+, newtext
+<<initial values for other fields of state>>=
+, []
+<<code to reset [[S]]>>=
+S.newtext := []
+@
+A closure is simply a procedure with arguments.
+<<*>>=
+record closure(proc, args)
+@
+[[before_next_newtext]] and [[after_next_newtext]] 
+add to the list of actions to be taken (at the left and right, respectively).
+<<*>>=
+procedure before_next_newtext(S, proc, args)
+  push(S.newtext, closure(proc, args))
+end
+
+procedure after_next_newtext(S, proc, args)
+  put(S.newtext, closure(proc, args))
+end
+@
+When taking the actions, be careful to avoid infinite loop, e.g., on empty lines.
+<<take actions appropriate to new text>>=
+l := S.newtext
+S.newtext := []
+while c := get(l) do
+  c.proc!c.args
+@
+Some control sequences temporarily override all actions to be taken on
+a new input, using [[delay_newtext]].
+ [[undelay_newtext]] restores actions.
+<<*>>=
+procedure delay_newtext(S)
+  S.delayed_newtext := S.newtext
+  S.newtext := []
+  return
+end
+
+procedure undelay_newtext(S)
+  S.newtext := S.delayed_newtext
+end
+<<other fields of state>>=
+, delayed_newtext
+<<initial values for other fields of state>>=
+, &null
+<<code to reset [[S]]>>=
+S.delayed_newtext := &null
+@
+\subsubsection{Opening and closing groups}
+There's only one list of actions to be taken at the next open,
+but there's a whole stack of lists of actions to be taken at closes.
+<<other fields of state>>=
+, open, closes
+<<initial values for other fields of state>>=
+, [], []
+<<code to reset [[S]]>>=
+every S.open | S.closes := []
+<<*>>=
+procedure after_next_open(S, proc, args)
+  return put(S.open, closure(proc, args))
+end
+
+procedure before_next_close(S, proc, args)
+  return push(S.closes[1], closure(proc, args)) # lost at top level
+end
+<<take open-group actions>>=
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+<<take close-group actions>>=
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+@
+\subsection{Handling control sequences and environments}
+OK, to eat a control sequence, first scan it, then execute it using [[do_cs]].
+[[S.csletters]] records the current set of ``letters'' for control
+sequences (so we can interpret \verb+\makeatletter+).
+<<control sequence>>=
+do_cs(S, if pos(0) then ""
+         else if any(S.csletters) then tab(many(S.csletters))
+         else move(1))
+<<other fields of state>>=
+, csletters
+<<initial values for other fields of state>>=
+, &letters
+<<code to reset [[S]]>>=
+S.csletters := &letters
+@
+To execute a control sequence, look up its procedure in [[cstab]],
+and pass in the name of the control sequence, plus the closure
+argument from [[csclosure]].
+<<*>>=
+global cstab, csclosure
+
+procedure do_cs(S, cs)
+  tab(many(' \t')) # skip white space and tabs following CS
+  (cstab[cs])(S, cs, csclosure[cs])
+  return 
+end
+<<initialization>>=
+cstab := table(unknown_cs)
+csclosure := table()
+@
+The default action for an unknown control sequence is [[unknown_cs]].
+<<*>>=
+procedure unknown_cs(S, cs, cl)
+  if S.text === ignore_text then return # a bit of a hack
+  if \show_unknowns then S.text(S, "<b>\\" || cs || "</b>")
+  if not member(unknown_set, cs) then {
+    write(\unknown_file, "Warning: unknown control sequence \\", cs)
+    insert(unknown_set, cs)
+  }
+  return
+end
+<<initialization>>=
+unknown_set := set()
+<<*>>=
+global cstab, csclosure, unknown_set
+@
+The control sequences \verb+\begin+ and \verb+\end+ are treated
+specially,
+so we can have a similar machinery for environments.
+<<*>>=
+global begintab, endtab, begincl, endcl
+
+procedure do_begin(S, cs, cl)
+  (="{", env := tab(upto('}')), ="}") | error("botched \\begin{...}")
+  <<take open-group actions>>
+  (begintab[env])(S, env, begincl[env])
+  return 
+end
+
+procedure do_end(S, cs, cl)
+  (="{", env := tab(upto('}')), ="}") | error("botched \\end{...}")
+  # write(&errout, "calling ", image(endtab[env]), " for \\end{", env, "}")
+  (endtab[env])(S, env, endcl[env])
+  <<take close-group actions>>
+  return 
+end
+<<control-sequence assignments>>=
+cstab["begin"] := do_begin
+cstab["end"]   := do_end
+<<initialization>>=
+every begintab | endtab := table(unknown_env)
+every begincl  | endcl  := table()
+<<*>>=
+procedure unknown_env(S, env, cl)
+  if S.text === ignore_text then return # a bit of a hack
+  if \show_unknowns then S.text(S, "<b>{" || env || "}</b>")
+  if not member(unknown_envs, env) then {
+    write(\unknown_file, "Warning: unknown environment {", env, "}")
+    insert(unknown_envs, env)
+  }
+  return
+end
+<<initialization>>=
+unknown_envs := set()
+<<*>>=
+global unknown_envs
+@
+\subsection{Procedures related to parsing {\TeX}}
+\subsubsection{Comment-skipping}
+This logic gobbles text into [[S.comment]]
+until a newline is encountered, at which point it calls 
+[[Ccomment]] to format the comment.
+All other new-text actions go on hold until the comment is over.
+<<comment>>=
+delay_newtext(S)
+eat_comment(S)
+<<*>>=
+procedure eat_comment(S)
+  S.comment ||:= tab(upto('\n') | 0)
+  if pos(0) then
+    before_next_newtext(S, eat_comment, [S])
+  else {
+    undelay_newtext(S)
+    Ccomment(S)
+    S.comment := ""
+  }
+  return
+end    
+<<other fields of state>>=
+, comment
+<<initial values for other fields of state>>=
+, ""
+<<code to reset [[S]]>>=
+S.comment := ""
+@
+Verbatim text is a little bit like comment text.
+For verbatim environment, we have a tag for the corresponding HTML, 
+plus a string that terminates the environment.
+<<*>>=
+record verbatim_cl(html, terminator)
+
+procedure Cverbatim(S, cs, cl)
+  S.text(S, tag(\cl.html))
+  delay_newtext(S)
+  do_verbatim(S, cl)
+  return
+end
+@
+If we find the terminator, we're finished.
+Otherwise, we swallow the whole input and make sure our action on next
+input is to continue scanning.
+<<*>>=
+procedure do_verbatim(S, cl)
+  if verbatimout(S, tab(find(cl.terminator))) then {
+    =cl.terminator
+    S.text(S, endtag(\cl.html))
+    undelay_newtext(S)
+  } else {
+     verbatimout(S, tab(0))
+     before_next_newtext(S, do_verbatim, [S, cl])
+  }
+  return
+end
+@
+When writing verbatim text, we still have to convert HTML specials.
+<<*>>=
+procedure verbatimout(S, s)
+  s ? {
+    while S.text(S, tab(upto('&<>'))) do
+      case move(1) of {
+        "&" : S.text(S, "&amp;")
+        "<" : S.text(S, "&lt;")
+        ">" : S.text(S, "&gt;")
+      }
+    S.text(S, tab(0))
+  }
+  return
+end
+@
+The \verb+\verb+ control sequence's terminator is the first character
+following \verb+\verb+
+<<*>>=
+procedure Cverb(S, cs, cl)
+  Cverbatim(S, cs, verbatim_cl("tt", move(1)))
+  return
+end
+@
+\subsubsection{Arguments}
+It's occasionally necessary to collect the argument of a control
+sequence.
+[[csarg]] does the job.
+<<*>>=
+procedure csarg(S)
+  return  2(="{", tab(bal('}', '{', '}')), ="}") |
+           (optwhite(), 
+               if ="\\" then 
+                 "\\" || (tab(many(S.csletters)) | move(1))
+               else
+                 move(1))
+end
+
+@
+\subsubsection{Misc specials}
+Ampersand is weak --- I just use some string depending on the environment.
+Tables look sort of OK.
+Notice that ampersands close and open groups.
+<<ampersand>>=
+<<take close-group actions>>
+S.text(S, S.ampersand)
+<<take open-group actions>>
+<<other fields of state>>=
+, ampersand
+<<initial values for other fields of state>>=
+, " --- "
+@
+The dollar sign is for entering and exiting math mode:
+<<dollar sign>>=
+if ="$" then
+  if S.mode == "M" then { Cdisplaymath_end(S); S.mode := "V" }
+  else                  { Cdisplaymath(S);     S.mode := "M" } 
+else
+  if S.mode == "M" then { Cmath_end(S); S.mode := "H" }
+  else                  { Cmath(S);     S.mode := "M" } 
+@
+Newlines emit themselves, plus start skipping blanks until they get to
+some nonblank text.
+We have to identify a blank line so we can insert a paragraph marker.
+<<newline>>=
+S.text(S, "\n")
+Cnewline(S)
+<<*>>=
+procedure Cnewline(S)
+  tab(many(' \t'))
+  if match("\n") then implicit_paragraph(S)
+  if pos(0) then before_next_newtext(S, Cnewline, [S])
+end
+@
+Paragraphs count only in horizontal or math mode (and they better not
+happen in math mode!).
+<<*>>=
+procedure implicit_paragraph(S)
+  if S.mode == "V" then return
+  else {
+    S.mode := "V"
+    Cparagraph(S)
+  }
+end
+@
+Here's a real hack.  I use it to stop skipping blanks when the noweb
+filter sees text quoted by [[[[...]]]].
+That text is never converted, but we don't want to skip blanks that
+follow it.
+<<*>>=
+procedure stop_skipping(S)
+  while S.newtext[1].proc === Cnewline do pop(S.newtext)
+end
+@
+\subsubsection{Items}
+For items, we actually want to do something with the optional arguments,
+namely, convert them.
+We wrap them in braces so that any font changes and so on will be 
+appropriately limited in their effects.
+<<*>>=
+record item_cl(before, after, ifnone)
+
+procedure Citem(S, cs, cl)
+  if ="[" then {
+    S.text(S, cl[1].before || 
+              convert(converter("H"), "{" || tab(upto(']' | 0)) || "}") || 
+              cl[1].after)
+    ="]"
+    optwhite()
+  } else {
+    S.text(S, cl[1].ifnone)
+  }
+end
+<<*>>=
+procedure listenv(env, html)
+  begintab[env] := Clist
+  begincl[env] := html
+  endtab[env] := Clist_end
+  endcl[env] := html
+end
+  
+procedure Clist(S, cs, cl)
+  S.text(S, tag(cl))
+  push(csclosure["item"], 
+    if cs == "description" then item_cl("<dt>", "<dd>", "<dt><dd>")
+    else                        item_cl("<li>", "--", "<li>"))
+end
+
+procedure Clist_end(S, cs, cl)
+  S.text(S, endtag(cl))
+  pop(csclosure["item"])
+end
+@
+\subsubsection{Labels and references}
+These could be done by [[argblock]], except I want to make it possible to have
+different text depending on whether the references point forward or backward.
+<<*>>=
+global labels_seen
+
+procedure Clabel(S, cs, cl)
+  initial /labels_seen := set()
+  insert(labels_seen, l := csarg(S)) | fail
+  S.text(S, "<a name=\"" || l || "\"><b>[*]</b></a>")
+end
+
+procedure Cref(S, cs, cl)
+  initial /labels_seen := set()
+  l := csarg(S) | fail
+  S.text(S, "<a href=\"#" || l || "\">[" || 
+                 (if member(labels_seen, l) then "<-" else "->") || "]</a>")
+end
+@
+\subsubsection{Citations}
+The important thing about a citation key is that it makes a hot line
+to the appropriate item in the bibliography.
+[[Ccite]] and [[Cbibitem]] work together to make it happen.
+
+I'm lazy, so I assume the citation stuff isn't split between inputs.
+<<*>>=
+procedure Ccite(S, cs, cl)
+  local commentary, key
+  if ="[" then {
+    commentary := convert(converter("H"), "{" || tab(upto(']' | 0)) || "}")
+    ="]"
+    optwhite()
+  }
+  key := csarg(S)
+  S.text(S, "<b>[cite <a href=\"#NWcite-" || key || "\">" || key || "</a>" ||
+            (("<i>, " || \commentary || "</i>") | "" ) ||
+            "]</b>")
+end
+<<*>>=
+procedure Cbibitem(S, cs, cl)
+  local label, key
+  static counter
+  initial counter := 0
+  if ="[" then {
+    label := convert(converter("H"), "{" || tab(upto(']' | 0)) || "}")
+    ="]"
+    optwhite()
+  } else {
+    label := "<b>[" || (counter +:= 1) || "]</b>"
+  }
+  key := csarg(S)
+  S.text(S, "<br><a name=\"NWcite-" || key || "\">" || label || "</a> ")
+end
+@
+[[Cbibliography]] reads in a BiB{\TeX} bibliography if it can find one.
+<<*>>=
+procedure Cbibliography(S, cs, cl)
+  local bibfile, T
+  if bibfile := open(basename(\curfile) || ".bbl") then {
+    T := converter("V")
+    while line := read(bibfile) do 
+      S.text(S, convert(T, line || "\n"))
+  } else {
+    S.text(S, "<b>[BibTeX bibliography]</b>")
+  }
+  cs_ignore(S, cs, "{")
+end
+<<*>>=
+procedure basename(name)
+  reverse(name) ? {
+    tab(upto('.')) & ="."
+    return reverse(tab(0))
+  }
+end
+@
+\subsubsection{Accents}
+This info is taken from the HTML RFC, section entitled 
+``ISO Latin~1 character entities.''
+<<*>>=
+global accent_name, accent_valid
+<<initialization>>=
+accent_name  := table()
+accent_valid := table('')
+accent_name ["`"]  := "grave"
+accent_valid["`"]  := 'AEIOUaeiou'
+accent_name ["'"]  := "acute"
+accent_valid["'"]  := 'AEIOUYaeiouy'
+accent_name ["^"]  := "circ"
+accent_valid["^"]  := 'AEIOUaeiou'
+accent_name ["\""] := "uml"
+accent_valid["\""] := 'AEIOUaeiouy'
+accent_name ["~"]  := "tilde"
+accent_valid["~"]  := 'ANOano'
+accent_name ["="]  := "bar"
+accent_name ["."]  := "dot"
+accent_name ["u"]  := "u"
+accent_name ["v"]  := "v"
+accent_name ["H"]  := "H"
+accent_name ["t"]  := "t"
+accent_name ["c"]  := "cedil"
+accent_valid["c"]  := 'Cc'
+accent_name ["d"]  := "underdot"
+accent_name ["b"]  := "underbar"
+@
+Initialization calls [[accent]] to indicate that a control
+sequence represents an accent.
+In fact, [[accent]] is called on all keys of [[accent_name]].
+<<*>>=
+procedure accent(cs)
+  cstab[cs] := Caccent
+end
+
+procedure Caccent(S, cs, cl)
+  arg := csarg(S) | return
+  if *arg = 1 & any(accent_valid[cs], arg) then
+    S.text(S, "&" || arg || accent_name[cs] || ";")
+  else {
+    write(&errout, "Can't handle \\", cs, " with arg ", image(arg))
+    S.text(S, arg)
+  }
+end
+@
+\subsection{Font changes}
+A font change changes the font until the next close, when we need to emit
+the appropriate end tag.
+<<*>>=
+procedure fontchange(tex, html)
+  cstab[tex] := Cfontchange
+  csclosure[tex] := html
+end
+<<*>>=
+procedure Cfontchange(S, tex, html)
+  S.text(S, tag(html))
+  before_next_close(S, emit_text, [S, endtag(html)])
+end
+@
+\section{Implementations of declaratives}
+
+\subsection{Ignoring stuff}
+There are several different kinds of things that can be ignored:
+ordinary arguments,
+balanced-brace arguments, optional arguments, assignments (which may
+include dimensions), stars, and parenthesized coordinates.
+We ignore a sequence of these things by supplying a template to
+[[ignore]], in which each character stands for something to be ignored.
+We've already seen examples of these things in Section~\ref{cs-decls}.
+
+We can ignore arguments of control sequences or environments.
+In either case, [[cs_ignore]] does the work.
+<<*>>=
+procedure ignore(cs, template)
+  /template := ""
+  cstab[cs] := cs_ignore
+  csclosure[cs] := template
+end
+
+procedure ignoreenv(env, template)
+  /template := ""
+  begintab[env] := cs_ignore
+  begincl[env] := template
+  endtab[env] := do_nothing
+end
+@
+Because ignoring may span many inputs, all [[cs_ignore]] does is set things
+up to call [[do_ignore]].  
+The major setup is replacing [[S.text]] with a function that does nothing.
+Oh, and it converts an integer template
+into that many arguments, for historical reasons.
+<<*>>=
+procedure cs_ignore(S, cs, template)
+  local saved_text
+  saved_text := S.text
+  S.text := ignore_text
+  if type(template) == "integer" then template := repl("{", template)
+  do_ignore(S, template, saved_text)
+end
+@
+Some things are easily ignored (partly because we assume they don't
+span inputs).  For others, we have special procedures.
+The brace-ignoring stuff uses the open and close hooks, because braces
+can be nested deeply.
+<<*>>=
+procedure do_ignore(S, template, saved_text)
+  if *template > 0 then
+    if optwhite() & pos(0) then
+      after_next_newtext(S, do_ignore, [S, template, saved_text])
+    else
+      case template[1] of {
+        "{" : { S.text := ignore_text
+                after_next_open(S, ignore_til_close, [S, template[2:0], saved_text])
+              }
+        "A" : { csarg(S) # had better be in one input
+                do_ignore(S, template[2:0], saved_text)
+              }
+        "[" : if optwhite() & ="[" then {
+                delay_newtext(S)
+                eat_to_bracket(S, do_ignore, [S, template[2:0], saved_text])
+              } else
+                do_ignore(S, template[2:0], saved_text)
+        "=" : { delay_newtext(S)
+                eat_assignment(S, do_ignore, [S, template[2:0], saved_text])
+              }
+        "*" : { (="*", optwhite())
+                do_ignore(S, template[2:0], saved_text)
+              }
+        "(" : { (="(", tab(upto(')')), =")", optwhite())
+                do_ignore(S, template[2:0], saved_text)
+              }
+      }
+  else  
+    S.text := saved_text
+end
+
+procedure ignore_til_close(S, template, saved_text)
+  before_next_close(S, do_ignore, [S, template, saved_text])
+end
+<<*>>=
+procedure ignore_text(S, s)
+  return
+end
+@
+Finally, at the end of an ignored environment, do nothing.
+<<*>>=
+procedure do_nothing(S, cs, cl)
+  return
+end
+@
+\subsubsection{Ignoring brackets}
+To ignore an optional argument, we may have to gobble to a bracket.
+This is just like gobbling to a newline, which we had to do with a comment.
+As in the other case, we do something stupid if the bracket is
+protected (e.g. by a backslash or comment char).
+<<*>>=
+procedure eat_to_bracket(S, proc, args)
+  tab(upto(']') | 0)
+  if pos(0) then
+    before_next_newtext(S, eat_to_bracket, [S, proc, args])
+  else {
+    ="]"
+    undelay_newtext(S)
+    (\proc)!args
+  }
+  return
+end    
+@
+\subsubsection{Ignoring assignments}
+Assignments are tricky because they might involve numbers, control
+sequences, dimensions, or even glue.
+We approximate the syntax from page 275 in the \TeX book.
+<<*>>=
+procedure eat_assignment(S, proc, args)
+  static decimal_chars
+  initial decimal_chars := &digits ++ '.,+-'
+  optwhite()
+  ="="		# so what if we swallow multiple = signs
+  optwhite()
+  if pos(0) then {
+    before_next_newtext(S, eat_assignment, [S, proc, args])
+    return
+  } else if glue() then { # finished
+  } else if any(decimal_chars) then {
+    tab(many(decimal_chars))
+    optwhite()
+    if ="\\" then
+      tab(many(S.csletters)) | move(1)
+    # else assume assignment of the form \hangafter=2
+  } else if ="\\" then
+    tab(many(S.csletters)) | move(1)
+  undelay_newtext(S)
+  (\proc)!args
+end
+<<*>>=
+procedure dimen()
+  static decimal_chars
+  initial decimal_chars := &digits ++ '.,'
+  suspend (optwhite(), 
+           if any('+-') then (move(1), optwhite()) else "",
+           tab(many(decimal_chars)), optwhite(), 
+           (="true", optwhite()) | &null,
+           =("em"|"ex"|"pt"|"pc"|"in"|"bp"|"cm"|"mm"|"dd"|"cc"|"sp"|"mu"))
+end
+<<*>>=
+procedure glue() 
+  suspend (dimen(), 
+           (optwhite(), ="plus",  dimen()) | "", 
+           (optwhite(), ="minus", dimen()) | "")
+end
+@
+\subsection{Substitution}
+
+\subsubsection{Simple substitution for a single control sequence}
+
+Even simple substitution isn't so simple, because in addition to the
+HTML that we substitute for the {\TeX}, we can also supply a template
+of stuff to be ignored (like the optional argument to \verb+\\+).
+<<*>>=
+procedure substitution(tex, html, ignore_template)
+  # ignore mode for now
+  cstab[tex] := Cemit_ig
+  csclosure[tex] := emit_ig_cl(html, \ignore_template | "")
+end
+@
+The closure contains HTML to be written and a template to be ignored.
+<<*>>=
+record emit_ig_cl(html, template)
+
+procedure Cemit_ig(S, cs, cl)
+  S.text(S, cl.html)
+  if *cl.template > 0 then 
+    cs_ignore(S, cs, cl.template)
+end
+@
+\subsubsection{Substitution for environments}
+The [[envblock]] procedure has two forms:
+\begin{itemize}
+\item
+[[envblock(]]{\it environment}, {\it tag}[[)]] simply uses
+begin- and end-{\it tag} in place of the environment.
+\item
+[[envblock(]]{\it environment}, {\it left}, {\it right}, {\it
+ignore}[[)]] 
+puts the {\it left} text at the beginning of the environment, the {\it
+right} text at the end, plus at the beginning of the environment it
+ignores the arguments described by {\it ignore}.
+\end{itemize}
+It's easier to implement than to describe.
+<<*>>=
+procedure envblock(env, left, right, ignore_template)
+  /ignore_template := ""
+  begintab[env] := Cemit_ig
+  begincl[env] := emit_ig_cl(if /right then tag(left) else left, ignore_template)
+  endtab[env] := Cemit
+  endcl[env] := if /right then endtag(left) else right
+end
+@ [[Cemit]] emits text with nothing to ignore.
+<<*>>=
+procedure Cemit(S, cs, cl)
+  S.text(S, cl)
+end
+@
+\subsubsection{Substitution around arguments of control sequences}
+These substitutions place tags at the beginning and end of arguments
+to control sequences, instead of surrounding the contents of an
+environment.
+For example, they specify how to convert [[\section{...}]] to
+[[<h1>...</h1>]] and so forth.
+The calling convention is as for [[envblock]].
+<<*>>=
+record blockpair(left, right, ignore)
+
+procedure argblock(tex, html, right, ignore)
+  # called as is envblock
+  /ignore := ""
+  cstab[tex] := Cblock
+  csclosure[tex] := 
+    if /right then blockpair (tag(html),  endtag(html), ignore)
+    else blockpair (html, right, ignore)
+end
+@ There is a fine point; control sequences labelled with [[argblockv]]
+should put the converter into vertical mode.
+<<*>>=
+procedure argblockv(tex, html, right)
+  argblock(tex, html, right)
+  cstab[tex] := CblockV
+end
+<<*>>=
+procedure Cblock(S, cs, cl)
+  return if pos(0) then {
+    after_next_newtext(S, do_cs, [S, cs, cl])
+  } else if match("{") then {
+    S.text(S, cl.left)
+    after_next_open(S, before_next_close, [S, emit_text, [S, cl.right]])
+  } else {
+    S.text(S, cl.left || csarg(S) || cl.right)
+  }
+end
+<<*>>=
+procedure CblockV(S, cs, cl)
+  S.mode := "V"
+  return Cblock(S, cs, cl)
+end
+@
+\subsection{Table environments}
+For tables, we not only have an HTML tag, we also supply some text
+for the ampersand.
+[[args]] is a template describing the arguments to the environment,
+which are ignored.
+<<*>>=
+record table_closure(args, amp, html)
+
+procedure table_env(env, args, amp, html)
+  begintab[env] := Ctable
+  begincl[env] := table_closure(args, amp, html)
+  endtab[env] := Ctable_end
+  endcl[env] := []
+end
+@
+<<*>>=
+procedure Ctable(S, env, cl)
+  local amp
+  amp := S.ampersand
+  S.ampersand := cl.amp
+  S.text(S, tag(\cl.html))
+  push(endcl[env], amp)
+  cs_ignore(S, env, cl.args)
+end
+
+procedure Ctable_end(S, env, cl)
+  S.ampersand := pop(cl)
+  S.text(S, endtag(\begincl[env].html))
+end
+@
+@
+\section{HTML formatting}
+First, generic procedures used to create beginning and ending tags.
+<<*>>=
+procedure tag(html)
+   return "<" || html || ">"
+end
+
+procedure endtag(html)
+  return "</" || html || ">"
+end
+@
+Next, a gazillion formatting procedures.
+<<*>>=
+procedure Ccomment(S)
+  S.text(S, "<!--")
+  S.comment ? {
+    while S.text(S, tab(find("--"))) do {
+      move(2)
+      S.text(S, "- - ")
+    }
+    S.text(S, tab(0))
+  }
+  S.text(S, "-->")
+  S.comment := ""
+  return
+end
+<<*>>=
+procedure Cparagraph(S)
+  S.text(S, "<p>")
+end
+<<*>>=
+procedure Cmath(S)
+  S.text(S, "<i>")
+end
+
+procedure Cmath_end(S)
+  S.text(S, "</i>")
+end
+<<*>>=
+procedure Cdisplaymath(S)
+  S.text(S, "<blockquote><i>")
+end
+
+procedure Cdisplaymath_end(S)
+  S.text(S, "</i></blockquote>")
+end
+<<*>>=
+procedure Cmakeatletter(S)
+  S.csletters ++:= '@'
+end
+
+procedure Cmakeatother(S)
+  S.csletters --:= '@'
+end
+@ 
+\section{Miscellanous utilities}
+[[optwhite]] skips and returns optional white space.
+<<*>>=
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+@
+\section{Chunks}
+\nowebchunks
+
+\section{Index}
+\begin{multicols}{2}
+\nowebindex
+\end{multicols}
+
+\end{document}
