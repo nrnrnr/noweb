@@ -4,6 +4,10 @@
 # See file COPYRIGHT for more information.
 
 nawk '
+BEGIN {
+  rcsid = "$Id$"
+  rcsname = "$Name$"
+}
 /^@begin docs 0$/ { next }
 /^@begin docs / { printf "@ " }
 /^@begin code / { code = 1 }
