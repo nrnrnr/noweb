@@ -59,6 +59,8 @@ void markup (FILE* in, FILE *out, char *filename) {
     int quoting = 0;            /* currently quoting code? */
     int count = 0;              /* number of current chunk, from 0 */
     int missing_newline;        /* was last line missing a trailing \n? */
+    int lineno = 0;		/* number of lines read */
+    int last_open_quote;	/* line number of last unmatched open quote */
 
     char *line;                 /* part of line up to mark (or end) */
     char *mark;                 /* potentially marked part of line */
@@ -97,8 +99,9 @@ and arbitrary documentation text can follow on the same line.
     print_state(out, Begin, state, count);
 
     while ((line = getline_expand(in)) != NULL) {
+	lineno++;
         <<remember if a newline was missing from the last line>>
-        if (starts_code(line)) {
+        if (starts_code(line, filename, lineno)) {
             <<complain and correct unmatched open quote, if any>>
             print_state(out, End, state, count);
             count++;
@@ -158,27 +161,27 @@ for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL;
        line = mark) {
     if (*line) print_pair(out, "text", unescape(line));
     print_pair(out, quoting ? "endquote" : "quote", 0);
-    quoting = !quoting;
+    if (quoting = !quoting) last_open_quote = lineno;
 }
 if (*line) print_pair(out, "text", unescape(line)); 
 <<complain and correct unmatched open quote, if any>>=
 if (quoting) {
-    errormsg(Warning, "Open quote `[[' never closed");
+    errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
     quoting = 0;
 }
 @
 If we missed the module definition line, this might suggest to us
 that we've made a mistake.
 <<Check a bunch of ``mistake indicators''>>=
-    if (state != Code && (mod_start(line,0)!=NULL)) {
-        errormsg(Warning, "Warning: chunk name in documentation (or missing = in definition):\n\t%s", line);
-    }
+if (state != Code && (mod_start(line,0)!=NULL))
+    errorat(filename, lineno, Warning, 
+            "Warning: chunk name in documentation (or missing = in definition)");
 @
 Finally, we give the main program, which opens each file and passes it
 to [[markup]].
 Like many main programs, it's based on K \& R [[cat]].
 <<*>>=
-void main(int argc, char **argv) {
+main(int argc, char **argv) {
 
     FILE *fp;
     char *myself=*argv;
@@ -192,9 +195,9 @@ void main(int argc, char **argv) {
         }
     if (i < argc)
         for (; i < argc; i++) {
-            if (!strcmp(argv[i], "-")) 
+            if (!strcmp(argv[i], "-")) {
 	        markup(stdin,stdout,"");
-            else 
+            } else 
                 if ((fp=fopen(argv[i],"r"))==NULL)
                     errormsg(Error, "%s: couldn't open file %s\n", myself, argv[i]);
                 else {
