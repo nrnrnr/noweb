@@ -15,7 +15,7 @@ for i do
         -n) latex=0 ; tex=0 ;;
         -x) xref=1 ; if [ $tex -eq 1 ]; then tex=0 ; latex=1; fi ;;
         -t*) markopts="$markopts $i" ;;
-        -*) echo "$0: Unrecognized argument `$i'" 1>&2 ; exit ;;
+        -*) echo "$0: Unrecognized argument '$i'" 1>&2 ; exit ;;
         *)  arg="$arg $i" ;;
 	esac
 done
