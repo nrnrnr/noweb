@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
 \section{Converting {\tt noweb} markup to {\TeX} markup (Icon version)}
 The copyright applies both to the {\tt noweb} source and to the
 generated shell script.
@@ -9,10 +10,13 @@ Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
 procedure main(args)
-  local delay
+  local delay, name
   <<initialization>>
   delay := !args == "-delay"
   noindex := !args == "-noindex"
+  if !args == "-no-gen-comment" then &null
+  else 
+    write("% this file was generated automatically by noweave --- better not edit it")
   while inputline := read() do inputline ? {
     <<scan and convert>>
   }
@@ -51,16 +55,21 @@ This whole code is a giant [[if ... then ... else if ...]].
 <<@xref>>
 <<@index>>
 <<others>>
-if ="@" then  						# follows last else
+if ="@fatal " then {				# follows last else
+ #  write(&errout, "Noweb error in stage ", tab(upto(' ')), ":", tab(0))
+  exit(1)
+} else if ="@" then 
   warn_unknown(1(tab(upto(' ')|0), pos(0) | move(1)))
 else
   write(&errout, "Botched line in noweb pipeline: ", tab(0))
 @
 \subsection{Basic text and chunk boundaries}
 <<code chunks>>=
-if ="@begin code " then	{ code := 1     ; writes("\\nwbegincode{", tab(0), "}")  } else
-if ="@end code "   then { code := &null ; writes("\\nwendcode{}")
-                          lastdefnlabel := &null                                 } else
+if ="@begin code " then	{ code := 1     ; writes("\\nwbegincode{", tab(0), "}")
+                          <<reset cross-reference info>>                         } else
+if ="@end code "   then { <<dump pending cross-reference info>>
+                          code := &null ; writes("\\nwendcode{}")
+                          lastdefnlabel := pendingprev := pendingnext := &null   } else
 <<docs chunks>>=
 if ="@begin docs " then	{ if \delay & match(0) then <<delay for [[@begin docs]]>>  
                           else {text := 0; writes("\\nwbegindocs{",tab(0),"}")}  } else
@@ -74,6 +83,7 @@ if ="@text " then 	{ text +:= *(line := tab(0))
 <<@nl>>=
 if ="@nl" & pos(0) then { if /code then {<<print [[\nwdocspar]] if no [[text]]>>}
                           if \quoting then writes("\\nwnewline")
+			  <<show definitions and uses on definition line---once>>
                           write()                                                } else
 @
 Delaying markup is handled by special patterns for the first document chunk.
@@ -96,16 +106,23 @@ and [[lastxrefref]].
 <<@defn>>=
 if ="@defn " then 	{ writes("\\sublabel{", \lastxreflabel, "}")
 			  writes("\\nwmargintag{", label2tag(\lastxreflabel), "}")
-                          writes("\\moddef{", convquotes(name := tab(0)), 
+                          writes("\\moddef{", convquotes(thischunk := tab(0)), 
                                  ("~" || label2tag(\lastxrefref)) | "",
-                                 "}\\", defns[name], "endmoddef")
+                                 "}\\", defns[thischunk], "endmoddef")
+			  useitems := \useitemstab[thischunk]
+			  pendinguses := 1
 			  lastdefnlabel := lastxreflabel
 			  <<clear [[lastxref*]]>>
-                          defns[name] := "plus"                                } else
+                          defns[thischunk] := "plus"                           } else
+@ [[useitemstab]] enables us to show uses even on later instances of a chunk,
+although the index filter only provides uses with the first chunk.
+<<initialization>>=
+useitemstab := table()
 <<@use>>=
 if ="@use " then 	{ writes("\\LA{}", convquotes(name := tab(0)), 
                                  ("~" || label2tag(\lastxrefref)) | "",
-                                 "\\RA{}")                                     } else
+                                 "\\RA{}")
+			  <<clear [[lastxref*]]>>                                } else
 <<*>>=
 procedure label2tag(label)
   return "{\\nwtagstyle{}\\subpageref{" || label || "}}"
@@ -118,17 +135,18 @@ defns := table("")
 @
 \subsection{Quoting, headers, trailers, \& miscellany}
 <<others>>=
-if ="@quote"    & pos(0)      then { quoting := 1     ; writes("{\\tt{}")          } else
-if ="@endquote" & pos(0)      then { quoting := &null ; writes("}")                } else
+if ="@quote"    & pos(0)      then { quoting := 1     ; writes("{\\Tt{}")        } else
+if ="@endquote" & pos(0)      then { quoting := &null ; writes("}")              } else
 if ="@file "                  then { filename := tab(0); <<clear [[lastxref*]]>>
-                                     \delay | writes("\\nwfilename{", filename, "}") } else
-if ="@literal "               then { writes(tab(0))                                } else
-if ="@header latex "          then { <<write {\LaTeX} header>>		           } else
-if ="@header tex "            then { writes("\\input nwmac ")		           } else
-if ="@trailer latex" & pos(0) then { write("\\end{document}")		           } else
-if ="@trailer tex"   & pos(0) then { write("\\bye")			           } else
+                                     \delay | writes("\\nwfilename{", filename, "}")
+										 } else
+if ="@literal "               then { writes(tab(0))                              } else
+if ="@header latex "          then { <<write {\LaTeX} header>>		         } else
+if ="@header tex "            then { writes("\\input nwmac ")		         } else
+if ="@trailer latex" & pos(0) then { write("\\end{document}")		         } else
+if ="@trailer tex"   & pos(0) then { write("\\bye")			         } else
 <<write {\LaTeX} header>>=
-writes("\\documentstyle[noweb]{article}\\pagestyle{noweb}\\noweboptions{", tab(0),
+writes("\\documentclass{article}\\usepackage{noweb}\\pagestyle{noweb}\\noweboptions{", tab(0),
        "}\\begin{document}")
 @
 \subsection{Cross-reference and index support}
@@ -138,23 +156,60 @@ We begin with basic cross-reference [[@xref label]] and [[@xref ref]],
 then show the chunk cross-reference that comes at the end of a code chunk.
 The {\LaTeX} back end ignores [[@xref nextdef]] and [[@xref prevdef]].
 <<@xref>>=
-if ="@xref "               then { <<@xref tests>> <<bad @xref>>                   } else
+if ="@xref "               then { <<@xref tests>> <<bad @xref>>                 } else
+<<reset cross-reference info>>=
+every defitems | useitems := []
+notused := &null
+@
+By resetting the cross-reference info after dumping,
+we make it possible to dump both before index stuff and before
+end of chunk, without having to do any checking.
+<<dump pending cross-reference info>>=
+dumpitems(defitems, "nwalsodefined")
+dumpitems(useitems, "nwused")
+writes("\\nwnotused{", \notused, "}")
+<<reset cross-reference info>>
 <<@xref tests>>=
-if ="label "               then { lastxreflabel := tab(0)			  } else
-if ="ref "                 then { lastxrefref   := tab(0)			  } else
-if ="begindefs"   & pos(0) then { writes("\\nwalsodefined{")		          } else
-if ="defitem "             then { writes("\\\\{", tab(0), "}")		          } else
-if ="enddefs"     & pos(0) then { writes("}")				          } else
-if ="beginuses"   & pos(0) then { writes("\\nwused{")			          } else
-if ="useitem "             then { writes("\\\\{", tab(0), "}")		          } else
-if ="enduses"     & pos(0) then { writes("}")				          } else
-if ="notused "             then { writes("\\nwnotused{", TeXliteral(tab(0)), "}") } else
-if ="nextdef "             then {                                                 } else
-if ="prevdef "             then {                                                 } else
+if ="label "               then { lastxreflabel := tab(0)			} else
+if ="ref "                 then { lastxrefref   := tab(0)			} else
+if ="begindefs"   & pos(0) then {                            		        } else
+if ="defitem "             then { put(defitems, tab(0)) 		        } else
+if ="enddefs"     & pos(0) then {              				        } else
+if ="beginuses"   & pos(0) then { useitems := []                		} else
+if ="useitem "             then { put(useitems, tab(0))	          		} else
+if ="enduses"     & pos(0) then { useitemstab[thischunk] := useitems	        } else
+if ="notused "             then { notused := tab(0)                             } else
+if ="nextdef "             then { pendingnext := tab(0)                         } else
+if ="prevdef "             then { pendingprev := tab(0)                         } else
+<<show definitions and uses on definition line---once>>=
+if \pendinguses | \pendingprev | \pendingnext then {
+  writes("\\nwstartdeflinemarkup")
+  <<write out definition-line markup>>
+  writes("\\nwenddeflinemarkup")
+  pendinguses := pendingprev := pendingnext := &null
+}
+<<write out definition-line markup>>=
+if \pendinguses then {
+  dumpitems(useitems, "nwusesondefline")
+}
+if \pendingprev | \pendingnext then {
+  writes("\\nwprevnextdefs{", \pendingprev | "\\relax", "}{", 
+                              \pendingnext | "\\relax", "}")
+}
 <<clear [[lastxref*]]>>=
 every lastxreflabel | lastxrefref := &null
 <<bad @xref>>=
 warn_unknown("xref " || tab(upto(' \t') | 0))
+<<*>>=
+procedure dumpitems(items, cs)
+  if *\items > 0 then {
+    writes("\\", cs, "{")
+    every writes("\\\\{", !items, "}")
+    writes("}")
+    return
+  } else
+    fail
+end
 @
 \subsubsection{Identifier cross-reference, i.e.\ index}
 <<@index>>=
@@ -180,7 +235,7 @@ if it's in code, we use the anchor label of the definition.
 might like to.)
 <<handle index defn>>=
 writes("\\nosublabel{", \lastxreflabel, "}")
-writes("\\nwindexdefn{", TeXliteral(name := tab(0)), "}{", indexlabel(name), "}{",
+writes("\\nwindexdefn{\\nwixident{", TeXliteral(name := tab(0)), "}}{", indexlabel(name), "}{",
 	\lastxrefref, "}")
 <<clear [[lastxref*]]>>
 @
@@ -189,7 +244,7 @@ The {\LaTeX} back end ignores uses in code; they get bundled up by a previous fi
 <<handle index use>>=
 if /code then {
   writes("\\protect\\nosublabel{", \lastxreflabel, "}")
-  writes("\\protect\\nwindexuse{", TeXliteral(name := tab(0)), "}{", 
+  writes("\\protect\\nwindexuse{\\nwixident{", TeXliteral(name := tab(0)), "}}{", 
                 indexlabel(name), "}{", \lastxrefref, "}")
 }
 <<clear [[lastxref*]]>>
@@ -197,20 +252,22 @@ if /code then {
 Here's the local identifier cross-reference that appears at the end of a code chunk.
 We guard everything with \LA{}SI\RA, as before.
 <<@index tests>>=
-if ="begindefs" & pos(0) then <<SI>> { writes("\\nwidentdefs{")                   } else
+if ="begindefs" & pos(0) then <<SI>> { <<dump pending cross-reference info>>
+                                       writes("\\nwidentdefs{")                   } else
 if ="isused "            then <<SI>> { "handled by latex"                         } else
 if ="defitem "           then <<SI>> { i := tab(0); <<write [[i]] with [[\\]]>>   } else
 if ="enddefs"   & pos(0) then <<SI>> { writes("}")                                } else
-if ="beginuses" & pos(0) then <<SI>> { writes("\\nwidentuses{"); ulist := []      } else
+if ="beginuses" & pos(0) then <<SI>> { <<dump pending cross-reference info>>
+                                       writes("\\nwidentuses{"); ulist := []      } else
 if ="isdefined "         then <<SI>> { "latex finds the definitions"              } else
 if ="useitem "           then <<SI>> { i := tab(0); <<write [[i]] with [[\\]]>> 
                                         put(ulist, i);                            } else
 if ="enduses"   & pos(0) then <<SI>> { writes("}"); <<write [[ulist]]>>           } else
 <<write [[i]] with [[\\]]>>=
-writes("\\\\{{", TeXliteral(i), "}{", indexlabel(i), "}}") 
+writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
 <<write [[ulist]]>>=
 every i := !ulist do 
-  writes("\\nwindexuse{", TeXliteral(i), "}{", indexlabel(i), "}{", \lastdefnlabel, "}")
+  writes("\\nwindexuse{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}{", \lastdefnlabel, "}")
 @ 
 \subsubsection{The list of chunks and the index}
 The treatments of the list of chunks and the index are similar.
@@ -228,8 +285,8 @@ if ="endchunks"   & pos(0) then {     					          } else
 <<@index tests>>=
 if ="beginindex"  & pos(0) then <<SI>> { 					  } else
 if ="entrybegin "          then <<SI>> { label := tab(upto(' ')); =" "; name := tab(0)
-                                         write("\\nwixlogsorted{i}{{", TeXliteral(name),
-                                         "}{", indexlabel(name), "}}%")	          } else
+										 write("\\nwixlogsorted{i}{{\\nwixident{", TeXliteral(name),
+										 "}}{", indexlabel(name), "}}%")	          } else
 if ="entryuse "            then <<SI>> { "handled by latex"	                  } else
 if ="entrydefn "           then <<SI>> { "handled by latex"                       } else
 if ="entryend"    & pos(0) then <<SI>> {                                          } else
@@ -254,22 +311,44 @@ I can't use [[\\char`\%]] and similar sequences with latex2e, because
 [[`]] is an active character that suppresses ligatures.  So I got TeX to print out the
 actual character codes for me.
 This string ([['\\{}$&#^_ ~%']]) should serve as a test.
+
+Unfortunately, the character codes for these characters are not the
+same across fonts.  While this is not a problem when everything is in
+a typewriter font, it can cause major strangenesses when another font
+is used (Icon, for example, is often typeset in a sans-serif font).
+Codes for `[[$]]', `[[&]]', `[[#]]', `[[^]]', `[[_]]', `[[~]]' and
+`[[%]]' use 
+font-independent macros.  Since there is no font-independent way to
+typeset `[[\]]', `[[{]]' and `[[}]]',\footnote{Although both plain
+\TeX\ and \LaTeX\ provide `[[\{]]' and `[[\}]], plain \TeX\ only
+allows their use in math mode.}
+we generate special macros defined in \verb"noweb.sty" and
+\verb"nwmac.tex".  The default definitions are geared to typewriter
+fonts, but they can be redefined as necessary.
 <<*>>=
 procedure TeXliteral(arg)
   static nospace, code
-  initial { codes := ["\\", 92, "{", 123, "}", 125, "$", 36, "&", 38, "#", 35, "^", 94, 
-                      "_", 95, "%", 37, "~", 126]
+  initial { codes := ["\\", "nwbackslash",
+                      "{", "nwlbrace",
+					  "}", "nwrbrace",
+					  "$", "$",
+					  "&", "&",
+					  "#", "#",
+					  "^", "char94", 
+                      "_", "_",
+					  "%", "%",
+					  "~", "char126"]
             code := table()
             while (c := get(codes), n := get(codes)) do code[c] := string(n)
             if c := !TeXspecials & c ~== " " & not member(code, c) then
-	      stop("internal error, character-code mismatch, report a bug!")
+	      fatal("internal error, character-code mismatch, report a bug!")
           }
   s := ""
   arg ? {
     while s ||:= tab(upto(TeXspecials)) do {
       c := move(1)
       if member(code, c) then
-        s ||:= "{\\char" || code[c] || "}"
+        s ||:= "{\\" || code[c] || "}"
       else
         s ||:= "\\" || c
     }
@@ -284,10 +363,10 @@ procedure convquotes(s)
   r := ""
   s ? {
     while r ||:= tab(find("[[")) do {
-      ="[[" | stop("impossible missing [[")
+      ="[[" | fatal("impossible missing [[")
       r ||:= "\\code{}" || TeXliteral(tab(find("]]")))
       r ||:= tab(many(']')-2)
-      ="]]" | stop("impossible missing ]]")
+      ="]]" | fatal("impossible missing ]]")
       r ||:= "\\edoc{}"
     }
     return r || tab(0)
@@ -335,3 +414,9 @@ trans["{"] := "lb"      # left brace
 trans["}"] := "rb"      # right brace
 trans["~"] := "ti"      # tilde
 @ %def indexlabel
+<<*>>=
+procedure fatal(L[])
+  write!([&errout, "noweb error in tohtml: "] ||| L)
+  exit(1)
+end
+
