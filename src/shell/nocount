@@ -1,0 +1,24 @@
+#!/bin/sh
+
+LIB=|LIBDIR|
+
+$LIB/markup $* | nawk '
+BEGIN { bogus = "this is total bogosity"; codecount[bogus] = -1; docscount[bogus] = -1 }
+/^@file / { thisfile = $2 ; files[thisfile] = 0 }
+/^@begin code/ { code = 1 }
+/^@begin docs/ { code = 0 }
+/^@nl/ {
+  if (code == 0)
+    docscount[thisfile]++
+  else
+    codecount[thisfile]++
+}
+END { 
+  printf " Code   Docs   Both  File\n"
+  for (file in files) {
+    printf "%5d  %5d  %5d  %s\n", codecount[file], docscount[file], codecount[file]+docscount[file], file
+    totalcode += codecount[file]
+    totaldocs += docscount[file]
+  } 
+  printf "%5d  %5d  %5d  %s\n", totalcode, totaldocs, totalcode+totaldocs, "Total"
+}'

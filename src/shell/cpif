@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# cpif [ -eq -ne ] file...
+# copy standard input to each of the named files
+# if new * old is true or old doesn't exist;
+# * defaults to -ne
+
+PATH=/bin:/usr/bin
+
+# set -x
+op=-ne
+case "$1" in
+-eq|-ne)	op=$1; shift ;;
+-*)		echo 'Usage: '`basename $0`' [ -eq -ne ] file...' 1>&2; exit 2
+esac
+case $# in
+0)		echo 'Usage: '`basename $0`' [ -eq -ne ] file...' 1>&2; exit 2
+esac
+
+new=/tmp/$$
+trap 'rm -f $new; exit 1' 1 2 15	# clean up files
+
+cat >$new
+for i
+do
+	cmp -s $new $i
+	case $op$? in
+	-eq0|-ne1|*2)	cp $new $i
+	esac
+done
+rm -f $new
