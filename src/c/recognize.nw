@@ -21,8 +21,8 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.10 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: recognize.nw,v 1.11 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 <<Include files>>
 <<header>>
 <<Type definitions>>
@@ -35,10 +35,8 @@ static char rcsname[] = "$Name: v2_9b $";
 @
 <<Include files>>=
 #include <string.h>
-@ %def strchr strcpy strlen
-<<Include files>>=
 #include <stdlib.h>
-@ %def malloc calloc free
+@ 
 
 \paragraph{External Interface}
 
@@ -50,26 +48,23 @@ allocated space.
 
 <<Exported prototypes>>=
 Recognizer new_recognizer(char *alphanum, char *symbols);
-@ %def new_recognizer
 <<Exported type definitions>>=
 typedef struct recognizer *Recognizer;
-@ %def Recognizer
+@
 A copy is made of the string pointed to by [[id]].
 It won't hurt to add the same identifier multiple times to a given
 recognizer.
 <<Exported prototypes>>=
 void add_ident(Recognizer r, char *id);
 void stop_adding(Recognizer r);
-@ %def add_ident stop_adding
 <<Exported prototypes>>=
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
-@ %def search_for_ident
+@ 
 
 [[instance]] is a pointer to the place within [[input]] that we
 saw the identifier.
 <<Exported type definitions>>=
 typedef void (*Callback) (void *closure, char *id, char *instance);
-@ %def Callback
 @
 
 \subsubsection{Defining the Automata}
@@ -78,20 +73,17 @@ typedef void (*Callback) (void *closure, char *id, char *instance);
 <<Type definitions>>=
 typedef struct goto_node Goto_Node;
 typedef struct move_node Move_Node;
-@ %def Goto_Node Move_Node
 <<Type definitions>>=
 typedef struct name_node {
   struct name_node *next; /* points to the next name on the output list */
   char *name;
 } Name_Node;
-@ %def Name_Node
 <<Type definitions>>=
 struct move_node {
   Move_Node *next;      /* points to the next node on the move list */
   Goto_Node *state;     /* the next state for this character */
   unsigned char c;
 };
-@ %def move_node
 <<Type definitions>>=
 struct goto_node {
   Name_Node *output;    /* list of words ending in this state */
@@ -99,7 +91,6 @@ struct goto_node {
   Goto_Node *fail;      /* and where to go when no move fits */
   Goto_Node *next;      /* next goto node with same depth */
 };
-@ %def goto_node
 <<Type definitions>>=
 struct recognizer {
   Goto_Node *root[256]; /* might want 128, depending on the character set */
@@ -110,7 +101,6 @@ struct recognizer {
                          created while adding ids, used while building
                          the failure functions */
 };
-@ %def recognizer root depths max_depth alphas syms
 @
 
 \paragraph{A Utility Function}
@@ -126,7 +116,6 @@ static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
     m = m->next;
   return m ? m->state : NULL;
 }
-@ %def goto_lookup
 @
 
 \subsubsection{Building the Automata}
@@ -142,7 +131,6 @@ Recognizer new_recognizer(char *alphanum, char *symbols)
   r->depths = (Goto_Node **) calloc(r->max_depth, sizeof(Goto_Node *));
   return r;
 }
-@ %def Recognizer
 @
 
 \paragraph{Building the Goto Table}
@@ -168,7 +156,6 @@ void add_ident(Recognizer r, char *id)
   }
   <<Set [[q->output]] to [[id]] (if not already present)>>
 }
-@ %def add_ident
 <<Create an entry for [[root[c]]]>>=
 {
   q = (Goto_Node *) calloc(1, sizeof(Goto_Node));
@@ -250,7 +237,6 @@ void stop_adding(Recognizer r)
     }
   }
 }
-@ %def stop_adding
 @
 
 \subsubsection{Using the Automata}
@@ -267,7 +253,6 @@ void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
     c = *current++;
   }
 }
-@ %def search_for_ident
 @
 This is all complicated by my use of [[NULL]] to indicate the
 initial state. However, we get a nice speedup by using the [[root]]
@@ -323,8 +308,7 @@ int reject_match(Recognizer r, char *id, char *input, char *current)
   if (next && strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
   return 0;
 }
-@ %def reject_match
-Note we never reject a zero [[prev]] or [[next]], since some
+@ Note we never reject a zero [[prev]] or [[next]], since some
 implementations of [[strchr]] always return true when searching for a
 zero character. 
 @

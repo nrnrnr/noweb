@@ -21,8 +21,8 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
-static char rcsid[] = "$Id: markup.nw,v 2.10 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: markup.nw,v 2.11 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,7 +60,6 @@ or code chunk, the first chunk is assumed to be a documentation chunk.
 @
 <<data definitions>>=
 char at_sign = '@';             /* should be the only place '@' is mentioned */
-@ %def at_sign
 <<header>>=
 extern char at_sign;                    /* the at sign */
 @
@@ -78,7 +77,7 @@ char *first_doc_line(char *line) {
     if (line[1]!='\0' && line[1] !='\n') return line+2;
     else return line+1;
 }
-@ %def starts_doc first_doc_line
+@
 An index line is a special case of starting documentation.
 <<header>>=
 int is_def(char *);
@@ -88,8 +87,12 @@ static char def_marker[] = " %def ";
 #define def_length (6)
 <<C functions>>=
 int is_def(char *line) {
+    int answer;
+    static complained;
     <<first time through, assert we got the length right>>
-    return (*line==at_sign && !strncmp(line+1, def_marker, def_length));
+    answer = (*line==at_sign && !strncmp(line+1, def_marker, def_length));
+    <<if [[answer && !complained]], complain>>
+    return answer;
 }
 
 char *remove_def_marker(char *line) {
@@ -102,7 +105,18 @@ char *remove_def_marker(char *line) {
     checked = 1;
   }
 }
-@ %def is_def remove_def_marker
+@ 
+Explicit deprecation is just too painful.  I think the users won't
+stand for it.
+<<if [[answer && !complained]], complain>>=
+if (answer && !complained) {
+    complained = 1;
+/*
+    fprintf(stderr, "Warning: @ %%def is deprecated.  Use `-filter autodefs.xxx'\n"
+	            "         or `-filter btdefn'\n");
+*/
+}
+@ 
 Recognizing module names (which introduce code chunks)
 and extracting them is the mission of the [[mod_start]] and [[mod_end]]
 functions.
@@ -131,7 +145,7 @@ char *mod_start(char *s, int mark) {
 char *mod_end(char *s, int mark) {
     return find_escaped(s,"@>>","@@>>", mark);
 }
-@ %def mod_start mod_end
+@ 
 Once we know how to [[mod_start]] and [[mod_end]], recognizing the
 beginning of a code chunk is easy.
 <<header>>=
@@ -161,7 +175,6 @@ void getmodname(char *dest, int size, char *source) {
     dest[size-1] = '\0';
     free(p);
 }
-@ %def starts_code getmodname
 <<error exit from [[starts_code]]>>=
 {
     errorat(filename, lineno, Error, "Module name doesn't end", line);
@@ -212,5 +225,3 @@ char *find_escaped(register char *s, char *search, char *escape, int mark) {
     if (mark) *s = '\0';
     return s+searchlen;
 }
-@ %def find_escaped
-

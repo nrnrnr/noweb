@@ -36,7 +36,7 @@ it is indented.\stylehook
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
 \codemargin=0pt
-@ %def \codehsize \codemargin
+@ 
 [[\defspace]] is the space we would like on the right of navigational info
 that appears on definition lines, so that it lines up with the text above
 and below.
@@ -77,7 +77,7 @@ escaped with a backslash.
 }
 \let\nwlbrace=\{
 \let\nwrbrace=\}
-@ %def \setupcode 
+@ 
 [[\eatline]] is used to consume newlines that should be ignored,
 for example, the newlines at the end of [[@ %def ]]{\em identifiers} lines.
 I can't remember what [[\startline]] or [[\newlines]] are for; I don't
@@ -91,7 +91,7 @@ think {\tt noweave} ever emits them.
 %%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
 \def\startline{\noindent\hskip\parindent\ignorespaces}
 \def\nwnewline{\ifvmode\else\hfil\break\leavevmode\hbox{}\fi}
-@ %def \startline \eatline \nwnewline
+@ 
 
 Within a code environment, it may be necessary to restore the 
 category codes in order to set a module (chunk) name.
@@ -111,7 +111,6 @@ This hack doesn't properly restore [["]] for use in {\tt german.sty}.
   \let\}\nwrbrace
   % bad news --- don't know what catcode to give "
   \Rm}
-@ %def \setupmodname
 @ \sublabel{ref:fred}
 @
 Setting up the space code has to be done differently for {\TeX} and
@@ -139,7 +138,7 @@ in general.
 \def\code{\leavevmode\begingroup\setupcode\newlines}
 \def\edoc{\endgroup}
 \let\maybehbox\relax
-@ %def \LA \RA \maybehbox
+@ 
 
 [[\equivbox]] and [[\plusequivbox]] are used to set the
 ``\unhcopy\equivbox''
@@ -158,7 +157,6 @@ either [[\endmoddef]] or [[\plusendmoddef]].
                \nobreak\hfill\nobreak}
 \def\plusendmoddef{\RA\ifmmode\mathord{+}\mathord{\equiv}\else\unhcopy\plusequivbox\fi
                \nobreak\hfill\nobreak}
-@ %def \equivbox \plusequivbox \moddef \endmoddef \plusendmoddef
 @
 Within a code environment, margin tags might be used to mark sub-page
 numbers in the margins, separated by [[\nwmarginglue]].\stylehook
@@ -174,7 +172,7 @@ The tag itself is displayed using [[\nwthemargintag]]
 \nwopt@margintag
 \newdimen\nwmarginglue
 \nwmarginglue=0.3in
-@ %def \nwmargintag margintag nomargintag \nwmarginglue
+@ 
 \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
@@ -196,7 +194,6 @@ I'll try to avoid such incompatible changes in the future.}%
 \errmessage{Use \string\nowebchunks\space instead of \string\chunklist}}
 \def\nowebchunks{\message{<Warning: You need noweave -x to use \string\nowebchunks>}}
 \def\nowebindex{\message{<Warning: You need noweave -index to use \string\nowebindex>}}
-@ %def \chunklist \nowebchunks \nowebindex
 @ We have to be careful with font-changing in the presence of
 different font-selection schemes.  In the \LaTeX{} New Font Selection
 Scheme something like [[\it\tt]] will attempt to use an italic
@@ -224,7 +221,6 @@ extra [[\reset@font]] does no harm.]
   \def\Bf{\reset@font\bf}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
-@ %def \Rm \Tt \It \Bf
 @
 \clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}
@@ -241,7 +237,7 @@ extra [[\reset@font]] does no harm.]
     \@ifundefined{nwopt@\@nwoption}{%
         \@latexerr{There is no such noweb option as '\@nwoption'}\@eha}{%
         \csname nwopt@\@nwoption\endcsname}}}
-@ %def \noweboptions
+@ 
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
 code is indented by [[\codemargin]].\stylehook
@@ -273,7 +269,7 @@ It may be emitted by {\tt noweave -shift}, or it might be given by a user.
 %  \advance \marginparwidth -\dimen@
 }
 \let\nwopt@noshift\@empty
-@ %def shift noshift
+@ 
 
 \iffalse
 <<man page: [[\noweboptions]]>>=
@@ -324,7 +320,6 @@ be broken anyhow (even within chunk names because of the
   \@begincode
 }{%
   \endtrivlist}
-@ %def \nwbegincode \nwendcode webcode
 @ This is just common code between [[\nwbegincode]] and [[webcode]].
 <<noweb.sty>>=
 \def\@begincode{%
@@ -334,7 +329,6 @@ be broken anyhow (even within chunk names because of the
   <<zap ligatures, fix spaces>>
   \nowebsize \setupcode
   \let\maybehbox\mbox }
-@ %def \@begincode
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
@@ -370,7 +364,6 @@ the glue placed before code chunks.\stylehook
   \def\nwopt@LARGEcode{\let\nowebsize=\LARGE}
   \def\nwopt@hugecode{\let\nowebsize=\huge}
   \def\nwopt@Hugecode{\let\nowebsize=\Huge}
-@ %def  \nwcodetopsep \nowebsize smallcode
 @ Maybe the penalties ought to be parameters\dots
 <<[[\nwbegincode]] separation and penalties>>=
   \topsep \nwcodetopsep
@@ -411,7 +404,7 @@ code chunk.  If you set it to 10000, code will never be broken across
 pages.\stylehook{}  I guess this should be settable in [[\noweboptions]].
 <<noweb.sty>>=
 \newcount\nwcodepenalty  \nwcodepenalty=\@highpenalty
-@ %def \nwcodepenalty
+@ 
 The cursing chunk accounts for the addition of a mess of characters
 to those reset by [[\@noligs]] in \LaTeX2e.
 <<zap ligatures, fix spaces>>=
@@ -443,7 +436,7 @@ vmode; if it does start a new one, it's only indented by the use of
 \def\nwbegindocs#1{\ifvmode\noindent\fi}
 \let\nwenddocs=\relax
 \let\nwdocspar=\filbreak
-@ %def \nwbegindocs \nwdocspar \nwenddocs
+@ 
 The page-breaking strategy implies ragged bottom pages, so we should
 turn it on in general (this is relevant for the {\tt report} style):
 <<noweb.sty>>=
@@ -491,7 +484,6 @@ otherwise they are ignored.
 }
 \def\nw@laterfilename#1{\endgroup\clearpage \markboth{#1}{#1}}
 \let\nwfilename=\@gobble
-@ %def \@original@textwidth \ps@noweb \nwfilename
 @
 \subsection{Chunk cross-reference}
 [[\nwalsodefined]], [[\nwused]], and [[\nwnotused]] are emitted by the {\tt
@@ -518,7 +510,7 @@ usuall by making [[\rightskip]] naturally zero but stretchable.
         \rightskip=0pt plus1in
         \interlinepenalty\nwcodepenalty
         \let\\\relax\footnotesize\Rm #1\@@par\penalty\nwcodepenalty}}
-@ %def \nwcodecomment 
+@ 
 This stuff is used at the end of a chunk.
 <<noweb.sty>>=
 \def\@nwalsodefined#1{\nwcodecomment{\@nwlangdepdef\ \nwpageprep\ \@pagesl{#1}.}}
@@ -526,7 +518,6 @@ This stuff is used at the end of a chunk.
 \def\@nwnotused#1{\nwcodecomment{\@nwlangdeprtc.}}
 \def\nwoutput#1{\nwcodecomment{\@nwlangdepcwf\ {\Tt \@stripstar#1*\stripped}.}}
 \def\@stripstar#1*#2\stripped{#1}
-@ %def \nwalsodefined \nwused \nwnotused \nwoutput
 <<add [[\nwcodecommentsep]] if this is the first [[\nwcodecomment]]>>=
 \if@firstnwcodecomment
   \vskip\nwcodecommentsep\penalty\nwcodepenalty\@firstnwcodecommentfalse
@@ -548,7 +539,7 @@ Note the hooks\stylehook{} for pointer styles.
 \newcommand{\@nwstartdeflinemarkup}{\nobreak\hskip 1.5em plus 1fill\nobreak}
 \newcommand{\@nwenddeflinemarkup}{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
 @
-And here are the options we use to choose one or the other.
+And here are the options we use to choose one, the other, or neither.
 <<noweb.sty>>=
 \def\nwopt@longxref{%
   \let\nwalsodefined\@nwalsodefined
@@ -568,15 +559,25 @@ And here are the options we use to choose one or the other.
   \let\nwstartdeflinemarkup\@nwstartdeflinemarkup
   \let\nwenddeflinemarkup\@nwenddeflinemarkup
 }
+\def\nwopt@noxref{%
+  \let\nwalsodefined\@gobble
+  \let\nwused\@gobble
+  \let\nwnotused\@gobble
+  \let\nwprevnextdefs\@gobbletwo
+  \let\nwusesondefline\@gobble
+  \let\nwstartdeflinemarkup\relax
+  \let\nwenddeflinemarkup\relax
+}
 \nwopt@shortxref % to hell with backward compatibility!
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
-.B longxref, shortxref
-Use either long, Knuth-style chunk cross-reference, or short,
-Hanson-style chunk cross-reference.
-The former uses small paragraphs after the chunk;
-the latter uses symbols on the definition line.
+.B longxref, shortxref, noxref
+Choose a style for chunk cross-reference.
+Long style uses  small paragraphs after each chunk, as in Knuth.
+Short style uses symbols on the definition line, as in Hanson.
+.B noxref
+provides no chunk cross-reference. 
 Defaults to 
 .B shortxref.
 @ \fi
@@ -765,7 +766,7 @@ defining the [[2on]] bit appropriately.
   \nwhyperreference{#1}{\nw@genericref\@subpageref{#1}}}
 \def\@subpageref#1#2#3\\{%
   \@ifundefined{2on#2}{#2}{\nwthepagenum{#1}{#2}}}
-@ %def \subpageref
+@ 
 [[\subpagepair]] produces a [[{subpage}{page}]] pair.
 <<noweb.sty>>=
 \newcommand{\subpagepair}[1]{%  % produces {subpage}{page}
@@ -789,7 +790,7 @@ anchors, for which we use [[\nwblindhyperanchor]].
       \newsublabel{#1}{{}{\thepage}}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \sublabel
+@ 
 [[\nosublabel]] creates a label with a sub-page part of~0.
 <<noweb.sty>>=
 \newcommand{\nosublabel}[1]{%
@@ -799,7 +800,6 @@ anchors, for which we use [[\nwblindhyperanchor]].
       \newlabel{#1}{{0}{\thepage}}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \nosublabel
 @
 [[\newsublabel]] is the macro that does the important work.  It is called with the
 same sort of arguments as [[\newlabel]]: the first argument is the
@@ -821,7 +821,6 @@ proper trailers.
 <<definition of [[\newsublabel]]>>=
 \newcommand{\@newsublabel}[2]{%
   \edef\this@page{\@cdr#2\@nil}%
-@ %def \newsublabel
 @
 Then we see whether it's changed from the value of [[\last@page]]
 which was stashed away by the last [[\newsublabel]] (or is [[\relax]] if
@@ -919,7 +918,6 @@ We need to define these.
 <<noweb.sty>>=
 \def\last@page{\relax}
 \newcount\sub@page
-@ %def \last@page \sub@page
 @
 We no longer use Rainer's new expandable definitions of [[\ref]] and
 [[\pageref]] to minimise the risk of nasty surprises; enough time has
@@ -936,7 +934,6 @@ elapsed that this should no longer be necessary.
     {\@nameuse{r@#1}}}
 <<warn of undefined reference to [[#1]]>>=
 \@warning{Reference `#1' on page \thepage \space undefined}
-@ %def \ref \pageref
 @
 
 Here a a couple of hooks for formatting sub-page numbers,
@@ -949,7 +946,7 @@ which can be alphabetic, numeric, or omitted.\stylehook
 \def\nwopt@numsubpage{\let\nwthepagenum=\@numsubpagenum}
 \def\nwopt@alphasubpage{\let\nwthepagenum=\@alphasubpagenum}
 \nwopt@alphasubpage
-@ %def \nwthepagenum nosubpage numsubpage alphasubpage
+@ 
 In rare cases, there may be more than 26 chunks on a page.
 In such a case, we need a sub-page numbering scheme that can go beyond
 ``a to z.''
@@ -1054,7 +1051,7 @@ Since the numbers are all distinct, no sub-page number is ever used.
   \let\sublabel=\weblabel
   \def\nwpageword{chunk}\def\nwpagesword{chunks}%
   \def\nwpageprep{in}}
-@ %def \weblabel webnumbering
+@ 
 \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
@@ -1085,14 +1082,12 @@ documentation chunk.
    \edef\@tempa{\write\@auxout{\string\nwixadd{#1}{#2}{#3}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \nwindexdefn \nwindexuse \@auxix
 <<noweb.sty>>=
 % \nwixadd{marker}{idlabel}{subpage label}
 \def\nwixadd#1#2#3{%
   \@ifundefined{nwixl@#2}%
     {\global\@namedef{nwixl@#2}{#1{#3}}}%
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
-@ %def \nwixadd
 @
 \subsubsection{Subscripted identifiers}
 We use either explicit subscripts or hyperlinks to point identifiers
@@ -1187,7 +1182,7 @@ Plus [[\\]] is applied to each element of the list.
                    \advance\@commacount by \m@ne
                    \ifnum\@commacount=1 \@nwlangdepand~\fi\@comma@each}\@comma@each}\fi
    #1}}
-@ %def \@commacount \commafy
+@ 
 
 \subsubsection{New, improved index code}
 There are two kinds of lists.
@@ -1200,7 +1195,7 @@ element is preceded by either [[\nwixd]] or [[\nwixu]].
 \def\nwix@cons#1#2{% {list}{\marker{element}}
   {\toks0=\expandafter{#1}\def\@tempa{#2}\toks2=\expandafter{\@tempa}%
    \xdef#1{\the\toks0 \the\toks2 }}}
-@ %def \nwix@cons
+@ 
 The reference list for an identifier labelled {\em id}
 is always called [[\nwixl@]]{\em id}.
 Most applications will work with reference lists by applying [[\\]]
@@ -1210,7 +1205,7 @@ either to the defs or to the uses.
   \def\nwixu{\\}\let\nwixd\@gobble\@nameuse{nwixl@#1}}
 \def\nwix@defs#1{% {label}
   \def\nwixd{\\}\let\nwixu\@gobble\@nameuse{nwixl@#1}}
-@ %def \nwix@uses \nwix@defs
+@ 
 
 Some applications count uses to see whether there is any need to
 display information.
@@ -1222,7 +1217,6 @@ display information.
    #1\global\nwix@counter=\count@ }}
 \def\nwix@usecount#1{\nwix@listcount{\nwix@uses{#1}}}
 \def\nwix@defcount#1{\nwix@listcount{\nwix@defs{#1}}}
-@ %def \nwix@listcount \nwix@usecount \nwix@defcount
 @
 \subsubsection{Supporting a mini-index at the end of each chunk}
 When displaying identifiers used, show the identifier and its
@@ -1233,7 +1227,7 @@ definitions.
   \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
 \def\nwidentuses#1{% list of index pairs
   \nwcodecomment{\@nwlangdepuss\ \let\\=\nwix@id@defs\commafy{#1}.}}
-@ %def \nwidentuses \nwix@id@defs
+@ 
 The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
 <<noweb.sty>>=
@@ -1481,7 +1475,7 @@ The following macro can be redefined to allow custom typesetting of
 identifiers in the index and mini-indices.
 <<noweb.sty>>=
 \let\nwixident=\relax
-@ %def \nwixident
+@ 
 @
 The following macros can be redefined to typeset `[[\]]', `[[{]]' and
 `[[}]]' correctly in non-typewriter fonts. 
@@ -1704,7 +1698,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
   January\or February\or March\or April\or May\or June\or
   July\or August\or September\or October\or November\or December\fi
   \space\number\day, \number\year}
-@ %def \textsize \today
 <<nwmac.tex>>=
 \long\def\ifundefined#1#2#3{%
    \expandafter\ifx\csname#1\endcsname\relax
@@ -1720,11 +1713,9 @@ First we make [[@]] a letter so that we can use `private' macro names.
 \ifundefined{myfootline}
     {\footline={\hfil}}
     {\expandafter\footline\expandafter{\myfootline}}
-@ %def \ifundefined
 <<nwmac.tex>>=
 \def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
 \raggedbottom
-@ %def \semifilbreak
 <<nwmac.tex>>=
 %
 % \chapcenter macro to produce nice centered chapter titles
@@ -1734,7 +1725,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
     \parfillskip=0pt \spaceskip=.3333em \xspaceskip=.5em
     \pretolerance=9999 \tolerance=9999
     \hyphenpenalty=9999 \exhyphenpenalty=9999}
-@ %def \chapcenter
 <<nwmac.tex>>=
 % \startsection{LEVEL}{INDENT}{BEFORESKIP}{AFTERSKIP}{STYLE}{HEADING}
 %               #1     #2      #3          #4         #5     #6
@@ -1760,7 +1750,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
                 {\noexpand\the\pageno}}}\next % write to toc
     %}
 }
-@ %def \startsection
 <<nwmac.tex>>=
 \def\settocparms#1{
         \count@=#1
@@ -1776,11 +1765,9 @@ First we make [[@]] a letter so that we can use `private' macro names.
             \edef\tocindent{\the\dimen@}
         \fi
 }
-@ %def \settocparms
 <<nwmac.tex>>=
 \def\tocline#1#2{\line{{\ignorespaces#1}\leaders\hbox to .5em{.\hfil}\hfil
      \hbox to1.5em{\hss#2}}}
-@ %def \tocline
 <<nwmac.tex>>=
 \def\section#1{\par \vskip3ex\noindent {\bf #1}\par\nobreak\vskip1ex\nobreak}
 \def\chapter#1{\vfil\eject\startsection{0}{0pt}{6ex}{3ex}{\frtbf\chapcenter}{#1}}
@@ -1804,8 +1791,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
 {\catcode`\^^M=\active % make CR an active character
   \gdef\bchack#1^^M{\relax#1}%
 }
-@ %def \section \chapter \section \subsection \subsubsection \paragraph
-@ %def \nwbegindocs \nwenddocs \nwbegincode \nwendcode \nwfilename
 <<nwmac.tex>>=
 \edef\contentsfile{\jobname.toc } % file that gets table of contents info
 \def\readcontents{\expandafter\input \contentsfile}
@@ -1813,7 +1798,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
 \newwrite\cont
 \openout\cont=\contentsfile
 \write\cont{\string\catcode`\string\@=11}% a hack to make contents
-@ %def \readcontents \cont
 <<nwmac.tex>>=
                                  % take stuff in plain.tex
 \def\bye{%
@@ -1824,7 +1808,6 @@ First we make [[@]] a letter so that we can use `private' macro names.
     \vfil\eject\end}
 \def\topofcontents{\vfil\mark{{\bf Contents}}}
 \def\botofcontents{}
-@ %def \bye \topofcontents \botofcontents
 <<nwmac.tex>>=
 \let\em=\it
 % used to produce an itemized (bulleted) list in plain {\TeX}
@@ -1851,7 +1834,7 @@ First we make [[@]] a letter so that we can use `private' macro names.
 \def\enditemize{\par\endgroup\noindent\ignorespaces}
 
 \let\begindocument=\relax
-@ %def \listlevel \itemwidth \itemize \enditemize
+@ 
 Finally we make [[@]] `other' again.
 <<nwmac.tex>>=
 \catcode`\@=12

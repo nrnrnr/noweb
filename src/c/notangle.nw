@@ -15,8 +15,8 @@ details later.
 <<header>>=
 void emit_module_named (FILE *out, char *rootname, char *locformat);
 <<*>>=
-static char rcsid[] = "$Id: notangle.nw,v 2.11 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: notangle.nw,v 2.12 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #define MAX_MODNAME 255
 @
 <<*>>=
@@ -42,8 +42,7 @@ void emit_module_named (FILE *out, char *rootname, char *locformat) {
     (void) expand(root,0,0,0,locformat,out);
     putc('\n',out);                     /* make output end with newline */
 }
-@ %def notangle
-
+@ 
 We loop looking for the start of a code chunk.
 When we find one, we get the name of the module in which the code
 is to appear.  
@@ -93,7 +92,7 @@ void read_defs(FILE *in) {
         <<if [[line==NULL]] die of premature end of file>>
     }
 }
-@ %def read_defs
+@ 
 <<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>=
 do { line = getline(in);
 } while (line != NULL && !is_keyword(line,"defn") && !is_keyword(line,"text"));
@@ -158,7 +157,6 @@ void warn_dots(char *modname) {
     errormsg(Warning, "Module name @<<%s@>> isn't completed as in web", 
              modname);
 }
-@ %def warn_dots
 <<Function declarations>>=
 static void warn_dots(char *modname);          /* warn about names ending in ... */
 
@@ -174,7 +172,6 @@ void insist(char *line, char *keyword, char *msg) {
   if (!is_keyword(line,keyword))
     impossible(msg);
 }
-@ %def insist
 <<if [[line==NULL]] die of premature end of file>>=
 if (line==NULL) {
     impossible("End of file occurred in mid-module");

@@ -26,7 +26,7 @@ struct modpart {
     Location loc;               /* for String, where's it from ? */
     struct modpart *next;
 };
-@ %def Location parttype modpart
+@ 
 In order to facilitate expansion of all roots (and to identify roots), 
 I keep a use counter in each module.
 <<header>>=
@@ -35,7 +35,6 @@ typedef struct module {
     int usecount;
     struct modpart *head, *tail;
 } *Module;
-@ %def module Module
 <<header>>=
 Module newmodule(char *modname);         /* create a new, blank module */
 <<C functions>>=
@@ -47,10 +46,9 @@ Module newmodule (char *modname) {
     p->head = p->tail = NULL;
     return p;
 }
-@ %def newmodule
 <<*>>=
-static char rcsid[] = "$Id: modules.nw,v 2.12 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: modules.nw,v 2.13 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -72,13 +70,11 @@ static char rcsname[] = "$Name: v2_9b $";
         /* add a module reference to a module definition (stripping final newline) */
 #define addnewline(MP) add_part(MP,0,NEWLINE,0)
 void add_part (Module mp, char *s, Parttype type, Location *loc);
-@ %def addstring addmodule addnewline
 <<C functions>>=
 void add_part (Module mp, char *s, Parttype type, Location *loc) {
     struct modpart *p = newmodpart(type,s,loc);
     append (mp,p);
 }
-@ %def add_part
 <<C functions>>=
 static struct modpart *
 newmodpart(int type, char *s, Location *loc) {
@@ -93,7 +89,6 @@ newmodpart(int type, char *s, Location *loc) {
     p->next = NULL;
     return p;
 }
-@ %def newmodpart
 <<C functions>>=
 static
 void append(Module mp, struct modpart *p) {
@@ -105,7 +100,6 @@ void append(Module mp, struct modpart *p) {
         mp->tail = p;
     }
 }
-@ %def append
 <<strip final newline from p->contents>>=
 { int k = strlen(p->contents)-1;
   if (p->contents[k] == '\n') p->contents[k] = '\0';
@@ -134,11 +128,9 @@ typedef struct parent {
 int expand (Module mp, int indent, int partial_distance, Parent parent, 
             char *locformat, FILE *out);
         /* expand a module, writing to file out */
-@ %def Parent
 <<local data>>=
 static char *lastfilename = 0;
 static int lastlineno = -1;
-@ %def lastfilename lastlineno
 <<header>>=
 void resetloc(void);
 <<C functions>>=
@@ -170,7 +162,6 @@ int expand (Module mp, int indent, int partial_distance, Parent parent,
     }
     return error;
 }
-@ %def expand
 @
 If the previous line was not partial, this string starts a fresh line
 and it is necessary to indent.
@@ -247,7 +238,7 @@ static int seekcycle(Module mp, Parent parent) {
         return 0;
     }
 }
-@ %def seekcycle
+@ 
 
 Printing locations means emitting [[#line]] numbers.
 [[printloc]] emits a [[#line]] only if the line emitted is out of sequence.
@@ -268,7 +259,6 @@ int printloc(FILE *fp, char *fmt, Location loc, int partial) {
         return 1;
     } else return 0;
 }
-@ %def printloc
 <<write out the line number pragma>>=
 for (p = fmt; *p; p++) {
     if (*p == '%') {
@@ -332,5 +322,3 @@ void remove_final_newline (Module mp) {
         p->next = NULL;
     }
 }
-@ %def remove_final_newline
-

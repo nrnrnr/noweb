@@ -14,8 +14,8 @@ of the length of the longest line.
 [[getline]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-static char rcsid[] = "$Id: getline.nw,v 2.10 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: getline.nw,v 2.11 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #define START_SIZE 128                  /* initial buffer size */
 
 #include <stdio.h>
@@ -29,7 +29,7 @@ static char *buf1 = NULL, *buf2 = NULL; /* lines without, with tabs expanded */
 static buf_size = START_SIZE;           /* size of both buffers if non-NULL */
 
 <<C functions>>
-@ %def START_SIZE buf_size buf1 buf2
+@ 
 <<header>>=
 char *getline_expand (FILE *fp);
   /* grab a line in buffer, return new buffer or NULL for eof
@@ -58,7 +58,6 @@ char *getline (FILE *fp) {
     }
     return buf1;
 }
-@ %def getline
 <<C functions>>=
 char *getline_expand (FILE *fp) {
     char *s, *t;
@@ -79,7 +78,6 @@ char *getline_expand (FILE *fp) {
     *t='\0';
     return buf2;
 }
-@ %def getline_expand
 <<if [[buf1==NULL]], allocate initial buffers>>=
 if (buf1==NULL) {
     checkptr(buf1 = (char *) malloc (buf_size));

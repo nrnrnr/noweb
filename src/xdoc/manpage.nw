@@ -8,7 +8,7 @@ notangle, noweave, nountangle \- noweb, a literate-programming tool
 [\fB\-L\fP[format]] [file] ...
 .br
 \fBnountangle\fP 
-[\fB\-ml\fP|\fB\-m3\fP|\fB\-c\fP|\fB\-c++\fP|\fB\-awk\fP|\fB\-tex\fP|\fB\-f77\fP|\fB\-f90\fP]
+[\fB\-ml\fP|\fB\-m3\fP|\fB\-c\fP|\fB\-c++\fP|\fB\-awk\fP|\fB\-tex\fP|\fB\-f77\fP|\fB\-f90\fP|\fB\-lisp\fP|\fB\-matlab\fP]
 [\fB\-R\fProotname ...] [\fB\-filter\fP command] [\fB\-w\fPwidth] [file] ...
 .br
 \fBnoweave\fP [options] [file] ...
@@ -129,10 +129,7 @@ Some programming or formatting languages may require a single \fB@\fP sign in
 the first column. 
 Noweb users may achieve this effect by putting a doubled \fB@@\fP in the first column;
 in this position only, it stands for a single \fB@\fP sign.
-<<notangle.1>>=
-.PP
-<<paragraph on marking identifier definitions>>
-<<paragraph on marking identifier definitions>>=
+<<paragraph on marking identifier definitions (no longer used)>>=
 Any line beginning with `\fB@ \fP' terminates a code chunk,
 but if the line has the form
 .br
@@ -259,8 +256,9 @@ or
 .I noweave
 can provide indexing and cross-reference information for chunks and for 
 programming-language identifiers.
-Identifier definitions may be marked by hand using \fB@ %def\fP, 
-or for some languages they may be found automatically using the 
+Identifier definitions may be marked by hand using backticks (`); the 
+\fB-filter btdefn\fP option recognizes these markings.
+For some languages, defintioins may be found automatically using the 
 \fB-autodefs\fP option.
 This section describes the indexing and cross-reference options;
 it might well be skipped on first reading.
@@ -352,26 +350,32 @@ multiple definitions and one is misspelled,
 the misspelled definition is silently ignored.
 .IR noroots (1)
 can be used to catch this mistake.
+\".PP
+\".I noweb
+\"requires the new version of
+\".IR awk ,
+\"assumed to be called
+\".IR nawk .
+\"DEC
+\".I nawk
+\"has a bug in that that causes 
+\".B noweave
+\"to fail to translate braces correctly.
+\"GNU 
+\".I gawk
+\"is reported to work.
+\".PP
+\"DEC 
+\".I sh
+\"has a bug that causes the
+\".B \-filter
+\"option to fail whenever the filter command contains more than one word.
 .PP
-.I noweb
-requires the new version of
-.IR awk ,
-assumed to be called
-.IR nawk .
-DEC
-.I nawk
-has a bug in that that causes 
-.B noweave
-to fail to translate braces correctly.
-GNU 
-.I gawk
-is reported to work.
-.PP
-DEC 
-.I sh
-has a bug that causes the
-.B \-filter
-option to fail whenever the filter command contains more than one word.
+The 
+.I "-L"
+option of
+.I notangle
+puts an implicit initial newline in the format string.
 .PP
 <<paragraph about bogus latex pagestyles>>
 .PP
@@ -510,8 +514,6 @@ chooses the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
 parsed correctly.
 .PP
 <<paragraph on escaping angle brackets>>
-.PP
-<<paragraph on marking identifier definitions>>
 .SH OPTIONS
 .TP
 .B \-t

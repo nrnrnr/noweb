@@ -7,8 +7,8 @@ extern int is_begin(char *line, char *type);
 extern int is_end(char *line, char *type);
 extern int is_index(char *line, char *type);
 <<*>>=
-static char rcsid[] = "$Id: match.nw,v 1.7 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: match.nw,v 1.8 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <string.h>
 #include "match.h"
 static int matches(char *line, char *search) {
@@ -34,5 +34,3 @@ int is_end(char *line, char *type) {
 int is_index(char *line, char *type) {
     return is_keyword(line,"index") && matches(line+1+6,type);
 }
-@ %def is_keyword is_begin is_end is_index
-

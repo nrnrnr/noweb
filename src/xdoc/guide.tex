@@ -440,7 +440,9 @@ another; see the description of {\tt finduses} on page~\pageref{finduses}.}
 
 Instances of \ikw{defn} normally come from one of two sources: either a
 language-dependent recognizer of definitions, or a hand-written
-\verb+@ %def+ line.
+\verb+@ %def+ line.%
+\footnote{The \texttt{@ \char`\%def} notation has been deprecated
+since version~2.10.}
 In the latter case, the line is terminated by a newline that is
 neither part of a code chunk nor part of a documentation chunk.
 To keep line numbers accurate, that newline can't just be abandoned,

@@ -5,13 +5,13 @@ LIB=/dev/null
 SHELL=/bin/sh
 CINAME=
 CIMSG=
-RCSFILES=emptydefn toascii.nw unmarkup Makefile nwmtime pipedocs h2a
+RCSFILES=emptydefn toascii.nw unmarkup Makefile nwmtime pipedocs h2a btdefn
 
 all: toascii
-	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a
+	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
 
 install: all
-	cp unmarkup emptydefn toascii nwmtime h2a $(LIB)
+	cp unmarkup emptydefn toascii nwmtime h2a btdefn $(LIB)
 	sed 's@|LIBDIR|@$(LIB)@g' pipedocs > $(LIB)/pipedocs
 	chmod +x $(LIB)/pipedocs
 

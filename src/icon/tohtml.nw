@@ -66,7 +66,6 @@ if ="@begin code " then	{ code := 1   ; thischunk := &null
 if ="@end code "   then { <<dump pending cross-reference info (long form)>>
                           code := nil ; previscode := 1 
                           writes(ecode, eraw)                                    } else
-@ %def previscode
 @ We maintain [[thischunk]] null until we've seen [[@defn]].
 
 We want to try to avoid emitting paragraph elements when the
@@ -144,7 +143,7 @@ procedure skip_chars()
   else if any('&') & upto(';') then
     suspend (tab(upto(';')) || =";")
   else if (any('<') & upto('>')) | any(' \t') then
-    (write(&errout, "broken skip_chars, report to nr@cs.virginia.edu: ", image(tab(0))),
+    (write(&errout, "broken skip_chars, report to nr@eecs.harvard.edu: ", image(tab(0))),
      &fail)
   else if any('<') then
     (write(&errout, "warning: can't find end of HTML tag: ", image(tab(0)),
@@ -529,7 +528,7 @@ end
 \end{document}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: tohtml.nw,v 1.8 2000/06/03 02:48:22 nr Exp nr $" ||
-         "$Name: v2_9b $"
+  return "$Id: tohtml.nw,v 1.9 2000/06/16 17:02:12 nr Exp nr $" ||
+         "$Name: v2_10 $"
 end
 @

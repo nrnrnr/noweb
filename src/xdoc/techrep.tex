@@ -269,7 +269,9 @@ If such a line has the form
 it also means that the preceding chunk defines the identifiers listed 
 in {\it identifiers}.
 This notation provides a way of marking definitions manually when 
-no automatic marking is available.
+no automatic marking is available.%
+\footnote{Starting with version~2.10, this form is deprecated; new
+code should use \texttt{-filter~btdefn}.}
 
 Figure~\ref{sample-input} shows a fragment of a {\tt noweb} program
 that computes prime numbers.
@@ -301,7 +303,6 @@ program print_primes(output);
   var <<variables of the program>>
     begin <<print the first [[m]] prime numbers>>
     end.
-@ %def print_primes m
 \end{verbatim} 
 \caption{Sample {\tt noweb} input, from prime number program}
 \label{sample-input}
@@ -694,12 +695,11 @@ Filters can be used to add significant features.
 filters, one that finds uses of defined identifiers and one that 
 uses \verb+@literal+ to insert {\LaTeX} cross-reference
 commands.
-In most cases, programmers must mark identifier definitions
-by hand, using ``{\tt @~\%def}'', 
-but
-in some cases, a third, language-dependent filter can be used to
+In many cases, a third, language-dependent filter can be used to
 mark identifier definitions,
-making index generation completely automatic.
+making index generation completely automatic;
+otherwise, the \verb+btdefn+ filter can be used to interpret
+hand-place backticks (`) as marking definitions.
 Kostas Oikonomou of AT\&T Bell Labs and Conrado Martinez-Parra of 
 the Univ.\ Politecnica de Catalunya in Barcelona have written filters
 that add prettyprinting to {\tt noweb}.

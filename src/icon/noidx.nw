@@ -103,7 +103,7 @@ procedure pass1(name, arg)
     }
   return
 end
-@ %def allchunks allidents indexlabels defanchors uses curfile lastbeginarg anchorlabel
+@ 
 The bug fix\label{multi-def-bug}
 alluded to above occurs when there are multiple definitions of an identifier.
 In this case, we can't just use [[indexanchorlabel[id]]], because that refers only to 
@@ -187,7 +187,7 @@ procedure pass2(name, arg)
   }
   return
 end
-@ %def thischunk thislabel thesedefns theseuses
+@ 
 The case of the [[@index defn]] is the one case where we don't emit a
 reference, because the reference has to go in earlier.  See
 page~\pageref{multi-def-bug} for an explanation.
@@ -454,8 +454,8 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: noidx.nw,v 1.8 2000/06/03 02:48:22 nr Exp nr $" ||
-         "$Name: v2_9b $"
+  return "$Id: noidx.nw,v 1.9 2000/06/16 17:02:12 nr Exp nr $" ||
+         "$Name: v2_10 $"
 end
 @
 \section{List of chunks}

@@ -62,10 +62,9 @@ static void print_pair(FILE *out, char *name, char *value) {
     } else
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
-@ %def state mark index print_state print_index print_pair
 <<*>>=
-static char rcsid[] = "$Id: markmain.nw,v 2.15 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: markmain.nw,v 2.16 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,7 +93,7 @@ void markup (FILE* in, FILE *out, char *filename) {
 
     <<copy all lines from [[in]] to [[out]], adding markup>>
 }
-@ %def markup
+@ 
 A {\em noweb } file consists of a sequence of
 {\em chunks,} which may appear in any order.
 {\em noweb} supports two kinds of chunks: documentation chunks and code chunks.
@@ -565,9 +564,10 @@ main(int argc, char **argv) {
             if (!strcmp(argv[i], "-")) {
                 markup(stdin,stdout,"");
             } else 
-                if ((fp=fopen(argv[i],"r"))==NULL)
+                if ((fp=fopen(argv[i],"r"))==NULL) {
                     errormsg(Error, "%s: couldn't open file %s", progname, argv[i]);
-                else {
+                    fprintf(stdout, "@fatal couldn't open file %s\n", argv[i]);
+                } else {
                     markup(fp,stdout,argv[i]);
                     fclose(fp);
                 }

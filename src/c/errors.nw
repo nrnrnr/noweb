@@ -14,8 +14,8 @@ has been.
 Some day we should hide it and give the world a function call that
 queries it.
 <<*>>=
-static char rcsid[] = "$Id: errors.nw,v 2.12 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: errors.nw,v 2.13 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,6 @@ enum errorlevel { Normal=0, Warning, Error, Fatal, Impossible };
 extern enum errorlevel errorlevel;
 extern int finalstage; /* set nonzero if this main() is a final stage */
 extern char *progname; /* set to name of program if main() is a filter */
-@ %def errorlevel
 <<C functions>>=
 enum errorlevel errorlevel = Normal;
 int finalstage = 0;
@@ -55,7 +54,6 @@ void errormsg(enum errorlevel level, char *s, ...);
 #define overflow(S) errormsg(Fatal,"Capacity exceeded: %s", S)
 #define impossible(S) errormsg(Impossible, "This can't happen: %s", S)
 #define checkptr(P) do { if (!(P)) overflow("memory"); } while (0)
-@ %def errormsg overflow impossible checkptr
 <<C functions>>=
 void errormsg(enum errorlevel level, char *s,...) {     
     va_list args;                       /* see K&R, page 174 */
@@ -65,7 +63,6 @@ void errormsg(enum errorlevel level, char *s,...) {
     if (level >= Fatal)
         nowebexit(s);
 }
-@ %def errormsg
 <<header>>=
 void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...);
 <<C functions>>=
@@ -78,7 +75,6 @@ void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {
     if (level >= Fatal)
         nowebexit(s);
 }
-@ %def errorat
 <<set [[errorlevel]] and print [[s]] with [[args]]>>=
 if (level > errorlevel)
     errorlevel = level;

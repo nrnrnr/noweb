@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# turn backticks into definitions
+
+nawk '
+/^@begin code / { code = 1 }
+/^@end code / { code = 0 }
+code && /^@text .*".*`.*"/ { print; next }
+code && /^@text .*`/ {
+  while (i = match($0, /`[a-zA-Z_][a-zA-Z0-9_]*/)) {
+    id = substr($0, i+1, RLENGTH-1)
+    sub(/`[a-zA-Z_][a-zA-Z0-9_]*/, id)
+    print "@index defn " id
+  }
+}
+{print}'

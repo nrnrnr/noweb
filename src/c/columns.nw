@@ -14,10 +14,9 @@ extern int limitcolumn (char *s, int startcolumn);
                                 /* width of startcolumn blanks plus s */
 extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
-@ %def tabsize 
 <<*>>=
-static char rcsid[] = "$Id: columns.nw,v 2.10 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: columns.nw,v 2.11 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include "columns.h"
 
@@ -26,7 +25,6 @@ int tabsize = 8;
 int columnwidth (char *s) {             /* width of a string in columns */
   return limitcolumn(s, 0);
 }
-@ %def columnwidth
 <<*>>=
 int limitcolumn (char *s, int col) {
     while (*s) {
@@ -36,7 +34,6 @@ int limitcolumn (char *s, int col) {
     }
     return col;
 }
-@ %def limitcolumn
 <<*>>=
 void indent_for (int width, FILE *fp) { 
                                 /* write whitespace [[width]] columns wide */
@@ -51,5 +48,4 @@ void indent_for (int width, FILE *fp) {
         width--;
     }
 }
-@ %def indent_for
 

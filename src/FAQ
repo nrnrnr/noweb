@@ -372,3 +372,19 @@ noweb -t foo
        language, hence web for no particular language or `noweb'.
      * A contraction of `Norman's web'
      * The third part of the pun is not suitable for publication.
+       
+   Q. Emacs noweb-mode is driving me crazy. For example, I want 4-space
+   tabs instead of the usual 8. I put this line in my file:
+% -*- mode: Noweb; noweb-code-mode: c-mode; tab-width: 4 -*-
+
+   Or equivalently I do M-x set-variable tab-width 4. Everything is fine
+   until the cursor moves from one chunk to another---then whammo! Tabs
+   are 8 spaces again. What can I do??
+   
+     A. If you have GNU emacs 20.4, or perhaps some other version, an
+     undocumented internal function of files.el will do what you want.
+     Try adding this to your ~/.emacs file:
+    (add-hook 'noweb-select-mode-hook
+              '(lambda () (hack-local-variables-prop-line)))
+
+     Thanks to Glenn Holloway for this discovery.

@@ -11,8 +11,8 @@ Module lookup (char *modname);  /* return ptr to module or NULL */
 void apply_each_module(void (*fun)(Module));
      /* apply [[fun]] to each module in the tree */
 <<*>>= 
-static char rcsid[] = "$Id: modtrees.nw,v 2.10 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: modtrees.nw,v 2.11 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -49,7 +49,7 @@ insert_tree(TNODE **rootptr, char *modname) {
      }
 
 }
-@ %def insert
+@ 
 
 Node allocation is perfectly standard.
 <<Allocate new tnode in **rootptr>>=
@@ -78,7 +78,7 @@ lookup_tree(TNODE **rootptr, char *modname) {
          return lookup_tree(&((*rootptr)->right),modname);
      }
 }
-@ %def lookup
+@ 
 
 [[apply_each_module]] takes as argument a function and applies
 it to each module in the tree.
@@ -96,5 +96,3 @@ void apply_to_tree(TNODE *p, void (*fun)(Module)) {
 void apply_each_module(void (*fun)(Module)) {
     apply_to_tree(root,fun);
 }
-@ %def apply_each_module
-

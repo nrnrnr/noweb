@@ -6,8 +6,8 @@ This main program is used to make the monolithic {\tt noweb}
 script efficient.
 Tips of the hat to Ross Williams and Preston Briggs.
 <<*>>=
-static char rcsid[] = "$Id: mnt.nw,v 1.8 2000/06/03 02:48:21 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9b $";
+static char rcsid[] = "$Id: mnt.nw,v 1.9 2000/06/16 17:02:11 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -62,7 +62,7 @@ void add_uses_to_usecounts(Module mp) {
                 used->usecount++;
         }
 }
-@ %def add_uses_to_usecounts
+@ 
 
 A conforming output chunk name has no spaces and no metacharacters.
 Names with spaces are silently ignored, but names that are otherwise
@@ -82,8 +82,6 @@ void emit_if_unused_and_conforming(Module mp) {
             errormsg(Error, "@<<%s@>> cannot be an output chunk; "
                             "it contains a metacharacter", mp->name);
 }
-@ %def emit_if_unused_and_conforming
-
 <<local prototypes>>=
 static void emitfile(char *modname);
 <<*>>=
@@ -106,7 +104,6 @@ static void emitfile(char *modname) {
     remove(tempname);
   }
 }
-@ %def emitfile
 <<set [[lfmt]] and [[filename]] from [[modname]]>>=
 { int n = strlen(modname) - 1;
   if (n >= 0 && modname[n] == '*') {
@@ -185,5 +182,3 @@ extern char *tempnam (const char *dir, const char *pfx);        /* temp file in 
 #else
 #define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
 #endif
-@ %def tempnam
-

@@ -30,6 +30,25 @@ The
 stands for the name of a programming language.
 (Icon installation only.)
 .TP
+.B btdefn
+The
+.B btdefn
+filter uses Dave Hanson's convention to mark definitions.
+In code chunks, each defining instances of an identifier should be preceded by 
+a single backtick character (ASCII 140).
+The
+.B btdefn
+filter removes these backticks from the code and converts them to definitions,
+thus:
+.BR "`definition".
+It, not
+.BR "@ %def" ,
+should be used with both 
+.IR notangle (1)
+and
+.IR noweave (1),
+at least for programs written in C-like languages.
+.TP
 .B disambiguate
 The 
 .B disambiguate 
