@@ -67,6 +67,7 @@ static void print_pair(FILE *out, char *name, char *value) {
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "errors.h"
 #include "markup.h"
 #include "getline.h"
@@ -180,8 +181,356 @@ while ((mark = mod_start(line,1)) != NULL) {
 if (*line) print_pair(out, "text",unescape(line)); 
                                   /* contribute the trailing string */
 @ To convert documentation lines, we have to track the quoting brackets.
-Note that [[if (quoting = !quoting)]] is a simultaneous toggle and test.
+We have the state machine from hell.  We can have ordinary text, quoted text in 
+[[[[...]]]], or a use in [[[[<<...>>]]]].  
+Ordinary text and quoted text can span lines, but uses can't.
+So, the four main states of our lexer are:
+\begin{quote}
+\begin{tabular}{ll}
+\tt t&Ordinary text\\
+\tt q&Quote text\\
+\tt u&A use\\
+\tt uq&Quoted text within a use\\
+\end{tabular}
+\end{quote}
+That last state covers the case where we have [[[[<<...[[...]]...>>]]]].
+BTW, it's no coincidence that if we've just consumed a newline (i.e., we're at the 
+start of a line), we must be in one of those four states.
+Moreover, since a newline would be a drastic error in states [[u]] and [[uq]]%
+\footnote{Because a use may not span lines.}, we can really only be in state [[q]]
+or [[t]].  This corresponds to [[quoting]] or [[!quoting]].
 <<convert a documentation line>>=
+{ static char *buf;
+  static int buflen = 0;
+  char *p, *s, *t, c;
+  <<make [[buf]] big enough to hold all of [[line]], plus two more characters>>
+  p = s = buf+2;
+  t = line;
+  c = *t++;
+  if (quoting) goto q;
+  else         goto t;
+  <<markup definitions>>
+  <<state machine>>
+ done: {}
+}
+@ By the way, one reason for writing a state machine by hand instead of using a 
+lexer generator is so I can test the machine using the wonderful $\chi$ATAC tool 
+developed by Bob Horgan, Saul London, and Hira Agrawal.  For more information
+send email to {\tt jrh@bellcore.com}.
+@
+We don't have to treat a newline specially, because [[print_pair]] inserts
+[[@nl]] if needed.
+<<emit text and goto [[done]] if at end of line>>=
+if (c == '\0') {
+  <<emit [[p]] to [[s]] as text>>
+  goto done;
+}
+@ 
+Markup is defined as follows:
+\begin{quote}
+\begin{tabular}{ll}
+\tt LA1 LA2&open a chunk\\
+\tt RA1 RA2&close a chunk\\
+\tt LS1 LS2&open a quote\\
+\tt RS1 RS2&close a quote\\
+\tt ESC&quotes the sequences above\\
+\end{tabular}
+\end{quote}
+By default we use angles for chunks and squares for quotes, at sign for escape:
+<<markup definitions>>=
+#define LA1 '<'
+#define LA2 '<'
+#define RA1 '>'
+#define RA2 '>'
+#define LS1 '['
+#define LS2 '['
+#define RS1 ']'
+#define RS2 ']'
+#define ESC '@'
+@
+Usually when we change state we advance the input pointer.
+Sometimes we also copy the current character.
+<<markup definitions>>=
+#define next(L) do {           c = *t++; goto L; } while (0)
+#define copy(L) do { *s++ = c; c = *t++; goto L; } while (0)
+@
+From here on I intercalate the code that implements the state machine with the
+dot code that draws a picture of it.
+The arcs in the pictures are labelled with {\it char}/{\it output}, but the
+output may be omitted.
+In the code, we see
+ [[goto]] when the picture has a [[-]] sign (denoting character not
+consumed), [[next]] when we're emitting some literal, and [[copy]] when
+we emit [[c]] (the next character).
+<<dot arcs>>=
+t -> at [label="@"]
+t -> la [label="<"]
+t -> ls [label="["]
+t -> t  [label="c/c"]
+<<state machine>>=
+t: assert(!quoting);
+   if (c == ESC) next(at);
+   if (c == LA1) next(la);
+   if (c == LS1) next(ls);
+   <<emit text and goto [[done]] if at end of line>>
+   copy(t);
+<<dot arcs>>=
+at -> atls [label="["]
+at -> atla [label="<"]
+at -> atrs [label="]"]
+at -> atra [label=">"]
+at -> t    [label="c-/@"]
+<<state machine>>=
+at: if (c == LA1) next(atla);
+    if (c == LS1) next(atls);
+    if (c == RA1) next(atra);
+    if (c == RS1) next(atrs);
+    *s++ = ESC; goto t;
+<<dot arcs>>=
+atls -> t [label="[/[["]
+atls -> t [label="c-/@["]
+<<state machine>>=
+atls: if (c == LS2) { *s++ = LS1; *s++ = LS2; next(t); }
+     *s++ = ESC; *s++ = LS1; goto t;
+<<dot arcs>>=
+atla -> t [label="</<<"]
+atla -> t [label="c-/@<"]
+<<state machine>>=
+atla: if (c == LA2) { *s++ = LA1; *s++ = LA2; next(t); }
+      *s++ = ESC; *s++ = LA1; goto t;
+<<dot arcs>>=
+atrs -> t [label="]/]]"]
+atrs -> t [label="c-/@]"]
+<<state machine>>=
+atrs: if (c == RS2) { *s++ = RS1; *s++ = RS2; next(t); }
+     *s++ = ESC; *s++ = RS1; goto t;
+<<dot arcs>>=
+atra -> t [label=">/>>"]
+atra -> t [label="c-/@>"]
+<<state machine>>=
+atra: if (c == RA2) { *s++ = RA1; *s++ = RA2; next(t); }
+      *s++ = ESC; *s++ = RA1; goto t;
+<<dot arcs>>=
+la  -> t [label="</<< (error)"]
+la  -> t [label="c-/<"]
+<<state machine>>=
+la: if (c == LA2) {
+      <<complain of unescaped @<< in documentation>>
+      *s++ = LA1; *s++ = LA2; goto t;
+    }
+    *s++ = LA1; goto t;
+@
+When we've seen [[[[]], we don't yet know whether it's the start of
+a quote or the start of a use---but we can emit the text so far.
+<<dot arcs>>=
+ls  -> qs [label="[ (text := cur; quote)"]
+ls  -> t [label="c-/["]
+<<state machine>>=
+ls: if (c == LS2) {
+        <<emit [[p]] to [[s]] as text>>
+        next(qs);
+    }
+    *s++ = LS1;
+    goto t;
+@
+Here's the ``quote start'' state, which might go on to become a use if we
+see [[<<]], or it might start to be the empty quote if we see [[]]].
+If it's not a use, we know we've got a quote.
+<<dot arcs>>=
+qs   -> qsla [label="<"]
+qs   -> qrs [label="]"]
+qs   -> q [label="c-"]
+<<state machine>>=
+qs: if (c == LA1) next(qsla);
+    quoting = 1; print_pair(out, "quote", 0); 
+    if (c == RS1) next(qrs);
+    goto q;
+@
+Here's the ordinary quote state.
+<<dot arcs>>=
+q -> qrs [label="]"]
+q -> q  [label="c/c"]
+<<state machine>>=
+q: assert(quoting);
+   if (c == RS1) next(qrs);
+   <<emit text and goto [[done]] if at end of line>>
+   copy(q);
+@
+We can't end the quote until we've consumed all the closing [[]]]'s.
+<<dot arcs>>=
+qrs -> qe [label="]"]
+qrs -> q [label="c-/]"]
+<<state machine>>=
+qrs: if (c == RS2) next(qe);
+     *s++ = RS1; goto q;
+<<dot arcs>>=
+qe -> qe [label="]/]"]
+qe -> t  [label="c-"]
+<<state machine>>=
+qe: if (c == RS2) copy(qe);
+    quoting = 0; <<emit [[p]] to [[s]] as text>> print_pair(out, "endquote", 0);
+    goto t;
+@
+Now's here where we might be seeing a use.
+<<dot arcs>>=
+qsla -> u [label="<"]
+qsla -> q [label="c-/<"]
+<<state machine>>=
+qsla: if (c == LA2) next(u);
+      *s++ = LA1; goto q;
+@
+When processing a use, we make sure [[[[...]]]] hide any closing angle brackets.
+<<dot arcs>>=
+u -> uls [label="[/["]
+u -> urs [label="]"]
+u -> ura [label=">"]
+u -> u  [label="c/c"]
+<<state machine>>=
+u: assert(!quoting);
+   if (c == LS1) copy(uls);
+   if (c == RS1) next(urs);
+   if (c == RA1) next(ura);
+   copy(u);
+<<dot arcs>>=
+urs -> upe [label="]"]
+urs -> u  [label="c-/]"]
+<<state machine>>=
+urs: if (c == RS2) next(upe);  /* premature end --- it's a quote after all */
+     *s++ = RS1; goto u;
+<<dot arcs>>=
+upe -> upe [label="]/]"]
+upe -> t [label="c- (text := cur; endquote [warn]"]
+@
+If something looks like a use, but then turns into a quote, we warn about 
+it unless it's the trivial quote [[[[<<]]]].
+<<state machine>>=
+upe: if (c == RS2) copy(upe);
+     if (s > p) {<<warn of use that became a quote>>}
+     <<make [[p]] to [[s]] a busted use and emit it as a quote>>
+     goto t;
+<<make [[p]] to [[s]] a busted use and emit it as a quote>>=
+print_pair(out, "quote", 0);
+<<prepend opening angles to [[p]]>>
+*s = 0;
+print_pair(out, "text", p);
+p = s = buf + 2;
+print_pair(out, "endquote", 0);
+<<dot arcs>>=
+uls -> uq [label="[/["]
+uls -> u  [label="c-"]
+<<state machine>>=
+uls: if (c == LS2) copy(uq);
+     goto u;
+<<dot arcs>>=
+uq -> uqrs [label="]/]"]
+uq -> uq  [label="c/c"]
+<<state machine>>=
+uq: assert(!quoting);
+    if (c == RS1) copy(uqrs);
+    if (c == '\n' || c == '\0') {
+      <<warn of use in docs terminated by newline>>
+      <<make [[p]] to [[s]] a busted use and emit it as a quote>>
+    }
+    copy(uq);
+<<dot arcs>>=
+uqrs -> uqe [label="]/]"]
+uqrs -> uq [label="c-"]
+<<state machine>>=
+uqrs: if (c == RS2) copy(uqe);
+      goto uq;
+<<dot arcs>>=
+uqe -> uqe [label="]/]"]
+uqe -> u  [label="c-"]
+<<state machine>>=
+uqe: if (c == RS2) copy(uqe);
+     goto u;
+<<dot arcs>>=
+ura -> ue [label=">"]
+ura -> u [label="c-/>"]
+<<state machine>>=
+ura: if (c == RA2) next(ue);
+     *s++ = RA1; goto u;
+@
+Here we've seen [[[[<<...>>]], and we hope for the closing square brackets.
+<<dot arcs>>=
+ue -> ues [label="]"]
+ue -> q [label="c-] (warn)"]
+<<state machine>>=
+ue: if (c == RS1) next(ues);
+    /* disaster */
+    <<prepend opening angles to [[p]]>>
+    *s++ = RA1;
+    *s++ = RA2;
+    <<warn of use in docs that wasn't properly terminated>>
+    quoting = 1;
+    print_pair(out, "quote", 0);
+    goto q;
+<<dot arcs>>=
+ues -> t [label="] (text := cur; emit use)"]
+ues -> q [label="c-] (warn)"]
+<<state machine>>=
+ues: if (c == RS2) {
+        <<emit [[p]] to [[s]] as use>>
+        next(t);
+    }
+    /* disaster */
+    <<prepend opening angles to [[p]]>>
+    *s++ = RA1;
+    *s++ = RA2;
+    *s++ = RS1;
+    <<warn of use in docs that wasn't properly terminated>>
+    quoting = 1;
+    print_pair(out, "quote", 0);
+    goto q;
+<<markup.dot>>=
+digraph lexer {
+  rotate=90
+  size="10,7.5"
+  ratio=fill
+  rankdir=LR
+  node [shape=circle]
+  <<dot arcs>>
+}
+@
+<<prepend opening angles to [[p]]>>=
+assert(p == buf + 2);
+p -= 2;
+p[0] = LA1;
+p[1] = LA2;
+<<make [[buf]] big enough to hold all of [[line]], plus two more characters>>=
+if (buf == NULL)
+  checkptr(buf = (char *) malloc(buflen = 128));
+if (buflen < strlen(line) + 1 + 2) {
+  while (buflen < strlen(line) + 1 + 2) 
+    buflen *= 2;
+  checkptr(buf = (char *) realloc(buf, buflen));
+}
+<<emit [[p]] to [[s]] as text>>=
+if (s > p) {
+  *s = 0;
+  print_pair(out, "text", p);
+}
+s = p = buf + 2;
+@ emit the empty use regardless
+<<emit [[p]] to [[s]] as use>>=
+*s = 0;
+print_pair(out, "use", p);
+s = p = buf + 2;
+@
+<<warn of use in docs that wasn't properly terminated>>=
+errorat(filename, lineno, Warning, "Warning: [[@<<... not terminated with ...@>>]]");
+<<warn of use that became a quote>>=
+errorat(filename, lineno, Warning, 
+       "Warning: [[@<<... terminated with ...]] instead of ...@>>]]");
+<<warn of use in docs terminated by newline>>=
+errorat(filename, lineno, Warning, 
+        "Warning: [[@<<... not terminated on line %d", lineno);
+<<complain of unescaped @<< in documentation>>=
+errorat(filename, lineno, Warning, "Warning: unescaped @<< in documentation chunk");
+@
+To convert documentation lines, we have to track the quoting brackets.
+Note that [[if (quoting = !quoting)]] is a simultaneous toggle and test.
+<<old convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
        line = mark) {
     if (!quoting) {<<complain if [[line]] has [[mod_start]]>>}
