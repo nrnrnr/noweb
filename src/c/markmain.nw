@@ -23,20 +23,21 @@ typedef enum mark {Begin=1, End=2} Mark;
 
 static char *states[] = { "bad state", "code", "docs" };
 static char *marks[]={ "bad mark", "begin", "end" };
+static char low_at_sign = '@';
 
 static void print_state(FILE *out, Mark be, State state, int count) {
-    fprintf(out, "%c%s %s %d\n", at_sign, marks[be], states[state], count);
+    fprintf(out, "%c%s %s %d\n", low_at_sign, marks[be], states[state], count);
 }
 
 static void print_pair(FILE *out, char *name, char *value) {
     if (value) {
-	int last=strlen(value)-1;
+        int last=strlen(value)-1;
         if (last>=0 && value[last]=='\n')
-            fprintf(out, "%c%s %s@nl\n", at_sign, name, value);
+            fprintf(out, "%c%s %s%cnl\n", low_at_sign, name, value, low_at_sign);
         else
-            fprintf(out, "%c%s %s\n", at_sign, name, value);
+            fprintf(out, "%c%s %s\n", low_at_sign, name, value);
     } else
-        fprintf(out, "%c%s\n", at_sign, name);
+        fprintf(out, "%c%s\n", low_at_sign, name);
 }
 @
 <<*>>=
@@ -51,13 +52,12 @@ static void print_pair(FILE *out, char *name, char *value) {
 
 void markup (FILE* in, FILE *out, char *filename) {
     State state = Docs;         /* what we are reading */
-    int quoting = 0;		/* currently quoting code? */
+    int quoting = 0;            /* currently quoting code? */
     int count = 0;              /* number of current chunk, from 0 */
     int missing_newline;        /* was last line missing a trailing \n? */
 
-    char *buffer = NULL;        /* buffer for input */
     char *line;                 /* part of line up to mark (or end) */
-    char *mark;			/* potentially marked part of line */
+    char *mark;                 /* potentially marked part of line */
 #define MAX_MODNAME 255
     char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
                                          [[""]] if no module is being read */ 
@@ -92,17 +92,20 @@ and arbitrary documentation text can follow on the same line.
     print_pair(out, "file", filename);
     print_state(out, Begin, state, count);
 
-    while ((line = buffer = getline(buffer, in)) != NULL) {
+    while ((line = getline_expand(in)) != NULL) {
         <<remember if a newline was missing from the last line>>
         if (starts_code(line)) {
+            <<complain and correct unmatched open quote, if any>>
             print_state(out, End, state, count);
             count++;
             state = Code;
             print_state(out, Begin, state, count);
             getmodname(modname,MAX_MODNAME,line);
             print_pair(out,"defn",modname);
+            print_pair(out,"nl",0);     /* could be implicit but this is better */
         } else {
             if (starts_doc(line)) {
+                <<complain and correct unmatched open quote, if any>>
                 print_state(out, End, state, count);
                 count++;
                 state = Docs;       /* always reading docs after a stop */
@@ -110,8 +113,8 @@ and arbitrary documentation text can follow on the same line.
                 line = first_doc_line(line);
             }
             <<Check a bunch of ``mistake indicators''>>
-	    switch(state) {
-	        case Code: <<convert a code line>> break;
+            switch(state) {
+                case Code: <<convert a code line>> break;
                 case Docs: <<convert a documentation line>> break;
                 default: impossible("bad state");
             }    
@@ -133,8 +136,8 @@ To convert a code line, we have to scan for the start and end of module
 references. 
 <<convert a code line>>=
 while ((mark = mod_start(line,1)) != NULL) { 
-    if (*line!='\0') print_pair(out, "text",unescape(line)); 
-				   /* emit string before module */
+    if (*line) print_pair(out, "text",unescape(line)); 
+                                   /* emit string before module */
     if ((line=mod_end(mark,1))==NULL) {
         errormsg(Error, "Module doesn't end: %s", mark);       
                                    /* module references can't cross lines */
@@ -143,38 +146,22 @@ while ((mark = mod_start(line,1)) != NULL) {
         print_pair(out, "use",mark);       /* emit the module */
     }
 }
-if (*line!='\0') print_pair(out, "text",unescape(line)); 
-				  /* contribute the trailing string */
+if (*line) print_pair(out, "text",unescape(line)); 
+                                  /* contribute the trailing string */
 @ To convert documentation lines, we have to track the quoting brackets.
-<<nasty way to convert a documentation line>>=
-<<start in mid-quote if already quoting>>
-while ((mark = quote_start(line,1)) != NULL) { 
-    quoting = 1;
-    if (*line!='\0') print_pair(out, "text",unescape(line)); 
-				   /* emit string before quoted code */
-midquote:
-    if ((line=quote_end(mark,1))==NULL) {
-        line = mark;
-        break;
-    } else {
-        quoting = 0;
-        print_pair(out, "quote",mark);     /* emit the quoted code */
-    }
-}
-if (*line!='\0') print_pair(out, quoting ? "quote" : "text",unescape(line)); 
-				/* contribute the trailing string */
-<<start in mid-quote if already quoting>>=
-if (quoting) {
-    mark = line;
-    goto midquote;
-}
 <<convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
        line = mark) {
-    if (*line != '\0') print_pair(out, quoting ? "quote" : "text", unescape(line));
+    if (*line) print_pair(out, "text", unescape(line));
+    print_pair(out, quoting ? "endquote" : "quote", 0);
     quoting = !quoting;
 }
-if (*line!='\0') print_pair(out, quoting ? "quote" : "text",unescape(line)); 
+if (*line) print_pair(out, "text", unescape(line)); 
+<<complain and correct unmatched open quote, if any>>=
+if (quoting) {
+    errormsg(Warning, "Open quote `[[' never closed");
+    quoting = 0;
+}
 @
 If we missed the module definition line, this might suggest to us
 that we've made a mistake.
