@@ -1,0 +1,26 @@
+<<*>>=
+.TH NOWEB 1 "local <<noweb documentation date>>"
+.SH NAME
+htmltoc \- add table of contents to HTML document
+.SH SYNOPSIS
+\fBhtmltoc\fP [file]
+.SH DESCRIPTION
+.I htmltoc
+adds a table of contents to the HTML document named on the command
+line or provided as standard input.
+The table of contents is inserted between
+.B <tableofcontents>
+and
+.B </tableofcontents>,
+which must appear on lines by themselves.
+Any text between those two markers is 
+.I discarded.
+These markers are inserted automatically by the
+.I sl2h(1)
+filter.
+.SH BUGS
+Requires
+.I perl(1).
+.SH SEE ALSO
+.I nowebfilters(7), sl2h(1), perl(1)
+<<AUTHOR section>>
