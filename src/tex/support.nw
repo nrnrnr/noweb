@@ -663,6 +663,9 @@ information.
 \nwix@cons\nw@pages{\\{\bf ??}}
 @
 \subsection{Sub-page references}
+
+% \@ifpackageloaded{nameref}{...}{...}
+
 This is the wonderful code that Dave Love provided to make page
 references like 7a, 7b, and so on.
 
@@ -695,7 +698,29 @@ to this \LaTeX-specific approach.  See [[latex.tex]] for enlightenment
 on the cross-referencing mechanism and the \LaTeX{} internals used
 below.  [DL: The internals change in \LaTeX2e compared with
 \LaTeX~2.09.  The code here still works, though.]
-
+@
+The new-style {\LaTeX} page-reference macros all work the same way: 
+if the thing is undefined, barf.  Otherwise, do the specified thing.
+We need to handle the fact that the expansion of the label may be two
+items or five items, depending on whether hypertext is used.
+Since we're only ever interested in the first two items, we use a
+hack---the ``do the specified thing'' must be defined as
+\mbox{[[\def\dome#1#2#3\\{...}]]} where [[...]] uses only the first two parameters.
+<<noweb.sty>>=
+\newcommand\nw@genericref[2]{% what to do, name of ref
+  \expandafter\nw@g@nericref\csname r@#2\endcsname#1{#2}}
+\newcommand\nw@g@nericref[3]{% control sequence, what to do, name
+  \ifx#1\relax
+    \ref{#3}% trigger the standard `undefined ref' mechanisms
+  \else
+    \expandafter#2#1.\\%
+  \fi}
+@ Much of what we want can be done by pulling out the first, second,
+or first and second elements of a ref.
+<<noweb.sty>>=
+\def\nw@selectone#1#2#3\\{#1}
+\def\nw@selecttwo#1#2#3\\{#2}
+\def\nw@selectonetwo#1#2#3\\{{#1}{#2}}
 @
 The [[\subpageref]] macro first does a normal [[\pageref]].  If the
 reference is actually defined, it then goes on to check whether the
@@ -705,28 +730,18 @@ defining the [[2on]] bit appropriately.
 [[\subpageref]] also tries to include the right hyperstuff for xhdvi.
 <<noweb.sty>>=
 \newcommand{\subpageref}[1]{%
-  \nwhyperreference{#1}{%
-  \@ifundefined{r@#1}%
-    {\pageref{#1}}%
-    {\@ifundefined{2on\@pageref{#1}}%
-      {\pageref{#1}}%
-      {\expandafter\expandafter\expandafter\nwthepagenum\csname r@#1\endcsname}}}}
+  \nwhyperreference{#1}{\nw@genericref\@subpageref{#1}}}
+\def\@subpageref#1#2#3\\{%
+  \@ifundefined{2on#2}{#2}{\nwthepagenum{#1}{#2}}}
 @ %def \subpageref
 [[\subpagepair]] produces a [[{subpage}{page}]] pair.
 <<noweb.sty>>=
 \newcommand{\subpagepair}[1]{%  % produces {subpage}{page}
   \@ifundefined{r@#1}%
     {{0}{0}}%
-    {\@ifundefined{2on\@pageref{#1}}%
-      {{0}{\expandafter\expandafter\expandafter\@cdr\csname r@#1\endcsname\@nil}}%
-      {\@nameuse{r@#1}}}}
-@
-[[\@pageref]] is like [[\pageref]], but it expands to [[\relax]] without a warning
-if the reference is undefined.
-<<noweb.sty>>=
-\def\@pageref#1{\expandafter\expandafter\expandafter
-                \@cdr\csname r@#1\endcsname\@nil}
-@ %def \@pageref
+    {\nw@genericref\@subpagepair{#1}}}
+\def\@subpagepair#1#2#3\\{%
+  \@ifundefined{2on#2}{{0}{#2}}{{#1}{#2}}}
 @
 [[\sublabel]] is like the [[\label]] command, except that it writes
 [[\newsublabel]] onto the [[.aux]] file rather than [[\newlabel]].
@@ -838,9 +853,10 @@ We need to define these.
 \newcount\sub@page
 @ %def \last@page \sub@page
 @
-We use Rainer's new expandable definitions of [[\ref]] and
-[[\pageref]] to minimise the risk of nasty surprises.
-<<noweb.sty>>=
+We no longer use Rainer's new expandable definitions of [[\ref]] and
+[[\pageref]] to minimise the risk of nasty surprises; enough time has
+elapsed that this should no longer be necessary.
+<<old noweb.sty>>=
 % RmS 92/08/14: made \ref and \pageref robust
 \def\ref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
     {\expandafter\expandafter\expandafter
@@ -856,7 +872,7 @@ We use Rainer's new expandable definitions of [[\ref]] and
 @
 
 Here a a couple of hooks for formatting sub-page numbers,
-which can be alphbetic, numeric, or omitted.\stylehook
+which can be alphabetic, numeric, or omitted.\stylehook
 <<noweb.sty>>=
 \def\@alphasubpagenum#1#2{#2\ifnum#1=0 \else\@alph{#1}\fi}
 \def\@nosubpagenum#1#2{#2}
