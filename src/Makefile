@@ -1,3 +1,7 @@
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+#
+#
 # Adjust these two lines for your ANSI C compiler
 CC=lcc -A
 CFLAGS=-g

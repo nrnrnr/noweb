@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 @ A cheap imitation of tangle.
 The idea is a very cheap implementation of tangle.
 The markup of the file is described in file markup.ow.

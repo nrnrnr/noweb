@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 \def\nw{{\tt noweb}}
 \def\[{\ifhmode\ \fi$[\mkern-2mu[$}
 \def\]{$]\mkern-2mu]$}

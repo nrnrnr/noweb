@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 The following options are good on the command line:
 
 -Rname          make name the name of the root module. 

@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 @ \section{Error messages}
 Here is a big set of functions that other places can call to issue
 error messages.

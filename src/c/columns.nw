@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 These functions are used to help accumulate indentations across module
 boundaries by measuring the widths of various strings
 in columns.  

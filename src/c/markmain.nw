@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 \section{Markup}
 This is the initial filter in the pipeline.
 Syntax from {\tt markup.ow}.

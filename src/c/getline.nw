@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 @ [[getline]] is reads in the next line, no matter
 how long it is, expanding tabs.
 I allocate more and more space for the line, until I've

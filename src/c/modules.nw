@@ -1,3 +1,5 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
 @ The internal structure of modules.
 Modules are linked lists.
 Each element of the list is either a string or a reference to another 
@@ -249,6 +251,9 @@ for (p=fmt;*p;p++) {
 }
 <<RCS log>>=
 $Log:	modules.nw,v $
+# Revision 2.0  91/10/10  14:43:32  nr
+# Distributed as version 2.0
+# 
 # Revision 1.3  91/10/09  14:22:59  nr
 # added %N format specifier
 # 
