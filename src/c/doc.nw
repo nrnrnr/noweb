@@ -1,3 +1,5 @@
+% $Id$
+
 \documentstyle[noweb,multicol,twoside]{article}
 \makeatletter
 \newenvironment{fields}{\@fields}{\crcr\egroup\par\end{quote}}
@@ -10,12 +12,10 @@
 \makeatother
 \pagestyle{noweb}\raggedbottom\noweboptions{shift}
 
-\title{{\tt noweb} Source Code\thanks{{\tt noweb} is copyright 1989--93 by Norman Ramsey.
-Although it is freely available, it is not in the public domain.
-It is not a Bellcore product. Bellcore makes no warranty and
-accepts no liability for any of this software.}}
+\title{{\tt noweb} Source Code\thanks{{\tt noweb} is copyright 1989--97 by Norman Ramsey.
+Although it is freely available, it is not in the public domain.}}
 \author{Norman Ramsey\thanks{Section~\ref{preston} is the 
-generous contribution of Preston Briggs}\\{\tt norman@bellcore.com}}
+generous contribution of Preston Briggs}\\{\tt nr@cs.virginia.edu}}
 \begin{document}
 \maketitle
 \section*{Preface}
