@@ -231,10 +231,13 @@ int printloc(FILE *fp, char *fmt, Location loc, int partial) {
 <<write out the line number pragma>>=
 for (p=fmt;*p;p++) {
     if (*p == '%') {
-        if (*++p == '%') putc('%',fp);
-        else if (*p == 'F') fprintf(fp,"%s",loc.filename);
-        else if (*p == 'L') fprintf(fp,"%d",loc.lineno);
-        else <<complain about bad format character>>
+        switch (*++p) {
+            case '%': putc('%',fp);                             break;
+            case 'N': putc('\n',fp);                            break;
+            case 'F': fprintf(fp,"%s",loc.filename);            break;
+            case 'L': fprintf(fp,"%d",loc.lineno);              break;
+            default:  <<complain about bad format character>>   break;
+        }
     } else putc(*p,fp);
 }
 <<complain about bad format character>>=
@@ -245,7 +248,11 @@ for (p=fmt;*p;p++) {
   }
 }
 <<RCS log>>=
-$Log: modules.nw,v $
+$Log:	modules.nw,v $
+# Revision 1.2  91/10/09  14:10:57  nr
+# added a third kind of module: now have strings, modules, and newlines
+# added newline support in creating and expanding modules
+# 
 # Revision 1.1  1991/08/23  23:39:22  ramsey
 # Initial revision
 #
