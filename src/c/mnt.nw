@@ -34,7 +34,7 @@ main(int argc, char **argv) {
         default:  emitfile(argv[i]);                               break;
       }
     exit(errorlevel);
-    return errorlevel;		/* slay warning */
+    return errorlevel;          /* slay warning */
 }
 @
 <<read standard input into tree>>=
@@ -51,11 +51,11 @@ void add_uses_to_usecounts(Module mp) {
     Module used;
     struct modpart *p;
     for (p=mp->head; p!=NULL; p=p->next)
-	if (p->ptype == MODULE) {
-	    used = lookup(p->contents);
-	    if (used != NULL)
-		used->usecount++;
-	}
+        if (p->ptype == MODULE) {
+            used = lookup(p->contents);
+            if (used != NULL)
+                used->usecount++;
+        }
 }
 @ %def add_uses_to_usecounts
 
@@ -68,9 +68,9 @@ void emit_if_unused_and_conforming(Module mp) {
     if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL)
         if (index = strpbrk(mp->name, "[](){}!$&<>*?;|^`'\\\""),
             index == NULL || index[0] == '*' && index[1] == 0)
-  	    emitfile(mp->name);
+            emitfile(mp->name);
         else 
-	    errormsg(Error, "@<<%s@>> cannot be an output chunk; "
+            errormsg(Error, "@<<%s@>> cannot be an output chunk; "
                             "it contains a metacharacter", mp->name);
 }
 @ %def emit_if_unused_and_conforming
@@ -149,14 +149,14 @@ if (root == NULL) {
                 errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
             else {<<write out all conforming roots>>}
             break;
-	case 't': /* set tab size or turn off */
-	    if (isdigit(argv[i][1]))
-	        tabsize = atoi(argv[i]+1);
-	    else if (argv[i][1]==0)
-	        tabsize = 0; 		/* no tabs */
-	    else 
-	        errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
-	    break;	    
+        case 't': /* set tab size or turn off */
+            if (isdigit(argv[i][1]))
+                tabsize = atoi(argv[i]+1);
+            else if (argv[i][1]==0)
+                tabsize = 0;            /* no tabs */
+            else 
+                errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
+            break;          
         case 'L': /* have a #line number format */
             locformat = argv[i] + 1;
             if (!*locformat) locformat = Clocformat;
@@ -172,7 +172,7 @@ efficient by making [[rename]] efficient.  If your operating system
 provides [[tempnam]], define [[TEMPNAM]] for compilation.
 <<local prototypes>>=
 #ifdef TEMPNAM
-extern char *tempnam (char *dir, char *pfx);	/* temp file in dir */
+extern char *tempnam (const char *dir, const char *pfx);        /* temp file in dir */
 #else
 #define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
 #endif

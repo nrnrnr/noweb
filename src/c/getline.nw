@@ -14,7 +14,7 @@ of the length of the longest line.
 [[getline]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-#define START_SIZE 128			/* initial buffer size */
+#define START_SIZE 128                  /* initial buffer size */
 
 #include <stdio.h>
 #include <string.h>
@@ -23,8 +23,8 @@ calls destroy the results of previous calls.
 #include "errors.h"
 #include "getline.h"
 
-static char *buf1 = NULL, *buf2 = NULL;	/* lines without, with tabs expanded */
-static buf_size = START_SIZE;		/* size of both buffers if non-NULL */
+static char *buf1 = NULL, *buf2 = NULL; /* lines without, with tabs expanded */
+static buf_size = START_SIZE;           /* size of both buffers if non-NULL */
 
 <<C functions>>
 @ %def START_SIZE buf_size buf1 buf2
@@ -49,10 +49,10 @@ char *getline (FILE *fp) {
     buf1=fgets(buf1, buf_size, fp);
     if (buf1==NULL) return buf1; /* end of file */
     while (buf1[strlen(buf1)-1] != '\n') { /* failed to get whole line */
-	buf_size *= 2;
-	new_buffers();
-	if (fgets(buf1+strlen(buf1),buf_size-strlen(buf1),fp)==NULL)
-	    return buf1; /* end of file */
+        buf_size *= 2;
+        new_buffers();
+        if (fgets(buf1+strlen(buf1),buf_size-strlen(buf1),fp)==NULL)
+            return buf1; /* end of file */
     }
     return buf1;
 }
@@ -66,14 +66,14 @@ char *getline_expand (FILE *fp) {
     <<if [[columnwidth(buf1) > buf_size - 1]], allocate new buffers>>
     s = buf1; t = buf2; width=0;
     while (*s)
-	if (*s=='\t' && tabsize > 0) {
-	    do {
-		*t++ = ' '; width++;
-	    } while (width % tabsize != 0);
-	    s++;
-	} else {
-	    *t++ = *s++; width++;
-	}
+        if (*s=='\t' && tabsize > 0) {
+            do {
+                *t++ = ' '; width++;
+            } while (width % tabsize != 0);
+            s++;
+        } else {
+            *t++ = *s++; width++;
+        }
     *t='\0';
     return buf2;
 }

@@ -3,7 +3,7 @@
 \newenvironment{fields}{\@fields}{\crcr\egroup\par\end{quote}}
 \def\@fields{\@ifnextchar[{\@@fields}{\@@fields[4in]}}
 \def\@@fields[#1]{\begin{quote}\catcode`\_=\other
-	\tabskip=\leftmargin
+        \tabskip=\leftmargin
         \halign\bgroup\tt##\hfil\tabskip=2em&
         {\hsize=#1\vtop{\noindent\raggedright\let\\=\cr
                         \strut##\strut\par}}\tabskip=0pt\cr}

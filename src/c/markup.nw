@@ -134,7 +134,7 @@ Once we know how to [[mod_start]] and [[mod_end]], recognizing the
 beginning of a code chunk is easy.
 <<header>>=
 int starts_code (char *line, char *filename, int lineno);  
-				        /* does this line start module defn? */
+                                        /* does this line start module defn? */
 void getmodname(char *dest, int size, char *source);
                                         /* extract module name and put in dest */
 <<C functions>>=
@@ -190,12 +190,12 @@ char *quote_end(char *s, int mark) {
     if (t == NULL) 
         return t;
     else {
-	t -= 2;		/* subtract length of ]] */
+        t -= 2;         /* subtract length of ]] */
         assert(t[0] == ']' && t[1] == ']');
         while (t[2] == ']') t++;
         assert(t[0] == ']' && t[1] == ']');
         if (mark) *t = 0;
-	return t+2;
+        return t+2;
     }
 }
 @ %def quote_end

@@ -33,7 +33,7 @@ main(int argc, char **argv) {
 
     notangle(stdin, stdout, rootname, locformat);
     exit(errorlevel);
-    return errorlevel;	/* slay warning */
+    return errorlevel;  /* slay warning */
 }
 @
 <<process argument [[i]]>>=
@@ -45,14 +45,14 @@ if (*argv[i]=='-') {
 @
 <<handle option in argument [[i]]>>=
     switch (*++argv[i]) {
-	case 't': /* set tab size or turn off */
-	    if (isdigit(argv[i][1]))
-	        tabsize = atoi(argv[i]+1);
-	    else if (argv[i][1]==0)
-	        tabsize = 0; 		/* no tabs */
-	    else 
-	        errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
-	    break;	    
+        case 't': /* set tab size or turn off */
+            if (isdigit(argv[i][1]))
+                tabsize = atoi(argv[i]+1);
+            else if (argv[i][1]==0)
+                tabsize = 0;            /* no tabs */
+            else 
+                errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
+            break;          
         case 'R': /* change name of root module */
             rootname = ++argv[i];
             break;
