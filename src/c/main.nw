@@ -11,7 +11,7 @@ The following options are good on the command line:
                 If not given, write no {\tt\#line} numbers.
 \end{fields}
 <<*>>=
-static char rcsid[] = "$Id$";
+static char rcsid[] = "$Id: main.nw,v 2.6 1997/09/13 19:36:15 nr Exp nr $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

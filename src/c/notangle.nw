@@ -15,7 +15,7 @@ details later.
 <<header>>=
 void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
 <<*>>=
-static char rcsid[] = "$Id$";
+static char rcsid[] = "$Id: notangle.nw,v 2.6 1997/09/13 19:40:25 nr Exp nr $";
 #define MAX_MODNAME 255
 @
 <<*>>=

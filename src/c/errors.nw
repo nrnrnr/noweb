@@ -14,7 +14,7 @@ has been.
 Some day we should hide it and give the world a function call that
 queries it.
 <<*>>=
-static char rcsid[] = "$Id$";
+static char rcsid[] = "$Id: errors.nw,v 2.7 1997/09/13 19:35:07 nr Exp nr $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

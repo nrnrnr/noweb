@@ -14,7 +14,7 @@ of the length of the longest line.
 [[getline]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-static char rcsid[] = "$Id$";
+static char rcsid[] = "$Id: getline.nw,v 2.5 1997/09/13 19:42:30 nr Exp nr $";
 #define START_SIZE 128                  /* initial buffer size */
 
 #include <stdio.h>
