@@ -1,5 +1,9 @@
 \section{Finding {\tt yacc} definitions}
 <<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
 procedure main(args)
   go()
 end

@@ -29,3 +29,9 @@ end
 procedure prepass(name, arg)
   if name == "end" then writedefn(&null) # force newline
 end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+@

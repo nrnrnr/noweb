@@ -1,5 +1,9 @@
 \section{Finding {\TeX} definitions}
 <<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
 procedure main(args)
   go()
 end
