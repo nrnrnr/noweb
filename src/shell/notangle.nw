@@ -1,0 +1,28 @@
+<<copyright notice>>=
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+<<notangle>>=
+#!/bin/sh
+<<copyright notice>>
+LIB=|LIBDIR|
+markup=$LIB/markup opt= arg= markopt= filters=
+while [ $# -gt 0 ]; do
+	case $1 in
+        -ml|-m3|-awk|-icn|-icon|-pascal|-c|-c++|-f77|-f90|-tex|-w[0-9][0-9]*) ;; 
+					# deliberately ignore nountangle args
+	-t)  ;; # this is default
+        -t*) markopt="$markopt -t" ; opt="$opt '$1'" ;;
+		# copy tabs at markup, use width given in notangle
+	-filter) filters="$filters $2 | " ; shift ;;
+	-markup) markup="$2" ; shift ;;
+	-)   arg="$arg '$1'" ;;
+	-L*) opt="$opt -t '$1'" ; markopt="$markopt -t" ;;
+	-*)  opt="$opt '$1'" ;;
+	*)   arg="$arg '$1'" ;;
+	esac
+	shift
+done
+PATH="$PATH:$LIB" 
+export PATH
+eval "$markup $markopt $arg | $filters $LIB/nt $opt "'; rc=$?'
+exit $rc
