@@ -59,6 +59,7 @@ substitution("&", "&amp;")
 argblock("emph", "em")
 argblock("footnote",     "<b>[</b>", "<b>]</b>")   # put footnotes in bold brackets
 argblock("footnotetext", "<b>[</b>", "<b>]</b>")
+argblock("thanks",       "<b>[</b>", "<b>]</b>")   # put footnotes in bold brackets
 substitution("today", &date)
 @
 \subsubsection{Type style}
@@ -102,6 +103,7 @@ argblockv("paragraph",     "h5", &null, "*[")
 argblockv("subparagraph",  "h6", &null, "*[")     
 ignore("appendix")
 substitution("tableofcontents", "<!--table of contents here-->")
+ignore("listoftables")
 @
 \subsubsection{Mathematical formulas}
 Here we see our first assignments to [[cstab]], which is the real
@@ -178,7 +180,7 @@ but for now it's not worth the hassle.
 argblockv("title", "h1")
 argblockv("author","address")
 argblockv("date",  "b")
-substitution("maketitle", "<!--title goes here>")
+substitution("maketitle", "<!--title goes here-->")
 ignoreenv("titlepage")
 envblock("abstract", "<h2>Abstract</h2><blockquote>", "</blockquote>")
 @
@@ -192,6 +194,7 @@ of the reference.
 <<control-sequence assignments>>=
 cstab["label"] := Clabel
 cstab["ref"] := Cref
+cstab["pageref"] := Cref
 @
 \subsubsection{Bibliography and citation}
 For the bibliography, I actually go grubbing for a {\tt .bbl} file if
@@ -273,8 +276,8 @@ ignore("thicklines")
 \subsubsection{Figures and Tables}
 I surround figures and tables with horizontal rules.
 <<control-sequence assignments>>=
-envblock("figure", "<hr>", "<hr>")
-envblock("table", "<hr>", "<hr>")
+envblock("figure", "<hr>", "<hr>", "[")
+envblock("table", "<hr>", "<hr>", "[")
 argblock("caption", "b")  # captions in bold
 @
 \subsubsection{{\tt tabbing} environment}
@@ -283,6 +286,7 @@ I can't see how to do anything sensible with {\tt tabbing}.
 envblock("tabbing", "blockquote")
 # \= is accent
 ignore(">")
+ignore("+")
 ignore("kill")
 @
 \subsubsection{{\tt array} and {\tt tabular} environment}
@@ -296,8 +300,8 @@ ignore("cline", "{")
 @
 \subsubsection{Definitions}
 <<control-sequence assignments>>=
-ignore("newcommand", "{[[{")
-ignore("renewcommand", "{[[{")
+ignore("newcommand", "A[[{")
+ignore("renewcommand", "A[[{")
 ignore("newenvironment", "{[{{")
 ignore("renewenvironment", "{[{{")
 ignore("newtheorem", "{{")
@@ -321,23 +325,40 @@ fontchange("sl", "i")
 fontchange("em", "em")
 ignore("rm")		# html can't switch to default font!
 ignore("sf")
+@ And some new ones
+<<control-sequence assignments>>=
+ignore("rmfamily")
+ignore("typeout", "[{")
 <<control-sequence assignments>>=
 ignoreenv("document")
-ignoreenv("multicols", "{[")
 <<control-sequence assignments>>=
 substitution("LaTeX", "LaTeX")
 <<control-sequence assignments>>=
 ignore("protect")
 @
+\subsection{Control sequences from various {\LaTeX} packages}
+<<control-sequence assignments>>=
+ignoreenv("multicols", "{[")
+cstab["citeN"] := Ccite
+ignore("afterpage", "{")
+@
 \subsection{Plain {\TeX} control sequences}
 <<control-sequence assignments>>=
 argblock("noalign", "<br>", "<br>")	# not clear what else to do...
+ignore("hbox")
+ignore("rlap")
+ignore("llap")
+ignore("vbox")
+ignore("vtop")
+ignore("message", "{")
 <<control-sequence assignments>>=
 cstab["par"] := implicit_paragraph
 cstab["smallskip"] := implicit_paragraph
 cstab["medskip"] := implicit_paragraph
 cstab["bigskip"] := implicit_paragraph
-
+<<control-sequence assignments>>=
+cstab["begingroup"] := Cbegingroup
+cstab["endgroup"] := Cendgroup
 @ 
 Lots of assignable things:
 <<control-sequence assignments>>=
@@ -365,6 +386,8 @@ substitution("nowebindex", "<nowebindex>")
 substitution("nowebchunks", "<nowebchunks>")
 <<control-sequence assignments>>=
 envblock("fields", "blockquote", &null, "[")     # lame; could try to <tt> 1st col
+
+ignore("citeauthoryear", "{{{")
 @
 
 
@@ -568,6 +591,14 @@ while c := get(S.open) do
 while c := get(S.closes[1]) do
   c.proc!c.args
 pop(S.closes)
+<<*>>=
+procedure Cbegingroup(S, cs, cl)
+ <<take open-group actions>>
+end
+<<*>>=
+procedure Cendgroup(S, cs, cl)
+ <<take close-group actions>>
+end
 @
 \subsection{Handling control sequences and environments}
 OK, to eat a control sequence, first scan it, then execute it using [[do_cs]].
@@ -717,11 +748,12 @@ When writing verbatim text, we still have to convert HTML specials.
 <<*>>=
 procedure verbatimout(S, s)
   s ? {
-    while S.text(S, tab(upto('&<>'))) do
+    while S.text(S, tab(upto('&<>"'))) do
       case move(1) of {
-        "&" : S.text(S, "&amp;")
-        "<" : S.text(S, "&lt;")
-        ">" : S.text(S, "&gt;")
+        "\"" : S.text(S, "&quot;")
+        "&"  : S.text(S, "&amp;")
+        "<"  : S.text(S, "&lt;")
+        ">"  : S.text(S, "&gt;")
       }
     S.text(S, tab(0))
   }
@@ -815,15 +847,19 @@ appropriately limited in their effects.
 record item_cl(before, after, ifnone)
 
 procedure Citem(S, cs, cl)
-  if ="[" then {
-    S.text(S, cl[1].before || 
-              convert(converter("H"), "{" || tab(upto(']' | 0)) || "}") || 
-              cl[1].after)
-    ="]"
-    optwhite()
-  } else {
+  if pos(0) then 
+    after_next_newtext(S, Citem, [S, cs, cl])
+  else if ="[" then
+    with_upto_bracket(S, "", convert_bracketed, cl)
+  else
     S.text(S, cl[1].ifnone)
-  }
+end
+<<*>>=
+procedure convert_bracketed(S, contents, cl)
+  S.text(S, cl[1].before || 
+            convert(converter("H"), "{" || contents || "}") || 
+            cl[1].after)
+  optwhite()
 end
 <<*>>=
 procedure listenv(env, html)
@@ -889,13 +925,20 @@ procedure Cbibitem(S, cs, cl)
   static counter
   initial counter := 0
   if ="[" then {
-    label := convert(converter("H"), "{" || tab(upto(']' | 0)) || "}")
-    ="]"
-    optwhite()
+    delay_newtext(S)
+    with_upto_bracket(S, "", finish_bibitem, [])
   } else {
     label := "<b>[" || (counter +:= 1) || "]</b>"
+    key := csarg(S) | fail
+    S.text(S, "<br><a name=\"NWcite-" || key || "\">" || label || "</a> ")
   }
-  key := csarg(S)
+end
+
+procedure finish_bibitem(S, contents, args)
+  local key, label
+  optwhite()
+  key := csarg(S) | fail
+  label := convert(converter("H"), "{" || contents || "}")
   S.text(S, "<br><a name=\"NWcite-" || key || "\">" || label || "</a> ")
 end
 @
@@ -958,14 +1001,22 @@ procedure accent(cs)
 end
 
 procedure Caccent(S, cs, cl)
+  static warned
+  initial warned := table()
   arg := csarg(S) | return
   if *arg = 1 & any(accent_valid[cs], arg) then
     S.text(S, "&" || arg || accent_name[cs] || ";")
   else {
-    write(&errout, "Can't handle \\", cs, " with arg ", image(arg))
+    <<warn about [[cs]] with [[arg]]>>
     S.text(S, arg)
   }
 end
+<<warn about [[cs]] with [[arg]]>>=
+/warned[cs] := set()
+if not member(warned[cs], arg) then {
+  write(&errout, "Warning: Can't handle \\", cs, " with arg ", image(arg))
+  insert(warned[cs], arg)
+}
 @
 \subsection{Font changes}
 A font change changes the font until the next close, when we need to emit
@@ -1041,7 +1092,8 @@ procedure do_ignore(S, template, saved_text)
               }
         "[" : if optwhite() & ="[" then {
                 delay_newtext(S)
-                eat_to_bracket(S, do_ignore, [S, template[2:0], saved_text])
+		with_upto_bracket(S, "", ignore_bracket_plus,
+    			                      [S, template[2:0], saved_text])
               } else
                 do_ignore(S, template[2:0], saved_text)
         "=" : { delay_newtext(S)
@@ -1072,23 +1124,31 @@ procedure do_nothing(S, cs, cl)
   return
 end
 @
-\subsubsection{Ignoring brackets}
-To ignore an optional argument, we may have to gobble to a bracket.
-This is just like gobbling to a newline, which we had to do with a comment.
+\subsubsection{Parsing bracketed (optional) arguments}
+We may have to deal with optional arguments that are split across lines.
+We pass in a continuation for the bracket.
+This is a lot like gobbling to a newline, which we had to do with a comment.
 As in the other case, we do something stupid if the bracket is
 protected (e.g. by a backslash or comment char).
 <<*>>=
-procedure eat_to_bracket(S, proc, args)
-  tab(upto(']') | 0)
+procedure with_upto_bracket(S, bracketed_text, proc, args)
+  bracketed_text ||:= tab(upto(']') | 0)
   if pos(0) then
-    before_next_newtext(S, eat_to_bracket, [S, proc, args])
+    before_next_newtext(S, with_upto_bracket, [S, bracketed_text, proc, args])
   else {
     ="]"
     undelay_newtext(S)
-    (\proc)!args
+    (\proc)(S, bracketed_text, args)
   }
   return
 end    
+@
+To ignore brackets:
+<<*>>=
+procedure ignore_bracket_plus(S, contents, args)
+  # contents are ignored
+  do_ignore!args
+end
 @
 \subsubsection{Ignoring assignments}
 Assignments are tricky because they might involve numbers, control
