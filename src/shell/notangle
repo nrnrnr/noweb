@@ -1,6 +1,6 @@
 #!/bin/sh
 # set -x
-LIB=+LIBDIR+
+LIB=|LIBDIR|
 opt= arg=
 for i do
 	case $i in

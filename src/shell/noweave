@@ -9,7 +9,7 @@ if [ "$1" = -l ]; then
   shift
 fi
 
-LIB=+LIBDIR+
+LIB=|LIBDIR|
 if [ $latex -eq 0 ]; then echo -n \\ ; echo input nwmac; 
 else echo -n \\; echo 'documentstyle[noweb]{article}'; 
      echo -n \\ ; echo 'begin{document}' ; fi
