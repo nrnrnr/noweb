@@ -600,17 +600,17 @@ pages are combined into ranges.
 \advance\@nwhipage by \m@ne
 \ifnum\@nwhipage=\@nwlopage
      \edef\@tempa{\noexpand\noexpand\noexpand\\%
-                       {\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}%
-                       {\@nwloxreftag}}%
+                       {{\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}%
+                        {\@nwloxreftag}}}%
 \else
   \count@=\@nwhipage \advance\count@ by \m@ne
   \ifnum\count@=\@nwlopage % consecutive pages
       \edef\@tempa{\noexpand\noexpand\noexpand\\%
-                       {\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}%
-                       {\@nwloxreftag}%
+                       {{\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}%
+                        {\@nwloxreftag}}%
                     \noexpand\noexpand\noexpand\\%
-                       {\nwthepagenum{\number\@nwhisub}{\number\@nwhipage}}
-                       {\@nwhixreftag}}%
+                       {{\nwthepagenum{\number\@nwhisub}{\number\@nwhipage}}
+                        {\@nwhixreftag}}}%
   \else <<use rules from Chicago style manual>>%
   \fi
 \fi
@@ -629,7 +629,7 @@ pages are combined into ranges.
   \fi
 \fi
 <<normal range>>=  
-\edef\@tempa{\noexpand\noexpand\noexpand\\{\number\@nwlopage--\number\@nwhipage}{}}
+\edef\@tempa{\noexpand\noexpand\noexpand\\{{\number\@nwlopage--\number\@nwhipage}{}}}
 <<noweb.sty>>=
 \newcount\@nwpagetemp
 @
@@ -643,23 +643,26 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 \def\@nwnextpagel#1{% label
   \@ifundefined{r@#1}{<<warn of undefined reference to [[#1]] and add page ??>>}{%
     \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}{#1}}\@tempa}}
+<<noweb.sty>>=
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
-  <<add range to range list>>\def\\##1##2{{##1}}%
+  <<add range to range list>>\def\\##1{\@nwhyperpagenum##1}%
   \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+\def\@nwhyperpagenum#1#2{\nwhyperreference{#2}{#1}}
+
 \def\@pagenumsl#1{%  list of labels -- doesn't include word `pages', commas, or `and'
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
   <<add range to range list>>%
-  \def\\##1##2{\nwhyperreference{##2}{##1}%
-               \def\\####1####2{~\nwhyperreference{####2}{####1}}}%
-  \nw@pages}
+  \def\\##1{\@nwhyperpagenum##1\let\\=\@nwpagenumslrest}\nw@pages}
+\def\@pagenumslrest#1{~\@nwhyperpagenum#1}
+<<noweb.sty>>=
 \def\subpages#1{% list of {{subpage}{page}}
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1{}}\@tempa
             \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
-  <<add range to range list>>\def\\##1##2{{##1}}%
+  <<add range to range list>>\def\\##1{\@firstoftwo##1}%
   \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
 \def\@nwaddrange{<<add range to range list>>}
 @
@@ -1254,13 +1257,11 @@ which test for the presence of one of these two packages,
 redefine themselve accordingly, and re-invoke themselves.
 <<noweb.sty>>=
 \newcommand\nwhyperreference{%
-{\tracingall
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
        {\global\let\nwhyperreference\@gobble}
        {\global\let\nwhyperreference\@nw@hyper@ref}}
     {\global\let\nwhyperreference\@nw@hyperref@ref}%
-}%
   \nwhyperreference
 }
 
