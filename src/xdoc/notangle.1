@@ -1,34 +1,15 @@
-.TH NOWEB 1 "local \- 12/8/89"
+.TH NOWEB 1 "local \- 10/10/91"
 .SH NAME
-notangle, noweave, nountangle, noroots \- noweb; a low-tech literate programming tool
+notangle, noweave, nountangle, noroots \- noweb, a literate programming tool
 .SH SYNOPSIS
 .B notangle
-[ 
-.B -Rrootname 
-] 
-[
-.B -L[format]
-]
-[file] ...
+[\fB-R\fProotname] 
+[\fB-L\fP[format]] [file] ...
 .br
-.B noweave [-l]
-[file] ...
+\fBnoweave\fP [\fB-l\fP] [file] ...
 .br
-.B nountangle
-[
-.B -ml
-|
-.B -m3
-|
-.B -c
-|
-.B -awk
-] [ 
-.B -Rrootname 
-] [
-.B -wwidth
-]
-[file] ...
+\fBnountangle\fP [\fB-ml\fP|\fB-m3\fP|\fB-c\fP|\fB-awk\fP] [\fB-R\fProotname] 
+[\fB-w\fPwidth] [file] ...
 .br
 .B noroots
 [file] ...
@@ -44,7 +25,7 @@ When
 .I notangle
 is given a 
 .I noweb
-file, it writes the program source on standard output.
+file, it writes the program on standard output.
 When 
 .I noweave
 is given a 
@@ -69,14 +50,13 @@ A
 file is a sequence of
 .I chunks,
 which may appear in any order.
-.I noweb
-supports documentation chunks and code chunks.
-Documentation chunks begin with an at sign (@) at the beginning of a line,
+A chunk may contain code or documentation.
+Documentation chunks begin with a line that starts with an at sign (@) 
 followed by a space or newline.
 They have no names.
 Code chunks begin with
 .br
-<<chunk name>>=
+<<\fIchunk name\fP>>=
 .br
 on a line by itself.
 The double left angle bracket (<<) must be in the first column.
@@ -90,88 +70,80 @@ and copied verbatim to
 standard output
 by
 .I noweave
-(with a few exceptions as noted below).
+(except for quoted code).
 .I noweave
-inserts a reference to a standard 
+can work with \fILaTeX\fP, or it can insert a reference to a standard 
 .I TeX
-macro package, which defines sectioning commands like
+macro package, \fInwmac\fP, that defines commands like
+.B \echapter
+and
 .B \esection.
 .PP
-Code chunk definitions are like macro definitions;
-they may contain both program source code and references to other code
+Code chunks contain program source code and references to other code
 chunks.
 Several code chunks may have the same name;
 .I notangle
-concatenates their definitions to produce a single chunk,
-just as does
+concatenates their definitions to produce a single chunk, just as does
 .I tangle(1).
-Typically, a programmer uses
-.I noweb
-to write a program by putting the program source in a chunk named <<*>>.
-(This substitutes for 
-.I tangle's
-``unnamed module.'')
-The definition of <<*>> contains references to other chunks, and so on.
-By default, 
+Code chunk definitions are like macro definitions;
 .I notangle
-expands the definition of <<*>>, writing the result on the 
-standard output.
-The output of
-.I notangle
-is readable by human beings; 
-it derives sensible indentations and line breaks from the
-indentations and line breaks present in its input.
+extracts a program by expanding one chunk (by default, the chunk named
+\fB<<\fP*\fB>>\fP).
+The definition of that chunk contains references to other chunks, which are 
+themselves expanded, and so on.
+\fInotangle\fP's output is readable; it preserves the indentation of expanded
+chunks with respect to the chunks in which they appear.
 .PP
 Code may be quoted within documentation
 chunks by placing double square brackets
-([[]]) around it.
+(\fB[[\fI...\fB]]\fR) around it.
 These double square brackets are ignored by
 .I notangle,
 but they may be used by 
 .I noweave
-to give the code different typographic treatment.
+to give the code special typographic treatment.
 .PP
-To use the double left or right angle bracket in code or documentation,
-not as part of a chunk name, escape the double angle bracket
-by placing an at sign in front of it (@<<).
+If the double left or right angle bracket is to be used 
+in code or documentation,
+not as part of a chunk name, it must be preceded by an at sign
+(e.g. \fB@<<\fP).
 .SH OPTIONS
-Given
-the
-.B -Rname
-option, 
+Given the \fB-R\fIname\fR option, 
 .I notangle
-will expand the <<name>> code chunk instead of <<*>>.
+will expand the \fB<<\fIname\fB>>\fR code chunk instead of \fB<<\fP*\fB>>\fP.
 .PP
-Given the
-.B -Lformat
-option, 
+Given the \fB-L\fIformat\fR option, 
 .I notangle
-will emit line number indications at module boundaries.
+will emit line number indications at chunk boundaries.
 A line number indication identifies the source of the line that follows it.
 In
-.B format,
+.I format,
 `%F' indicates the name of the source file,
 `%L' indicates the line number of the source file,
 `%N' indicates a newline,
 and `%%' indicates a percent sign.
 If 
-.B format
+.I format
 is omitted, the default format is that accepted by the C preprocessor:
-.B `#line %L "%F"%N'.
+.B 
+`#line %L "%F"%N'.
+.R
 .PP
 .I nountangle
 accepts various language options that determine the format of the comments into 
 which it transforms the documentation chunks.
+The \fB-w\fInn\fR option tells it to create comments for a line \fInn\fP 
+characters wide.
 .I notangle
 and
 .I nountangle
 accept (and ignore) each other's options.
 .PP
-Given the
+The
 .B -l
-option,
+option makes
 .I noweave
-will emit header and trailer stuff to make a LaTeX document.
+emit header and trailer for a \fILaTeX\fP document.
 .SH ERROR MESSAGES
 If
 .I notangle
@@ -181,18 +153,18 @@ encounters a chunk name within documentation, it assumes that this
 indicates an error, usually misspelling ``<<name>>=''.
 Other error messages should be self-explanatory.
 .PP
-It is erroneous to refer to a chunk that is never
+It is incorrect to refer to a chunk that is never
 defined, but it is OK for chunks to be defined and not used.
 .SH FILES
 .PP
-.ta \w'+TEXINPUTS+nwkernel.texxx'u
+.ta \w'|TEXINPUTS|nwkernel.texxx'u
 .nf
-+LIBDIR+/markup	markup preprocessor
-+LIBDIR+/unmarkup	inverts markup
-+LIBDIR+/nt	notangle proper
-+TEXINPUTS+/nwkernel.tex	kernel TeX macros
-+TEXINPUTS+/nwmac.tex	formatting TeX macros
-+TEXINPUTS+/noweb.sty	use in LaTeX documents
+|LIBDIR|/markup	markup preprocessor
+|LIBDIR|/unmarkup	inverts markup
+|LIBDIR|/nt	notangle proper
+|TEXINPUTS|/nwkernel.tex	kernel TeX macros
+|TEXINPUTS|/nwmac.tex	formatting TeX macros
+|TEXINPUTS|/noweb.sty	use in LaTeX documents
 .fi
 .PP
 .SH BUGS
@@ -209,10 +181,11 @@ the misspelled definition will be silently ignored.
 .I noroots
 can be used as a sanity checker to catch this sort of mistake.
 .PP
-.I nountangle
+.I noweb
 requires the new version of
 .I awk,
-sometimes called
+assumed to be called
 .I nawk.
 .SH AUTHOR
 Norman Ramsey, Princeton University.
+Internet address \fBnr@princeton.edu\fP.
