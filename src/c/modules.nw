@@ -203,7 +203,7 @@ When we're expanding a module, the partial distance becomes the new indentation 
 <<expand a module>>=
 newmod = lookup(p->contents);
 if (newmod==NULL) {
-    errormsg (Error, "undefined module name: @<<%s@>>", p->contents);
+    errormsg (Error, "undefined chunk name: @<<%s@>>", p->contents);
     error=Error;
 } else {
     int retcode;
@@ -320,3 +320,4 @@ void remove_final_newline (Module mp) {
     }
 }
 @ %def remove_final_newline
+
