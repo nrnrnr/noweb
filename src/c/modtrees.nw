@@ -50,8 +50,7 @@ insert_tree(TNODE **rootptr, char *modname) {
 @
 Node allocation is perfectly standard...
 <<Allocate new tnode in **rootptr>>=
-       *rootptr=(struct tnode *) malloc (sizeof(struct tnode));
-       if (*rootptr==NULL) overflow("memory allocation");
+       checkptr(*rootptr=(struct tnode *) malloc (sizeof(struct tnode)));
        (*rootptr)->left = (*rootptr)->right = NULL;
 @
 <<Function declarations>>=
