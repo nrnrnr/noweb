@@ -1,5 +1,5 @@
-\documentstyle[noweb]{article}
-\pagestyle{noweb}
+\documentstyle[noweb,twoside]{article}
+\pagestyle{noweb}\raggedbottom
 \title{{\TeX} support for {\tt noweb}}
 \author{Norman Ramsey}
 \begin{document}
@@ -54,6 +54,7 @@
   \catcode`\ =10
   \catcode`\^^M=5
   \rm}
+@ \sublabel{ref:fred}
 <<kernel>>=
 \def\LA{\begingroup\setupmodname\it$\langle${}}
 \def\RA{\/$\rangle$\endgroup}
@@ -72,20 +73,19 @@
 \def\filename#1{\vfil\eject\mark{#1}}
 <<kernel>>=
 \def\chunklist{%
-\expandafter\errhelp\expandafter{I changed \noexpand\chunklist\space
-to \noexpand\nowebchunks.  I'll try to avoid such incompatible changes
-in the future.}%
-\errmessage{Use \string\nowebchunks\space instead of \chunklist.}}
+\errhelp{I changed \chunklist to \nowebchunks.  
+I'll try to avoid such incompatible changes in the future.}%
+\errmessage{Use \string\nowebchunks\space instead of \string\chunklist}}
 \def\nowebchunks{\message{<Warning: You need noweave -x to use \string\nowebchunks>}}
 \def\nowebindex{\message{<Warning: You need noweave -idx to use \string\nowebindex>}}
 <<kernel>>=
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
 \ifx\documentstyle\undefined
-  \let\Rm=\rm \let\Tt=\tt	% plain
+  \let\Rm=\rm \let\Tt=\tt       % plain
 \else\ifx\selectfont\undefined
-  \let\Rm=\rm \let\Tt=\tt	% LaTeX OFSS
-\else				% LaTeX NFSS
+  \let\Rm=\rm \let\Tt=\tt       % LaTeX OFSS
+\else                           % LaTeX NFSS
   \def\Rm{\fontfamily\rmdefault \fontseries\default@series
     \fontshape\default@shape \selectfont}
   \def\Tt{\fontfamily\ttdefault \fontseries\default@series
@@ -118,7 +118,7 @@ in the future.}%
 
 \ifundefined{myheadline}
     {\headline={\hbox to \textsize{\tentt\firstmark\hfil\tenrm\today\hbox
-		to 4em{\hss\folio}}\hss}}
+                to 4em{\hss\folio}}\hss}}
     {\expandafter\headline\expandafter{\myheadline}}
 
 \ifundefined{myfootline}
@@ -138,17 +138,17 @@ in the future.}%
     \hyphenpenalty=9999 \exhyphenpenalty=9999}
 <<nwmac.tex>>=
 % \startsection{LEVEL}{INDENT}{BEFORESKIP}{AFTERSKIP}{STYLE}{HEADING}
-%		#1     #2      #3          #4         #5     #6
+%               #1     #2      #3          #4         #5     #6
 %
-%	LEVEL:		depth; e.g. part=0 chapter=1 sectino=2...
-%	INDENT:		indentation of heading from left margin
-%	BEFORESKIP:	skip before header
-%	AFTERSKIP:	skip after header
-%	STYLE:		style of heading; e.g.\bf
-%	HEADING:	heading of the sectino
+%       LEVEL:          depth; e.g. part=0 chapter=1 sectino=2...
+%       INDENT:         indentation of heading from left margin
+%       BEFORESKIP:     skip before header
+%       AFTERSKIP:      skip after header
+%       STYLE:          style of heading; e.g.\bf
+%       HEADING:        heading of the sectino
 %
 \def\startsection#1#2#3#4#5#6{\par\vskip#3 plus 2in
-	\penalty-200\vskip 0pt plus -2in
+        \penalty-200\vskip 0pt plus -2in
     \noindent{\leftskip=#2 \rightskip=0.5true in plus 4em minus 0.5 true in
               \hyphenpenalty=9999 \exhyphenpenalty=9999
               #5#6\par}\vskip#4%
@@ -157,24 +157,24 @@ in the future.}%
     \def\themodtitle{#6}
     {\def\code{\string\code}\def\edoc{\string\edoc}%
     \edef\next{\noexpand\write\cont{\tocskip
-	\tocline{\hskip\tocindent\tocstyle\relax\themodtitle}
-		{\noexpand\the\pageno}}}\next % write to toc
+        \tocline{\hskip\tocindent\tocstyle\relax\themodtitle}
+                {\noexpand\the\pageno}}}\next % write to toc
     }%
 }
 <<nwmac.tex>>=
 \def\settocparms#1{
-	\count255=#1
-	\ifnum\count255<1
+        \count255=#1
+        \ifnum\count255<1
             \def\tocskip{\vskip3ptplus1in\penalty-100
-			\vskip0ptplus-1in}%
+                        \vskip0ptplus-1in}%
             \def\tocstyle{\bf}
-	    \def\tocindent{0pt}
+            \def\tocindent{0pt}
         \else
             \def\tocskip{}
-	    \def\tocstyle{\rm}
-	    \dimen0=2em \advance\count255 by -1 \dimen0=\count255\dimen0
-	    \edef\tocindent{\the\dimen0}
-	\fi
+            \def\tocstyle{\rm}
+            \dimen0=2em \advance\count255 by -1 \dimen0=\count255\dimen0
+            \edef\tocindent{\the\dimen0}
+        \fi
 }
 <<nwmac.tex>>=
 \def\tocline#1#2{\line{{\ignorespaces#1}\leaders\hbox to .5em{.\hfil}\hfil
@@ -206,7 +206,7 @@ in the future.}%
 \openout\cont=\contentsfile
 \write\cont{\string\catcode`\string\@=11}% a hack to make contents
 <<nwmac.tex>>=
-				 % take stuff in plain.tex
+                                 % take stuff in plain.tex
 \def\bye{%
     \write\cont{}% ensure that the contents file isn't empty
     \closeout\cont
@@ -242,6 +242,7 @@ in the future.}%
 
 \let\begindocument=\relax
 @
+\clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}
 <<noweb.sty>>=
 <<kernel>>
@@ -251,7 +252,7 @@ in the future.}%
 code is indented by [[\codemargin]].
 <<noweb.sty>>=
 \codemargin=10pt
-\advance\codehsize by \codemargin	% make room for indentation of code
+\advance\codehsize by \codemargin       % make room for indentation of code
 @ 
 [[\nowebshift]] is used to shift the whole page left to make room for
 the wide code lines.
@@ -276,14 +277,14 @@ the wide code lines.
   \advance\leftskip\codemargin
   \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
   \obeylines \Tt \catcode``=13 \@noligs \setupcode}
-
-% \noindent puts into horizontal mode so that lines can follow without
-% indentation if there is no following \par.  The \hfil afterwards is
-% some glue so that it there are lines following immediately, it will
-% be possible to break there.  If I forced a break with \break, that
-% would be wrong because a following \par would leave us with an
-% underfull (empty!) hbox.
-
+@
+[[\noindent]] puts into horizontal mode so that lines can follow without
+indentation if there is no following [[\par]].  The [[\hfil]] afterwards is
+some glue so that it there are lines following immediately, it will
+be possible to break there.  If I forced a break with [[\break]], that
+would be wrong because a following [[\pa]]r would leave us with an
+underfull (empty!) hbox.
+<<noweb.sty>>=
 \def\begincode#1{\par\vskip3pt
     \penalty500
     \noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
@@ -338,14 +339,17 @@ the wide code lines.
 noweb} cross-referencers. (What arguments?)
 If unused chunks are output chunks, a filter can slip in [[\let\notused\nwoutput]].
 <<noweb.sty>>=
-\def\alsodefined#1{\break\hspace{-\codemargin}{\footnotesize\Rm 
-	This definition is continued on \pages{#1}.}\hfil}
-\def\used#1{\break\hspace{-\codemargin}{\footnotesize\Rm 
-	This code is used on \pages{#1}.}\hfil}
-\def\notused#1{\break\hspace{-\codemargin}{\footnotesize\Rm 
-	Root chunk (not used in this document).}\hfil}
-\def\nwoutput#1{\break\hspace{-\codemargin}{\footnotesize\Rm 
-	This code is written to file {\Tt #1}.}\hfil}
+\newdimen\nw@originaltextsize
+\nw@originaltextsize=\hsize
+\def\codecomment#1{\@@par
+    \hspace{-\codemargin}{%
+        \hsize=\nw@originaltextsize\textwidth=\nw@originaltextsize
+        \advance\rightskip by 0pt plus1in
+        \let\\\relax\footnotesize\Rm #1\hfil\@@par}}
+\def\alsodefined#1{\codecomment{This definition is continued on \pages{#1}.}}
+\def\used#1{\codecomment{This code is used on \pages{#1}.}}
+\def\notused#1{\codecomment{Root chunk (not used in this document).}}
+\def\nwoutput#1{\codecomment{This code is written to file {\Tt #1}.}}
 @
 Here's some list-of-pages code that's supposed to eliminate
 duplicates, insert commas, and insert ``and'' at the right place.
@@ -355,7 +359,7 @@ A lot of the list stuff is cribbed from the {\TeX}book.
 \def\lop#1\to#2{\expandafter\lopoff#1\lopoff#1#2}
 \long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
 \def\loop#1\repeat{\def\iterate{#1\expandafter\iterate\fi}%
-	\iterate \let\iterate\relax}
+        \iterate \let\iterate\relax}
 <<noweb.sty>>=
 \def\thepageref#1{\@ifundefined{r@#1}{0\@warning
    {Reference `#1' on page \thepage \space 
@@ -392,24 +396,11 @@ A lot of the list stuff is cribbed from the {\TeX}book.
 }
 
 \def\dopages#1\done{%
-  \def\thepages{#1}%
-  \lop\thepages\to\lastref
-  \lastpage=\lastref
-  \ifx\thepages\empty page \else pages \fi
-  \the\lastpage
-  \pagesout=1
-  \loop\ifx\thepages\empty\else
-    \lop\thepages\to\lastref
-    \thispage=\lastref
-    \ifx\thepages\empty 
-       \ifnum\pagesout>1 , \else{} \fi
-       and 
-    \else ,
-    \fi 
-    \the\thispage
-    \advance\pagesout by 1
-    \lastpage=\thispage  
-  \repeat}
+  {\count255=0 \def\\##1{\advance\count255 by 1 }#1%
+  \ifnum\count255=1 page \else pages \fi}%
+  \commafy{#1}}
+<<noweb.sty>>=
+\def\subpages#1{{\let\\\subpageref\dopages#1\done}}
 @
 \subsection{Sub-page references}
 This is the wonderful code that Dave Love provided to make page
@@ -465,7 +456,7 @@ if the reference is undefined.
 \def\@pageref#1{\expandafter\expandafter\expandafter
                 \@cdr\csname r@#1\endcsname\@nil}
 @
-[[\sublabel]] is like the usual [[\label]] command, except that it writes
+[[\sublabel]] is like the [[\label]] command, except that it writes
 [[\newsublabel]] onto the [[.aux]] file rather than [[\newlabel]].
 <<noweb.sty>>=
 \newcommand{\sublabel}[1]{%
@@ -537,9 +528,9 @@ We use Rainer's new expandable definitions of [[\ref]] and
                 \@cdr\csname r@#1\endcsname
                 \@nil\null}}
 @
-\section{Indexing (identifier cross-reference) support}
+\subsection{Indexing (identifier cross-reference) support}
 
-\subsection{Tracking definitions and uses}
+\subsubsection{Tracking definitions and uses}
 Both definitions and uses of identifiers may be either ``bound'' or
 ``free.''
 A bound definition or use appears within a code chunk and is associated
@@ -550,57 +541,71 @@ The control sequences used are
 <<noweb.sty>>=
 % \boundindexdefn{printable name}{identifying label}{label of chunk}
 % \freeindexdefn{printable name}{identifying label}
-% \indexuse{printable name}{identifying label}
-% \indexuse{printable name}{identifying label}
+% \boundindexuse{printable name}{identifying label}{label of chunk}
+% \freeindexuse{printable name}{identifying label}
 
-\def\boundindexdefn#1#2#3{%
-{\edef\@wazoo{\noexpand\@addtoindexdefns{\subpageref{#3}}{#2}}%
-   \@wazoo}}
+\def\boundindexdefn#1#2#3{\@auxixb{def}{#2}{#3}{}\@auxixb{all}{#2}{#3}{\protect\underline}}
+\def\boundindexuse#1#2#3{\@auxixb{use}{#2}{#3}{}\@auxixb{all}{#2}{#3}{}}
+\def\freeindexdefn#1#2#3{\@auxixf{def}{#2}{}\@auxixf{all}{#2}{\protect\underline}}
+\def\freeindexuse#1#2#3{\@auxixf{use}{#2}{}\@auxixf{all}{#2}{}}
 
-\def\freeindexdefn#1#2{%
-  \marginpar{\Tt #1}%
-  \@addtoindexdefns{#2}{\thepage}}
-
-\def\indexuse#1#2{\@addtoindexuses{#2}{\thepage}}
+\def\@auxixb#1#2#3#4{\@auxix{#1}{#2}{\protect\subpageref{#3}}{#4}}
+\def\@auxixf#1#2#3{\@auxix{#1}{#2}{\thepage}{#3}}
+\def\@auxix#1#2#3#4{%
+   \@bsphack\if@filesw {\let\thepage\relax\let\subpageref\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \nwixadd{#1}{#2}{#3}{#4}}}%
+   \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+<<noweb.sty>>=
+% \nwixadd{listname}{idlabel}{page}{markup for page}
+\def\nwixadd#1#2#3#4{%
+  \@ifundefined{nwix#1@#2}%
+    {\global\@namedef{nwix#1@#2}{{#4{#3}}}}%
+    {\expandafter\@cons\csname nwix#1@#2\endcsname{#4{#3}}}}
 <<noweb.sty>>=
 \chardef\nwbs=`\\
-
 @
-These utility functions add to lists of definitions and uses.
-They don't capture forward references; they need to be rewritten to
-use the [[.aux]] file.
+\subsubsection{Supporting a mini-index at the end of each chunk}
 <<noweb.sty>>=
-\def\@addtoindexdefns#1#2{\@addtoixlist{ixd}{#2}{#1}%
-                          \@addtoixlist{ixu}{#2}{{\underline{#1}}}}
-\def\@addtoindexuses{\@addtoixlist{ixu}}
-
-\def\@addtoixlist#1#2#3{%
-  \@ifundefined{#1@#2}%
-    {\global\@namedef{#1@#2}{{#3}}}%
-    {\expandafter\@cons\csname #1@#2\endcsname{#3}}%
-}
-@
-\subsection{Supporting a mini-index at the end of each chunk}
-<<noweb.sty>>=
-% \identdefs{{name 1}\\{{name 2}\\...\\{name n}}
+% \identdefs{\\{name 1}\\{{name 2}\\...\\{name n}}
 %    Defines name 1, name 2, name n.
-% \identuses{{name 1\indexrefs{label 1}}\\...\\{name n\indexrefs{label n}}}
+% \identuses{\\{name 1\indexrefs{label 1}}\\...\\{name n\indexrefs{label n}}}
 %    Uses name 1 page page page, ..., name n page.
 % \indexpages{identifying label}
 %    expands to list of page references
 % \indexlisting{name}{label}
 %    what actually appears in an index
 
-\def\identdefs#1{\break\hspace{-\codemargin}{\footnotesize\Rm%\tracingall 
-	Defines \Tt\def\\{{\Rm, }}#1\hfil}}
-\def\identuses#1{\break\hspace{-\codemargin}{\footnotesize\Rm%\tracingall 
-	Uses \Tt\def\\{, }#1\hfil}}
+\def\identdefs#1{\codecomment{Defines \Tt\commafy{#1}.}}
+\def\identuses#1{\codecomment{Uses \Tt\commafy{#1}.}}
 
-\def\indexrefs#1{{\Rm~\let\@elt=~\@nameuse{ixd@#1}}}
-\def\indexpages#1{{\def\@elt{, }\@nameuse{ixu@#1}}}
-\def\indexlisting#1#2{{\Tt #1}: \indexpages{#2}\\}
+\def\indexrefs#1{{\Rm~\let\@elt=~\@nameuse{nwixdef@#1}}}
+\def\indexpages#1{{\def\@elt{, }\@nameuse{nwixall@#1}}}
+\def\indexlisting#1#2{{\parindent=-10pt \parskip=0pt 
+        \advance\leftskip by 10pt 
+        \advance\rightskip by 0pt plus1in
+        \indent
+        {\Tt #1}: \indexpages{#2}\par}}
+@
+This goo attempts to support good comma separation.
+<<noweb.sty>>=
+\newcount\@commacount
+\def\commafy#1{%
+  {\@commacount=0
+   \let\@comma@each=\\%
+   \def\\##1{\advance\@commacount by 1 }#1%
+   \ifcase\@commacount\let\\=\@comma@each\or\let\\=\@comma@each\or
+     \def\\{\def\\{ and \@comma@each}\@comma@each}\else
+     \def\\{\def\\{{\Rm, }%
+                   \advance\@commacount by -1
+                   \ifnum\@commacount=1{\Rm{}and }\fi\@comma@each}\@comma@each}\fi
+   #1}}
 @
 \twocolumn
 \section{Index}
 \nowebindex
 \end{document}
+
+
