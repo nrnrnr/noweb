@@ -60,15 +60,18 @@ nil&match anything\\
 It doesn't handle the {\tt [} metacharacter, but it might one day.
 <<*>>=
 procedure globpat(s)
+  static specials
+  initial specials := '?*\\'
   l := []
   s ?
     while not pos(0) do
       put(l, 
-        if not any('?*') then
-          tab(upto('?*')|0)
+        if not any(specials) then
+          tab(upto(specials)|0)
         else case move(1) of {
           "?" : &cset
           "*" : &null
+          "\\" : move(1)
         })
   return l
 end
@@ -103,7 +106,7 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: elide.nw,v 1.2 1997/09/13 20:13:09 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 @
