@@ -38,20 +38,38 @@ void errormsg(enum errorlevel level, char *s, ...);
 #define impossible(s) errormsg(Impossible, "This can't happen: %s", s)
 #define checkptr(P) do { if (!(P)) overflow("memory"); } while (0)
 <<C functions>>=
+void errormsg(enum errorlevel level, char *s,...) {     
+    va_list args;                       /* see K&R, page 174 */
+    va_start(args,s);
+    <<set [[errorlevel]] and print [[s]] with [[args]]>>
+    va_end(args);
+    if (level >= Fatal)
+        exit(level);
+}
+<<header>>=
+void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...);
+<<C functions>>=
+void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {     
+    va_list args;                       /* see K&R, page 174 */
+    va_start(args,s);
+    fprintf(stderr, "\"%s\", line %d: ", filename, lineno);
+    <<set [[errorlevel]] and print [[s]] with [[args]]>>
+    va_end(args);
+    if (level >= Fatal)
+        exit(level);
+}
+<<set [[errorlevel]] and print [[s]] with [[args]]>>=
+if (level > errorlevel)
+    errorlevel = level;
+vfprintf(stderr, s, args);
+fprintf(stderr,"\n");
+@
+Some older machines don't do [[vfprintf]]; here's an implementation:
+<<crock for non-ANSI machines>>=
 extern int _doprnt(const char *format, va_list args, FILE *stream);
 
 int vfprintf(FILE *stream, const char *format, va_list arg) { 
     return _doprnt(format,arg,stream);
 }
 
-void errormsg(enum errorlevel level, char *s,...) {     
-    va_list args;                       /* see K&R, page 174 */
-    va_start(args,s);
-    if (level > errorlevel)
-        errorlevel = level;
-    vfprintf(stderr, s, args);
-    fprintf(stderr,"\n");
-    va_end(args);
-    if (level >= Fatal)
-        exit(level);
-}
+
