@@ -81,7 +81,8 @@ procedure pass1(name, arg)
             "use"  : { insert(allidents, arg)
                        addud(indexud, "use", arg, \lastanchorlabel)
                      }
-	    "defn" : { insert(allidents, arg)
+	    "defn" | "localdefn" : { 
+                       insert(allidents, arg)
 		       (l := \lastanchorlabel) | 
 			     slipin("@xref label " || (l := newdocslabel()))
                        addud(indexud, "defn", arg, l)
@@ -136,6 +137,7 @@ procedure pass2(name, arg)
     }
     "defn" : { thischunk := arg; 
                write("@xref ref " || anchorlabel[arg])
+	       <<write markers for previous and next definitions of [[thischunk]]>>
                <<copy [[name]] and [[arg]] to output>> 
              }
     "use"  : { write("@xref ref " || (\anchorlabel[arg] | "nw@notdef")) # was "???"
@@ -144,7 +146,8 @@ procedure pass2(name, arg)
     "index" : {
        <<shift [[name]] and [[arg]]>>
        case name of {
-         "defn" : { insert(thesedefns, arg)
+         "defn" | "localdefn" : { 
+                    insert(thesedefns, arg)
                     # no xref ref because of bug fix
 		  }
          "use"  : { insert(theseuses, arg)
@@ -158,7 +161,7 @@ procedure pass2(name, arg)
         if match("code", arg) then {<<write cross-reference>>}
         write("@", name, " ", arg)
       }
-    "text" : # grotesque hack! for chunks and index
+    "text" : # grotesque hack! for chunks and index in HTML
        if /thischunk then # docs mode
          case arg of { 
        	   "<nowebchunks>" : lognowebchunks()
@@ -175,12 +178,13 @@ The case of the [[@index defn]] is the one case where we don't emit a
 reference, because the reference has to go in earlier.  See
 page~\pageref{multi-def-bug} for an explanation.
 @
-<<write cross-reference>>=
+<<write markers for previous and next definitions of [[thischunk]]>>=
 defout[thischunk] +:= 1
-<<write index cross-reference>>
-if defout[thischunk] = 1 then {<<write chunk cross-reference>>}
 write("@xref prevdef ", defanchors[thischunk][defout[thischunk] - 1]) # fail if first
 write("@xref nextdef ", defanchors[thischunk][defout[thischunk] + 1]) # faif if last
+<<write cross-reference>>=
+<<write index cross-reference>>
+if defout[thischunk] = 1 then {<<write chunk cross-reference>>}
 <<write index cross-reference>>=
 theseuses --:= thesedefns
 if *thesedefns > 0 then {
