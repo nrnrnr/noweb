@@ -2,6 +2,7 @@
 \documentstyle[noweb]{article}
 \pagestyle{noweb}
 \begin{document}
+@
 \section{Converting {\tt noweb} markup to {\tt HTML}}
 This copyright applies both to the {\tt noweb} source and to the
 generated code.
@@ -18,6 +19,7 @@ document before converting the document with {\tt latex2html}.
 <<copyright notice>>
 # Don't try to understand this file!  Look at icon/tohtml.nw in the noweb source!
 
+global braw, eraw
 procedure main(args)
   local delay, raw, where, localindex, noindex, shortxref
   <<initialization>>
@@ -30,8 +32,8 @@ procedure main(args)
   if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
   if !args == "-no-gen-comment" then &null
   else 
-    write("<!-- this file was generated automatically by noweave",
-          " --- better not edit it-->")
+    write("<!-- this file was generated automatically by noweave;",
+          " better not edit it-->")
   while inputline := read() do inputline ? {
     <<scan and convert>>
   }
@@ -79,7 +81,7 @@ Sometimes it happens that a document-chunk anchor is put in a document chunk tha
 contains no text.  In that case, we put in a phony anchor at the end of the chunk so 
 we won't lose the cross-reference.
 <<docs chunks>>=
-if ="@end docs " then  	{ write(braw, linklabel(\lastxreflabel, "*"), eraw)
+if ="@end docs " then  	{ write(linklabel(\lastxreflabel, "*"))
                           lastxreflabel := &null                                 } else
 @
 Normally, if there's a pending anchor, we put it on the first available text line.
@@ -105,15 +107,15 @@ skip past.
 None of this crap would be necessary if HTML could anchor to empty text.
 <<docs anchor>>=
 1(line ? skip_white_tags() || 
-         braw || linklabel(\lastxreflabel, skip_chars()) || eraw || tab(0),
+         linklabel(\lastxreflabel, skip_chars()) || tab(0),
   insert(defns_above, \lastxreflabel),
   lastxreflabel := &null)
 <<old docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)},
-  line ? braw || linklabel(\lastxreflabel, 
+  line ? linklabel(\lastxreflabel, 
                            (tab(many(' \t')) | "") || 
                             (skip_tags_and_char() | "*")) ||
-         eraw || tab(0),
+         tab(0),
   insert(defns_above, \lastxreflabel),
   lastxreflabel := &null)
 @ 
@@ -121,7 +123,7 @@ An indexed identifier is not empty and contains no tags, so we don't
 have to worry.
 <<index and docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)}, 
-  linklabelto(lastxreflabel, lastindexref, escapeSpecials(line)),
+  linklabelto(lastxreflabel, lastindexref, escapeSpecials(line), "bare"),
   lastxreflabel := lastindexref := &null)
 @
 Skip as many tags as possible.
@@ -183,10 +185,10 @@ The preceding scheme sometimes wraps an anchor around a tag.
 If that turns out to be bad, we could try the following alternative:
 <<funky new docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)},
-  line ? braw || scan_initial_tags() ||
+  line ? scan_initial_tags() ||
                    linklabel(\lastxreflabel, 
                                 (tab(many(' \t')) | "") || (scan_past_char() | "*")) ||
-         eraw || tab(0),
+         tab(0),
   insert(defns_above, \lastxreflabel),
   lastxreflabel := &null)
 <<procedures to support new docs anchor>>=
@@ -223,11 +225,13 @@ if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0))
        	                  <<clear [[lastxref*]]>>                                } else
 @
 Writing a chunk involves creating an anchor for it.
+The anchor is ``bare'' because it's always in an HTML-containing place.
 <<*>>=
 procedure writechunk(label, ref, tag, name, suffix)
   /suffix := ""
   writes(linklabelto(label, ref, 
-                     sgmlwrap(tag, "&lt;" || convquotes(name) || "&gt;" || suffix)))
+                     sgmlwrap(tag, "&lt;" || convquotes(name) || "&gt;" || suffix),
+		     "bare"))
   return
 end
 @
@@ -374,7 +378,7 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 "beginindex"  : { write(braw, "<ul>") }
 "entrybegin"  : { writes("<li>"); comma := ": "; count := 0
                   arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
-                  writes(linklabelto("NWI-" || escapeSpecials(name), ref, name)) }
+                  writes(linklabelto("NWI-" || escapeSpecials(name), ref, name, "b")) }
 "entryuse"    : { writes(comma, linkto(arg, "U" || (count +:= 1)));  comma := ", " }
 "entrydefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
 "entryend"    : write()
@@ -426,25 +430,39 @@ so bad that I've punted on it (for now).  Hence the [[\uglyindex]].
 @
 \subsection{Support functions}
 Here's all our anchor support goo.
+Unless the anchor is deemed ``bare,'' the beginning and ending tags
+are protected with [[braw]] and [[eraw]].
+This step is necessary to make \verb=noweave -latex+html= work without
+trapping {\LaTeX} markup in a \texttt{rawhtml} environment.
 <<*>>=
-procedure linklabelto(label, ref, contents)
+procedure linklabelto(label, ref, contents, bare)
   local s
-  s   := if \label | \ref then "<a"   else ""
+  s   := if \bare then "" else braw
+  s ||:= if \label | \ref then "<a"   else ""
   s ||:= " name=" || image(\label)
   s ||:= " href=" || image("#" || \ref)
   s ||:= if \label | \ref then ">"    else ""
+  s ||:= if \bare then "" else eraw
   s ||:= contents
+  s ||:= if \bare then "" else braw
   s ||:= if \label | \ref then "</a>" else ""
+  s ||:= if \bare then "" else eraw
   return s
+end
+@ 
+Here are two abbreviations.
+<<*>>=
+procedure linklabel(label, contents, bare)
+  return linklabelto(label, &null, contents, bare)
 end
 
 procedure linkto(ref, contents)
-  return linklabelto(&null, ref, contents)
+  return linklabelto(&null, ref, contents, "bare")
 end
-
-procedure linklabel(label, contents)
-  return linklabelto(label, &null, contents)
-end
+@ [[linkto]] is always used ``bare,'' and I've decided that the
+inconsistency in calling conversions is worth the savings from not
+having to write a meaningless argument everywhere.
+Reasonable people could disagree.
 @
 Another support function is used for wrapping tags around text:
 <<*>>=
@@ -511,7 +529,7 @@ end
 \end{document}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: tohtml.nw,v 1.5 1997/09/13 20:16:00 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 @
