@@ -15,7 +15,7 @@ SRCS=$(MANPAGES) $(TXTPAGES)
 NAME="name of version checked in"
 CIMSG="message for version checked in"
 RCSFILES=*.nw *.tex Makefile
-DOVERSION=sed '/^version $$Name:/s/_/./g;/^version $$Name:/s/ $$\././;/^version $$Name:/s/$$Name: v//'
+DOVERSION=./doversion
 
 all: $(SRCS)
 source: $(SRCS)
