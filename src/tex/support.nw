@@ -97,7 +97,6 @@ Within a code environment, it may be necessary to restore the
 category codes in order to set a module (chunk) name.
 This hack doesn't properly restore [["]] for use in {\tt german.sty}.
 <<kernel>>=
-{\obeyspaces\global\let =\ } % from texbook, p 381
 \def\setupmodname{%
   \catcode`\$=3
   \catcode`\&=4
@@ -114,6 +113,15 @@ This hack doesn't properly restore [["]] for use in {\tt german.sty}.
   \Rm}
 @ %def \setupmodname
 @ \sublabel{ref:fred}
+@
+Setting up the space code has to be done differently for {\TeX} and
+{\LaTeX}, so as not to screw up {\LaTeX}'s \texttt{verbatim} package.
+(Fix from Rafael Laboissiere.)
+<<nwmac.tex>>=
+{\obeyspaces\global\let =\ } % from texbook, p 381
+<<noweb.sty>>=
+{\obeyspaces\AtBeginDocument{\global\let =\ }} % from texbook, p 381
+@ 
 
 {\tt noweave} brackets uses of chunk names with [[\LA]] and [[\RA]], which
 handle the angle brackets, font, and environment.
@@ -336,6 +344,9 @@ Set code in
 .B "\\\\small"
 font instead of 
 .B "\\\\normalsize."
+Similar options exist for all the 
+.I LaTeX
+size-changing commands.
 @ \fi
 @ [[\nowebsize]] governs the size at which code is set; users who want
 to minimize code can [[\let\nowebsize=\small]].  
@@ -349,7 +360,16 @@ the glue placed before code chunks.\stylehook
 <<noweb.sty>>=
   \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
   \let\nowebsize=\normalsize
+  \def\nwopt@tinycode{\let\nowebsize=\tiny}
+  \def\nwopt@footnotesizecode{\let\nowebsize=\footnotesize}
+  \def\nwopt@scriptsizecode{\let\nowebsize=\scriptsize}
   \def\nwopt@smallcode{\let\nowebsize=\small}
+  \def\nwopt@normalsizecode{\let\nowebsize=\normalsize}
+  \def\nwopt@largecode{\let\nowebsize=\large}
+  \def\nwopt@Largecode{\let\nowebsize=\Large}
+  \def\nwopt@LARGEcode{\let\nowebsize=\LARGE}
+  \def\nwopt@hugecode{\let\nowebsize=\huge}
+  \def\nwopt@Hugecode{\let\nowebsize=\Huge}
 @ %def  \nwcodetopsep \nowebsize smallcode
 @ Maybe the penalties ought to be parameters\dots
 <<[[\nwbegincode]] separation and penalties>>=

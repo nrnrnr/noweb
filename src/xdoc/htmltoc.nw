@@ -3,7 +3,7 @@
 .SH NAME
 htmltoc \- add table of contents to HTML document
 .SH SYNOPSIS
-\fBhtmltoc\fP [\fB-2345\fP] [file]
+\fBhtmltoc\fP [\fB\-2345\fP] [file]
 .SH DESCRIPTION
 .I htmltoc
 adds a table of contents to the HTML document named on the command
@@ -16,14 +16,15 @@ which must appear on lines by themselves.
 Any text between those two markers is 
 .I discarded.
 These markers are inserted automatically by the
-.I sl2h(1)
+.IR sl2h (1)
 filter.
 .PP
 The table of contents includes only headers at levels 2, 3, 4, and 5.
 This can be changed by using a command-line
- option, e.g., \fB-123456789\P to include all possible headers.
+option, e.g., \fB\-123456789\P to include all possible headers.
 .SH SEE ALSO
-.I nowebfilters(7), sl2h(1)
+.IR nowebfilters (7),
+.IR sl2h (1)
 <<AUTHOR section>>
 .PP
 Stephen Parker provided a preliminary version.

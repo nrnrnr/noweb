@@ -10,8 +10,8 @@ Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
 procedure rcsinfo () 
-  return "$Id: totex.nw,v 1.4 1997/09/13 20:16:31 nr Exp nr $" ||
-         "$Name: v2_8a $"
+  return "$Id: totex.nw,v 1.5 1998/08/17 00:19:27 nr Exp nr $" ||
+         "$Name:  $"
 end
 global headercomment, realwrite
 procedure main(args)

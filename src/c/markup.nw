@@ -21,7 +21,7 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
-static char rcsid[] = "$Id: markup.nw,v 2.7 1997/09/13 19:55:02 nr Exp nr $";
+static char rcsid[] = "$Id: markup.nw,v 2.8 1997/09/13 19:59:15 nr Exp nr $";
 static char rcsname[] = "$Name: v2_8a $";
 #include <stdlib.h>
 #include <stdio.h>

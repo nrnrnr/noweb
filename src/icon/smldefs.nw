@@ -2,8 +2,8 @@
 \section{Finding definitions in Standard ML}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: smldefs.nw,v 1.2 1997/09/13 20:15:40 nr Exp nr $" ||
-         "$Name: v2_8a $"
+  return "$Id: smldefs.nw,v 1.3 1998/08/17 00:17:16 nr Exp nr $" ||
+         "$Name:  $"
 end
 procedure main(args)
   go()

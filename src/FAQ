@@ -32,6 +32,18 @@ A.  The awk versions of the noweb scripts pass the awk programs as
     if you prefer, you can edit the offending scripts so that the awk
     programs reside in separate files and the scripts call awk -f.
 
+Q.  I'm unable to run noweb on Windows NT 4.0. The problem is that
+    the Icon programs use a DOS extender which doesn't work in an NT
+    console.
+   
+A.  Clint Jeffery, the Icon Master for Windows, says to use the
+    NT console binaries (nticont.exe and nticonx.exe at
+    ftp://ringer.cs.utsa.edu/pub/icon/nt/console) rather than
+    wiconx.exe with its faux console. Only applications that use the
+    graphics facilities require wiconx.exe and its kin. The nticonx*
+    binaries should run fine on Win95 also.
+
+
 
 INDENTATION OF CODE, ESPECIALLY FORTRAN
   
@@ -70,6 +82,26 @@ A. Noweb is set up never to break chunks across pages. You can get
 
       \def\nwendcode{\endtrivlist \endgroup}
       \let\nwdocspar=\par
+
+
+MICROSOFT MADNESS
+
+Q. Using the precompiled MS-DOS and Windows binaries for noweb, many
+   of the programs throw their output to the screen and not to whatever
+receiving program/file they ought to go to. A typical example: I go to
+/noweb/examples and type
+
+     notangle wc.nw > wc.c
+
+I see the tangled program scroll by on the screen, but it isn't piped
+to the file wc.c as requested. Any solutions?
+
+  _A._ This is a known COMMAND.COM problem. Try:
+     command /c notangle wc.nw > wc.c
+
+  or get a COMMAND.COM replacement such as 4DOS. Better yet, help
+  with the noweb 3 port.
+
 
 
 OTHER QUESTIONS

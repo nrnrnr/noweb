@@ -54,7 +54,7 @@ procedure optwhite()
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: lrtldefs.nw,v 1.1 1997/09/13 20:17:29 nr Exp nr $" ||
+         "$Name:  $"
 end
 @

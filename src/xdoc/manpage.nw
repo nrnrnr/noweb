@@ -4,12 +4,12 @@
 notangle, noweave, nountangle \- noweb, a literate-programming tool
 .SH SYNOPSIS
 .B notangle
-[\fB-R\fProotname ...] [\fB-filter\fP command]
-[\fB-L\fP[format]] [file] ...
+[\fB\-R\fProotname ...] [\fB\-filter\fP command]
+[\fB\-L\fP[format]] [file] ...
 .br
 \fBnountangle\fP 
-[\fB-ml\fP|\fB-m3\fP|\fB-c\fP|\fB-c++\fP|\fB-awk\fP|\fB-tex\fP|\fB-f77\fP|\fB-f90\fP]
-[\fB-R\fProotname ...] [\fB-filter\fP command] [\fB-w\fPwidth] [file] ...
+[\fB\-ml\fP|\fB\-m3\fP|\fB\-c\fP|\fB\-c++\fP|\fB\-awk\fP|\fB\-tex\fP|\fB\-f77\fP|\fB\-f90\fP]
+[\fB\-R\fProotname ...] [\fB\-filter\fP command] [\fB\-w\fPwidth] [file] ...
 .br
 \fBnoweave\fP [options] [file] ...
 .SH DESCRIPTION
@@ -31,19 +31,20 @@ is given a
 .I noweb
 file, it reads the 
 .I noweb
-source and produces, on standard output, \fILaTeX\fP, \fITeX\fP, or \fIHTML\fP
+source and produces, on standard output, \fILaTeX\fP, \fITeX\fP, \fItroff\fP,
+or \fIHTML\fP
 source for typeset documentation.
 .I nountangle
 converts a literate program into an ordinary program by
 turning interleaved documentation into comments.
-The file name `-' refers to standard input.
+The file name `\-' refers to standard input.
 .SH FORMAT OF NOWEB FILES
 <<paragraph describing markup of chunks>>
 <<paragraph describing markup of chunks>>=
 A 
 .I noweb 
 file is a sequence of
-.I chunks,
+.IR chunks ,
 which may appear in any order.
 A chunk may contain code or documentation.
 Documentation chunks begin with a line that starts with an at sign (@) 
@@ -69,7 +70,7 @@ by
 .I noweave
 (except for quoted code).
 .I noweave
-can work with \fILaTeX\fP, plain \fITeX\fP, or \fIHTML\fP.
+can work with \fILaTeX\fP, plain \fITeX\fP, \fItroff\fP or \fIHTML\fP.
 With plain \fITeX\fP, it inserts a reference to a 
 .I TeX
 macro package, \fInwmac\fP, which defines commands like
@@ -82,7 +83,7 @@ chunks.
 Several code chunks may have the same name;
 .I notangle
 concatenates their definitions to produce a single chunk, just as does
-.I tangle(1).
+.IR tangle (1).
 Code chunk definitions are like macro definitions;
 .I notangle
 extracts a program by expanding one chunk (by default, the chunk named
@@ -102,7 +103,7 @@ but they may be used by
 to give the code special typographic treatment, e.g., hypertext links.
 If quoted code ends with three or more square brackets,
 .I noweave
-choose the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
+chooses the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
 parsed correctly.
 The names of
 code chunks may appear within quoted code unless that quoted code is itself
@@ -139,7 +140,7 @@ but if the line has the form
 .br
 it is taken to mean that the preceding chunk defines the identifiers listed 
 in 
-.I identifiers.
+.IR identifiers .
 This list contains identifiers separated by whitespace; 
 any sequence of nonwhite characters may be an identifier.
 .I noweb
@@ -154,21 +155,21 @@ accept the same set of options, although some options have effects only on one
 or the other.
 The options are:
 .TP
-.B -R\fIname\fR
+.B \-R\fIname\fR
 Expand the \fB@<<\fIname\fB@>>\fR code chunk.
 The 
-.B -R
+.B \-R
 option can be repeated, 
 in which case each chunk is written to the output.
 If no
-.B -R
+.B \-R
 option is given, expand the chunk named  \fB@<<\fP*\fB@>>\fP.
 .TP
-.B -L\fIformat\fR
+.B \-L\fIformat\fR
 Emit line number indications at chunk boundaries.
 A line number indication identifies the source of the line that follows it.
 In
-.I format,
+.IR format ,
 .B "%F"
 indicates the name of the source file,
 .B "%L"
@@ -184,11 +185,21 @@ If
 .I format
 is omitted, the default format is that accepted by the C preprocessor:
 `\fB#line %L "%F"%N\fR'.
-When using the \fB-L\fIformat\fR option, 
+When using the \fB\-L\fIformat\fR option, 
 .I notangle
 ensures that all text appears in the same column in input and output.
 .I nountangle
 ignores this option.
+.IP " "
+Common format strings include:
+.ta \w'zzzSunyFORTRANxxxx'u
+.nf
+   C	\fB\-L'#line %L "%F"%N'\fP
+   Sun FORTRAN	\fB\-L'\\# %L "%F"%N'\fP
+   Icon	\fB\-L'#line %\-1L "%F"%N'\fP
+   Modula-3	\fB\-L'<*LINE %L "%F" *>%N'\fP
+   SML/NJ	\fB\-L'(*#line %L "%F"*)'\fP
+.fi
 .IP " "
 To solve the converse problem, that is, to get noweb to do something sensible 
 with \fB#line\fP in its input, see the \fBsharpline\fP filter in the examples
@@ -209,18 +220,18 @@ after converting it to tool form and before tangling.
 looks for 
 .I cmd
 first on the user's
-.B PATH,
+.BR PATH ,
 then in
-.B |LIBDIR|.
+.BR |LIBDIR| .
 Such filters
 can be used to add features to
-.I notangle;
+.IR notangle ;
 for an example see
-.B |LIBDIR|/emptydefn.
+.BR |LIBDIR|/emptydefn .
 For experts only.
 <<description of -markup option>>
 .TP
-.B "-awk | -c | -icn | -icon | -ml | -m3 | -pascal | -f77 | -f90 | -tex"
+.B "\-awk | \-c | \-icn | \-icon | \-ml | \-m3 | \-pascal | \-f77 | \-f90 | \-tex"
 When 
 .I nountangle
 transforms documentation chunks into comments, use the comment format of the language
@@ -230,7 +241,7 @@ is the default.
 .I notangle
 ignores these options.
 .TP
-.B -w\fIn\fP
+.B \-w\fIn\fP
 When 
 .I nountangle
 transforms documentation chunks into comments, create comments on lines of width \fIn\fP.
@@ -241,7 +252,8 @@ ignores this option.
 .SH INDEXING AND CROSS-REFERENCE
 <<man page: INDEXING AND CROSS-REFERENCE section>>
 When used with 
-.I LaTeX 
+.IR LaTeX ,
+.IR troff ,
 or
 .I HTML,
 .I noweave
@@ -272,35 +284,35 @@ I'll assume you have a
 file with a C program in chunk 
 .B @<<foo.c@>>
 and a header file in chunk
-.B @<<foo.h@>>, 
+.BR @<<foo.h@>> ,
 and that your documentation is marked up using
-.I latex(1).
+.IR latex(1) .
 I'll show you how to build things using the most common options.
 .PP
 To rebuild your C source, try
 .RS
-.B "notangle -L -Rfoo.c foo.nw > foo.c"
+.B "notangle \-L \-Rfoo.c foo.nw > foo.c"
 .RE
 To rebuild your header file, try
 .RS
-.B "notangle -Rfoo.h foo.nw | cpif foo.h"
+.B "notangle \-Rfoo.h foo.nw | cpif foo.h"
 .RE
 There are two compromises here.
-Omitting \fB-L\fP keeps \fB#line\fP out of your header file,
+Omitting \fB\-L\fP keeps \fB#line\fP out of your header file,
 and using \fBcpif\fP prevents the command from rewriting 
 .B foo.h
 unless the contents have changed.  Thus, this is good code to put in a Makefile rule.
 .PP
 To build a printed document, run
 .RS
-.B "noweave -autodefs c -index foo.nw > foo.tex"
+.B "noweave \-autodefs c \-index foo.nw > foo.tex"
 .RE
 If you have your own preamble, containing \fB\\documentclass\fP and all, 
-you will also need the \fB-delay\fP option.
+you will also need the \fB\-delay\fP option.
 .PP
 To build a web page, run
 .RS
-.B "noweave -filter l2h -autodefs c -index -html foo.nw | htmltoc > foo.html"
+.B "noweave \-filter l2h \-autodefs c \-index \-html foo.nw | htmltoc > foo.html"
 .RE
 Have fun!
 .SH FILES
@@ -312,6 +324,7 @@ Have fun!
 |LIBDIR|/nt	notangle proper
 |LIBDIR|/finduses	find uses of identifiers for index
 |LIBDIR|/noidx	generate index and cross-reference info
+|LIBDIR|/toroff	back end to emit \fItroff\fP
 |LIBDIR|/totex	back end to emit \fITeX\fP or \fILaTeX\fP
 |LIBDIR|/tohtml	back end to emit HTML
 |TEXINPUTS|/nwmac.tex	formatting \fITeX\fP macros
@@ -319,7 +332,14 @@ Have fun!
 .fi
 .SH SEE ALSO
 .PP
-.I cpif(1), nodefs(1), noroots(1), noweb(1), noindex(1), nowebstyle(7), nowebfilters(7)
+.IR cpif (1),
+.IR nodefs (1),
+.IR noroots (1),
+.IR noweb (1),
+.IR noindex (1),
+.IR noroff (1),
+.IR nowebstyle (7),
+.IR nowebfilters (7)
 .SH BUGS
 .I notangle 
 and
@@ -330,14 +350,14 @@ Ignoring unused chunks can cause problems;
 if a chunk has
 multiple definitions and one is misspelled,
 the misspelled definition is silently ignored.
-.I noroots(1)
+.IR noroots (1)
 can be used to catch this mistake.
 .PP
 .I noweb
 requires the new version of
-.I awk,
+.IR awk ,
 assumed to be called
-.I nawk.
+.IR nawk .
 DEC
 .I nawk
 has a bug in that that causes 
@@ -355,7 +375,7 @@ option to fail whenever the filter command contains more than one word.
 .PP
 <<paragraph about bogus latex pagestyles>>
 .PP
-.I latex2html(1)
+.IR latex2html (1)
 mangles some source files.
 .PP
 .I noweave
@@ -371,10 +391,10 @@ Enables use of noweb tools on files in other formats;
 for example, the 
 .B numarkup
 parser understands
-.I nuweb(1)
+.IR nuweb (1)
 format.
 See 
-.I nowebfilters(7)
+.IR nowebfilters (7)
 for more information.
 For experts only.
 <<paragraph about bogus latex pagestyles>>=
@@ -401,17 +421,17 @@ can be used as an example.
 noweb \- a simple literate-programming tool
 .SH SYNOPSIS
 .B noweb
-[\fB-t\fP] 
-[\fB-o\fP] 
-[\fB-L\fP\fIformat\fP] 
-[\fB-markup\fP \fIparser\fP]
+[\fB\-t\fP] 
+[\fB\-o\fP] 
+[\fB-\L\fP\fIformat\fP] 
+[\fB-\markup\fP \fIparser\fP]
 [file] ...
 .SH DESCRIPTION
 .I Noweb
 is a literate-programming tool like
 .I FunnelWEB
 or 
-.I nuweb,
+.IR nuweb ,
 only simpler.
 A 
 .I noweb
@@ -424,15 +444,15 @@ to the output files mentioned in the noweb file, and it writes a
 file for typeset documentation.
 .PP
 The 
-.I noweb(1)
+.IR noweb (1)
 command is for people who don't like reading man pages or who are switching from 
-.I nuweb.
+.IR nuweb .
 To get the most out of
-.I noweb,
+.IR noweb ,
 use
-.I notangle(1)
+.IR notangle (1)
 and 
-.I noweave(1)
+.IR noweave (1)
 instead.
 .SH FORMAT OF NOWEB FILES
 <<paragraph describing markup of chunks>>
@@ -473,8 +493,8 @@ chunks with respect to the chunks in which they appear.
 .PP
 If a star (\fB*\fP) is appended to the name of an output file,
 .I noweb
-includes line-number information as specified by the \fB-L\fP\fIformat\fP
-option (or for C if no \fB-L\fP\fIformat\fP option is given).
+includes line-number information as specified by the \fB\-L\fP\fIformat\fP
+option (or for C if no \fB\-L\fP\fIformat\fP option is given).
 The name itself may not contain shell metacharacters.
 .PP
 Code may be quoted within documentation
@@ -509,7 +529,7 @@ to format line-number information for starred output files.
 (If the option is omitted, a format suitable for C is used.)
 .I format
 is as defined by 
-.I notangle(1);
+.IR notangle (1);
 <<description of -markup option>>
 .SH BUGS
 .PP
@@ -517,7 +537,7 @@ Ignoring unused chunks whose names contain spaces
 sometimes causes problems, especially in the case when a chunk has
 multiple definitions and one is misspelled;
 the misspelled definition will be silently ignored.
-.I noroots(1)
+.IR noroots (1)
 can be used as a sanity checker to catch this sort of mistake.
 .PP
 .I noweb
@@ -534,9 +554,9 @@ If the design were better, we could all use the same commands.
 .PP
 .I noweb
 requires the new version of
-.I awk,
+.IR awk ,
 assumed to be called
-.I nawk.
+.IR nawk .
 DEC
 .I nawk
 has a bug in that that causes problems with braces in
@@ -549,8 +569,13 @@ is reported to work.
 <<paragraph about bogus latex pagestyles>>
 .SH SEE ALSO
 .PP
-.I "notangle(1), noweave(1), noroots(1), nountangle(1), nowebstyle(7),"
-.I "nowebfilters(7), nuweb2noweb(1)"
+.IR notangle (1),
+.IR noweave (1),
+.IR noroots (1),
+.IR nountangle (1),
+.IR nowebstyle (7),
+.IR nowebfilters (7),
+.IR nuweb2noweb (1)
 .br
 Norman Ramsey,
 .I "Literate programming simplified, IEEE Software"
@@ -566,7 +591,7 @@ nowebstyle \- \fILaTeX\fP package for \fInoweb\fP
 When 
 .I noweave
 generates code for 
-.I LaTeX,
+.IR LaTeX ,
 the
 .B noweb
 package is required.
@@ -590,7 +615,8 @@ The noweb package describes a gazillion special control sequences.
 Only a few are listed here.
 <<man page: noweb style control sequences>>
 .SH SEE ALSO
-.I noweave(1), noweb(1)
+.IR noweave (1),
+.IR noweb (1)
 <<AUTHOR section>>
 @ 
 <<cpif.1>>=
@@ -599,29 +625,29 @@ Only a few are listed here.
 cpif \- selectively update files
 .SH SYNOPSIS
 .B cpif
-[\fB-eq\fP|\fB-ne\fP] file ...
+[\fB\-eq\fP|\fB\-ne\fP] file ...
 .SH DESCRIPTION
 .I cpif
 is an auxiliary tool for use with 
-.I notangle(1)
+.IR notangle (1)
 and
-.I make(1).
+.IR make (1).
 .I cpif
 compares its standard input to each of the named files,
 overwriting the file if the comparison succeeds or if
 the named file does not exist.
 If neither
-.B -eq
+.B \-eq
 or 
-.B -ne
+.B \-ne
 is specified, the default is
-.B -ne.
+.BR \-ne .
 Typical usage is in the following default rule, suitable for use in a Makefile.
 .br
- .nw.h: ; notangle -Rheader $*.nw | cpif $*.h
+ .nw.h: ; notangle \-Rheader $*.nw | cpif $*.h
 .br
 .SH SEE ALSO
-.I notangle(1)
+.IR notangle (1)
 <<AUTHOR section>>
 @ 
 <<nuweb2noweb.1>>=
@@ -641,8 +667,8 @@ format, writing the results on standard output.
 Input is from the file(s) named on the command line.
 .SH SEE ALSO
 .PP
-.I noweb(1), nuweb(1)
-.SH AUTHOR
+.IR noweb (1),
+.IR nuweb (1)
 <<AUTHOR section>>
 @ 
 

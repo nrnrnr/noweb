@@ -2,8 +2,8 @@
 <<*>>=
 global showlocal
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: promeladefs.nw,v 1.1 1997/09/13 20:15:00 nr Exp nr $" ||
+         "$Name:  $"
 end
 procedure main(args)
   showlocal := !args == "-local"

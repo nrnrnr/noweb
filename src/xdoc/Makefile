@@ -7,9 +7,11 @@ SHELL=/bin/sh
 .7.ps: ;	psroff -t -man $*.7 > $*.ps
 
 MANPAGES=notangle.1   cpif.1   noweb.1   nodefs.1   noroots.1   noindex.1   \
-         nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1 htmltoc.1
+         nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1 htmltoc.1   \
+	 noroff.1
 TXTPAGES=notangle.txt cpif.txt noweb.txt nodefs.txt noroots.txt noindex.txt \
-         nowebstyle.txt nowebfilters.txt nuweb2noweb.txt sl2h.txt htmltoc.txt
+         nowebstyle.txt nowebfilters.txt nuweb2noweb.txt sl2h.txt htmltoc.txt   \
+	 noroff.txt
 SRCS=$(MANPAGES) $(TXTPAGES)
 
 NAME="name of version checked in"
@@ -68,6 +70,9 @@ cpif.1: manpage.nw docdate.nw
 
 nuweb2noweb.1: manpage.nw docdate.nw
 	notangle -t8 -Rnuweb2noweb.1  manpage.nw docdate.nw | $(DOVERSION) > nuweb2noweb.1
+
+noroff.1: noroff.nw docdate.nw
+	notangle -t8 noroff.nw docdate.nw | $(DOVERSION) > noroff.1
 
 wc.tex: ../../examples/wc.nw
 	(cd ../../examples; noweave -n -index wc.nw) > wc.tex

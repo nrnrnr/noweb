@@ -1,10 +1,10 @@
 <<noweb documentation date>>=
-4/17/97
+2/16/1998
 <<AUTHOR section>>=
 .SH VERSION
 This man page is from 
 .I noweb
-version $Name: v2_8a $.
+version $Name: v2_9a $.
 .SH AUTHOR
 Norman Ramsey, University of Virginia.
 Internet address \fBnr@cs.virginia.edu\fP.

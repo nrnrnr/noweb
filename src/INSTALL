@@ -12,14 +12,14 @@ To build noweb:
      The Icon versions have fewer bugs and provide more filters (e.g.,
      convert LaTeX to HTML in documentation chunks).  If you have the
      Icon translator but not the Icon compiler set ICONC=icont in the
-     Makefile.
+     Makefile.  (Icon is freely available from the University of Arizona.)
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
        LIB        a directory to store markup, nt, noxref, ...
        MAN        man pages will go in $MAN/man1
-       TEXINPUTS  a directory TeX will look for nwmac.tex and nwkernel.tex
+       TEXINPUTS  a directory TeX will look for nwmac.tex and noweb.sty
        ELISP      a directory for noweb-mode.el, for emacs 19
      All of these files are *output* files, where noweb will place
      binaries and man pages that are customized for your installation.

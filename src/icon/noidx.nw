@@ -391,8 +391,8 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: noidx.nw,v 1.5 1997/09/13 20:14:33 nr Exp nr $" ||
-         "$Name: v2_8a $"
+  return "$Id: noidx.nw,v 1.6 1998/08/17 00:16:54 nr Exp nr $" ||
+         "$Name:  $"
 end
 @
 \section{List of chunks}

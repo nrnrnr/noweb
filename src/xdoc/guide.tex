@@ -10,7 +10,7 @@
   University of Virginia, Charlottesville, VA 22903, USA;
 send email to {\tt nr@cs.virginia.edu}.}\\Department of Computer Science\\
 Princeton University}
-\date{September 1992\\(Revised August 1994)}
+\date{September 1992\\(Revised August 1994, December 1997)}
 
 \setcounter{secnumdepth}{0}
 \setcounter{tocdepth}{3}
@@ -126,7 +126,7 @@ represent the {\tt noweb} source syntax directly.
 They must appear in particular orders that reflect the
 structure of the source.
 The tagging keywords can be inserted
-essentially anywhere, and with some exceptions, they are not generated
+essentially anywhere (within reason), and with some exceptions, they are not generated
 by {\tt markup}.
 The wrapper keywords
 mark the beginning and end of file,
@@ -154,6 +154,7 @@ inserted directly by the {\tt noweave} shell script, not by {\tt markup}.
 \hline
 @file {\rm\it filename}&Name of the file from which the chunks came\\
 @line $n$&Next text line came from source line $n$ in current file\\
+@language {\rm\it language}&Programming language in which code is written\\
 @index \ldots&Index information.\\
 @xref \ldots&Cross-reference information.\\
 \hline
@@ -165,12 +166,19 @@ inserted directly by the {\tt noweave} shell script, not by {\tt markup}.
       First line, identifying formatter and options\\
 @trailer {\rm\it formatter}&Last line, identifying formatter.\\
 \hline
-\end{tabularx}\\
-\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+%\end{tabularx}\\
+%\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
 \ttitle{Error keyword}
 \hline
 @fatal {\rm\it stagename} {\rm\it message}&
       A fatal error has occurred.\\
+\hline
+%\end{tabularx}\\
+%\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Lying, cheating, stealing keyword}
+\hline
+@literal {\rm\it text}&
+      Copy {\it text} to output.\\
 \hline
 \end{tabularx}
 
@@ -255,6 +263,51 @@ Most filters ignore \kw{file} and \kw{line}, but {\tt nt}
 respects them, so that {\tt
 notangle} can properly mark line numbers if some {\tt noweb}
 filter starts moving lines around.
+
+\subsubsection{Programming languages}
+
+To support automatic indexing or prettyprinting, it's possible to
+indicate the programming language in which a chunk is written.
+The \kw{language} keyword may appear at most once between
+each \kw{begin~code} and \kw{end code} pair.
+Standard values of \kw{language} and their associated meanings are:
+\begin{quote}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}lX@{}}
+\texttt{awk}&awk\\
+\texttt{c}&C\\
+\texttt{c++}&C$++$\\
+\texttt{caml}&CAML\\
+\texttt{html}&HTML\\
+\texttt{icon}&Icon\\
+\texttt{latex}&{\LaTeX} source\\
+\texttt{lisp}&Lisp or Scheme\\
+\texttt{make}&A Makefile\\
+\texttt{m3}&Modula-3\\
+\texttt{ocaml}&Objective CAML\\
+\texttt{perl}&A perl script\\
+\texttt{python}&Python\\
+\texttt{sh}&A shell script\\
+\texttt{sml}&Standard ML\\
+\texttt{tex}&plain {\TeX}\\
+\texttt{tcl}&tcl\\
+\end{tabularx}
+\end{quote}
+If the \kw{language} keyword catches on, it may be useful to create an
+automatic registry on the World-Wide Web.
+
+I have made it impossible to place \kw{language} information directly
+in a \texttt{noweb} source file.
+My intent is that tools will identify the language of the root chunks
+using any of several methods: conventional names of chunks, being told
+on a command line, or identifying the language by looking at the
+content of the chunks.
+(Of these methods, the most practical is to name the root chunks after
+the files to which they will be extracted, and to use the same naming
+conventions as \texttt{make} to figure out what the contents are.)
+A \texttt{noweb} filter will tag non-root chunks with the appropriate
+\kw{language} by propagating information from uses to definitions.
+
+
 
 
 \subsubsection{Indexing and cross-reference concepts}
@@ -421,8 +474,8 @@ These keywords can appear anywhere inside a code chunk, but
 filters are encouraged to keep these keywords together.
 The standard
 filters guarantee that only
-\ikw{isused} and \ikw{defitem} appear between \ikw{begindef} and
-\ikw{enddef}.
+\ikw{isused} and \ikw{defitem} appear between \ikw{begindefs} and
+\ikw{enddefs}.
 The standard filters put them at the end of the code chunk, which
 simplifies translation by the {\LaTeX} back end, but that strategy
 might change in the future.
@@ -700,6 +753,21 @@ Using \kw{fatal} enables shell scripts to detect
 that something has gone wrong even if the only exit status they have
 access to is the
 exit status of the last stage in a pipeline.
+
+\subsection{Lying, cheating, stealing keyword}
+
+The \kw{literal} keyword is used to hack output directly into \texttt{noweave}
+back ends, like \texttt{totex} and \texttt{tohtml}.
+These back ends simply copy the text to their output.
+Tangling back ends ignore \kw{literal}.
+The \kw{literal} keyword is used by Master Hackers who are too lazy to
+write new back ends.
+Its use is deprecated.
+It should not exist.
+
+
+
+
 
 \section{Standard filters}
 

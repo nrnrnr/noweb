@@ -64,7 +64,7 @@ static void print_pair(FILE *out, char *name, char *value) {
 }
 @ %def state mark index print_state print_index print_pair
 <<*>>=
-static char rcsid[] = "$Id: markmain.nw,v 2.12 1997/09/13 19:55:02 nr Exp nr $";
+static char rcsid[] = "$Id: markmain.nw,v 2.13 1997/09/13 19:59:15 nr Exp nr $";
 static char rcsname[] = "$Name: v2_8a $";
 #include <stdio.h>
 #include <stdlib.h>

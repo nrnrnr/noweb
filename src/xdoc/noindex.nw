@@ -23,7 +23,7 @@ In the simple case, these files are run through
 together, to produce a single
 .I LaTeX
 file.
-.I noweave \-index
+.I "noweave \-index"
 suffices to produce an index and cross-referencing information;
 neither 
 .I nodefs
@@ -58,7 +58,7 @@ feature can be used, making it possible to format parts of large programs while 
 complete cross-reference information.
 .IP
 When used with
-.I make(1),
+.IR make (1),
 the technique 
 avoids running 
 .I noweave
@@ -78,9 +78,10 @@ are needed for full cross-referencing and a properly sorted index.
 This example assumes a 
 .I noweb
 program of three source files:
-.B a.nw, b.nw, 
+.B a.nw ,
+.B b.nw ,
 and
-.B c.nw.
+.BR c.nw .
 The file
 .B doc.tex
 is assumed to contain 
@@ -96,21 +97,22 @@ boilerplate, including the commands
 .PP
 The first sequence of steps is to create a file listing all the
 identifiers defined anywhere in 
-.B a, b,
+.BR a ,
+.BR b ,
 or 
-.B c.
+.BR c .
 .IP
 nodefs a.nw > a.defs
 .nf
 nodefs b.nw > b.defs
 nodefs c.nw > c.defs
-sort -u a.defs b.defs c.defs | cpif all.defs
+sort \-u a.defs b.defs c.defs | cpif all.defs
 .fi
 .PP
 Using
-.I sort -u
+.I "sort \-u"
 and
-.I cpif(1)
+.IR cpif (1)
 avoids changing
 .B all.defs
 unless the set of identifiers changes.
@@ -120,10 +122,10 @@ The next series of steps is to create
 .I LaTeX
 files with full cross-reference information for all identifiers.
 .IP
-noweave -n -indexfrom all.defs a.nw > a.tex
+noweave \-n \-indexfrom all.defs a.nw > a.tex
 .nf
-noweave -n -indexfrom all.defs b.nw > b.tex
-noweave -n -indexfrom all.defs c.nw > c.tex
+noweave \-n \-indexfrom all.defs b.nw > b.tex
+noweave \-n \-indexfrom all.defs c.nw > c.tex
 .fi
 .PP
 The final steps run
@@ -155,5 +157,7 @@ The awk version is slow and does a poorer job sorting.
 There is no comparable machinery to make it possible to use multiple files 
 with the HTML back end.
 .SH SEE ALSO
-.I noweave(1), nodefs(1), cpif(1)
+.IR noweave (1),
+.IR nodefs (1),
+.IR cpif (1)
 <<AUTHOR section>>

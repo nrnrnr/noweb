@@ -2,7 +2,7 @@
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
-CC=gcc
+CC=gcc -ansi -pedantic
 CFLAGS=
 
 # after installation, make doc.dvi for literate version
@@ -61,7 +61,7 @@ clean: ;	rm -f nt markup mnt finduses fakepretty
 		rm -f *.atac *.trace *.html
 
 clobber:	clean
-		rm -f $(SRCS) fakepretty.c
+		rm -f $(SRCS) fakepretty.c pretty.[ch]
 
 checkin:	$(FILES) doc.nw
 		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
@@ -90,7 +90,7 @@ columns.o:       columns.h
 errors.o:        errors.h 
 finduses.o:     errors.h match.h getline.h recognize.h 
 getline.o:      columns.h errors.h getline.h 
-main.o:         notangle.h errors.h columns.h 
+main.o:         notangle.h errors.h columns.h modules.h modtrees.h
 markmain.o:     errors.h markup.h getline.h columns.h 
 markup.o:       markup.h strsave.h errors.h 
 match.o:        match.h 

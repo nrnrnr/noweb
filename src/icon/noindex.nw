@@ -98,8 +98,8 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: noindex.nw,v 1.2 1997/09/13 20:14:50 nr Exp nr $" ||
+         "$Name:  $"
 end
 @
 \section{Index}

@@ -1,0 +1,197 @@
+\documentclass{article}
+\usepackage{alltt,multicol,array,tabularx}
+\pagestyle{empty}
+\usepackage{vpage}
+\setpapersize{USletter}
+\setmarginsrb{0.75in}{0.75in}{0.75in}{0.75in}{0pt}{0pt}{0pt}{0pt}
+
+
+\newenvironment{mytt}{\alltt\def\\{\(\backslash\)}}{\endalltt}
+\def\.{\char`\\}
+\def\{{\char`\{}
+\def\}{\char`\}}
+
+\setcounter{secnumdepth}{0}
+
+
+\newcommand\code[1]{$\langle$\emph{#1}$\rangle$}
+
+\begin{document}
+\raggedright
+
+\parskip=0.5\baselineskip plus 0.2\baselineskip
+\parindent=0pt
+ 
+\hbox{}
+\kern-1in
+\advance\voffset by0.5in
+
+\begin{center}
+{\Large A One-Page Guide to Using \texttt{noweb} with {\LaTeX}}
+
+\smallskip
+
+{Norman Ramsey\\after Lee Wittenberg and Carl Gregory}
+\end{center}
+
+
+\begin{multicols}{2}[\section{The \texttt{noweb} file \texttt{foo.nw}}]
+
+\vbox{
+\centerline{\large\textbf{Documentation}}
+
+\verb+@+ in column~1 of a line by itself starts a documentation chunk.
+
+Text is in {\LaTeX}; use \verb+[[+\ldots \verb+]]+ for embedded code
+fragments.
+
+\texttt{noweave} automatically wraps file in
+\begin{quote}
+{\ttfamily\begin{tabular}{|l|}\hline
+\.documentclass\{article\}\\
+\.usepackage\{noweb\}\\
+\.begin\{document\}\\
+~~\vdots\\
+\.end\{document\}\\
+\hline
+\end{tabular}}
+\end{quote}
+To avoid wrapper, put \verb+\documentclass+ and
+\verb+\usepackage+ in your source and use \texttt{noweave~-delay}.
+}
+
+\vskip 0pt plus1in
+\penalty-500
+	
+\vbox{
+\centerline{\large\textbf{Code}}
+
+\verb+<<+\ldots \emph{name of chunk}\ldots \verb+>>=+ in column~1 of a
+line by itself starts a code chunk.
+
+Code is in any language; use \verb+<<+\ldots \verb+>>+ to include
+other code chunks by reference.
+
+\emph{You can write multiple code chunks with the same name}; they are
+concatenated.
+
+Name chunks inside functions with verbs, e.g., 
+\code{copy all lines from \texttt{\upshape in} to \texttt{\upshape
+out}, adding markup}. 
+
+Name chunks holding declarations with nouns, e.g., \code{private
+function prototypes} or \code{definitions of exported functions}.
+
+Name top-level ``root'' chunks after the files they are to 
+represent, e.g., \verb+<<foo.c>>=+ or \verb+<<foo.h>>=+.
+}
+\vskip 0pt plus3in
+
+\end{multicols}
+
+
+\emph{For emacs users}: 
+A first line of \verb+% -*- mode: Noweb; noweb-code-mode: c-mode -*-+
+is useful (to set editing mode for code chunks).
+The Unix \texttt{teTeX} distribution comes with helpful Info files
+that cover {\LaTeX} and \texttt{dvips}.
+
+
+
+
+\section{Typical Commands}
+
+\noindent
+\begin{tabularx}\textwidth{@{}>{\ttfamily}l>{\raggedright\arraybackslash}X}
+notangle -L -Rfoo.c foo.nw > foo.c&Extract file \texttt{foo.c}, with \texttt{\#line}\\
+notangle -Rfoo.h foo.nw | cpif foo.h&Extract file \texttt{foo.h} if it
+has changed (without \texttt{\#line}).\\
+\small noweave -filter l2h -index -html foo.nw > foo.html&
+  Create HTML, converting documentation from {\LaTeX}.\\
+noweave -x foo.nw > foo.tex& Create {\LaTeX} document with
+cross-reference, no index.\\
+latex foo; latex foo& Process {\LaTeX} into ``device-independent''
+(\texttt{dvi}) file.\\
+latex '\.scrollmode \.input foo'& Alternate {\LaTeX} command for use in
+Makefile.\\
+dvips -o foo.ps foo&Convert \texttt{foo.dvi} into PostScript.\\
+\end{tabularx}
+
+
+\begin{multicols}{2}[\section{Minimal {\LaTeX}}]
+
+\emph{Special characters}\hfil\break
+Not to be typed in text; OK in code\hfil\break
+\hbox{\qquad \verb=% \ { } $ & # ^ _ ~=}
+
+\emph{Escapes for specials}\hfil\break
+\hbox{\qquad \verb=\% $\backslash$ \{ \} \$ \& \# \_=}
+
+\emph{Blank line} is new paragraph.
+
+Write \verb+``quotes''+ to get ``quotes.''  Never \verb+"quotes"+.
+
+\newenvironment{sample}[1]{\begin{tabular}{@{}l>{\ttfamily}l}\emph{#1}}{\end{tabular}}
+
+\begin{sample}{Titles}
+&\.title\{\ldots\}\\
+&\.author\{\ldots\}\\
+&\.maketitle\\
+\end{sample}
+
+
+
+\begin{sample}{Sectioning}
+&\.section\{\ldots\}\\
+&\.subsection\{\ldots\}\\
+&\.subsubsection\{\ldots\}\\
+\end{sample}
+
+\begin{sample}{Fonts}
+&\.emph\{{\normalfont\emph{emphasis}}\}\\
+&\.textbf\{{\normalfont\textbf{bold}}\}\\
+&\.texttt\{{\normalfont\texttt{typewriter}}\}\\
+&\.textit\{{\normalfont\textit{italics}}\}\\
+&\.textsf\{{\normalfont\textsf{sans serif}}\}\\
+&\.textsc\{{\normalfont\textsc{small caps}}\}\\
+\end{sample}
+
+\newdimen\onecol
+\onecol=0.25\textwidth
+\advance\onecol by -0.33in
+
+
+{\noindent\parskip=0pt
+\begin{tabular}{@{}lp{\onecol}p{\onecol}}
+\emph{Lists}&
+\texttt{List of items}
+\par\kern-0.8\baselineskip
+\begin{verbatim}
+\begin{itemize}
+\item one
+\item two 
+\item three
+\end{itemize}
+\end{verbatim}
+\par\kern-2.5\baselineskip\hbox{}
+&  List of items
+\begin{itemize}
+\item one
+\item two 
+\item three
+\end{itemize}
+\par\kern-2.5\baselineskip\hbox{}
+\\
+&\multicolumn2{l}{Also \texttt{\.begin\{enumerate\}} for numbered lists.}
+\end{tabular}}
+
+Get the right version; you want {\LaTeX}2$\varepsilon$, not {\LaTeX}~2.09.
+
+
+\end{multicols}
+
+
+\end{document}
+
+
+

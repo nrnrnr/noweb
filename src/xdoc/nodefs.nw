@@ -4,15 +4,15 @@
 nodefs \- find definitions in noweb file
 .SH SYNOPSIS
 .B nodefs
-[\fB-auto\fP \fIlang\fP]
-[\fB-showauto\fP]
+[\fB\-auto\fP \fIlang\fP]
+[\fB\-showauto\fP]
 file ...
 .SH DESCRIPTION
 .I nodefs
 is an auxiliary tool that produces output for use with the
 .B \-indexfrom
 option of
-.I noweave(1).
+.IR noweave (1).
 .I nodefs
 searches a
 .I noweb
@@ -29,16 +29,18 @@ The
 option displays permissible values of \fIlang\fP, which vary but may include
 .B tex
 or 
-.B icon.
+.BR icon .
 .PP
 For a complete description of using
 .I nodefs
 together with 
-.I noweave(1)
+.IR noweave (1)
 and 
-.I noindex(1),
+.IR noindex (1),
 see the man page for 
-.I noindex(1).
+.IR noindex (1).
 .SH SEE ALSO
-.I noweave(1), noweb(1), noindex(1)
+.IR noweave (1),
+.IR noweb (1),
+.IR noindex (1)
 <<AUTHOR section>>

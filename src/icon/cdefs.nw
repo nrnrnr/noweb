@@ -126,7 +126,7 @@ procedure look_for_static(stat, tok)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: cdefs.nw,v 1.2 1997/09/13 20:11:58 nr Exp nr $" ||
-         "$Name: v2_8a $"
+  return "$Id: cdefs.nw,v 1.3 1998/08/17 00:13:31 nr Exp nr $" ||
+         "$Name:  $"
 end
 @

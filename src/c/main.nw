@@ -1,17 +1,10 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 \section{Tangling}
 \subsection{Main program}
-The following options are good on the command line:
-\begin{fields}
--Rname&         make name the name of the root module. 
-                Default is [[@<<*@>>]].\\
--L[format]&     Use the given format to write {\tt\#line} numbers.
-                If -L is given alone, use ANSI C format.
-                If not given, write no {\tt\#line} numbers.
-\end{fields}
 <<*>>=
-static char rcsid[] = "$Id: main.nw,v 2.8 1997/09/13 19:55:02 nr Exp nr $";
+static char rcsid[] = "$Id: main.nw,v 2.9 1997/09/13 19:59:15 nr Exp nr $";
 static char rcsname[] = "$Name: v2_8a $";
 #include <stdio.h>
 #include <string.h>
@@ -20,48 +13,73 @@ static char rcsname[] = "$Name: v2_8a $";
 #include "notangle.h"
 #include "errors.h"
 #include "columns.h"
+#include "modules.h"
+#include "modtrees.h"
 
+@ 
+The main program makes one pass through the arguments, using options
+to set global state, and counting any roots it sees.
+It then makes a second pass to emit all the roots, or if there are no
+roots on the command line, it emits the module (chunk) named [[<<*>>]].
+<<*>>=
 main(int argc, char **argv) {
     int i;
-    char *rootname = "*";       /* name of the root module */
     char *locformat = "";
     char *Clocformat = "#line %L \"%F\"%N";
+    int root_options_seen = 0;
 
     tabsize = 0;  /* default for nt is not to use tabs */
     progname = argv[0];
     finalstage = 1;
 
     for (i=1; i<argc; i++) {
-        <<process argument [[i]]>>
+        <<process argument [[i]]---first pass>>
     }
 
-    notangle(stdin, stdout, rootname, locformat);
+    read_defs(stdin);                        /* read all the definitions */
+    apply_each_module(remove_final_newline); /* pretty up the module texts */
+    if (root_options_seen == 0)
+      emit_module_named(stdout, "*", locformat);
+    else
+      for (i=1; i<argc; i++) 
+        if (argv[i][0] == '-' && argv[i][1] == 'R')
+	  emit_module_named(stdout, argv[i]+2, locformat);
+
     nowebexit(NULL);
     return errorlevel;  /* slay warning */
 }
 @
-<<process argument [[i]]>>=
+<<process argument [[i]]---first pass>>=
 if (*argv[i]=='-') {
     <<handle option in argument [[i]]>>
 } else {
     <<handle argument in argument [[i]]>>
 }
 @
+The following options are good on the command line:
+\begin{fields}
+-Rname&         make name the name of the root module. 
+                Default is [[@<<*@>>]].\\
+-L[format]&     Use the given format to write {\tt\#line} numbers.
+                If -L is given alone, use ANSI C format.
+                If not given, write no {\tt\#line} numbers.\\
+-t[tabsize]& Fiddle with tabs
+\end{fields}
 <<handle option in argument [[i]]>>=
-    switch (*++argv[i]) {
+    switch (argv[i][1]) {
         case 't': /* set tab size or turn off */
-            if (isdigit(argv[i][1]))
-                tabsize = atoi(argv[i]+1);
-            else if (argv[i][1]==0)
+            if (isdigit(argv[i][2]))
+                tabsize = atoi(argv[i]+2);
+            else if (argv[i][2]==0)
                 tabsize = 0;            /* no tabs */
             else 
                 errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
             break;          
         case 'R': /* change name of root module */
-            rootname = ++argv[i];
+            root_options_seen++;
             break;
         case 'L': /* have a #line number format */
-            locformat = ++argv[i];
+            locformat = argv[i]+2;
             if (!*locformat) locformat = Clocformat;
             break;
         default:

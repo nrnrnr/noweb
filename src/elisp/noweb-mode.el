@@ -16,8 +16,10 @@
 ;; along with this program; if not, write to the Free Software
 ;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ;; 
-;; $Id: noweb-mode.el,v 1.17 1995/06/25 17:27:36 ohl Exp $
-;; $Name$
+;; See bottom of this file for information on language-dependent highlighting
+;;
+;; $Id: noweb-mode.el,v 1.3 1997/09/13 21:08:56 nr Exp nr $
+;; $Name: v2_8a $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; THIS IS UNRELEASED CODE: IT IS MISSING FUNCTIONALITY AND IT NEEDS CLEANUP ;;
@@ -74,10 +76,10 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.17 1995/06/25 17:27:36 ohl Exp $")
+  "$Id: noweb-mode.el,v 1.3 1997/09/13 21:08:56 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
-  "$Name$")
+  "$Name: v2_8a $")
 
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.
@@ -349,16 +351,16 @@ Record them in NOWEB-CHUNK-VECTOR."
   (save-excursion
     (goto-char (point-min))
     (let ((chunk-list (list (cons 'doc (point-marker)))))
-      (while (re-search-forward "^\\(@\\( %def\\)?\\|<<\\(.*\\)>>=\\)" nil t)
+      (while (re-search-forward "^\\(@\\( \\|$\\|\\( %def\\)\\)\\|<<\\(.*\\)>>=\\)" nil t)
 	(goto-char (match-beginning 0))
-	;; If the second subexpression matched, we're still in a code
+	;; If the 3rd subexpression matched @ %def, we're still in a code
 	;; chunk (sort of), so don't place a marker here.
-	(if (not (match-beginning 2))
+	(if (not (match-beginning 3))
 	    (setq chunk-list
-		  ;; If the third subexpression matched, we're seeing
+		  ;; If the 4th subexpression matched inside <<...>>, we're seeing
 		  ;; a new code chunk.
-		  (cons (cons (if (match-beginning 3)
-				  (buffer-substring (match-beginning 3) (match-end 3))
+		  (cons (cons (if (match-beginning 4)
+				  (buffer-substring (match-beginning 4) (match-end 4))
 				'doc)
 			      (point-marker))
 			chunk-list))
@@ -947,6 +949,129 @@ and and update the chunk vector."
 
 (run-hooks 'noweb-mode-load-hook)
 (provide 'noweb-mode)
+
+
+;;; Code-dependent highlighting
+
+;;  *****
+;;  
+;;  Adding highlighting to noweb-mode.el
+;;  
+;;  Here is a description of how one can add highlighting via the
+;;  font-lock package to noweb buffers.  It uses the hooks provided by
+;;  noweb-mode.el.  The solution provides the following features:
+;;  1) The documentation chunks are highlighted in the noweb-doc-mode
+;;  (e.g., LaTeX).
+;;  2) The code chunks without mode comments (-*- mode -*-) arew
+;;  highlighted in the noweb-code-mode.
+;;  3) The code chunks with mode comments (-*- mode -*-) one the first
+;;  line of the chunk, are highlighted in the mode in the comment.
+;;  
+;;  For example, given the file:
+;;  
+;;    % -*- mode: Noweb; noweb-code-mode: c-mode -*-
+;;  
+;;    \begin{itemize}
+;;    \item a main routine written in C,
+;;    \item a log configuration file parser written in YACC, and
+;;    \item a lexical analyzer written in Lex.
+;;    \end{itemize}
+;;  
+;;    <<warning c comment>>=
+;;    /* DO NOT EDIT ME! */
+;;    /* This file was automatically generated from %W% (%G%). */
+;;    @
+;;  
+;;    <<warning nroff comment>>=
+;;    .\" -*- nroff -*-
+;;    .\" DO NOT EDIT ME!
+;;    .\" This file was automatically generated from %W% (%G%).
+;;    @
+;;  
+;;  The LaTeX list is highlighted in latex-mode (the default noweb doc
+;;  mode), the chunk <<warning c comment>> is highlighted in c-mode (the
+;;  default noweb code mode), and the chunk <<warning nroff comment>> is
+;;  highlighted in nroff-mode due to the "-*- nroff -*-" comment.
+;;  
+;;  Chunks are highlighted each time point moves into them from a
+;;  different mode.
+;;  
+;;  The solution has the following drawbacks:
+;;  1) It won't work if global-font-lock-mode is set.
+;;  2) The ighlighting sometimes get confuses.  For example, a "$" in a
+;;  previous code chunk throws the highlighting in the LaTeX math mode.
+;;  (Note this problem exist in LaTeX highlighting if the "$" is in a
+;;  verbatim as well.)  Similarly a lone "'" in a previous LaTeX chunk can
+;;  cause problems in code mode highlighting.
+;;  
+;;  To use highlighing, add the following to your .emacs:
+;;  
+;;  ;;; We need this variable since we will be overwriting the
+;;  ;;; noweb-code-mode from time to time.
+;;  (defvar my-noweb-main-code-mode nil
+;;    "Variable used to save the default noweb-code-mode.")
+;;  
+;;  (defun my-set-noweb-code-mode (beg-pt end-pt)
+;;    "Set the noweb-code-mode for the chunk between BEG-PT and END-PT."
+;;    (let (beg end done mode)
+;;  	;; Reset code-mode to default and then check for a mode comment.
+;;  	(setq mode my-noweb-main-code-mode)
+;;  	(save-excursion
+;;  	  (goto-char beg-pt)
+;;  	  (beginning-of-line 2)
+;;  	  (and (search-forward "-*-"
+;;  			       (save-excursion (end-of-line) (point))
+;;  			       t)
+;;  	       (progn
+;;  		 (skip-chars-forward " \t")
+;;  		 (setq beg (point))
+;;  		 (search-forward "-*-"
+;;  				 (save-excursion (end-of-line) (point))
+;;  				 t))
+;;  	       (progn
+;;  		 (forward-char -3)
+;;  		 (skip-chars-backward " \t")
+;;  		 (setq end (point))
+;;  		 (goto-char beg)
+;;  		 (setq mode (intern
+;;  			     (concat
+;;  			      (downcase (buffer-substring beg end))
+;;  			      "-mode")))))
+;;  	  (noweb-set-code-mode mode))))
+;;  
+;;  (defun my-noweb-pre-select-code-mode-hook ()
+;;    "Set the code mode for the current chunk."
+;;    (let ((r (noweb-chunk-region)))
+;;  	(my-set-noweb-code-mode (car r) (cdr r))
+;;  	t))
+;;  
+;;  (defun my-noweb-select-mode-hook ()
+;;    "Fontify the current chunk based on the chunks mode."
+;;    ;; If this is the first time, save the default noweb-code-mode.
+;;    (if my-noweb-first-time
+;;  	  (progn
+;;  	    (setq my-noweb-first-time nil)
+;;  	    (setq my-noweb-main-code-mode noweb-code-mode)))
+;;    (font-lock-set-defaults)
+;;    (let ((r (noweb-chunk-region)))
+;;  	(save-excursion
+;;  	  (font-lock-fontify-region (car r) (cdr r))
+;;  	  t)))
+;;  
+;;  (defun my-noweb-mode-hook()
+;;    (setq my-noweb-first-time t))
+;;  
+;;  (add-hook 'noweb-mode-hook 'my-noweb-mode-hook)
+;;  (add-hook 'noweb-select-mode-hook 'my-noweb-select-mode-hook)
+;;  (add-hook 'noweb-pre-select-code-mode-hook 'my-noweb-pre-select-code-mode-hook)
+;;  
+;;  *****
+;;  
+;;  Adnan Yaqub (AYaqub@orga.com)
+;;  ORGA Kartensysteme GmbH // An der Kapelle 2 // D-33104 Paderborn // Germany
+;;  Tel. +49 5254 991-823 //Fax. +49 5254 991-749
+
+
 
 
 ;; Local Variables:

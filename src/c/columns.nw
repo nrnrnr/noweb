@@ -16,7 +16,7 @@ extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
 @ %def tabsize 
 <<*>>=
-static char rcsid[] = "$Id: columns.nw,v 2.7 1997/09/13 19:55:02 nr Exp nr $";
+static char rcsid[] = "$Id: columns.nw,v 2.8 1997/09/13 19:59:15 nr Exp nr $";
 static char rcsname[] = "$Name: v2_8a $";
 #include <stdio.h>
 #include "columns.h"

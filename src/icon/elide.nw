@@ -106,7 +106,7 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: elide.nw,v 1.2 1997/09/13 20:13:09 nr Exp nr $" ||
-         "$Name: v2_8a $"
+  return "$Id: elide.nw,v 1.3 1998/08/17 00:14:31 nr Exp nr $" ||
+         "$Name:  $"
 end
 @

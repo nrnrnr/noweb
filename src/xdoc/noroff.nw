@@ -1,0 +1,49 @@
+<<*>>=
+.TH NOWEB 1 "local <<noweb documentation date>>"
+.SH NAME
+noroff \- format woven \fItroff\fP documentation
+.SH SYNOPSIS
+.B noroff
+.RI [ " groff options " ]
+files ...
+.SH DESCRIPTION
+.I Noroff
+formats documents that have been woven with
+.IR "noweave \-troff" .
+It passes on any options (flags) to
+.IR groff (1),
+and treats any remaining non-option arguments as files to be processed.
+The
+.I groff
+options allow the easy invocation of the
+.IR gpic ,
+.IR gtbl ,
+and/or
+.IR geqn ,
+preprocessors.
+.PP
+If no options are supplied, it defaults to using the
+.B \-mgm
+macros, with PostScript output.
+.SH BUGS
+The shell script is probably still not as robust as it needs to be.
+.SH SEE ALSO
+.IR groff (1),
+.IR noweave (1),
+.IR nodefs (1),
+.IR cpif (1)
+.br
+.I "Converting noweb markup to troff markup"
+in the file
+.B src/shell/roff.nw
+in the
+.I noweb
+distribution.
+<<AUTHOR section>>
+.PP
+.I Noroff
+was written by Phil Bewig for SoftQuad
+.IR troff ,
+and enhanced and ported to GNU
+.I troff
+by Aharon Robbins.

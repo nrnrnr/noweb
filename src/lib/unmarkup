@@ -5,7 +5,7 @@
 
 nawk '
 BEGIN {
-  rcsid = "$Id: unmarkup,v 1.3 1997/09/13 20:20:45 nr Exp nr $"
+  rcsid = "$Id: unmarkup,v 1.4 1997/09/13 21:00:38 nr Exp nr $"
   rcsname = "$Name: v2_8a $"
 }
 /^@begin docs 0$/ { next }
