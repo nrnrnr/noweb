@@ -1,0 +1,99 @@
+\section{Converting {\tt noweb} markup to {\TeX} markup}
+The copyright applies both to the {\tt noweb} source and to the
+generated shell script.
+<<copyright notice>>=
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+<<totex>>=
+#!/bin/sh
+<<copyright notice>>
+delay=0
+if [ "$1" = "-delay" ]; then delay=1; fi
+nawk '<<awk program for conversion to {\TeX}>>' delay=$delay
+@ The markup carefully adds no newlines not already present in the input,
+so that the line numbers of the {\TeX} file will be the same as the
+numbers of the corresponding {\tt noweb} file.
+The variables are:
+\begin{description}
+\item[\tt code] Nonzero if converting a code chunk.
+\item[\tt quoting] Nonzero if quoting code in documentation.
+\item[\tt text] Number of characters written since start of
+		documentation chunk.
+\end{description}
+[[text]] is used to write [[\par]] if a newline appears at the
+beginning of a documentation chunk without any intervening text.
+This subtle trick preserves new-paragraph semantics without requiring
+the insertion of a blank line that would throw off the line count.
+<<awk program for conversion to {\TeX}>>=
+BEGIN		{ code=0 ; quoting=0 ; text=1 }
+/^@begin code/ 	{ code=1 ; printf "\\begincode{%s}", substr($0, 13) }
+/^@end code/   	{ code=0 ; printf "\\endcode{}" }
+<<special patterns for document chunk 0>>
+/^@begin docs/ 	{ text=0 ; printf "\\begindocs{%s}", substr($0, 13) }
+/^@end docs/   	{          printf "\\enddocs{}" }
+/^@text / 	{ line = substr($0, 7) ; text += length - 6
+    		  if (code)         <<escape braces, backslashes in [[line]]>>
+    		  else if (quoting) <<escape TeX specials in [[line]]>>
+    		  printf "%s", line
+		}
+/^@index nl$/	{ printf "\\eatline\n" }
+/^@nl$/   	{ <<print [[\nwdocspar]] if no text>>; printf "\n" }
+/^@defn / 	{ name = substr($0, 7)
+    		  printf "\\moddef{%s}\\%sendmoddef", convquotes(name), defns[name]
+                  defns[name] = "plus"
+		}
+/^@use / 	{ printf "\\LA{}%s\\RA{}", convquotes(substr($0, 6)) }
+/^@quote$/ 	{ quoting = 1 ; printf "\\code{}" }
+/^@endquote$/ 	{ quoting = 0 ; printf "\\edoc{}" }
+/^@file / 	{ filename = substr($0, 7)
+                  if (!delay) printf "\\filename{%s}", filename 
+                }
+/^@literal / 	{ printf "%s", substr($0, 10) }
+@
+<<print [[\nwdocspar]] if no text>>=
+if (text==0) printf "\\nwdocspar"
+text=1
+@
+Delaying markup is handled by special patterns for the first document chunk.
+Because several {\tt noweb} files can be marked up at once, there can be
+several document chunks numbered 0.
+The later ones are given no special treatment by the simple expedient of
+turning [[delay]] off after the first one.
+<<special patterns for document chunk 0>>=
+/^@begin docs 0$/ { if (delay) next }
+/^@end docs 0$/   { if (delay) { 
+                      printf "\\filename{%s}", filename
+                      delay=0
+                      next
+                    }
+                  }
+@ 
+Some versions of [[nawk]] have bugs in their [[gsub]] code.
+The use of [["&&"]] is reported to work on more systems than
+the previous use of [["\\\\"]].
+{\em Caveat emptor.}
+<<escape braces, backslashes in [[line]]>>=
+{
+  gsub("\\\\", "&&", line); gsub("{", "\\{", line) ; gsub("}", "\\}", line)
+}
+@
+A special function is used to implement {\tt noweb}'s quoting 
+convention within chunk names.
+<<awk program for conversion to {\TeX}>>=
+function convquotes(s, r, i, line) {
+  r = ""
+  while (i = index(s, "[[")) {
+    r = r substr(s, 1, i-1) "\\code{}"
+    s = substr(s, i+2)
+    if (i = match(s, "\\]\\]+")) {
+      line = substr(s, 1, i-1+RLENGTH-2)
+      <<escape braces, backslashes in [[line]]>>
+      r = r line "\\edoc{}"
+      s = substr(s, i+RLENGTH)
+    } else {
+      r = r s "\\edoc{}"
+      s = ""
+    }
+  }
+  return r s
+}
