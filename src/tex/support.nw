@@ -1,7 +1,9 @@
-\documentstyle[noweb,twoside]{article}
+% -*- mode: Noweb; noweb-code-mode: tex-mode -*-
+\documentclass[twoside]{article}
+\usepackage{noweb}
 \pagestyle{noweb}
 \noweboptions{longchunks,smallcode}
-\title{{\TeX} support for {\tt noweb}}
+\title{{\TeX} and {\LaTeX} support for {\tt noweb}}
 \author{Norman Ramsey}
 \newcommand{\stylehook}{\marginpar{\raggedright\sl Style hook}}
 \begin{document}
@@ -41,7 +43,15 @@ and below.
 <<kernel>>=
 \newdimen\nwdefspace
 \nwdefspace=\codehsize
-\advance\nwdefspace by -\textwidth\relax
+% need to use \textwidth in {\LaTeX} to handle styles with
+% non-standard margins (David Bruce).  Don't know why we sometimes
+% wanted \hsize.  27 August 1997.
+%% \advance\nwdefspace by -\hsize\relax
+\ifx\textwidth\undefined
+  \advance\nwdefspace by -\hsize\relax
+\else
+  \advance\nwdefspace by -\textwidth\relax
+\fi
 @
 Most code is set in an environment in which [[\setupcode]] has been
 executed.
@@ -62,8 +72,11 @@ escaped with a backslash.
   \catcode`\~=\other
   \catcode`\_=\other
   \catcode`\^=\other
+  \catcode`\"=\other	% fixes problem with german.sty
   \obeyspaces\Tt
 }
+\let\nwlbrace=\{
+\let\nwrbrace=\}
 @ %def \setupcode 
 [[\eatline]] is used to consume newlines that should be ignored,
 for example, the newlines at the end of [[@ %def ]]{\em identifiers} lines.
@@ -82,6 +95,7 @@ think {\tt noweave} ever emits them.
 
 Within a code environment, it may be necessary to restore the 
 category codes in order to set a module (chunk) name.
+This hack doesn't properly restore [["]] for use in {\tt german.sty}.
 <<kernel>>=
 {\obeyspaces\global\let =\ } % from texbook, p 381
 \def\setupmodname{%
@@ -94,6 +108,9 @@ category codes in order to set a module (chunk) name.
   \catcode`\^=7
   \catcode`\ =10
   \catcode`\^^M=5
+  \let\{\nwlbrace
+  \let\}\nwrbrace
+  % bad news --- don't know what catcode to give "
   \Rm}
 @ %def \setupmodname
 @ \sublabel{ref:fred}
@@ -726,7 +743,7 @@ anchors, for which we use [[\nwblindhyperanchor]].
       \newlabel{#1}{{0}{\thepage}}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \sublabel
+@ %def \nosublabel
 @
 [[\newsublabel]] is the macro that does the important work.  It is called with the
 same sort of arguments as [[\newlabel]]: the first argument is the
@@ -762,12 +779,50 @@ If we've had at least two on the page, we define the
     \global\@namedef{2on\this@page}{}%
   \fi
 @
+\nextchunklabel{cl1}\nextchunklabel{cl2}
 Then we write a normal [[\newlabel]] with the sub-reference as the
 normal reference value in the second argument.
+We may have pending labels in support of [[\nextchunklabel]], as defined in
+chunk~\subpageref{chunklabel}. 
+Because we want to define all of the ``pending sublabels'' in exactly
+the same way, we do something a bit odd---we make the current label a
+pending label as well.
 <<definition of [[\newsublabel]]>>=
+  \pendingsublabel{#1}%
+  \edef\@tempa##1{\noexpand\newlabel{##1}%
+    {{\number\sub@page}{\this@page}}}%
+  \pending@sublabels
+  \def\pending@sublabels{}}
+<<old definition of [[\newsublabel]]>>=
   \edef\@tempa{\noexpand\newlabel{#1}%
     {{\number\sub@page}{\this@page}}}%
   \@tempa}
+@ 
+Now we keep track of those pending guys.\nextchunklabel{chunklabel}
+The goal here is to save them up until they're all equivalent to the
+label on the next chunk.
+We have to control expansion so chunks like \subpageref{cl1}
+(\subpageref{cl2}) can be labelled twice.
+<<noweb.sty>>=
+\newcommand{\nextchunklabel}[1]{%
+  \nwblindhyperanchor{#1}%
+  \@bsphack\if@filesw {\let\thepage\relax
+      \edef\@tempa{\write\@auxout{\string\pendingsublabel{#1}}}%
+      \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+\newcommand\pendingsublabel[1]{%
+  \def\@tempa{\noexpand\@tempa}%
+  \edef\pending@sublabels{\noexpand\@tempa{#1}\pending@sublabels}}
+\def\pending@sublabels{}
+<<man page: noweb style control sequences>>=
+.PP \" .TP will not work with the backslashes on the next line. Period.
+\fB\\nextchunklabel{l}\fP
+.RS
+Associates label \fBl\fP
+with the sub-page reference of the next code chunk.
+Can be used in for concise chunk cross-reference with, e.g.,
+\fBchunk~\\subpageref{l}\fP.
+.RE
 @
 We need to define these.
 <<noweb.sty>>=
@@ -1101,6 +1156,84 @@ Initial support courtesy of Balasubramanian Narasimhan.
   \@ifundefined{blindhyperanchor}%
      {\global\let\nwblindhyperanchor\@gobble}%
      {\blindhyperanchor{#1}\global\def\nwblindhyperanchor\blindhyperanchor}}
+@ 
+\subsection{Support for hypertext translation to HTML}
+<<noweb.sty>>=
+\newcommand\nwanchorto{%
+  \begingroup\let\do\@makeother\dospecials
+     \catcode`\{=1 \catcode`\}=2 \nw@anchorto}
+\newcommand\nw@anchorto[1]{\endgroup\def\nw@next{#1}\nw@anchortofin}
+\newcommand\nw@anchortofin[1]{#1\footnote{See URL \texttt{\nw@next}.}}
+\let\nwanchorname\@gobble
+<<man page: noweb style control sequences>>=
+.PP
+.B "\\\\nwanchorto{URL}{anchor text}"
+.RS
+Creates a link to the given URL with the given anchor text.
+Implemented in 
+.I latex(1)
+using footnotes, but 
+.I sl2h(1)
+translates this to
+.B "<a href=URL>anchor text</a>"
+.RE
+.PP
+.B "\\\\nwanchorname{name}{anchor text}"
+.RS
+Creates an anchor point for a hyperlink.
+Implemented in 
+.I latex(1)
+using 
+.B "\\\\label",
+but
+.I sl2h(1)
+translates this to
+.B "<a name=name>anchor text</a>"
+.RE
+@
+This lets us hide stuff intended for use only when converting to HTML:
+<<noweb.sty>>=
+\newif\ifhtml
+\htmlfalse
+<<man page: noweb style control sequences>>=
+.PP
+.B "\\\\ifhtml ... \\\\fi"
+.RS
+Text between
+.B "\\\\ifhtml"
+and
+.B "\\\\fi"
+is ignored by 
+.I latex(1),
+but 
+.I sl2h(1)
+and the 
+.I l2h 
+noweb filter translate the text into HTML.
+.RE
+@ 
+\subsection{Support for Prettyprinting}
+The following macro can be redefined to allow custom typesetting of
+identifiers in the index and mini-indices.
+<<noweb.sty>>=
+\let\nwixident=\relax
+@ %def \nwixident
+@
+The following macros can be redefined to typeset `[[\]]', `[[{]]' and
+`[[}]]' correctly in non-typewriter fonts. 
+<<noweb.sty>>=
+\def\nwbackslash{\char92}
+\let\nwlbrace=\{
+\let\nwrbrace=\}
+% the above is bogus for {\LaTeX} -- the typewriter font doesn't have
+% the math symbol, and we wind up with a symbol font and a warning.
+% Not good.
+\def\nwlbrace{\char123}
+\def\nwrbrace{\char125}
+<<nwmac.tex>>=
+\def\nwbackslash{\char92}
+\def\nwlbrace{\char123}
+\def\nwrbrace{\char125}
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
@@ -1176,7 +1309,7 @@ First we make [[@]] a letter so that we can use `private' macro names.
     \edef\next{\noexpand\write\cont{\tocskip
         \tocline{\hskip\tocindent\tocstyle\relax\themodtitle}
                 {\noexpand\the\pageno}}}\next % write to toc
-    }%
+    %}
 }
 @ %def \startsection
 <<nwmac.tex>>=
