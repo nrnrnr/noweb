@@ -12,9 +12,10 @@ Here's the organization of the source:
 <<initialization>>
 <<scan options and arguments>>
 <<emit markup on standard output>> |
-$backend $noindex $delay
-if [ -n "$verbose" ]; then echo $backend $noindex $delay 1>&2; fi
+                                $backend $noindex $delay $shortxref
 exit $?
+<<if verbose, show back end>>=
+if [ -n "$verbose" ]; then echo $backend $noindex $delay $shortxref 1>&2; fi
 @
 The first item of initialization is to locate the {\tt noweb} library.
 <<initialization>>= 
@@ -22,13 +23,37 @@ LIB=|LIBDIR|
 @
 <<initialization>>=
 markup=$LIB/markup backend=$LIB/totex
-wrapper= delay= args= markopts= noweboptions= autodefs= verbose=
+wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
 noquote="-noquote" docanchor= noindex="-noindex"
-filtera= filterb= filterc= filterd=
+filtera= filterb= filterc= filterd= filtere=
 @
 I make two passes over the arguments so as not to require that options
 be given in a certain order
 <<scan options and arguments>>=
+pass2setcmd="set ignore"
+for i do
+  pass2setcmd="$pass2setcmd '$i'"
+done
+arg=
+while [ $# -gt 0 ]; do
+  case $1 in
+    <<first pass {\tt noweave} options>>
+    -)  arg="$arg $1" ;;
+    -*) echo "$0: Unrecognized option '$1'" 1>&2 ; <<show usage>>; exit 1 ;;
+    *)  arg="$arg $1" ;;
+  esac
+  shift
+done
+if [ -z "$wrapper" ]; then wrapper=latex; fi
+eval $pass2setcmd
+shift
+while [ $# -gt 0 ]; do
+  case $1 in
+    <<second pass {\tt noweave} options>>
+  esac
+  shift
+done
+<<old scan options and arguments>>=
 pass2args="$*"
 while [ $# -gt 0 ]; do
   case $1 in
@@ -54,45 +79,54 @@ if [ -z "$noweboptions" ] ; then noweboptions="$newopt"
 else noweboptions="$noweboptions,$newopt"
 fi
 <<first pass {\tt noweave} options>>=
--latex)      wrapper=latex ;;
+-latex)      if [ "$wrapper" != "none" ]; then wrapper=latex; fi ;;
 -tex)        wrapper=tex ;;
 -html)       if [ "$wrapper" != "none" ]; then wrapper=html; fi; 
-             backend="$LIB/tohtml -localindex";        
-             noquote=""; docanchor="-docanchor 10"; noindex= ;;
+             backend="$LIB/tohtml -localindex"
+             noquote=""; docanchor="-docanchor 10" ;;
 -latex+html) if [ "$wrapper" != "none" ]; then wrapper=latex; fi; 
              backend="$LIB/tohtml -localindex -raw"
-             noquote=""; docanchor="-docanchor 10"; noindex= ;;
+             noquote=""; docanchor="-docanchor 10" ;;
+-ascii)      wrapper=none
+             backend="$LIB/toascii" ;;
+-troff)      wrapper=mm
+             backend="$LIB/toroff" ;;
 -n)          wrapper=none ;;
--backend)    backend="$2" ; noindex= ; shift ;;
+-backend)    backend="$2" ; shift ;;
 -markup)     markup="$2"  ; shift ;;
 @
 Note some versions of echo break on [[echo "-n..."]], echoing nothing 
 at all.  The leading space is claimed to prevent this problem.
 <<option printout for usage>>=
-echo "-latex		Use LaTeX headers and trailers (default)." 1>&2
-echo "-tex		Use TeX headers and trailers." 1>&2
-echo "-html		Use HTML headers and trailers." 1>&2
+echo "-latex		Emit LaTeX with headers and trailers (default)." 1>&2
+echo "-tex		Emit plain TeX with headers and trailers." 1>&2
+echo "-html		Emit HTML with headers and trailers." 1>&2
 echo "-latex+html	Assume LaTeX in documentation, but use HTML in code." 1>&2
+# echo "-ascii            Emit ASCII." 1>&2
+echo "-troff            Emit troff (unsupported)." 1>&2
 echo " -n		Don't use any header or trailer." 1>&2
+echo "-markup frontend  Parse input with frontend (e.g., numarkup)." 1>&2
 @ \iffalse
 <<noweave man page option table>>=
 .TP
 .B \-latex
-Use LaTeX wrapper in 
+Emit LaTeX, including wrapper in 
 .B article
-style with
+style with the
 .B noweb
-style option and page style. (Default)
+package and page style. (Default)
 .TP 
 .B \-tex
-Use plain TeX wrapper and the
+Emit plain TeX, including wrapper with
 .B nwmac
 macros.
 .TP
 .B \-html
-Format the program for HTML, not TeX or LaTeX. 
-If \fB-n\fP is not given, use HTML wrapper as well.
-The output is uninteresting without \fB-index\fP.
+Emit HTML, using HTML wrapper.
+The output is uninteresting without \fB-index\fP or \fB-x\fP.
+The tags \fB<nowebchunks>\fP and \fB<nowebindex>\fP, on lines by themselves,
+produce a list of chunks and an index of identifiers, respectively.
+If these tags are not present, the list and index are placed at the end of the file.
 .TP
 .B \-latex+html
 Assume documentation chunks are LaTeX, but generate HTML for code chunks,
@@ -100,6 +134,34 @@ suitably marked so conversion with
 .I latex2html(1)
 yields reasonable output.
 A LaTeX wrapper is implied, but can be turned off with \fB-n\fP.
+.I Use of this option is 
+.B deprecated; 
+use
+.B \-html
+with 
+.B "\-filter l2h"
+instead.
+<<noweave man page option table>>=
+.TP
+.B \-troff
+Emit 
+.I troff(1)
+markup (with no wrapper).
+The result should be processed with 
+.I noroff(1).
+Bug reports for 
+.B \-troff
+to Phil Bewig
+.B <pbewig@netcom.com>.
+<<bogus noweave man page option table>>=
+.TP
+.B \-ascii
+Emit ASCII (with no wrapper).
+Bug reports for 
+.B \-ascii
+to Phil Bewig
+.B <pbewig@netcom.com>.
+<<noweave man page option table>>=
 .TP
 .B \-n
 Don't use any wrapper (header or trailer).
@@ -110,9 +172,9 @@ See also
 @ \fi
 <<first pass {\tt noweave} options>>=
 -filter)    shift                                                               ;;
--x)	           if [ "$wrapper" != none ]; then wrapper=latex; fi            ;;
--index)            if [ "$wrapper" != none ]; then wrapper=latex; fi ; noindex= ;;
--indexfrom) shift; if [ "$wrapper" != none ]; then wrapper=latex; fi ; noindex= ;;
+-x)	                    ;;
+-index)            noindex= ;;
+-indexfrom) shift; noindex= ;;
 <<second pass {\tt noweave} options>>=
 -filter) 
     newfilter="$2" ; shift ;                  <<add [[$newfilter]] (could overflow)>> ;;
@@ -125,9 +187,9 @@ See also
     newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>>
     shift ;;
 <<option printout for usage>>=
-echo "-x		Use the default cross-referencer (needs LaTeX)." 1>&2
+echo "-x		Use the default cross-referencer (needs LaTeX or HTML)." 1>&2
 echo "-index		Create index using identifiers defined in input files." 1>&2
-echo "-indexfrom idx	Create index of identifers listed in file defs." 1>&2
+echo "-indexfrom defs	Create index of identifers listed in file defs." 1>&2
 echo "-filter cmd	Filter through 'cmd' before weaving; cmd could prettyprint" 1>&2
 echo "			or perform other functions." 1>&2
 @ \iffalse
@@ -208,6 +270,7 @@ supports up to four filters; one can get more by shell trickery,
 for example, \fB-filter "icon.filter | noidx"\fP.
 The \fB-autodefs\fP,
 \fB-x\fP, \fB-index\fP, and \fB-indexfrom\fP options are implemented as filters.
+<<description of -markup option>>
 @ \fi 
 Note that it would be appropriate to look for filters using [[[ -x $newfilter ]]],
 but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
@@ -218,7 +281,7 @@ do in a portable way is [[test -r]].
            else echo "$0: don't know how to find definitions for '$2'" 1>&2; exit 1
            fi
 	   shift
-           if [ -z "$wrapper" ]; then wrapper=latex; fi ;;
+           ;;
 -showautodefs) <<print all legal [[-autodefs]] or complain>>; exit 1 ;;
 <<option printout for usage>>=
 echo "-autodefs lang	Source is in language 'lang'; find definitions automatically." 1>&2
@@ -254,10 +317,17 @@ if [ -z "$foundautodefs" ]; then
   echo "This `basename $0` does not support -autodefs"
 fi
 @
+Here's an embarrassing hack --- if we spot \verb+-option shortxref+ 
+or \verb+-option longxref+ on the
+command line, we pass something suitable to the back end, in case we're doing
+HTML.
 <<first pass {\tt noweave} options>>=
--option) newopt="$2"; shift; <<add [[$newopt]] to [[noweboptions]]>> ;;
+-option) newopt="$2"; shift
+         if [ "X$newopt" = "Xshortxref" ]; then shortxref="-shortxref"; fi
+         if [ "X$newopt" = "Xlongxref" ];  then shortxref="-longxref";  fi
+         <<add [[$newopt]] to [[noweboptions]]>> ;;
 <<option printout for usage>>=
-echo "-option opt	Add \noweboptions{opt} to header (latex only)" 1>&2
+echo '-option opt	Add \noweboptions{opt} to header (latex only)' 1>&2
 @ \iffalse
 <<noweave man page option table>>=
 .TP 
@@ -265,13 +335,16 @@ echo "-option opt	Add \noweboptions{opt} to header (latex only)" 1>&2
 Adds \fB\enoweboptions{\fP\fIopt\fP\fB}\fP to the
 .I LaTeX
 header.
-Works only with the
-.B \-latex
-option.
 See 
 .I nowebstyle(1) 
 for values of
 .I opt.
+Normally useful only with the
+.B \-latex
+option, but 
+.B "\-option longxref"
+works black magic with 
+.B \-html.
 @ \fi
 <<first pass {\tt noweave} options>>=
 # -nodelay) delay= ;;
@@ -293,7 +366,7 @@ act a little bit like the
 ``limbo.''
 The option is typically used to enable a user to put a specialized
 .I LaTeX
-.B "\\\\documentstyle"
+.B "\\\\documentclass"
 command and other preamble material in the first documentation chunk.
 This option also forces trailing cross-referencing information to be emitted
 just before the final chunk, instead of at the end of the document;
@@ -324,7 +397,6 @@ Expand tabs with stops every \fIk\fP columns.
 .B \-t
 Copy tabs to the output.
 @ \fi
-\iffalse
 <<first pass {\tt noweave} options>>=
 -v) verbose=1 ;;
 <<option printout for usage>>=
@@ -342,7 +414,7 @@ be used in \fITeX\fP documents that
 .B "\\\\input nwmac,"
 in \fILaTeX\fP documents that  use the
 .B noweb
-document-style option (see \fInowebstyle(1)\fP),
+package (see \fInowebstyle(1)\fP),
 and in \fIHTML\fP documents to be browsed with 
 .I Mosaic(1).
 .I Noweave
@@ -389,6 +461,8 @@ elif [ -z "$filterc" ]; then
   filterc="$newfilter"
 elif [ -z "$filterd" ]; then
   filterd="$newfilter"
+elif [ -z "$filtere" ]; then
+  filtere="$newfilter"
 else
   echo "$0: ran out of filters" 1>&2
   exit 1
@@ -404,14 +478,19 @@ The altered [[PATH]] provides a convenience to people who want to
 use simple names to refer to filters in [[$LIB]].
 <<emit markup on standard output>>=
 (
+header=
 case $wrapper in
   none) ;;
-  latex)  echo "@header $wrapper $noweboptions" ;;
-  *)  echo "@header $wrapper $arg" ;;
+  latex)  header="@header $wrapper $noweboptions" 
+	  trailer="@trailer $wrapper" ;;
+  *)  header="@header $wrapper$arg" 
+      trailer="@trailer $wrapper" ;;
 esac
+if [ -n "$header" ]; then echo "$header"; fi
 PATH="$PATH:$LIB" 
 export PATH
 <<if verbose, make noise about pipeline>>
+<<if verbose, show back end>>
 if   [ -z "$filtera" ]; then
   $markup $markopts $arg
 elif [ -z "$filterb" ]; then
@@ -420,16 +499,27 @@ elif [ -z "$filterc" ]; then
   $markup $markopts $arg | $filtera | $filterb
 elif [ -z "$filterd" ]; then
   $markup $markopts $arg | $filtera | $filterb | $filterc
-else
+elif [ -z "$filtere" ]; then
   $markup $markopts $arg | $filtera | $filterb | $filterc | $filterd
+else
+  $markup $markopts $arg | $filtera | $filterb | $filterc | $filterd | $filtere
 fi
-if [ "$wrapper" != "none" ]; then echo "@trailer $wrapper"; fi
+if [ -n "$trailer" ]; then echo $trailer; fi
 )
 <<if verbose, make noise about pipeline>>=
 if [ -n "$verbose" ]; then
-  echo $markup $arkopts $arg '|' 1>&2
+  if [ -n "$header" -o -n "$trailer" ]; then
+    parenpfx="("
+    if [ -n "$header" ]; then echo "(echo $header" 1>&2; parenpfx=" "; fi
+    echo "$parenpfx$markup" $markopts $arg 1>&2
+    if [ -n "$trailer" ]; then echo " echo $trailer" 1>&2; fi
+    echo ") |" 1>&2
+  else
+    echo $markup $markopts $arg '|' 1>&2
+  fi
   if   [ -n "$filtera" ]; then echo $filtera '|' 1>&2; fi
   if   [ -n "$filterb" ]; then echo $filterb '|' 1>&2; fi
   if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
   if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
+  if   [ -n "$filtere" ]; then echo $filtere '|' 1>&2; fi
 fi
