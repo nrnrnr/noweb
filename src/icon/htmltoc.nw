@@ -103,11 +103,12 @@ called to add the item to the [[contents]] list.
 if (c := tab(upto('<')), ="</", skip(), tab(any('hH')), =n, skip(), =">") then {
   no +:= 1
   addcontents(no, n, c)
+  <<append modified line to [[file]]>>
 } else
   write(&errout, "Unterminated <h", n, ">", tab(0), "...")
 @ We also need to label the heading in the text, so
 we can reference it from the TOC.  
-<<add header line to [[contents]] and [[file]]>>=
+<<append modified line to [[file]]>>=
 put(file, pre || "<h" || n || "><a name=toc" || no || ">" || c ||
           "</a></h" || n || ">" || tab(0))
 @ [[addcontents()]] should simply append the [[ioc]]
@@ -210,7 +211,7 @@ procedure openfile(f)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: htmltoc.nw,v 1.1 1997/09/13 20:13:13 nr Exp nr $" ||
+  return "$Id: htmltoc.nw,v 1.2 1997/09/14 01:09:07 nr Exp nr $" ||
          "$Name: v2_8a $"
 end
 @
