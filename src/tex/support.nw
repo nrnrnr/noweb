@@ -8,10 +8,11 @@
 @
 \section{Basic {\TeX} support for {\tt noweb}}
 <<kernel>>=
-\def\LL{<<}
-\def\GG{>>}
+\def\LL{@<<}
+\def\GG{@>>}
 \def\LLS{[[}
 \def\RRS{]]}
+@ %def \LL \GG \LLS \RRS
 <<kernel>>=
 % make \hsize in code sufficient for 88 columns
 \setbox0=\hbox{\tt m}
@@ -19,6 +20,7 @@
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
 \codemargin=0pt
+@ %def \codehsize \codemargin
 <<kernel>>=
 \chardef\other=12
 \def\setupcode{%
@@ -41,6 +43,7 @@
 }
 %%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
 \def\startline{\noindent\hskip\parindent\ignorespaces}
+@ %def \setupcode \startline
 <<kernel>>=
 {\obeyspaces\global\let =\ } % from texbook, p 381
 \def\setupmodname{%
@@ -54,12 +57,14 @@
   \catcode`\ =10
   \catcode`\^^M=5
   \rm}
+@ %def \setupmodname
 @ \sublabel{ref:fred}
 <<kernel>>=
 \def\LA{\begingroup\setupmodname\it$\langle${}}
 \def\RA{\/$\rangle$\endgroup}
 \def\code{\leavevmode\begingroup\setupcode\newlines}
 \def\edoc{\endgroup}
+@ %def \LA \RA \code \edoc
 <<kernel>>=
 \newbox\equivbox
 \setbox\equivbox=\hbox{$\equiv$}
@@ -69,8 +74,10 @@
 \def\moddef{\leavevmode\kern-\codemargin\LA}
 \def\endmoddef{\RA\unhcopy\equivbox}
 \def\plusendmoddef{\RA\unhcopy\plusequivbox}
+@ %def \equivbox \plusequivbox \moddef \endmoddef \plusendmoddef
 <<kernel>>=
 \def\filename#1{\vfil\eject\mark{#1}}
+@ %def \filename
 <<kernel>>=
 \def\chunklist{%
 \errhelp{I changed \chunklist to \nowebchunks.  
@@ -78,6 +85,7 @@ I'll try to avoid such incompatible changes in the future.}%
 \errmessage{Use \string\nowebchunks\space instead of \string\chunklist}}
 \def\nowebchunks{\message{<Warning: You need noweave -x to use \string\nowebchunks>}}
 \def\nowebindex{\message{<Warning: You need noweave -idx to use \string\nowebindex>}}
+@ %def \chunklist \nowebchunks \nowebindex
 <<kernel>>=
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
@@ -109,6 +117,7 @@ I'll try to avoid such incompatible changes in the future.}%
   January\or February\or March\or April\or May\or June\or
   July\or August\or September\or October\or November\or December\fi
   \space\number\day, \number\year}
+@ %def \textsize \today
 <<nwmac.tex>>=
 \long\def\ifundefined#1#2#3{%
    \expandafter\ifx\csname#1\endcsname\relax
@@ -124,9 +133,11 @@ I'll try to avoid such incompatible changes in the future.}%
 \ifundefined{myfootline}
     {\footline={\hfil}}
     {\expandafter\footline\expandafter{\myfootline}}
+@ %def \ifundefined
 <<nwmac.tex>>=
 \def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
 \raggedbottom
+@ %def \semifilbreak
 <<nwmac.tex>>=
 %
 % \chapcenter macro to produce nice centered chapter titles
@@ -136,6 +147,7 @@ I'll try to avoid such incompatible changes in the future.}%
     \parfillskip=0pt \spaceskip=.3333em \xspaceskip=.5em
     \pretolerance=9999 \tolerance=9999
     \hyphenpenalty=9999 \exhyphenpenalty=9999}
+@ %def \chapcenter
 <<nwmac.tex>>=
 % \startsection{LEVEL}{INDENT}{BEFORESKIP}{AFTERSKIP}{STYLE}{HEADING}
 %               #1     #2      #3          #4         #5     #6
@@ -161,6 +173,7 @@ I'll try to avoid such incompatible changes in the future.}%
                 {\noexpand\the\pageno}}}\next % write to toc
     }%
 }
+@ %def \startsection
 <<nwmac.tex>>=
 \def\settocparms#1{
         \count255=#1
@@ -176,9 +189,11 @@ I'll try to avoid such incompatible changes in the future.}%
             \edef\tocindent{\the\dimen0}
         \fi
 }
+@ %def \settocparms
 <<nwmac.tex>>=
 \def\tocline#1#2{\line{{\ignorespaces#1}\leaders\hbox to .5em{.\hfil}\hfil
      \hbox to1.5em{\hss#2}}}
+@ %def \tocline
 <<nwmac.tex>>=
 \def\section#1{\par \vskip3ex\noindent {\bf #1}\par\nobreak\vskip1ex\nobreak}
 \def\chapter#1{\vfil\eject\startsection{0}{0pt}{6ex}{3ex}{\frtbf\chapcenter}{#1}}
@@ -198,6 +213,8 @@ I'll try to avoid such incompatible changes in the future.}%
 {\catcode`\^^M=\active % make CR an active character
   \gdef\bchack#1^^M{\relax#1}%
 }
+@ %def \section \chapter \section \subsection \subsubsection \paragraph
+@ %def \begindocs \enddocs \begincode \endcode
 <<nwmac.tex>>=
 \edef\contentsfile{\jobname.toc } % file that gets table of contents info
 \def\readcontents{\expandafter\input \contentsfile}
@@ -205,6 +222,7 @@ I'll try to avoid such incompatible changes in the future.}%
 \newwrite\cont
 \openout\cont=\contentsfile
 \write\cont{\string\catcode`\string\@=11}% a hack to make contents
+@ %def \readcontents \cont
 <<nwmac.tex>>=
                                  % take stuff in plain.tex
 \def\bye{%
@@ -215,6 +233,7 @@ I'll try to avoid such incompatible changes in the future.}%
     \vfil\eject\end}
 \def\topofcontents{\vfil\mark{{\bf Contents}}}
 \def\botofcontents{}
+@ %def \bye \topofcontents \botofcontents
 <<nwmac.tex>>=
 \let\em=\it
 % used to produce an itemized (bulleted) list in plain {\TeX}
@@ -241,19 +260,20 @@ I'll try to avoid such incompatible changes in the future.}%
 \def\enditemize{\par\endgroup\noindent\ignorespaces}
 
 \let\begindocument=\relax
+@ %def \listlevel \itemwidth \itemize \enditemize
 @
 \clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}
 <<noweb.sty>>=
 <<kernel>>
-@ 
+@
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
 code is indented by [[\codemargin]].
 <<noweb.sty>>=
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
-@ 
+@
 [[\nowebshift]] is used to shift the whole page left to make room for
 the wide code lines.
 <<noweb.sty>>=
@@ -266,7 +286,8 @@ the wide code lines.
      \advance\oddsidemargin by \dimen0
   \fi
 }
-@ 
+@ %def \nowebshift
+@
 
 \subsection{Environments for setting code}
 <<noweb.sty>>=
@@ -277,6 +298,7 @@ the wide code lines.
   \advance\leftskip\codemargin
   \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
   \obeylines \Tt \catcode``=13 \@noligs \setupcode}
+@ %def \@begincode
 @
 [[\noindent]] puts into horizontal mode so that lines can follow without
 indentation if there is no following [[\par]].  The [[\hfil]] afterwards is
@@ -298,6 +320,7 @@ underfull (empty!) hbox.
 \def\edoc{\endgroup}
 
 \let\nowebsize=\normalsize
+@ %def \begincode \endcode \webcode \endwebcode \code \edoc
 @
 <<noweb.sty>>=
 \def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1}
@@ -305,6 +328,7 @@ underfull (empty!) hbox.
 \def\begindocs#1{\relax\ifvmode\@maybreak{1in}\fi}
 \def\nwdocspar{\par\@maybreak{1in}}
 \def\enddocs{\relax}
+@ %def \@maybreak \maybreak \begindocs \nwdocspar \enddocs
 @
 \subsection{The {\tt noweb} page style}
 <<noweb.sty>>=
@@ -333,6 +357,7 @@ underfull (empty!) hbox.
   \def\filename##1{\vfil\eject\markboth{##1}{##1}}%
 }
 \def\filename#1{\relax}
+@ %def \@original@textwidth \ps@noweb \filename
 @
 \subsection{Chunk cross-reference}
 [[\alsodefined]], [[\used]], and [[\notused]] are emitted by the {\tt
@@ -350,6 +375,8 @@ If unused chunks are output chunks, a filter can slip in [[\let\notused\nwoutput
 \def\used#1{\codecomment{This code is used on \pages{#1}.}}
 \def\notused#1{\codecomment{Root chunk (not used in this document).}}
 \def\nwoutput#1{\codecomment{This code is written to file {\Tt #1}.}}
+@ %def \nw@originaltextsize \codecomment \alsodefined \used \notused
+@ %def \nwoutput
 @
 Here's some list-of-pages code that's supposed to eliminate
 duplicates, insert commas, and insert ``and'' at the right place.
@@ -360,10 +387,12 @@ A lot of the list stuff is cribbed from the {\TeX}book.
 \long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
 \def\loop#1\repeat{\def\iterate{#1\expandafter\iterate\fi}%
         \iterate \let\iterate\relax}
+@ %def \empty \lop \lopoff \loop
 <<noweb.sty>>=
 \def\thepageref#1{\@ifundefined{r@#1}{0\@warning
    {Reference `#1' on page \thepage \space 
     undefined}}{\@nameuse{r@#1}}}
+@ %def \thepageref
 <<noweb.sty>>=
 \newcount\lastpage
 \newcount\thispage
@@ -389,6 +418,8 @@ A lot of the list stuff is cribbed from the {\TeX}book.
       \lastpage=\thispage  
     \fi
   \repeat}
+@ %def \lastpage \thispage \pagesout \dosetpage \setthispage
+@ %def \setpagenumbers
 <<noweb.sty>>=
 \def\pages#1{%
   \setpagenumbers{#1}%
@@ -399,8 +430,10 @@ A lot of the list stuff is cribbed from the {\TeX}book.
   {\count255=0 \def\\##1{\advance\count255 by 1 }#1%
   \ifnum\count255=1 page \else pages \fi}%
   \commafy{#1}}
+@ %def \pages \dopages
 <<noweb.sty>>=
 \def\subpages#1{{\let\\\subpageref\dopages#1\done}}
+@ %def \subpages
 @
 \subsection{Sub-page references}
 This is the wonderful code that Dave Love provided to make page
@@ -449,12 +482,14 @@ defining the [[2on]] bit appropriately.
     {\@ifundefined{2on\@pageref{#1}}%
       {}%
       {\ref{#1}}}}
+@ %def \subpageref
 @
 [[\@pageref]] is like [[\pageref]], but it expands to [[\relax]] without a warning
 if the reference is undefined.
 <<noweb.sty>>=
 \def\@pageref#1{\expandafter\expandafter\expandafter
                 \@cdr\csname r@#1\endcsname\@nil}
+@ %def \@pageref
 @
 [[\sublabel]] is like the [[\label]] command, except that it writes
 [[\newsublabel]] onto the [[.aux]] file rather than [[\newlabel]].
@@ -466,6 +501,7 @@ if the reference is undefined.
       \newsublabel{#1}{{}{\thepage}}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+@ %def \sublabel
 @
 [[\newsublabel]] is the macro that does the important work.  It is called with the
 same sort of arguments as [[\newlabel]]: the first argument is the
@@ -480,6 +516,7 @@ First we extract the page number into [[\this@page]].
 <<definition of [[\newsublabel]]>>=
 \newcommand{\newsublabel}[2]{%
   \edef\this@page{\@cdr#2\@nil}%
+@ %def \newsublabel
 @
 Then we see whether it's greater than the value of [[\last@page]]
 which was stashed away by the last [[\newsublabel]] (or is zero if
@@ -512,6 +549,7 @@ suitably-initialised macro instead.
 <<noweb.sty>>=
 \newcount\last@page
 \newcount\sub@page
+@ %def \last@page \sub@page
 @
 We use Rainer's new expandable definitions of [[\ref]] and
 [[\pageref]] to minimise the risk of nasty surprises.
@@ -527,6 +565,7 @@ We use Rainer's new expandable definitions of [[\ref]] and
     undefined}}{\expandafter\expandafter\expandafter
                 \@cdr\csname r@#1\endcsname
                 \@nil\null}}
+@ %def \ref \pageref
 @
 \subsection{Indexing (identifier cross-reference) support}
 
@@ -558,12 +597,15 @@ The control sequences used are
       \nwixadd{#1}{#2}{#3}{#4}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+@ %def \boundindexdefn \boundindexuse \freeindexdefn \freeindexuse
+@ %def \@auxixb \@auxixf \@auxix
 <<noweb.sty>>=
 % \nwixadd{listname}{idlabel}{page}{markup for page}
 \def\nwixadd#1#2#3#4{%
   \@ifundefined{nwix#1@#2}%
     {\global\@namedef{nwix#1@#2}{{#4{#3}}}}%
     {\expandafter\@cons\csname nwix#1@#2\endcsname{#4{#3}}}}
+@ %def \nwixadd
 <<noweb.sty>>=
 \chardef\nwbs=`\\
 @
@@ -588,6 +630,7 @@ The control sequences used are
         \advance\rightskip by 0pt plus1in
         \indent
         {\Tt #1}: \indexpages{#2}\par}}
+@ %def \identdefs \identuses \indexrefs \indexpages \indexlisting
 @
 This goo attempts to support good comma separation.
 <<noweb.sty>>=
@@ -602,6 +645,7 @@ This goo attempts to support good comma separation.
                    \advance\@commacount by -1
                    \ifnum\@commacount=1{\Rm{}and }\fi\@comma@each}\@comma@each}\fi
    #1}}
+@ %def \@commacount \commafy
 @
 \twocolumn
 \section{Index}
