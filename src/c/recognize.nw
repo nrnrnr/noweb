@@ -21,8 +21,8 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.7 1997/12/10 22:19:34 nr Exp nr $";
-static char rcsname[] = "$Name:  $";
+static char rcsid[] = "$Id: recognize.nw,v 1.8 1999/02/16 21:12:14 nr Exp nr $";
+static char rcsname[] = "$Name: v2_9a $";
 <<Include files>>
 <<header>>
 <<Type definitions>>
@@ -119,7 +119,7 @@ We need a function that, given the current state and a character, will
 return the next state as directed by the ``goto table.'' If there is
 no defined entry in the table, the function returns [[NULL]].
 <<Function definitions>>=
-static Goto_Node *goto_lookup(char c, Goto_Node *g)
+static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
 {
   Move_Node *m = g->moves;
   while (m && m->c != c)
