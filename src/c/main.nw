@@ -19,7 +19,7 @@ The following options are good on the command line:
 #include "errors.h"
 #include "columns.h"
 
-void main(int argc, char **argv) {
+main(int argc, char **argv) {
     int i;
     char *rootname = "*";       /* name of the root module */
     char *locformat = "";
