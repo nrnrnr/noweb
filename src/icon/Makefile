@@ -7,7 +7,7 @@ CPIF=| cpif		# change to ">" to insure all sources always made
 
 LIBEXECS=totex disambiguate noidx tohtml elide l2h docs2comments \
        autodefs.tex autodefs.icon autodefs.yacc autodefs.sml autodefs.pascal \
-	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix xchunks
+	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix xchunks pipedocs
 LIBSPECIAL=autodefs.cee
 BINEXECS=noindex sl2h htmltoc
 EXECS=$(LIBEXECS) $(BINEXECS) $(LIBSPECIAL)
@@ -129,6 +129,9 @@ noidx: noidx.icn
 
 elide: elide.icn
 	$(ICONT) elide.icn
+
+pipedocs: pipedocs.icn
+	$(ICONT) pipedocs.icn
 
 disambiguate: disambiguate.icn
 	$(ICONT) disambiguate.icn

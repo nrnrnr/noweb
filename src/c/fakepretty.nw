@@ -1,7 +1,7 @@
 \section{A fake prettyprinter}
 This ``prettyprinter'' builds a code brick.
 <<*>>=
-static char rcsid[] = "$Id: fakepretty.nw,v 1.7 2000/07/31 18:21:39 nr Exp nr $";
+static char rcsid[] = "$Id: fakepretty.nw,v 1.8 2000/07/31 18:28:49 nr Exp nr $";
 static char rcsname[] = "$Name: v2_10 $";
 #include <string.h>
 #include <ctype.h>

@@ -2743,6 +2743,7 @@ procedure main(args)
     if arg[1] == "-" then
       case arg of {
         "-show-unknowns" : show_unknowns := 1
+        "-" : { curfile := arg; convert_file(&input) }
         default : write(&errout, "Warning: unrecognized option ", arg)
       }
     else if f := open(curfile <- arg) then
@@ -2765,7 +2766,7 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.11 2000/07/31 18:21:40 nr Exp nr $" ||
+  return "$Id: l2h.nw,v 1.12 2000/07/31 18:28:50 nr Exp nr $" ||
          "$Name: v2_10 $"
 end
 @

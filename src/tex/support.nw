@@ -78,6 +78,11 @@ escaped with a backslash.
 \let\nwlbrace=\{
 \let\nwrbrace=\}
 @ 
+[[\nwendquote]] is called after quoted code.
+It resets the spacefactor
+<<kernel>>=
+\def\nwendquote{\relax\ifhmode\spacefactor=1000 \fi}
+@ 
 [[\eatline]] is used to consume newlines that should be ignored,
 for example, the newlines at the end of [[@ %def ]]{\em identifiers} lines.
 I can't remember what [[\startline]] or [[\newlines]] are for; I don't

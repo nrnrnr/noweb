@@ -21,7 +21,7 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.12 2000/07/31 18:21:39 nr Exp nr $";
+static char rcsid[] = "$Id: recognize.nw,v 1.13 2000/07/31 18:28:49 nr Exp nr $";
 static char rcsname[] = "$Name: v2_10 $";
 <<Include files>>
 <<header>>

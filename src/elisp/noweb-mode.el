@@ -18,7 +18,7 @@
 ;; 
 ;; See bottom of this file for information on language-dependent highlighting
 ;;
-;; $Id: noweb-mode.el,v 1.7 2000/07/31 18:21:43 nr Exp nr $
+;; $Id: noweb-mode.el,v 1.8 2000/07/31 18:28:52 nr Exp nr $
 ;; $Name: v2_10 $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,7 +76,7 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.7 2000/07/31 18:21:43 nr Exp nr $")
+  "$Id: noweb-mode.el,v 1.8 2000/07/31 18:28:52 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
   "$Name: v2_10 $")

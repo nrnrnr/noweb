@@ -5,7 +5,7 @@
 
 nawk '
 BEGIN {
-  rcsid = "$Id: unmarkup,v 1.8 2000/07/31 18:21:08 nr Exp nr $"
+  rcsid = "$Id: unmarkup,v 1.9 2000/07/31 18:28:47 nr Exp nr $"
   rcsname = "$Name: v2_10 $"
   firstdoc = 1
 }

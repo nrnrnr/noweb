@@ -26,7 +26,7 @@ procedure prepass(name, arg)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: mmixdefs.nw,v 1.3 2000/07/31 18:21:40 nr Exp nr $" ||
+  return "$Id: mmixdefs.nw,v 1.4 2000/07/31 18:28:50 nr Exp nr $" ||
          "$Name: v2_10 $"
 end
 @

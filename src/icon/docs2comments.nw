@@ -82,6 +82,8 @@ procedure comment(s)
   }    
 end
 @ 
+[[grab]] concatenates a string [[s]] onto the last line being held in
+list [[holding]].
 <<*>>=
 procedure grab(s, holding)
   return (\holding)[-1] := holding[-1] || s
@@ -97,6 +99,11 @@ while line := read() do
     if ="@end docs" | ="@end code" then {
       if (\holding)[-1] == "" then pull (holding)
       put(chunks, code(preceding_defn, \defn_pending, holding) | docs(holding))
+## if type(chunks[-1]) == "code" then
+## every write("##### " || (
+## "preceding defn is " || image(preceding_defn) |
+## "defn pending is " || image(defn_pending) |
+##                                   "Holding chunk with these lines:" | image(!holding)))
       defn_pending := &null
       holding := &null
       chunks := drain(chunks)
@@ -144,13 +151,17 @@ procedure drain(chunks)
       emit_as_comments(chunks[i])
     write("@text ", comment("<" || c.defn || ">="), "\n@nl")
     write("@text ", \lastline, "\n@nl")
-    get(\c.lines) == "@nl" | runerr(1, "expected newline after definition")
+    bad := &null
+    (bad := get(\c.lines)) == "@nl" | 
+      { write(&errout, "expected newline after definition; got ", image(bad));
+        runerr(1, bad) }
     every write(!c.lines)
     c := chunks[-1]
     if type(c) == "docs" & upto(\c.lines[1], ~' \n\t') then {
       write("@text ", \firstline, "\n@nl")
       emit_as_comments(c)
       write("@text ", \lastline, "\n@nl")
+      write("@nl")
       chunks := []
     } else 
       chunks := [c]
