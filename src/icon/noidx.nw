@@ -1,160 +1,236 @@
 \documentstyle[noweb]{article}
 \pagestyle{noweb}
 \begin{document}
+Missing ``{\tt @xref tag} {\it label tag},'' where {\it label} is the name of 
+a label and {\it tag} is a chunk number, page number, sub-page number, or
+other identifying mark.
 @
 \section{Cross-reference and index support}
-Here is is.
 <<*>>=
-global lines				# all the input lines
+global lines		# all the input lines
+global delay		# non-null if markup should be delayed past the first chunk 
+global anchordist	# max distance before code chunk to place defining @xref label
 
 procedure main(args)
   lines := []
   <<initialization>>
+  delay := &null
+  <<swallow [[args]]>>
   while put(lines, line := read()) do
     apply(pass1, line)
   every apply(pass2, !lines)
+  if /delay then <<write trailers>>
 end
 
 procedure apply(pass, line)
     line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
 end
+<<swallow [[args]]>>=
+while case(a := get(args)) of {
+  "-delay"     : delay := 1
+  "-docanchor" : anchordist := integer(get(args))
+  default      : write(&errout, "noidx: unknown argument ", image(a))
+}
 @
 <<*>>=
-global curfile
+global curfile		# unique id of the current @file
+global lastbeginarg	# identifies last chunk (for -delay)
 <<initialization>>=
-curfile := "standard input?"		# unique tag for current file
+curfile := "standard input?"
+lastbeginarg := "never any chunks?"
+@
+[[anchorlabel]] is the label that references to a code chunk refer to.
+The {\LaTeX} back end typically uses the chunk itself, but the HTML
+back end will use a spot in the preceding documentation chunk (if
+any), as requested by [[-docanchor]] (and non-null [[anchordist]])
+and recorded in [[anchorlabel]].
+<<*>>=
+global allchunks, allidents
+global indexlabels, defanchors, uses, anchorlabel, indexanchorlabel
+<<initialization>>=
+every allchunks | allidents := set()
+every indexlabels | defanchors | uses | anchorlabel | indexanchorlabel := table()
 <<*>>=
 procedure pass1(name, arg)
-  static thislabel
+  static lastdefnlabel, thisusecount, lastanchorlabel
   case name of {
-    "file" : curfile := modid(arg || (arg[4+:3] | arg[4:0] | ""))
-    "defn" : {
+    "file"  : curfile := uniqueid(arg)
+    "begin" : lastbeginarg := arg
+    "end"   : if arg ? ="docs " & \anchordist then 
+                {<<insert and set [[lastanchorlabel]]>>}
+              else 
+                lastanchorlabel := &null
+    "defn"  : {
         insert(allchunks, arg)
-        d := pull(lines)
-        put(lines, "@thislabel " || (thislabel := newlabel("DEFN", defns, arg)))
-        put(lines, d)		# make label show up BEFORE defn
+        slipin("@xref label " || (lastdefnlabel := newdefnlabel(arg)))
+        /lastanchorlabel := lastdefnlabel
+        /anchorlabel[arg] := lastanchorlabel
+        addlabel(defanchors, arg, lastanchorlabel)
+        addud(chunkud, "defn", arg, lastanchorlabel)
+        thisusecount := 0
       }
-    "use"  : {
+    "use"   : {
         insert(allchunks, arg)
-        addlabel(uses, arg, thislabel)
+        slipin("@xref label " || lastdefnlabel || "-u" || (thisusecount +:= 1))
+        addlabel(uses, arg, lastanchorlabel)
+        addud(chunkud, "use", arg, lastanchorlabel)
+      }
+    "index" : {
+        <<shift [[name]] and [[arg]]>>
+        case name of {
+            "use"  : { insert(allidents, arg)
+                       addud(indexud, "use", arg, \lastanchorlabel)
+                     }
+	    "defn" : { insert(allidents, arg)
+		       (l := \lastanchorlabel) | 
+			     slipin("@xref label " || (l := newdocslabel()))
+                       addud(indexud, "defn", arg, l)
+                       /indexanchorlabel[arg] := l
+                       slipin("@xref ref " || l)  # bug fix
+                     }
+        }
+      }
     }
-    "index" :
-      arg ? if insert(if ="defn " then defnidents else if="use "then useidents, 
-                      ident := tab(0)) then
-        /indexlabels[ident] := indexlabel(ident)
-  }
   return
 end
-@ %def allchunks defnidents useidents indexlabels defns uses
+@ %def allchunks allidents indexlabels defanchors uses curfile lastbeginarg anchorlabel
+The bug fix\label{multi-def-bug}
+alluded to above occurs when there are multiple definitions of an identifier.
+In this case, we can't just use [[indexanchorlabel[id]]], because that refers only to 
+the first definition.  In the {\TeX} back end, that leads to bogus
+tags like \hbox{\it x \small\rm 7b 7b 7b} instead of \hbox{\it x
+\small\rm 7b 9 12a}; the first tag is repeated again and again.
+Because the tag for the current [[@defn]] is lost by the time pass~2
+rolls around, we have to slip it in on pass~1.
+@
+<<insert and set [[lastanchorlabel]]>>=
+t := []; n := anchordist
+lastanchorlabel := newdocslabel()
+while lines[-1] ?
+  if n = 0 | ="@begin docs" then
+     { put(lines, "@xref label " || lastanchorlabel); lines |||:= t; break }
+  else 
+     { if ="@nl" & pos(0) then n -:= 1; push(t, pull(lines)) }
+@
+[[slipin]] sticks something into [[lines]] just before the current (last) line.
+It makes sense only on the first pass.
 <<*>>=
-global allchunks, defnidents, useidents, indexlabels, defns, uses
-<<initialization>>=
-every allchunks | defnidents | useidents := set()
-every indexlabels | defns | uses := table()
-@ %def  allchunks defnidents useidents indexlabels defns uses foo$bar
+procedure slipin(s)
+  local last
+  last := pull(lines)
+  every put(lines, s | last)
+  return s
+end
 <<*>>=
 procedure pass2(name, arg)
-  static thischunk, thesedefns, theseuses
-  static thislabel # null for docs chunk, sub-page label for code chunk
-  static firstdefnout
-  initial firstdefnout := set()
+  static thesedefns, theseuses
+  static thischunk # null for docs chunk, arg of @defn for code chunk
+  static defout		# number of definitions emitted for each chunk
+  initial defout := table(0)
   case name of {
-    "thislabel" :
-       write("@literal \\sublabel{", thislabel := arg, "}")
     "begin" : {
+       if \delay & lastbeginarg == arg then <<write trailers>>
        <<copy [[name]] and [[arg]] to output>>
-       <<shift [[name]] and [[arg]]>>
        every thesedefns | theseuses := set()
-       if name == "docs" then thislabel := &null
+       thischunk := &null
     }
-    "defn" : { 
-        thischunk := arg
-	write("@literal \\let\\pages=\\subpages")
-        write("@literal \\leavevmode\\llap{\\footnotesize\\Rm\\subpageref{", thislabel, 
-                        "}\\kern0.3in\\kern\\codemargin}")
-        write("@defn ", arg, "~{\\footnotesize\\Rm\\subpageref{", defns[arg][1], "}}") 
-    }
-    "use" : 
-        write("@use ", arg, "~{\\footnotesize\\Rm\\subpageref{", (\defns[arg])[1], "}}") |
-        write("@use ", arg, "~{\\footnotesize\\Rm (never defined)}")
+    "defn" : { thischunk := arg; 
+               write("@xref ref " || anchorlabel[arg])
+               <<copy [[name]] and [[arg]] to output>> 
+             }
+    "use"  : { write("@xref ref " || (\anchorlabel[arg] | "nw@notdef")) # was "???"
+               <<copy [[name]] and [[arg]] to output>> 
+             }
     "index" : {
-       write("@", name, " ", arg)
        <<shift [[name]] and [[arg]]>>
-       if name == "defn" then {
-           <<emit an index definition>>
-           insert(thesedefns, arg)
-       } else if name == "use" then
-           insert(theseuses, arg)
+       case name of {
+         "defn" : { insert(thesedefns, arg)
+                    # no xref ref because of bug fix
+		  }
+         "use"  : { insert(theseuses, arg)
+                    write("@xref ref ", \indexanchorlabel[arg])
+		  }
+       }
+       name := "index " || name
+       <<copy [[name]] and [[arg]] to output>>
     }
     "end" : {
         if match("code", arg) then {<<write cross-reference>>}
         write("@", name, " ", arg)
       }
-    "text"  : if      /thislabel & \arg == "\\nowebchunks" then nowebchunks()
-              else if /thislabel & \arg == "\\nowebindex"  then nowebindex()
-              else write("@text", (" " || \arg) | "")
+    "text" : # grotesque hack! for chunks and index
+       if /thischunk then # docs mode
+         case arg of { 
+       	   "<nowebchunks>" : lognowebchunks()
+           "<nowebindex>"  : lognowebindex()
+           default : <<copy [[name]] and [[arg]] to output>>
+       	 }
+       else <<copy [[name]] and [[arg]] to output>>
     default : <<copy [[name]] and [[arg]] to output>>
   }
   return
 end
 @ %def thischunk thislabel thesedefns theseuses
-<<emit an index definition>>=
-if /thislabel then
-  write("@literal \\freeindexdefn{", TeXliteral(arg), "}",
-        "{", indexlabels[arg], "}")
-else
-  write("@literal \\boundindexdefn{", TeXliteral(arg), "}",
-                          "{", indexlabels[arg], "}{", thislabel, "}")
+The case of the [[@index defn]] is the one case where we don't emit a
+reference, because the reference has to go in earlier.  See
+page~\pageref{multi-def-bug} for an explanation.
+@
 <<write cross-reference>>=
+defout[thischunk] +:= 1
 <<write index cross-reference>>
-<<if first definition, write chunk cross-reference>>
+if defout[thischunk] = 1 then {<<write chunk cross-reference>>}
+write("@xref prevdef ", defanchors[thischunk][defout[thischunk] - 1]) # fail if first
+write("@xref nextdef ", defanchors[thischunk][defout[thischunk] + 1]) # faif if last
 <<write index cross-reference>>=
 theseuses --:= thesedefns
 if *thesedefns > 0 then {
-  l := alphasort(thesedefns)
-  write("@literal \\nwidentdefs{")
-  while write("@literal \\\\{{", TeXliteral(ident := get(l)), "}",
-                                "{", indexlabels[ident], "}}")
-  write("@literal }")
+  write("@index begindefs")
+  every i := !alphasort(thesedefns) do {
+    every u := !\indexud[i] do u ? if ="use " then write("@index isused ", tab(0))
+    write("@index defitem ", i)
+  }
+  write("@index enddefs")
 }
 if *theseuses > 0 then {
   l := alphasort(theseuses)
-  write("@literal \\nwidentuses{")
-  every write("@literal \\\\{{", TeXliteral(ident := !l), "}",
-                                "{", indexlabels[ident], "}}")
-  write("@literal }")
-  every write("@literal \\boundindexuse{", TeXliteral(ident := !l), "}",
-                          "{", indexlabels[ident], "}{", thislabel, "}")
-}
-<<if first definition, write chunk cross-reference>>=
-if not member(firstdefnout, thischunk) then {
-  insert(firstdefnout, thischunk)
-  if *defns[thischunk] > 1 then {
-    writes("@literal \\alsodefined{")
-    every i := 2 to *defns[thischunk] do 
-      writes("\\\\{", defns[thischunk][i], "}")
-    write("}")
+  write("@index beginuses")
+  every i := !alphasort(theseuses) do {
+    every d := !\indexud[i] do d ? if ="defn " then write("@index isdefined ", tab(0))
+    write("@index useitem ", i)
   }
-  if \uses[thischunk] then {
-    writes("@literal \\used{")
-    every i := 1 to *uses[thischunk] do 
-      writes("\\\\{", uses[thischunk][i], "}")
-    write("}")
-  } else write("@literal \\notused{", TeXliteral(thischunk), "}")
+  write("@index enduses")
 }
+#  every write("@literal \\nwindexuse{", TeXliteral(ident := !l), "}",
+#                          "{", indexlabels[ident], "}{", thislabel, "}")
+<<write chunk cross-reference>>=
+if *defanchors[thischunk] > 1 then {
+  write("@xref begindefs")
+  every write("@xref defitem ", defanchors[thischunk][2 to *defanchors[thischunk]])
+  write("@xref enddefs")
+}
+if \uses[thischunk] then {
+  write("@xref beginuses")
+  every write("@xref useitem ", !uses[thischunk])
+  write("@xref enduses")
+} else 
+  write("@xref notused ", thischunk)
+@
 <<shift [[name]] and [[arg]]>>=
 { arg ? { name := tab(upto(' ')|0); arg := if =" " then tab(0) else &null } }
 <<copy [[name]] and [[arg]] to output>>=
 write("@", name, (" " || \arg) | "")
 <<*>>=
-procedure newlabel(which, tbl, arg)
-  local label
-  which := map(which, &lcase, &ucase)   # DEFN | USE | IDXDEF
-  /tbl[arg] := []
-  label := which || ":" || curfile || ":" || modid(arg) || "-" || (1+*tbl[arg])
-  return addlabel(tbl, arg, label)
+procedure newdefnlabel(arg)
+  /defanchors[arg] := []
+  return "NW" || curfile || "-" || uniqueid(arg) || "-" || alphacode(1+*defanchors[arg])
 end
-
+<<*>>=
+procedure newdocslabel()
+  static count
+  initial count := 0
+  return "NWD" || alphacode(count +:= 1)
+end
+<<*>>=
 procedure addlabel(tbl, arg, label)
   /tbl[arg] := []
   if tbl[arg][-1] == label then &null
@@ -162,43 +238,75 @@ procedure addlabel(tbl, arg, label)
   return label
 end
 <<*>>=      
-procedure modid(name)
+global chunkud, indexud
+procedure addud(udlist, name, arg, label)
+  /udlist[arg] := []
+  s := name || " " || label
+  return udlist[arg][-1] == s | put(udlist[arg], s)
+end
+<<initialization>>=
+every chunkud | indexud := table();
+@
+[[uniqueid]] eliminates both {\TeX} and HTML specials.
+<<*>>=      
+procedure uniqueid(name)
   local key
   static idtable, keycounts
   initial { idtable := table() ; keycounts := table(0) }
 
   if not member(idtable, name) then {
-    key := map(name, " \\{}-[]`#%&~_^", "**************")
-    if *key > 6 then key := key[1:4] || key[0:-3]
+    key := make_key(map(name, " \\{}-[]`#%&~_^<>\"", "*****************"))
     keycounts[key] +:= 1
-    idtable[name] := key || if keycounts[key] > 1 then "-" || keycounts[key] else ""
+    idtable[name] := key 
+    if keycounts[key] > 1 then idtable[name] ||:= "." || alphacode(keycounts[key])
   }
   return idtable[name]
 end
 <<*>>=
-procedure nowebchunks()
+procedure make_key(key, len)
+    static noslash
+    initial noslash := ~ '/'
+    key ? return make_key(3(tab(upto('/')), ="/", tab(many(noslash)), pos(0)), *key) |
+                 key[1+:3] || alphacode(\len | *key) |
+                 key || (alphacode(\len) | "")
+end
+<<write trailers>>=
+{ write("@nl")
+  write("@nl")
+  lognowebchunks()
+  lognowebindex() 
+}
+@
+Now, a special hack, so we can write this stuff in the right place on pass 2.
+<<*>>=
+procedure lognowebchunks(noheader)
+  static called
+  if \called then return
+  else called := 1
+
   l := alphasort(allchunks)
+  write("@xref beginchunks")
   while name := get(l) do {
-    write("@literal %")
-    write("@nl")
-    write("@literal {")
-    write("@use ", name, "~{\\footnotesize\\Rm\\subpageref{", (\defns[name])[1], "}}") |
-    write("@use ", name, "~{\\footnotesize\\Rm (never defined)}")
-    write("@literal }")
-    if *l > 0 then write("@literal \\\\")
+    write("@xref chunkbegin ", (\anchorlabel[name] | "nw@notdef"), " ", name)
+    every write("@xref chunk", !\chunkud[name])
+    write("@xref chunkend")
   }
+  write("@xref endchunks")
 end
 <<*>>=
-procedure nowebindex()
-  l := alphasort(useidents)
-  write("@literal \\begin{thenowebindex}")
+procedure lognowebindex()
+  static called
+  if \called then return
+  else called := 1
+
+  l := alphasort(allidents)
+  write("@index beginindex")
   while name := get(l) do {
-    write("@literal %")
-    write("@nl")
-    write("@literal \\\\{{", TeXliteral(name), "}",
-                           "{", indexlabels[name], "}}")
+    write("@index entrybegin ", (\indexanchorlabel[name] | "nw@notdef"), " ", name)
+    every write("@index entry", !\indexud[name])
+    write("@index entryend")
   }
-  write("@literal \\end{thenowebindex}")
+  write("@index endindex")
 end
 <<*>>=
 procedure alphasort(x)
@@ -220,64 +328,22 @@ procedure sortkey(s)
 end
 @ %def sortkey
 <<*>>=
-procedure indexlabel(ident)
-  static badset, trans
-  initial {
-    <<initialize [[trans]]>>
-    badset := ''
-    every badset ++:= key(trans)
-  }
-  ident ? {
-    s := ""
-    while s ||:= tab(upto(badset)) do s ||:= ":" || trans[move(1)]
-    return s || tab(0)
-  }
+procedure alphacode(n)
+  static codes
+  initial codes := &digits || &letters
+  return if n < 0 then 
+           "-" || alphacode(-n)
+         else if n >= *codes then
+           alphacode(n / *codes) || alphacode(n % *codes)
+         else
+           codes[n+1]
 end
-<<initialize [[trans]]>>=
-trans := table()
-trans[" "] := "sp"      # space
-trans["#"] := "has"     # hash
-trans["$"] := "do"      # dollar
-trans["%"] := "pe"      # percent
-trans["&"] := "am"      # ampersand
-trans[","] := "com"     # commad
-trans[":"] := "col"     # colon
-trans["\\"] := "bs"      # backslash
-trans["^"] := "hat"     # hat
-trans["_"] := "un"      # underscore
-trans["{"] := "lb"      # left brace
-trans["}"] := "rb"      # right brace
-trans["~"] := "ti"      # tilde
-@ %def indexlabel
-<<*>>=
-global TeXspecials
-procedure escape(line, chars)
-  line ? {
-    s := ""
-    while s ||:= tab(upto(chars)) do s ||:= "\\" || move(1)
-    return s || tab(0)
-  }
-end
-@ %def escape
-<<*>>=
-procedure TeXliteral(arg)
-  escape(arg, TeXspecials) ? {
-    s := ""
-    while s ||:= tab(find("\\\\")) do {
-      move(2)
-      s ||:= "{\\nwbs}"
-    }
-    return s || tab(0)
-  }
-end
-<<initialization>>=
-TeXspecials := '\\{}$&#^_ ~%'
-@ %def TeXspecials
-
+@
 \section{List of chunks}
 \nowebchunks
 
 \twocolumn
 \section{Index}
 \nowebindex
+@
 \end{document}
