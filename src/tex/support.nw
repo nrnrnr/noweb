@@ -241,6 +241,14 @@ code is indented by [[\codemargin]].\stylehook
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
 \advance\nwdefspace by \codemargin	% and fix adjustment for def/use
+\def\setcodemargin#1{%
+  \advance\codehsize by -\codemargin       % make room for indentation of code
+  \advance\nwdefspace by -\codemargin	% and fix adjustment for def/use
+  \codemargin=#1
+  \advance\codehsize by \codemargin       % make room for indentation of code
+  \advance\nwdefspace by \codemargin	% and fix adjustment for
+					% def/use
+}
 @
 [[\noweboptions{shift}]] is used to shift the whole page left to make room for
 the wide code lines.
@@ -805,7 +813,7 @@ We have to control expansion so chunks like \subpageref{cl1}
 (\subpageref{cl2}) can be labelled twice.
 <<noweb.sty>>=
 \newcommand{\nextchunklabel}[1]{%
-  \nwblindhyperanchor{#1}%
+  \nwblindhyperanchor{#1}%   % looks slightly bogus --- nr
   \@bsphack\if@filesw {\let\thepage\relax
       \edef\@tempa{\write\@auxout{\string\pendingsublabel{#1}}}%
       \expandafter}\@tempa
@@ -927,6 +935,29 @@ documentation chunk.
     {\global\@namedef{nwixl@#2}{#1{#3}}}%
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
 @ %def \nwixadd
+@
+\subsubsection{Subscripted identifiers}
+For indexing in code (on special occasions).
+<<noweb.sty>>=
+\def\@nwsubscriptident#1#2{\mbox{$\mbox{#1}_{\mathrm{\subpageref{#2}}}$}}
+\def\@nwnosubscriptident#1#2{#1}
+\def\nwopt@subscriptidents{\let\nwsubscriptident=\@nwsubscriptident}
+\def\nwopt@nosubscriptidents{\let\nwsubscriptident=\@nwnosubscriptident}
+\nwopt@nosubscriptidents
+@ 
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B subscriptidents, nosubscriptidents
+Controls subscripting of identifiers in code, including quoted code.
+Selecting
+.B subscriptidents
+means an identifier appearing in a code chunk (or in quoted code
+within a documentation 
+chunk) will be subscripted with the chunk number of its definition.
+Defaults to 
+.B nosubscriptidents.
+@ \fi
 @
 \subsubsection{Writing lists with commas and ``and''}
 You get one of
@@ -1145,17 +1176,43 @@ show page numbers of definitions and uses of each chunk.
 @ \fi
 
 @
-\subsection{support for hypertext with {\tt hyper.sty}}
-Initial support courtesy of Balasubramanian Narasimhan.
+\subsection{Support for hypertext}
+There are two sets of support for hypertext.
+ Balasubramanian Narasimhan wrote initial support for \texttt{hyper.sty}.
 <<noweb.sty>>=
-\newcommand\nwhyperreference[2]{%
-  \@ifundefined{hyperreference}%
-     {#2\global\let\nwhyperreference\@gobble}%
-     {\hyperreference{#1}{#2}\global\def\nwhyperreference\hyperreference}}
-\newcommand\nwblindhyperanchor[1]{%
-  \@ifundefined{blindhyperanchor}%
-     {\global\let\nwblindhyperanchor\@gobble}%
-     {\blindhyperanchor{#1}\global\def\nwblindhyperanchor\blindhyperanchor}}
+\newcommand\@nw@hyper@ref{\hyperreference} % naras
+\newcommand\@nw@hyper@anc{\blindhyperanchor} % naras
+@ Norman Ramsey wrote support for the \texttt{hyperrref} package (May
+ 1998).
+<<noweb.sty>>=
+\newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}}  % nr
+\newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
+%%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
+%%\renewcommand\@nw@hyperref@anc[1]{}  % nr
+@ We define the independent macros [[\nwhyperreference]] and
+ [[\nwblindhyperanchor]],
+which test for the presence of one of these two packages, 
+redefine themselve accordingly, and re-invoke themselves.
+<<noweb.sty>>=
+\newcommand\nwhyperreference{%
+{\tracingall
+  \@ifundefined{hyperlink}
+    {\@ifundefined{hyperreference}
+       {\global\let\nwhyperreference\@gobble}
+       {\global\let\nwhyperreference\@nw@hyper@ref}}
+    {\global\let\nwhyperreference\@nw@hyperref@ref}%
+}%
+  \nwhyperreference
+}
+
+\newcommand\nwblindhyperanchor{%
+  \@ifundefined{hyperlink}
+    {\@ifundefined{hyperreference}
+       {\global\let\nwblindhyperanchor\@gobble}
+       {\global\let\nwblindhyperanchor\@nw@hyper@anc}}
+    {\global\let\nwblindhyperanchor\@nw@hyperref@anc}%
+  \nwblindhyperanchor
+}
 @ 
 \subsection{Support for hypertext translation to HTML}
 <<noweb.sty>>=
@@ -1221,13 +1278,18 @@ identifiers in the index and mini-indices.
 @
 The following macros can be redefined to typeset `[[\]]', `[[{]]' and
 `[[}]]' correctly in non-typewriter fonts. 
+The problem is that the built-in {\LaTeX} [[\{]] tries to produce a
+math symbol, which doesn't exist in the typewriter font, so we get a
+brace in the wrong font and a warning.  Most unpleasant.
+Noweave therefore attempts to emit [[\nwlbrace]] and [[\nwrbrace]]
+wherever it believes braces should appear.
+The standard noweb style is to set code in typewriter font, and so the
+standard definitions just select the proper characters from that font.
+ People setting code in
+fonts other than typewriter are responsible for redefining those
+macros to work in their environment.
 <<noweb.sty>>=
 \def\nwbackslash{\char92}
-\let\nwlbrace=\{
-\let\nwrbrace=\}
-% the above is bogus for {\LaTeX} -- the typewriter font doesn't have
-% the math symbol, and we wind up with a symbol font and a warning.
-% Not good.
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
 <<nwmac.tex>>=
