@@ -2,8 +2,9 @@
 The copyright applies both to the {\tt noweb} source and to the
 generated shell script.
 <<copyright notice>>=
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
+# $Id$
 @
 Here's the organization of the source:
 <<noweave>>=
@@ -44,6 +45,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+<<insist first-pass options are self-consistent>>
 if [ -z "$wrapper" ]; then wrapper=latex; fi
 eval $pass2setcmd
 shift
@@ -170,11 +172,21 @@ a part of a larger document.
 See also 
 .B \-delay.
 @ \fi
+A common bug seems to be using both [[-x]] and [[-index]] on the same
+command line, so I complain about it.
+<<insist first-pass options are self-consistent>>=
+if [ -n "$using_xref" -a -n "$using_index" ]; then
+  echo "$0: you may not use -x with -index or -indexfrom (drop the -x)" 1>&2
+  exit 1
+fi
+<<initialization>>=
+using_index= using_xref=
+@ 
 <<first pass {\tt noweave} options>>=
--filter)    shift                                                               ;;
--x)	                    ;;
--index)            noindex= ;;
--indexfrom) shift; noindex= ;;
+-filter)    shift                           ;;
+-x)                           using_xref=1  ;;
+-index)            noindex= ; using_index=1 ;;                 
+-indexfrom) shift; noindex= ; using_index=1 ;;
 <<second pass {\tt noweave} options>>=
 -filter) 
     newfilter="$2" ; shift ;                  <<add [[$newfilter]] (could overflow)>> ;;
@@ -270,9 +282,15 @@ supports up to four filters; one can get more by shell trickery,
 for example, \fB-filter "icon.filter | noidx"\fP.
 The \fB-autodefs\fP,
 \fB-x\fP, \fB-index\fP, and \fB-indexfrom\fP options are implemented as filters.
+Filters are executed with the shell's
+.B eval
+command, so
+.I cmd
+should be quoted accordingly.
 <<description of -markup option>>
 @ \fi 
-Note that it would be appropriate to look for filters using [[[ -x $newfilter ]]],
+Note that it would be appropriate to look for autodefs
+using [[[ -x $newfilter ]]],
 but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
 do in a portable way is [[test -r]].
 <<first pass {\tt noweave} options>>=
@@ -494,15 +512,17 @@ export PATH
 if   [ -z "$filtera" ]; then
   $markup $markopts $arg
 elif [ -z "$filterb" ]; then
-  $markup $markopts $arg | $filtera
+  $markup $markopts $arg | eval $filtera
 elif [ -z "$filterc" ]; then
-  $markup $markopts $arg | $filtera | $filterb
+  $markup $markopts $arg | eval $filtera | eval $filterb
 elif [ -z "$filterd" ]; then
-  $markup $markopts $arg | $filtera | $filterb | $filterc
+  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc
 elif [ -z "$filtere" ]; then
-  $markup $markopts $arg | $filtera | $filterb | $filterc | $filterd
+  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
+                           eval $filterd
 else
-  $markup $markopts $arg | $filtera | $filterb | $filterc | $filterd | $filtere
+  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
+                           eval $filterd | eval $filtere
 fi
 if [ -n "$trailer" ]; then echo $trailer; fi
 )
