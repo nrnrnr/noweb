@@ -4,7 +4,8 @@
 # See file COPYRIGHT for more information.
 # set -x
 LIB=|LIBDIR|
-$LIB/markup $* | awk '
+$LIB/markup $* | nawk '
+/^@quote$/,/^@endquote$/ { next }
 /^@defn / { chunk=substr($0,7) ; defined[chunk]=1 }
 /^@use /  { chunk=substr($0,6) ; used[chunk]=1 }
 END {
