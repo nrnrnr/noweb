@@ -140,17 +140,16 @@ references.
 while ((mark = mod_start(line,1)) != NULL) { 
     if (*line) print_pair(out, "text",unescape(line)); 
                                    /* emit string before module */
-    if ((line=mod_end(mark,1))==NULL) {
-        errormsg(Error, "Module doesn't end: %s", mark);       
-                                   /* module references can't cross lines */
-        goto mod_does_not_end;
+    if ((line=mod_end(mark,1))==NULL) { /* no matching @>>; treat @<< as text */
+        line = mark - 2;	/* back up; point to @<< */
+        *line = '<';		/* restore missing < (was '\0') */
+        break;
     } else {  
         print_pair(out, "use",mark);       /* emit the module */
     }
 }
 if (*line) print_pair(out, "text",unescape(line)); 
                                   /* contribute the trailing string */
-mod_does_not_end:
 @ To convert documentation lines, we have to track the quoting brackets.
 <<convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
