@@ -47,17 +47,30 @@ BEGIN		{ code=0 ; quoting=0 }
     		  printf "%s", line
 		}
 /^@nl$/   	{ printf "\n" }
-/^@defn / 	{ gsub("\\[\\[", "\\code{}") ; gsub("\\]\\]", "\\edoc{}")
-    		  printf "\\moddef{%s}\\%sendmoddef", substr($0, 7), defns[substr($0, 7)]
-                  defns[substr($0, 7)] = "plus"
+/^@defn / 	{ name = substr($0, 7)
+    		  printf "\\moddef{%s}\\%sendmoddef", convquotes(name), defns[name]
+                  defns[name] = "plus"
 		}
-/^@use / 	{ gsub("\\[\\[", "\\code{}") ; gsub("\\]\\]", "\\edoc{}")
-   		  printf "\\LA{}%s\\RA{}", substr($0, 6)
-		}
+/^@use / 	{ printf "\\LA{}%s\\RA{}", convquotes(substr($0, 6)) }
 /^@quote$/ 	{ quoting = 1 ; printf "\\code{}" }
 /^@endquote$/ 	{ quoting = 0 ; printf "\\edoc{}" }
 /^@file / 	{ printf "\\filename{%s}\n", substr($0, 7) }
-/^@literal / 	{ printf "%s", substr($0, 10) }'
+/^@literal / 	{ printf "%s", substr($0, 10) }
+function convquotes(s, r, i) {
+  r = ""
+  while (i = index(s, "[[")) {
+    r = r substr(s, 1, i-1) "\\code{}"
+    s = substr(s, i+2)
+    if (i = match(s, "\\]\\]+")) {
+      r = r substr(s, 1, i-1+RLENGTH-2) "\\edoc{}"
+      s = substr(s, i+RLENGTH)
+    } else {
+      r = r s "\\edoc{}"
+      s = ""
+    }
+  }
+  return r s
+}'
 status=$?
 if [ $tex -eq 1 ]; then echo -n \\ ; echo bye; fi
 if [ $latex -eq 1 ]; then echo -n \\; echo 'end{document}' ; fi
