@@ -3,7 +3,7 @@ This nonsense is the result.  (Too bad mk isn't everywhere.)
 <<script>>=
 (cat Makefile.nw; echo ""; notangle -t8 -R'generate chunks' Makefile.nw | sh) | notangle -t8 -
 <<*>>=
-# Copyright 1995 by Norman Ramsey.  All rights reserved.
+# Copyright 1995-2001 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
@@ -45,13 +45,13 @@ CAT7DIR=$(MAN)/cat$(MAN7EXT)
 LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
-all: FAQ
+all: 
 	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all 
 	for i in shell lib xdoc tex; do (cd $$i; make all); done
 	cd $(LIBSRC); make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all
 
 FAQ: FAQ.html
-	html2ascii FAQ.html > FAQ
+	sleep 1; html2ascii FAQ.html > FAQ
 
 FAQ.html: $(HOME)/www/noweb/FAQ.html
 	rm -f FAQ.html
@@ -160,7 +160,7 @@ done
 install-tex:
 	-mkdir $(TEXINPUTS) 2>/dev/null
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
-	-texhash
+	-texhash || echo "Program texhash not found or failed"
 
 install-elisp:
 	-mkdir $(ELISP) 2>/dev/null
@@ -173,11 +173,12 @@ checkin:
 	(cd elisp; ci -l $(CINAME) $(CIMSG) *.el)
 	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README FAQ COPYRIGHT nwmake *.nw
 
-source: 
+source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make CPIF=">" source); done
 	sleep 1
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
 touch:
+	touch FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
 clean:
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clean); done
