@@ -142,6 +142,19 @@ void getmodname(char *dest, int size, char *source) {
         ("I couldn't manage to extract a module name, but I'm sure I saw one");
 }
 @
+Finding code-quoting brackets is a straightforward application of 
+[[find_escaped]].
+<<header>>=
+char *quote_start (char *s, int mark);    /* find open code quote ([[) */
+char *quote_end (char *s, int mark);      /* find close code quote (]]) */
+<<C functions>>=
+char *quote_start(char *s, int mark) {
+    return find_escaped(s,"[[",NULL, mark);
+}
+char *quote_end(char *s, int mark) {
+    return find_escaped(s,"]]",NULL, mark);
+}
+@
 Here we do the magic [[find_escaped]].
 Find an arbitrary character seqence, skipping an escaped sequence (if any),
 replacing the beginning with [['\0']] if [[mark]] is set.
