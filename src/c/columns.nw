@@ -1,5 +1,6 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
+\subsection{Managing indentation and columns}
 These functions are used to help accumulate indentations across module
 boundaries by measuring the widths of various strings
 in columns.  
@@ -13,16 +14,18 @@ extern int limitcolumn (char *s, int startcolumn);
 				/* width of startcolumn blanks plus s */
 extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
+@ %def tabsize 
 <<*>>=
 #include <stdio.h>
 #include "columns.h"
 
 int tabsize = 8;
-
+<<*>>=
 int columnwidth (char *s) {             /* width of a string in columns */
   return limitcolumn(s, 0);
 }
-
+@ %def columnwidth
+<<*>>=
 int limitcolumn (char *s, int col) {
     while (*s) {
         col++;
@@ -31,7 +34,8 @@ int limitcolumn (char *s, int col) {
     }
     return col;
 }
-
+@ %def limitcolumn
+<<*>>=
 void indent_for (int width, FILE *fp) { 
                                 /* write whitespace [[width]] columns wide */
 /*fprintf(fp,"<%2d>",width); if (width>4) {fprintf(fp,"    "); width -= 4;}*/
@@ -45,3 +49,4 @@ void indent_for (int width, FILE *fp) {
         width--;
     }
 }
+@ %def indent_for
