@@ -35,7 +35,14 @@ it is indented.\stylehook
 \newdimen\codemargin
 \codemargin=0pt
 @ %def \codehsize \codemargin
-
+[[\defspace]] is the space we would like on the right of navigational info
+that appears on definition lines, so that it lines up with the text above
+and below.
+<<kernel>>=
+\newdimen\nwdefspace
+\nwdefspace=\codehsize
+\advance\nwdefspace by -\textwidth\relax
+@
 Most code is set in an environment in which [[\setupcode]] has been
 executed.
 In this environment, only [[\]], [[{]], and [[}]] have their usual
@@ -107,7 +114,7 @@ in general.
 \def\code{\leavevmode\begingroup\setupcode\newlines}
 \def\edoc{\endgroup}
 \let\maybehbox\relax
-@ %def \LA \RA \code \edoc \maybehbox
+@ %def \LA \RA \maybehbox
 
 [[\equivbox]] and [[\plusequivbox]] are used to set the
 ``\unhcopy\equivbox''
@@ -122,8 +129,10 @@ either [[\endmoddef]] or [[\plusendmoddef]].
 \setbox\plusequivbox=\hbox{$\mathord{+}\mathord{\equiv}$}
 % \moddef can't have an argument because there might be \code...\edoc
 \def\moddef{\leavevmode\kern-\codemargin\LA}
-\def\endmoddef{\RA\ifmmode\equiv\else\unhcopy\equivbox\fi}
-\def\plusendmoddef{\RA\ifmmode\mathord{+}\mathord{\equiv}\else\unhcopy\plusequivbox\fi}
+\def\endmoddef{\RA\ifmmode\equiv\else\unhcopy\equivbox\fi
+               \nobreak\hfill\nobreak}
+\def\plusendmoddef{\RA\ifmmode\mathord{+}\mathord{\equiv}\else\unhcopy\plusequivbox\fi
+               \nobreak\hfill\nobreak}
 @ %def \equivbox \plusequivbox \moddef \endmoddef \plusendmoddef
 @
 Within a code environment, margin tags might be used to mark sub-page
@@ -214,6 +223,7 @@ code is indented by [[\codemargin]].\stylehook
 <<noweb.sty>>=
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
+\advance\nwdefspace by \codemargin	% and fix adjustment for def/use
 @
 [[\noweboptions{shift}]] is used to shift the whole page left to make room for
 the wide code lines.
@@ -303,7 +313,13 @@ font instead of
 .B "\\\\normalsize."
 @ \fi
 @ [[\nowebsize]] governs the size at which code is set; users who want
-to minimize code can [[\let\nowebsize=\small]].  [[\nwcodetopsep]] is
+to minimize code can [[\let\nowebsize=\small]].  
+Slitex users should try
+\begin{quote}
+[[\def\nowebsize{\normalsize\baselineskip=20pt \parskip=5pt }]]
+\end{quote}
+to avoid code lines that are too far apart.
+[[\nwcodetopsep]] is
 the glue placed before code chunks.\stylehook
 <<noweb.sty>>=
   \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
@@ -329,6 +345,18 @@ Note that [[\hsize]] isn't altered.
   \parskip\z@ \parindent\z@ \parfillskip\@flushglue
 @ The penalty inserted between verbatim lines would normally be
 [[\interlinepenalty]], but we want to prohibit breaks there.
+@
+Note the bug lurking somewhere in this code, as reported by Steven Ooms:
+\begin{quote}
+I have some lay-out
+problems in the documentation chunks.  When using the (La)TeX commands
+[[\hline]] or [[\vtop]] the right margin is always extended far beyond the page
+margin after the first code chunk has been typeset.  I'm still looking for
+the exact cause of it, but to me it seems that LaTeX supposes for those
+commands that the line width for the documentation chunk is as large as that
+for code chunks, which isn't true in reality.
+\end{quote}
+@
 <<[[\obeylines]] setup>>=
   \@@par
   \def\par{\leavevmode\null \@@par \penalty\nwcodepenalty}%
@@ -338,12 +366,22 @@ code chunk.  If you set it to 10000, code will never be broken across
 pages.\stylehook{}  I guess this should be settable in [[\noweboptions]].
 <<noweb.sty>>=
 \newcount\nwcodepenalty  \nwcodepenalty=\@highpenalty
-@ The [[\catcode`\-=12]] accounts for the addition of [[-]] to the
-list of characters reset by [[\@noligs]] in \LaTeX2e.
-<<zap ligatures, fix spaces>>=
-  \catcode`\`\active \@noligs \catcode`\-=12
-  \setupcode \frenchspacing \@vobeyspaces
 @ %def \nwcodepenalty
+The cursing chunk accounts for the addition of a mess of characters
+to those reset by [[\@noligs]] in \LaTeX2e.
+<<zap ligatures, fix spaces>>=
+  \@noligs <<make all those damn active characters ``other''>>
+  \setupcode \frenchspacing \@vobeyspaces
+@
+We can't make [[`]] ``other,'' because then we'll get ligatures.
+(Why Don put these ligatures in the [[\tt]] font I wish I knew.)
+But we'll step on all the others.
+<<make all those damn active characters ``other''>>=
+  \ifx\verbatim@nolig@list\undefined\else
+    \let\do=\nw@makeother \verbatim@nolig@list \do@noligs\`
+  \fi
+<<noweb.sty>>=
+\def\nw@makeother#1{\catcode`#1=12 }
 @
 {\tt noweave} uses [[\nwbegindocs{nnn}]] and [[\nwenddocs]] to bracket
 documentation chunks.
@@ -369,20 +407,15 @@ turn it on in general (this is relevant for the {\tt report} style):
 \def\nwdocspar{\par\semifilbreak}
 @
 
-{\tt noweave} brackets quoted code with [[\code]] and [[\edoc]], which handle
-the font and environment for code.
-Because quoted code often appears in arguments, {\tt noweave} now
-(with version 2.5)
-escapes all {\TeX} specials within it, so the category-code changes
-aren't strictly necessary.
+{\tt noweave} doesn't bracket quoted code with [[\code]] and [[\edoc]] any more.
+It probably should do something nifty, just to make {\TeX} hackers happy, but it doesn't.
 <<noweb.sty>>=
 \def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
 \let\edoc=\endgroup
-@ %def \code \edoc
 @
 \subsection{The {\tt noweb} page style}
 Headers contain file name, date, and page number.
-{\tt noweave} emits [[\filename{]]{\em name}[[}]] for each new file.
+{\tt noweave} emits [[\nwfilename{]]{\em name}[[}]] for each new file.
 In the {\tt noweb} page style, new files cause page breaks;
 otherwise they are ignored.
 <<noweb.sty>>=
@@ -407,11 +440,13 @@ otherwise they are ignored.
   \let\subsubsectionmark\@gobble
   \let\paragraphmark\@gobble
   \let\subparagraphmark\@gobble
-  \def\filename##1{\markboth{##1}{##1}\let\filename=\@laterfilename}%
+  \def\nwfilename{\begingroup\let\do\@makeother\dospecials
+                \catcode`\{=1 \catcode`\}=2 \nw@filename}
+  \def\nw@filename##1{\endgroup\markboth{##1}{##1}\let\nw@filename=\nw@laterfilename}%
 }
-\def\@laterfilename#1{\clearpage \markboth{#1}{#1}}
-\let\filename=\@gobble
-@ %def \@original@textwidth \ps@noweb \filename
+\def\nw@laterfilename#1{\endgroup\clearpage \markboth{#1}{#1}}
+\let\nwfilename=\@gobble
+@ %def \@original@textwidth \ps@noweb \nwfilename
 @
 \subsection{Chunk cross-reference}
 [[\nwalsodefined]], [[\nwused]], and [[\nwnotused]] are emitted by the {\tt
@@ -439,10 +474,11 @@ usuall by making [[\rightskip]] naturally zero but stretchable.
         \interlinepenalty\nwcodepenalty
         \let\\\relax\footnotesize\Rm #1\@@par\penalty\nwcodepenalty}}
 @ %def \nwcodecomment 
+This stuff is used at the end of a chunk.
 <<noweb.sty>>=
-\def\nwalsodefined#1{\nwcodecomment{This definition is continued \nwpageprep\ \@pagesl{#1}.}}
-\def\nwused#1{\nwcodecomment{This code is used \nwpageprep\ \@pagesl{#1}.}}
-\def\nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
+\def\@nwalsodefined#1{\nwcodecomment{This definition is continued \nwpageprep\ \@pagesl{#1}.}}
+\def\@nwused#1{\nwcodecomment{This code is used \nwpageprep\ \@pagesl{#1}.}}
+\def\@nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
 \def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt \@stripstar#1*\stripped}.}}
 \def\@stripstar#1*#2\stripped{#1}
 @ %def \nwalsodefined \nwused \nwnotused \nwoutput
@@ -450,6 +486,55 @@ usuall by making [[\rightskip]] naturally zero but stretchable.
 \if@firstnwcodecomment
   \vskip\nwcodecommentsep\penalty\nwcodepenalty\@firstnwcodecommentfalse
 \fi
+@
+This stuff on the definition line.
+Note the hooks\stylehook{} for pointer styles.
+<<noweb.sty>>=
+\newcommand{\nwprevdefptr}[1]{%
+  \mbox{$\mathord{\triangleleft}\,\mathord{\mbox{\subpageref{#1}}}$}}
+\newcommand{\nwnextdefptr}[1]{%
+  \mbox{$\mathord{\mbox{\subpageref{#1}}}\,\mathord{\triangleright}$}}
+
+\newcommand{\@nwprevnextdefs}[2]{%
+  {\nwtagstyle
+  \ifx\relax#1\else ~~\nwprevdefptr{#1}\fi
+  \ifx\relax#2\else ~~\nwnextdefptr{#2}\fi}}
+\newcommand{\@nwusesondefline}[1]{{\nwtagstyle~~(\@pagenumsl{#1})}}
+\newcommand{\@nwstartdeflinemarkup}{\nobreak\hskip 1.5em plus 1fill\nobreak}
+\newcommand{\@nwenddeflinemarkup}{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
+@
+And here are the options we use to choose one or the other.
+<<noweb.sty>>=
+\def\nwopt@longxref{%
+  \let\nwalsodefined\@nwalsodefined
+  \let\nwused\@nwused
+  \let\nwnotused\@nwnotused
+  \let\nwprevnextdefs\@gobbletwo
+  \let\nwusesondefline\@gobble
+  \let\nwstartdeflinemarkup\relax
+  \let\nwenddeflinemarkup\relax
+}
+\def\nwopt@shortxref{%
+  \let\nwalsodefined\@gobble
+  \let\nwused\@gobble
+  \let\nwnotused\@gobble
+  \let\nwprevnextdefs\@nwprevnextdefs
+  \let\nwusesondefline\@nwusesondefline
+  \let\nwstartdeflinemarkup\@nwstartdeflinemarkup
+  \let\nwenddeflinemarkup\@nwenddeflinemarkup
+}
+\nwopt@shortxref % to hell with backward compatibility!
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B longxref, shortxref
+Use either long, Knuth-style chunk cross-reference, or short,
+Hanson-style chunk cross-reference.
+The former uses small paragraphs after the chunk;
+the latter uses symbols on the definition line.
+Defaults to 
+.B shortxref.
+@ \fi
 <<noweb.sty>>=
 \newskip\nwcodecommentsep \nwcodecommentsep=3pt plus 1pt minus 1pt
 \newif\if@firstnwcodecomment\@firstnwcodecommenttrue
@@ -531,12 +616,17 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
   <<add range to range list>>\let\\=\relax
   \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+\def\@pagenumsl#1{%  list of labels -- doesn't include word `pages', commas, or `and'
+  \gdef\nw@pages{}\@nwpagecount=0
+  \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
+  <<add range to range list>>\def\\{\let\\=~}\nw@pages}
 \def\subpages#1{% list of {{subpage}{page}}
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1}\@tempa
             \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
   <<add range to range list>>\let\\=\relax
   \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
+\def\@nwaddrange{<<add range to range list>>}
 @
 [[\nwpageword]] and [[\nwpageprep]] let you change the wording of the cross-reference 
 information.
@@ -587,13 +677,15 @@ reference is actually defined, it then goes on to check whether the
 control sequence [[2on]]\LA{}{page referenced}\RA{} is defined and sets the
 [[\ref]] value to get [[a]] etc.\ if so.  The magic, of course, is in
 defining the [[2on]] bit appropriately.
+[[\subpageref]] also tries to include the right hyperstuff for xhdvi.
 <<noweb.sty>>=
 \newcommand{\subpageref}[1]{%
+  \nwhyperreference{#1}{%
   \@ifundefined{r@#1}%
     {\pageref{#1}}%
     {\@ifundefined{2on\@pageref{#1}}%
       {\pageref{#1}}%
-      {\expandafter\expandafter\expandafter\nwthepagenum\csname r@#1\endcsname}}}
+      {\expandafter\expandafter\expandafter\nwthepagenum\csname r@#1\endcsname}}}}
 @ %def \subpageref
 [[\subpagepair]] produces a [[{subpage}{page}]] pair.
 <<noweb.sty>>=
@@ -613,8 +705,11 @@ if the reference is undefined.
 @
 [[\sublabel]] is like the [[\label]] command, except that it writes
 [[\newsublabel]] onto the [[.aux]] file rather than [[\newlabel]].
+For hyperreferencing, all labels must be hypertext 
+anchors, for which we use [[\nwblindhyperanchor]].
 <<noweb.sty>>=
 \newcommand{\sublabel}[1]{%
+  \nwblindhyperanchor{#1}%
   \@bsphack\if@filesw {\let\thepage\relax
    \def\protect{\noexpand\noexpand\noexpand}%
    \edef\@tempa{\write\@auxout{\string
@@ -777,19 +872,7 @@ documentation chunk.
     {\global\@namedef{nwixl@#2}{#1{#3}}}%
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
 @ %def \nwixadd
-[[\nwbs]] is used in the printable form of identifiers to represent a backslash.
-[[\nwbraces]] is used to give escaped braces the appropriate treatment.
-<<kernel>>=
-\chardef\nwbs=`\\
-\def\donwbraces{\chardef\{='173 \chardef\}='175 }
-% don't use `\{ literals since those are latex `fragile'
-@ %def \donwbraces \nwbs
-<<nwmac.tex (after kernel)>>=
-\let\nwbraces=\donwbraces
-@ %def \nwbraces
-<<noweb.sty>>=
-\def\nwbraces{\protect\donwbraces}
-@ %def \nwbraces
+@
 \subsubsection{Writing lists with commas and ``and''}
 You get one of
 \begin{itemize}
@@ -1007,6 +1090,18 @@ show page numbers of definitions and uses of each chunk.
 @ \fi
 
 @
+\subsection{support for hypertext with {\tt hyper.sty}}
+Initial support courtesy of Balasubramanian Narasimhan.
+<<noweb.sty>>=
+\newcommand\nwhyperreference[2]{%
+  \@ifundefined{hyperreference}%
+     {#2\global\let\nwhyperreference\@gobble}%
+     {\hyperreference{#1}{#2}\global\def\nwhyperreference\hyperreference}}
+\newcommand\nwblindhyperanchor[1]{%
+  \@ifundefined{blindhyperanchor}%
+     {\global\let\nwblindhyperanchor\@gobble}%
+     {\blindhyperanchor{#1}\global\def\nwblindhyperanchor\blindhyperanchor}}
+@
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
 
@@ -1077,7 +1172,7 @@ First we make [[@]] a letter so that we can use `private' macro names.
     {\def\code##1{[[}\def\edoc##1{]]}\message{[#6]}}
     \settocparms{#1}
     \def\themodtitle{#6}
-    {\def\code{\string\code}\def\edoc{\string\edoc}%
+%%%%    {\def\code{\string\code}\def\edoc{\string\edoc}%
     \edef\next{\noexpand\write\cont{\tocskip
         \tocline{\hskip\tocindent\tocstyle\relax\themodtitle}
                 {\noexpand\the\pageno}}}\next % write to toc
@@ -1113,9 +1208,8 @@ First we make [[@]] a letter so that we can use `private' macro names.
 \def\paragraph#1{\startsection{4}{0pt}{1.5ex}{0ex}{\it}{#1}}
 
 <<kernel>>
-<<nwmac.tex (after kernel)>>
 
-\def\filename#1{\vfil\eject\mark{#1}}
+\def\nwfilename#1{\vfil\eject\mark{#1}}
 
 \def\nwbegindocs#1{\filbreak}
 \def\nwenddocs{\par}
@@ -1129,7 +1223,7 @@ First we make [[@]] a letter so that we can use `private' macro names.
   \gdef\bchack#1^^M{\relax#1}%
 }
 @ %def \section \chapter \section \subsection \subsubsection \paragraph
-@ %def \nwbegindocs \nwenddocs \nwbegincode \nwendcode \filename
+@ %def \nwbegindocs \nwenddocs \nwbegincode \nwendcode \nwfilename
 <<nwmac.tex>>=
 \edef\contentsfile{\jobname.toc } % file that gets table of contents info
 \def\readcontents{\expandafter\input \contentsfile}
