@@ -21,6 +21,7 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
+static char rcsid[] = "$Id$";
 <<Include files>>
 <<header>>
 <<Type definitions>>
@@ -100,7 +101,7 @@ struct goto_node {
 @ %def goto_node
 <<Type definitions>>=
 struct recognizer {
-  Goto_Node *root[128]; /* might want 256, depending on the character set */
+  Goto_Node *root[256]; /* might want 128, depending on the character set */
   char *alphas;
   char *syms;
   int max_depth;
