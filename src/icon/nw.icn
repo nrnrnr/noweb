@@ -1,0 +1,50 @@
+# noweave in Icon
+
+procedure main(args)
+  kind := ""
+  quoting := latex := &null
+  tex := 1
+  options := "noweb"
+  while case args[1] of {
+          "-l" : { latex := 1; tex := &null }
+          "-n" : { latex := tex := &null }
+          "-x" : options ||:= ",noxref"
+        } do get(args)
+  if \tex then write("\\input nwmac")
+  if \latex then write("\\documentstyle[", options, "]{article}\n\\begin{document}")
+  while line := read() do
+    line ? (="@" & pass2(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+  if \tex then write("\\bye")
+  if \latex then write("\\end{document}")
+end
+
+global kind, quoting
+
+procedure pass2(name, arg)
+  case name of {
+    "begin"    : arg ? write("\\begin", kind := tab(many(&letters)), 
+		  	     "{", tab(many(' ')) & tab(0), "}")
+    "end"      : arg ? write("\\end", tab(many(&letters)), kind := "")
+    "text"     : arg ? {
+                   if kind == "code" | \quoting then
+                      while writes(tab(upto('\\{}'))) do writes("\\", move(1))
+                   writes(tab(0))
+                 }
+    "nl"       : write()
+    "defn"     : writes("\\moddef{", gsub(arg, ["[[", "]]"], ["\\code{}", "\\edoc{}"]), 
+                        "}\\endmoddef")
+    "use"      : writes("\\LA{}",    gsub(arg, ["[[", "]]"], ["\\code{}", "\\edoc{}"]), 
+                        "\\RA{}")
+    "quote"    : { quoting := 1;     writes("\\code{}") }
+    "endquote" : { quoting := &null; writes("\\edoc{}") }
+    "file"     : write("\\filename{", arg, "}")
+    "literal"  : writes(arg)
+  }
+  return
+end
+
+procedure gsub(s, old, new)
+  every i := 1 to *old do
+    while j := find(old[i], s) do s[j+:*old[i]] := new[i]
+  return s
+end
