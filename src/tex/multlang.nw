@@ -16,27 +16,19 @@
 \begin{quote}
 {\bf Explanatory note} on the changes made by Miguel Filgueiras
 (DCC-FCUP \& LIACC, Universidade do Porto)\\
-This is a version of the document ``{\TeX} and {\LaTeX} support for
-{\tt noweb}'' written by Norman Ramsay that may be used to generate
-not only the files {\tt noweb.sty} and {\tt nwmac.tex} but also a file
-{\tt noweb-ml.sty} that allows for multilingual support. All the
+The changes provide multilingual support. The
 English wording for text inserted by {\tt noweb.sty} was replaced by
 macros that are then defined in a specific language depending on the
 (apparently standard) {\LaTeX} macro [[\languagename]]. This macro is
 defined by the {\tt babel} package, and therefore if this package is
 included with the appropriate language name {\em before} the inclusion
-of {\tt noweb-ml.sty}, all the wording will appear in that language.
+of the  {\tt noweb} package, all the wording will appear in that language.
 Note however that at present there is only support for English
 (preserving the original text), Portuguese, German and French. The latter is
 faulty: the translations might be not the best ones, and there are
 bugs in the implementation that I could not solve (I am no experienced
 {\TeX} user). Other languages can easily be accomodated by inserting
-new translations in subsection~\ref{subsection:langdeps}. Probably the
-definition of {\tt noweb-ml.sty} could become that of {\tt noweb.sty}
-as it is more general and defaults to English when [[\languagename]]
-is undefined or has a unknown value. This can be done easily in that
-subsection. No changes were made to the plain {\TeX} support, nor to
-the manual page.
+new translations in subsection~\ref{subsection:langdeps}. 
 \end{quote}
 
 This document describes the {\TeX} code that supports {\tt noweave}
@@ -48,7 +40,7 @@ This file contains both plain {\TeX} and {\LaTeX} support:
 <<nwmac.tex>>=
 % nwmac.tex -- plain TeX support for noweb
 % DON'T read or edit this file!  Use ...noweb-source/tex/support.nw instead.
-<<noweb-base>>=
+<<noweb.sty>>=
 % noweb-LANGUAGE.sty -- LaTeX support for noweb
 % DON'T read or edit this file!  Use .../support-multiling.nw instead.
 @
@@ -148,7 +140,7 @@ Setting up the space code has to be done differently for {\TeX} and
 (Fix from Rafael Laboissiere.)
 <<nwmac.tex>>=
 {\obeyspaces\global\let =\ } % from texbook, p 381
-<<noweb-base>>=
+<<noweb.sty>>=
 {\obeyspaces\AtBeginDocument{\global\let =\ }} % from texbook, p 381
 @ 
 
@@ -193,7 +185,7 @@ Within a code environment, margin tags might be used to mark sub-page
 numbers in the margins, separated by [[\nwmarginglue]].\stylehook
 The interaction with [[\moddef]] involves tricky kerning.
 The tag itself is displayed using [[\nwthemargintag]]
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@nomargintag{\let\nwmargintag=\@gobble}
 \def\nwopt@margintag{%
   \def\nwmargintag##1{\leavevmode\llap{##1\kern\nwmarginglue\kern\codemargin}}}
@@ -215,7 +207,7 @@ left margin. (Default)
 Don't use margin tags.
 @ \fi
 [[\nwtagstyle]] determines the style in which tags are displayed.\stylehook
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwtagstyle{\footnotesize\Rm}
 @
 <<kernel>>=
@@ -259,11 +251,11 @@ extra [[\reset@font]] does no harm.]
 \section{The {\tt noweb} document-style option for {\LaTeX}}
 \label{section:sty}
 {\LaTeX} support begins with the kernel shown above.
-<<noweb-base>>=
+<<noweb.sty>>=
 <<kernel>>
 @
 \subsection{Support for noweb options}
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\noweboptions#1{%
   \def\@nwoptionlist{#1}%
   \@for\@nwoption:=\@nwoptionlist\do{%
@@ -274,7 +266,7 @@ extra [[\reset@font]] does no harm.]
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
 code is indented by [[\codemargin]].\stylehook
-<<noweb-base>>=
+<<noweb.sty>>=
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
 \advance\nwdefspace by \codemargin      % and fix adjustment for def/use
@@ -290,7 +282,7 @@ code is indented by [[\codemargin]].\stylehook
 [[\noweboptions{shift}]] is used to shift the whole page left to make room for
 the wide code lines.
 It may be emitted by {\tt noweave -shift}, or it might be given by a user.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@shift{%
   \dimen@=-0.8in
   \if@twoside                 % Values for two-sided printing:
@@ -342,7 +334,7 @@ the catcode changes is setting [[\linewidth]]; this will avoid some
 overfull hboxen when the code lines are too long, but the lines won't
 be broken anyhow (even within chunk names because of the
 [[\maybehbox]] definition).
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwbegincode#1{%
   \begingroup
   <<[[\nwbegincode]] separation and penalties>>
@@ -355,7 +347,7 @@ be broken anyhow (even within chunk names because of the
   \endtrivlist}
 @ %def \nwbegincode \nwendcode webcode
 @ This is just common code between [[\nwbegincode]] and [[webcode]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\@begincode{%
   <<[[\trivlist]] clich\'e (\`a la {\Tt verbatim})>>
   \linewidth\codehsize
@@ -386,7 +378,7 @@ Slitex users should try
 to avoid code lines that are too far apart.
 [[\nwcodetopsep]] is
 the glue placed before code chunks.\stylehook
-<<noweb-base>>=
+<<noweb.sty>>=
   \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
   \let\nowebsize=\normalsize
   \def\nwopt@tinycode{\let\nowebsize=\tiny}
@@ -438,7 +430,7 @@ for code chunks, which isn't true in reality.
 @ [[\nwcodepenalty]] is the penalty for breaking between lines in a
 code chunk.  If you set it to 10000, code will never be broken across
 pages.\stylehook{}  I guess this should be settable in [[\noweboptions]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\nwcodepenalty  \nwcodepenalty=\@highpenalty
 @ %def \nwcodepenalty
 The cursing chunk accounts for the addition of a mess of characters
@@ -454,7 +446,7 @@ But we'll step on all the others.
   \ifx\verbatim@nolig@list\undefined\else
     \let\do=\nw@makeother \verbatim@nolig@list \do@noligs\`
   \fi
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nw@makeother#1{\catcode`#1=12 }
 @
 {\tt noweave} uses [[\nwbegindocs{nnn}]] and [[\nwenddocs]] to bracket
@@ -468,14 +460,14 @@ have another [[\filbreak]] after it---see [[\nwbegincode]].)
 new paragraph if the previous chunk didn't end one, i.e.\ didn't enter
 vmode; if it does start a new one, it's only indented by the use of
 [[\nwdocspar]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwbegindocs#1{\ifvmode\noindent\fi}
 \let\nwenddocs=\relax
 \let\nwdocspar=\filbreak
 @ %def \nwbegindocs \nwdocspar \nwenddocs
 The page-breaking strategy implies ragged bottom pages, so we should
 turn it on in general (this is relevant for the {\tt report} style):
-<<noweb-base>>=
+<<noweb.sty>>=
 \raggedbottom
 <<nwmac.tex>>=
 \def\nwdocspar{\par\semifilbreak}
@@ -483,7 +475,7 @@ turn it on in general (this is relevant for the {\tt report} style):
 
 {\tt noweave} doesn't bracket quoted code with [[\code]] and [[\edoc]] any more.
 It probably should do something nifty, just to make {\TeX} hackers happy, but it doesn't.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
 \let\edoc=\endgroup
 @
@@ -492,7 +484,7 @@ Headers contain file name, date, and page number.
 {\tt noweave} emits [[\nwfilename{]]{\em name}[[}]] for each new file.
 In the {\tt noweb} page style, new files cause page breaks;
 otherwise they are ignored.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newdimen\@original@textwidth
 \def\ps@noweb{%
   \@original@textwidth=\textwidth
@@ -540,7 +532,7 @@ We firkled with [[\rightskip]] in [[\nwbegincode]] above; now we want to
 reset it so that paragraphs are the normal width ([[\textwidth]],
 possibly less [[\codemargin]]) and set ragged right.  This is done as
 usuall by making [[\rightskip]] naturally zero but stretchable.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwcodecomment#1{\@@par\penalty\nwcodepenalty
     <<add [[\nwcodecommentsep]] if this is the first [[\nwcodecomment]]>>%
     \hspace{-\codemargin}{%
@@ -549,7 +541,7 @@ usuall by making [[\rightskip]] naturally zero but stretchable.
         \let\\\relax\footnotesize\Rm #1\@@par\penalty\nwcodepenalty}}
 @ %def \nwcodecomment 
 This stuff is used at the end of a chunk.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\@nwalsodefined#1{\nwcodecomment{\@nwlangdepdef\ \nwpageprep\ \@pagesl{#1}.}}
 \def\@nwused#1{\nwcodecomment{\@nwlangdepcud\ \nwpageprep\ \@pagesl{#1}.}}
 \def\@nwnotused#1{\nwcodecomment{\@nwlangdeprtc.}}
@@ -563,7 +555,7 @@ This stuff is used at the end of a chunk.
 @
 This stuff on the definition line.
 Note the hooks\stylehook{} for pointer styles.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\nwprevdefptr}[1]{%
   \mbox{$\mathord{\triangleleft}\,\mathord{\mbox{\subpageref{#1}}}$}}
 \newcommand{\nwnextdefptr}[1]{%
@@ -578,7 +570,7 @@ Note the hooks\stylehook{} for pointer styles.
 \newcommand{\@nwenddeflinemarkup}{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
 @
 And here are the options we use to choose one or the other.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@longxref{%
   \let\nwalsodefined\@nwalsodefined
   \let\nwused\@nwused
@@ -609,7 +601,7 @@ the latter uses symbols on the definition line.
 Defaults to 
 .B shortxref.
 @ \fi
-<<noweb-base>>=
+<<noweb.sty>>=
 \newskip\nwcodecommentsep \nwcodecommentsep=3pt plus 1pt minus 1pt
 \newif\if@firstnwcodecomment\@firstnwcodecommenttrue
 @
@@ -618,7 +610,7 @@ The goal is to combine sub-page numbers in a way that makes sense.
 Multiple sub-pages of one page become that page, and individual
 pages are combined into ranges.
 (A range may be only one page.)
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\@nwlopage\newcount\@nwhipage  % range lo..hi-1
 \newcount\@nwlosub              % subpage of lo
 \newcount\@nwhisub              % subpage of hi
@@ -679,12 +671,12 @@ pages are combined into ranges.
 \fi
 <<normal range>>=  
 \edef\@tempa{\noexpand\noexpand\noexpand\\{{\number\@nwlopage--\number\@nwhipage}{}}}
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\@nwpagetemp
 @
 The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 [[\subpages]] works from a list of [[{{subpage}{page}}]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\@nwpagecount
 \def\@nwfirstpagel#1{% label
   \@ifundefined{r@#1}{<<warn of undefined reference to [[#1]] and add page ??>>}{%
@@ -692,7 +684,7 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 \def\@nwnextpagel#1{% label
   \@ifundefined{r@#1}{<<warn of undefined reference to [[#1]] and add page ??>>}{%
     \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}{#1}}\@tempa}}
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
@@ -706,7 +698,7 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
   <<add range to range list>>%
   \def\\##1{\@nwhyperpagenum##1\let\\=\@nwpagenumslrest}\nw@pages}
 \def\@nwpagenumslrest#1{~\@nwhyperpagenum#1}
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\subpages#1{% list of {{subpage}{page}}
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1{}}\@tempa
@@ -717,7 +709,7 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 @
 [[\nwpageword]] and [[\nwpageprep]] let you change the wording of the cross-reference 
 information.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwpageword{\@nwlangdepchk}  % chunk, was page
 \def\nwpageprep{\@nwlangdepin}     % in, was on
 <<warn of undefined reference to [[#1]] and add page ??>>=
@@ -766,7 +758,7 @@ items or five items, depending on whether hypertext is used.
 Since we're only ever interested in the first two items, we use a
 hack---the ``do the specified thing'' must be defined as
 \mbox{[[\def\dome#1#2#3\\{...}]]} where [[...]] uses only the first two parameters.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\nw@genericref[2]{% what to do, name of ref
   \expandafter\nw@g@nericref\csname r@#2\endcsname#1{#2}}
 \newcommand\nw@g@nericref[3]{% control sequence, what to do, name
@@ -777,7 +769,7 @@ hack---the ``do the specified thing'' must be defined as
   \fi}
 @ Much of what we want can be done by pulling out the first, second,
 or first and second elements of a ref.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nw@selectone#1#2#3\\{#1}
 \def\nw@selecttwo#1#2#3\\{#2}
 \def\nw@selectonetwo#1#2#3\\{{#1}{#2}}
@@ -788,14 +780,14 @@ control sequence [[2on]]\LA{}{page referenced}\RA{} is defined and sets the
 [[\ref]] value to get [[a]] etc.\ if so.  The magic, of course, is in
 defining the [[2on]] bit appropriately.
 [[\subpageref]] also tries to include the right hyperstuff for xhdvi.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\subpageref}[1]{%
   \nwhyperreference{#1}{\nw@genericref\@subpageref{#1}}}
 \def\@subpageref#1#2#3\\{%
   \@ifundefined{2on#2}{#2}{\nwthepagenum{#1}{#2}}}
 @ %def \subpageref
 [[\subpagepair]] produces a [[{subpage}{page}]] pair.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\subpagepair}[1]{%  % produces {subpage}{page}
   \@ifundefined{r@#1}%
     {{0}{0}}%
@@ -807,7 +799,7 @@ defining the [[2on]] bit appropriately.
 [[\newsublabel]] onto the [[.aux]] file rather than [[\newlabel]].
 For hyperreferencing, all labels must be hypertext 
 anchors, for which we use [[\nwblindhyperanchor]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\sublabel}[1]{%
   \nwblindhyperanchor{#1}%
   \@bsphack\if@filesw {\let\thepage\relax
@@ -818,7 +810,7 @@ anchors, for which we use [[\nwblindhyperanchor]].
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
 @ %def \sublabel
 [[\nosublabel]] creates a label with a sub-page part of~0.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\nosublabel}[1]{%
   \@bsphack\if@filesw {\let\thepage\relax
    \def\protect{\noexpand\noexpand\noexpand}%
@@ -834,7 +826,7 @@ label name and the second is  [[{<<ref value>>}{<<page number>>}]].
 (Note that the only definition here which needs to be
 global is the one which is, and that [[\global]] is redefined by
 [[\enddocument]], which will bite you if you use it\dots)
-<<noweb-base>>=
+<<noweb.sty>>=
 <<definition of [[\newsublabel]]>>
 @
 Before we create a [[\newsublabel]] for the first time, we set the
@@ -906,7 +898,7 @@ loaded, because that is restricted to the preamble, and
 the whole document is processed.
 We therefore test for [[\@secondoffive]].
 This is lame, but what else can we do?
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\nw@settrailers{% -- won't work on first run
   \@ifpackageloaded{nameref}%
      {\gdef\nw@labeltrailers{{}{}{}}}%
@@ -921,7 +913,7 @@ The goal here is to save them up until they're all equivalent to the
 label on the next chunk.
 We have to control expansion so chunks like \subpageref{cl1}
 (\subpageref{cl2}) can be labelled twice.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand{\nextchunklabel}[1]{%
   \nwblindhyperanchor{#1}%   % looks slightly bogus --- nr
   \@bsphack\if@filesw {\let\thepage\relax
@@ -943,7 +935,7 @@ Can be used in for concise chunk cross-reference with, e.g.,
 .RE
 @
 We need to define these.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\last@page{\relax}
 \newcount\sub@page
 @ %def \last@page \sub@page
@@ -951,7 +943,7 @@ We need to define these.
 We no longer use Rainer's new expandable definitions of [[\ref]] and
 [[\pageref]] to minimise the risk of nasty surprises; enough time has
 elapsed that this should no longer be necessary.
-<<old noweb-base>>=
+<<old noweb.sty>>=
 % RmS 92/08/14: made \ref and \pageref robust
 \def\ref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
     {\expandafter\expandafter\expandafter
@@ -968,7 +960,7 @@ elapsed that this should no longer be necessary.
 
 Here a a couple of hooks for formatting sub-page numbers,
 which can be alphabetic, numeric, or omitted.\stylehook
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\@alphasubpagenum#1#2{#2\ifnum#1=0 \else\@alph{#1}\fi}
 \def\@nosubpagenum#1#2{#2}
 \def\@numsubpagenum#1#2{#2\ifnum#1=0 \else.\@arabic{#1}\fi}
@@ -995,7 +987,7 @@ implies
 Here's a righteous hack: we get the effect of WEB-like chunk numbers
 just by redefining [[\sublabel]] to use a counter instead of the current page number.
 Since the numbers are all distinct, no sub-page number is ever used.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\nw@chunkcount
 \nw@chunkcount=\@ne
 \newcommand{\weblabel}[1]{%
@@ -1025,7 +1017,7 @@ a label defined with [[\sublabel]] or [[\nosublabel]].
 Either the label is the [[\sublabel]] of the code chunk in which the definition or use
 appears, or it is a [[\nosublabel]] appearing in the middle of a
 documentation chunk.
-<<noweb-base>>=
+<<noweb.sty>>=
 % \nwindexdefn{printable name}{identifying label}{label of chunk}
 % \nwindexuse{printable name}{identifying label}{label of chunk}
 
@@ -1039,7 +1031,7 @@ documentation chunk.
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
 @ %def \nwindexdefn \nwindexuse \@auxix
-<<noweb-base>>=
+<<noweb.sty>>=
 % \nwixadd{marker}{idlabel}{subpage label}
 \def\nwixadd#1#2#3{%
   \@ifundefined{nwixl@#2}%
@@ -1050,13 +1042,13 @@ documentation chunk.
 \subsubsection{Subscripted identifiers}
 We use either explicit subscripts or hyperlinks to point identifiers
 to their definitions.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\@nwsubscriptident#1#2{\mbox{$\mbox{#1}_{\mathrm{\subpageref{#2}}}$}}
 \def\@nwnosubscriptident#1#2{#1}
 \def\@nwhyperident#1#2{\leavevmode\nwhyperreference{#2}{#1}}
 @ 
 We can use subscripts, hyperlinks, or nothing on all identifiers.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@subscriptidents{%
   \let\nwlinkedidentq\@nwsubscriptident
   \let\nwlinkedidentc\@nwsubscriptident
@@ -1075,7 +1067,7 @@ We can use subscripts, hyperlinks, or nothing on all identifiers.
 }
 @ 
 We can change only identifiers appearing in quoted code.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@subscriptquotedidents{%
   \let\nwlinkedidentq\@nwsubscriptident
 }
@@ -1090,7 +1082,7 @@ We can change only identifiers appearing in quoted code.
 }
 @ 
 The default is to hyperlink everything.
-<<noweb-base>>=
+<<noweb.sty>>=
 \nwopt@hyperidents
 @ 
 \iffalse
@@ -1129,7 +1121,7 @@ You get one of
 \item ``$a$, $\ldots$, $b$, and $c$''
 \end{itemize}
 Plus [[\\]] is applied to each element of the list.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\@commacount
 \def\commafy#1{%
   {\nwix@listcount{#1}\@commacount=\nwix@counter
@@ -1149,7 +1141,7 @@ If the elements are index elements, they are {\em[[{]]printable
 identifier[[}{]]label[[}]]} pairs.
 The other kind is a list of sub-page labels, in which each 
 element is preceded by either [[\nwixd]] or [[\nwixu]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwix@cons#1#2{% {list}{\marker{element}}
   {\toks0=\expandafter{#1}\def\@tempa{#2}\toks2=\expandafter{\@tempa}%
    \xdef#1{\the\toks0 \the\toks2 }}}
@@ -1158,7 +1150,7 @@ The reference list for an identifier labelled {\em id}
 is always called [[\nwixl@]]{\em id}.
 Most applications will work with reference lists by applying [[\\]]
 either to the defs or to the uses.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwix@uses#1{% {label}
   \def\nwixu{\\}\let\nwixd\@gobble\@nameuse{nwixl@#1}}
 \def\nwix@defs#1{% {label}
@@ -1167,7 +1159,7 @@ either to the defs or to the uses.
 
 Some applications count uses to see whether there is any need to
 display information.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcount\nwix@counter
 \def\nwix@listcount#1{% {list with \\}
   {\count@=0
@@ -1180,7 +1172,7 @@ display information.
 \subsubsection{Supporting a mini-index at the end of each chunk}
 When displaying identifiers used, show the identifier and its
 definitions.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwix@id@defs#1{% index pair
   {{\Tt \@car#1\@nil}%
   \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
@@ -1189,7 +1181,7 @@ definitions.
 @ %def \nwidentuses \nwix@id@defs
 The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwix@totaluses#1{% list of index pairs
   {\count@=0
    \def\\##1{\nwix@usecount{\@cdr##1\@nil}\advance\count@ by\nwix@counter}%
@@ -1209,7 +1201,7 @@ if none of the identifiers defined is ever used.
     \nwcodecomment{\@nwlangdepdfs:}%
     {\def\\##1{\nwix@id@uses ##1}#1}%
   \fi}
-<<noweb-base>>=
+<<noweb.sty>>=
 \newif\ifnw@hideunuseddefs\nw@hideunuseddefsfalse
 \def\nwopt@hideunuseddefs{\nw@hideunuseddefstrue}
 @ 
@@ -1220,7 +1212,7 @@ if none of the identifiers defined is ever used.
 Omit defined but unused identifiers from
 the local identifier cross-reference (Preston Briggs).
 @ \fi
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@noidentxref{%
   \let\nwidentdefs\@gobble
   \let\nwidentuses\@gobble}
@@ -1234,7 +1226,7 @@ Omit the local identifier cross-reference which follows each code chunk.
 
 \subsubsection{Support for chunk and identifier indices}
 The index in the back shows absolutely all the pages.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nw@underlinedefs{% {list with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
   \def\nwixd##1{\\\underline{\subpageref{##1}}\let\\\nw@comma}%
@@ -1249,14 +1241,14 @@ The index in the back shows absolutely all the pages.
     \def\\##1{\nw@indexline##1}}{}
 @
 The information comes from the list [[nwisx@i]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nowebindex{%
   \@ifundefined{nwixs@i}%
      {\@warning{The \string\nowebindex\space is empty}}%
      {\begin{thenowebindex}\@nameuse{nwixs@i}\end{thenowebindex}}}
 @
 Here's a more efficient version for the external case:
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nowebindex@external{%
   {\let\nwixadds@c=\@gobble
    \def\nwixadds@i##1{\nw@indexline##1}%
@@ -1264,14 +1256,14 @@ Here's a more efficient version for the external case:
    \begin{thenowebindex}\@input{\jobname.nwi}\end{thenowebindex}}}
 @ 
 That list ([[nwisx@i]]) is created by calls to [[\nwixlogsorted{i}]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwixlogsorted#1#2{% list data
    \@bsphack\if@filesw 
      \toks0={#2}\immediate\write\@auxout{\string\nwixadds{#1}{\the\toks0}}
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
 @ 
 [[nwixs@c]] and [[nwixs@i]] are sorted lists of chunks and identifiers, respectively.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwixadds#1#2{%
   \@ifundefined{nwixs@#1}%
     {\global\@namedef{nwixs@#1}{\\{#2}}}%
@@ -1280,7 +1272,7 @@ That list ([[nwisx@i]]) is created by calls to [[\nwixlogsorted{i}]].
 @
 If an external index is used, we need a [[.nwi]] file,
 [[\nwixadds]] is to be ignored, and we use [[\nwixaddsx]].
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwopt@externalindex{%
   \ifx\nwixadds\@gobbletwo % already called
   \else
@@ -1298,7 +1290,7 @@ Use an index generated with
 (q.v.).
 @ \fi
 @
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nowebchunks{%
   \@ifundefined{nwixs@c}%
      {\@warning{The are no \string\nowebchunks}}%
@@ -1309,22 +1301,22 @@ Use an index generated with
    \def\nwixaddsx##1##2{\@nameuse{nwixadds@##1}{##2}}%
    \begin{thenowebchunks}\@input{\jobname.nwi}\end{thenowebchunks}}}
     \@namedef{r@nw@notdef}{{0}{(\@nwlangdepnvd)}}
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nw@chunkunderlinedefs{% {list of labels with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
   \def\nwixd##1{\\\underline{\subpageref{##1}}\let\\\nw@comma}%
   \def\nwixu##1{\\\subpageref{##1}\let\\\nw@comma}}
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nw@onechunk#1#2#3{% {name}{label of first definition}{list with \nwixd, \nwixu}
   \@ifundefined{r@#2}{}{%
     \indent\LA #1~{\nwtagstyle\subpageref{#2}}\RA 
     \if@nwlongchunks{~\nw@chunkunderlinedefs#3}\fi\par}}
-<<noweb-base>>=
+<<noweb.sty>>=
 \newenvironment{thenowebchunks}{\vskip3pt
   \parskip=\z@\parindent=-10pt \advance\leftskip by 10pt
   \advance\rightskip by 0pt plus10pt \@afterindenttrue
   \def\\##1{\nw@onechunk##1}}{}
-<<noweb-base>>=
+<<noweb.sty>>=
 \newif\if@nwlongchunks
 \@nwlongchunksfalse
 \let\nwopt@longchunks\@nwlongchunkstrue
@@ -1341,12 +1333,12 @@ show page numbers of definitions and uses of each chunk.
 \subsection{Support for hypertext}
 There are two sets of support for hypertext.
  Balasubramanian Narasimhan wrote initial support for \texttt{hyper.sty}.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\@nw@hyper@ref{\hyperreference} % naras
 \newcommand\@nw@hyper@anc{\blindhyperanchor} % naras
 @ Norman Ramsey wrote support for the \texttt{hyperrref} package (May
  1998).
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}}  % nr
 \newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
 %%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
@@ -1355,7 +1347,7 @@ There are two sets of support for hypertext.
  [[\nwblindhyperanchor]],
 which test for the presence of one of these two packages, 
 redefine themselve accordingly, and re-invoke themselves.
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\nwhyperreference{%
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
@@ -1375,7 +1367,7 @@ redefine themselve accordingly, and re-invoke themselves.
 }
 @ 
 \subsection{Support for hypertext translation to HTML}
-<<noweb-base>>=
+<<noweb.sty>>=
 \newcommand\nwanchorto{%
   \begingroup\let\do\@makeother\dospecials
      \catcode`\{=1 \catcode`\}=2 \nw@anchorto}
@@ -1409,7 +1401,7 @@ translates this to
 .RE
 @
 This lets us hide stuff intended for use only when converting to HTML:
-<<noweb-base>>=
+<<noweb.sty>>=
 \newif\ifhtml
 \htmlfalse
 <<man page: noweb style control sequences>>=
@@ -1432,7 +1424,7 @@ noweb filter translate the text into HTML.
 \subsection{Support for Prettyprinting}
 The following macro can be redefined to allow custom typesetting of
 identifiers in the index and mini-indices.
-<<noweb-base>>=
+<<noweb.sty>>=
 \let\nwixident=\relax
 @ %def \nwixident
 @
@@ -1448,7 +1440,7 @@ standard definitions just select the proper characters from that font.
  People setting code in
 fonts other than typewriter are responsible for redefining those
 macros to work in their environment.
-<<noweb-base>>=
+<<noweb.sty>>=
 \def\nwbackslash{\char92}
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
@@ -1457,102 +1449,77 @@ macros to work in their environment.
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
 @
-\subsection{Language dependent macros} \label{subsection:langdeps}
-The language dependent macros are defined here in each supported
+\subsection{Language-dependent macros} 
+
+\label{subsection:langdeps}
+
+The language-dependent macros are defined here in each supported
 language in a different subsubsection.
 
-NOTE: The style file with multilingual support is called [[noweb-ml.sty]]
-but should probably be renamed [[noweb.sty]] (defined here but that can
-be deleted).
-
-<<noweb.sty>>=
-<<noweb-base>>
-<<noweb-english>>
-
-@ The choice of language depends on testing the [[\languagename]]
+The choice of language depends on testing the [[\languagename]]
 macro. There must be a more elegant way of coding the tests below\ldots
-
-<<noweb-ml.sty>>=
-<<noweb-base>>
+<<noweb.sty>>=
+<<language support>>
 \ifx\languagename\undefined % default is English
-  <<noweb-english>>
-\else\def\@nwlangdeplang{portuges} % Portuguese
- \ifx\languagename\@nwlangdeplang
-  <<noweb-portuguese>>
- \else\def\@nwlangdeplang{german}  % German
-  \ifx\languagename\@nwlangdeplang
-   <<noweb-german>>
-  \else\def\@nwlangdeplang{frenchb} % French
-    \ifx\languagename\@nwlangdeplang
-     <<noweb-french>>
-    \else\def\@nwlangdeplang{ngerman} % new German
-      \ifx\languagename\@nwlangdeplang
-       <<noweb-german>>
-      \else                       % all others in English
-       <<noweb-english>>
-      \fi
-    \fi
-  \fi
- \fi
+  \nwoptions{english}
+\else
+  \@ifundefined{nwopt@\languagename}
+     {\nwoptions{english}}
+     {\expandafter\nwoptions\expandafter{\languagename}}
 \fi
-
-@ \subsubsection{Support for English}
+@ 
+\subsubsection{Support for English}
 
 This describes the original English text.
-
-<<noweb-english>>=
-\def\@nwlangdepdef{This definition is continued}
-\def\@nwlangdepcud{This code is used}
-\def\@nwlangdeprtc{Root chunk (not used in this document)}
-\def\@nwlangdepcwf{This code is written to file}
-\def\@nwlangdepchk{chunk}
-\def\@nwlangdepin{in}
-\def\@nwlangdepand{and}
-\def\@nwlangdepuss{Uses}
-\def\@nwlangdepusd{used}
-\def\@nwlangdepnvu{never used}
-\def\@nwlangdepdfs{Defines}
-\def\@nwlangdepnvd{never defined}
-
-@ %def \@nwlangdepdef \@nwlangdepcud \@nwlangdeprtc \@nwlangdepcwf
-@ %def \@nwlangdepchk \@nwlangdepin  \@nwlangdepand \@nwlangdepuss
-@ %def \@nwlangdepusd \@nwlangdepnvu \@nwlangdepdfs \@nwlangdepnvd
+<<language support>>=
+\def\nwopt@english{%
+  \def\@nwlangdepdef{This definition is continued}%
+  \def\@nwlangdepcud{This code is used}%
+  \def\@nwlangdeprtc{Root chunk (not used in this document)}%
+  \def\@nwlangdepcwf{This code is written to file}%
+  \def\@nwlangdepchk{chunk}%
+  \def\@nwlangdepin{in}%
+  \def\@nwlangdepand{and}%
+  \def\@nwlangdepuss{Uses}%
+  \def\@nwlangdepusd{used}%
+  \def\@nwlangdepnvu{never used}%
+  \def\@nwlangdepdfs{Defines}%
+  \def\@nwlangdepnvd{never defined}%
+}
+\let\nwopt@american\nwopt@english
+@ 
 
 @
 \subsubsection{Support for Portuguese}
 
 This contains the text in Portuguese.
-
-<<noweb-portuguese>>=
-\def\@nwlangdepdef{Defini\c{c}\~ao continuada em}
-% This definition is continued
-\def\@nwlangdepcud{C\'odigo usado em}
-% This code is used
-\def\@nwlangdeprtc{Fragmento de topo (sem uso no documento)}
-% Root chunk (not used in this document)
-\def\@nwlangdepcwf{Este c\'odigo foi escrito no ficheiro}
-% This code is written to file
-\def\@nwlangdepchk{fragmento}
-% chunk
-\def\@nwlangdepin{no(s)}
-% in
-\def\@nwlangdepand{e}
-% and
-\def\@nwlangdepuss{Usa}
-% Uses
-\def\@nwlangdepusd{usado}
-% used
-\def\@nwlangdepnvu{nunca usado}
-% never used
-\def\@nwlangdepdfs{Define}
-% Defines
-\def\@nwlangdepnvd{nunca definido}
-% never defined
-
-@ %def \@nwlangdepdef \@nwlangdepcud \@nwlangdeprtc \@nwlangdepcwf
-@ %def \@nwlangdepchk \@nwlangdepin  \@nwlangdepand \@nwlangdepuss
-@ %def \@nwlangdepusd \@nwlangdepnvu \@nwlangdepdfs \@nwlangdepnvd
-
+<<language support>>=
+\def\nwopt@portuges{%
+  \def\@nwlangdepdef{Defini\c{c}\~ao continuada em}%
+  % This definition is continued
+  \def\@nwlangdepcud{C\'odigo usado em}%
+  % This code is used
+  \def\@nwlangdeprtc{Fragmento de topo (sem uso no documento)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Este c\'odigo foi escrito no ficheiro}%
+  % This code is written to file
+  \def\@nwlangdepchk{fragmento}%
+  % chunk
+  \def\@nwlangdepin{no(s)}%
+  % in
+  \def\@nwlangdepand{e}%
+  % and
+  \def\@nwlangdepuss{Usa}%
+  % Uses
+  \def\@nwlangdepusd{usado}%
+  % used
+  \def\@nwlangdepnvu{nunca usado}%
+  % never used
+  \def\@nwlangdepdfs{Define}%
+  % Defines
+  \def\@nwlangdepnvd{nunca definido}%
+  % never defined
+}
 @
 \subsubsection{Support for French}
 
@@ -1564,74 +1531,77 @@ There are problems with using accents: on the [[\@nwlangdepnvd]] macro
 and in some other macros (\LaTeX{} complains about missing
 [[\endcsname]]). This should be fixed by someone with experience in
 using \TeX\ldots
-
-<<noweb-french>>=
-\def\@nwlangdepdef{Cette d\'efinition suit dans}
-% This definition is continued
-\def\@nwlangdepcud{Ce code est employ\'e dans}
-% This code is used
-\def\@nwlangdeprtc{Morceau racine (pas employ\'e dans le document)}
-% Root chunk (not used in this document)
-\def\@nwlangdepcwf{Ce code est \'ecrit dans le fichier}
-% This code is written to file
-\def\@nwlangdepchk{morceau}
-% chunk
-\def\@nwlangdepin{dans le(s)}
-% in
-\def\@nwlangdepand{et}
-% and
-\def\@nwlangdepuss{Il emploie}
-% Uses
-\def\@nwlangdepusd{employ\'{e}}
-% used
-\def\@nwlangdepnvu{jamais employ\'{e}}
-% never used
-\def\@nwlangdepdfs{Il d\'{e}fine}
-% Defines
-% Cannot use the accent here: \def\@nwlangdepnvd{jamais d\'{e}fini}
-\def\@nwlangdepnvd{jamais defini}
-% never defined
-
-@ %def \@nwlangdepdef \@nwlangdepcud \@nwlangdeprtc \@nwlangdepcwf
-@ %def \@nwlangdepchk \@nwlangdepin  \@nwlangdepand \@nwlangdepuss
-@ %def \@nwlangdepusd \@nwlangdepnvu \@nwlangdepdfs \@nwlangdepnvd
-
+<<language support>>=
+\def\nwopt@frenchb{%
+  \def\@nwlangdepdef{Cette d\'efinition suit dans}%
+  % This definition is continued
+  \def\@nwlangdepcud{Ce code est employ\'e dans}%
+  % This code is used
+  \def\@nwlangdeprtc{Morceau racine (pas employ\'e dans ce document)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Ce code est \'ecrit dans le fichier}%
+  % This code is written to file
+  \def\@nwlangdepchk{morceau}%
+  % chunk
+  \def\@nwlangdepin{dans le(s)}%
+  % in
+  \def\@nwlangdepand{et}%
+  % and
+  \def\@nwlangdepuss{Il emploie}%
+  % Uses
+  \def\@nwlangdepusd{employ\'{e}}%
+  % used
+  \def\@nwlangdepnvu{jamais employ\'{e}}%
+  % never used
+  \def\@nwlangdepdfs{Il d\'{e}fine}%
+  % Defines
+  % Cannot use the accent here: \def\@nwlangdepnvd{jamais d\'{e}fini}%
+  \def\@nwlangdepnvd{jamais defini}%
+  % never defined
+}
+\let\nwopt@french\nwopt@frenchb
 @
 \subsubsection{Support for German}
 
 This is a translation to German by Sabine Broda (DCC-FCUP \& LIACC,
 Universidade do Porto).
-
-<<noweb-german>>=
-\def\@nwlangdepdef{Diese Definition wird fortgesetzt}
-% This definition is continued
-\def\@nwlangdepcud{Dieser Code wird benutzt}
-% This code is used
-\def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}
-% Root chunk (not used in this document)
-\def\@nwlangdepcwf{Dieser Code schreibt man zum File}
-% This code is written to file
-\def\@nwlangdepchk{Teil}
-% chunk
-\def\@nwlangdepin{im}
-% in
-\def\@nwlangdepand{und}
-% and
-\def\@nwlangdepuss{Benutztt}
-% Uses
-\def\@nwlangdepusd{benutzt}
-% used
-\def\@nwlangdepnvu{nicht benutzt}
-% never used
-\def\@nwlangdepdfs{Definiert}
-% Defines
-\def\@nwlangdepnvd{nicht definiert}
-% never defined
-
-@ %def \@nwlangdepdef \@nwlangdepcud \@nwlangdeprtc \@nwlangdepcwf
-@ %def \@nwlangdepchk \@nwlangdepin  \@nwlangdepand \@nwlangdepuss
-@ %def \@nwlangdepusd \@nwlangdepnvu \@nwlangdepdfs \@nwlangdepnvd
-
+<<language support>>=
+\def\nwopt@german{%
+  \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
+  % This definition is continued
+  \def\@nwlangdepcud{Dieser Code wird benutzt}%
+  % This code is used
+  \def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Dieser Code schreibt man zum File}%
+  % This code is written to file
+  \def\@nwlangdepchk{Teil}%
+  % chunk
+  \def\@nwlangdepin{im}%
+  % in
+  \def\@nwlangdepand{und}%
+  % and
+  \def\@nwlangdepuss{Benutztt}%
+  % Uses
+  \def\@nwlangdepusd{benutzt}%
+  % used
+  \def\@nwlangdepnvu{nicht benutzt}%
+  % never used
+  \def\@nwlangdepdfs{Definiert}%
+  % Defines
+  \def\@nwlangdepnvd{nicht definiert}%
+  % never defined
+}
+\let\nwopt@ngerman\nwopt@german
+@
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B english, french, german, portuges
+Write cross-reference information in the language specified.
+Defaults to 
+.B english.
+@ \fi
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
