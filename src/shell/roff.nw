@@ -2,10 +2,6 @@
 .nr O 1i
 .nr P 2
 .nr W 6.5i
-.fp 1 PR
-.fp 2 PI
-.fp 3 PB
-@ .ft 1
 .S 18 18
 'ce
 Converting noweb markup to troff markup
@@ -20,6 +16,10 @@ literate programming system.  Liam Quin ([[lee@sq.com]]) provided technical
 assistance with troff.
 Norman Ramsey made the code easier to port and made it conform with
 his idea of the noweb philosophy.
+Arnold Robbins ([[arnold@gnu.org]]) modified it for use with
+GNU troff (hopefully improving portability even more),
+improved the flexibility of the noroff script,
+and added extra explanation about the gory troff details.
 .P
 The high-level view of toroff is that it comes in two parts.
 The first part is an ordinary back end, which produces 
@@ -58,6 +58,11 @@ AWK=nawk
 <<invoke awk program>>
 @ .P
 Processing arguments is simple.
+The only effect of the [[-delay]] flag is to control placement of
+the ``begin document'' document macro;
+the noroff script supplies the command to source the noroff macros
+as the very first line. This avoids groff warnings about undefined
+strings in the generated markup for the indexing and cross-references.
 <<process arguments>>=
 delay=0 noindex=0
 for i do
@@ -80,7 +85,7 @@ trap 'rm -f $awkfile' 0 1 2 10 14 15
 cat > $awkfile << 'EOF'
 <<awk program>>
 EOF
-$AWK -f $awkfile -v delay=$delay noindex=$noindex macrodir=|LIBDIR|
+$AWK -f $awkfile -v delay=$delay noindex=$noindex
 @ %def awkfile tagsfile
 .HU "The main program"
 The overall structure of the awk program is simple.  The [[tags]]
@@ -91,7 +96,8 @@ processed by awk's pattern-action loop.
 <<functions>>
 @ .HU "Beginning and ending the document"
 The [[-delay]] option allows the initial document chunk to be processed
-before reading the macro packages, so that necessary initialization may
+before invoking the ``begin document'' macro,
+so that necessary initialization may
 be performed.  The only commands which are useful in such an initial chunk
 are bare troff commands.  The delay is handled by special patterns for
 the initial document chunk.  Because several noweb files can be
@@ -101,21 +107,14 @@ simple expedient of turning off [[delay]] after the first one.  This
 code also handles the [[trailer]] at the end of the document.
 <<read and process noweb source>>=
 /^@begin docs 0$/ { if (delay) next }
-/^@end docs 0$/ { if (delay) { <<load macro package>>; delay = 0; next } }
-/^@header m/ { macros = substr($0, 10)
-               if (!delay) { <<load macro package>> } }
+/^@end docs 0$/ { if (delay) { <<start document>>; delay = 0; next } }
+/^@header m/ { if (!delay) { <<start document>> } }
 /^@trailer/ { print ".ENDOFDOCUMENT" }
-@ %def macros
 <<tmac.w>>=
 .de ENDOFDOCUMENT
 ..
-@ .P
-The location of [[macrodir]] is likely to require customization.
-<<load macro package>>=
-printf ".so %s/tmac.%s\n", macrodir, macros
-printf ".so %s/tmac.w\n", macrodir
+<<start document>>=
 printf ".BEGINNINGOFDOCUMENT\n"
-@ %def macrodir
 <<tmac.w>>=
 .de BEGINNINGOFDOCUMENT
 ..
@@ -186,6 +185,8 @@ original values restored at the end of a code chunk.
 The code below replaces the built-in [[.ta]] tab-setting command with a
 custom tab-setting command that allows tab stops to be reset and later
 recalled.
+(A.R.: I don't see a use for this; furthermore this saves
+the new settings in [[ta_saved]], it doesn't save the old ones.)
 <<tmac.w>>=
 .rn ta real_ta
 .de ta
@@ -195,6 +196,10 @@ recalled.
 @ .P
 The font, type size and leading require two saved values, so
 that both the current value and the previous value can be restored.
+For those not intimately familiar with troff, [[.f]] is the current
+font number, [[.s]] is the current point size, [[.v]] is the current
+vertical spacing, [[.u]] is 1 or 0 for fill/no-fill, [[.j]] is the
+current adjust mode, and [[.i]] is the current indent mode.
 <<save environment>>=
 .nr OLDft \\n(.f
 .ft P
@@ -227,6 +232,8 @@ is read into a diversion and a page break is issued if the code chunk
 is too big to fit on the current page.  After the diversion is read back
 in, when it is known what page the code is printed on, the location of
 the code chunk is written using a [[.tm]] command.
+(The [[dn]] number register is the height of the most recent diversion,
+and [[.t]] is the distance to the next trap.)
 <<read back code chunk from diversion>>=
 .br                        \" flush last line of code
 .di                        \" end diversion
@@ -247,9 +254,9 @@ the beginning of the code chunk.
 .vs \\n[PREVvs]u
 .vs \\n[OLDvs]u
 .if \\n[OLDfi] .fi
-.ad \\n[OLDad]u
+.ad \\n[OLDad]
 .in \\n[OLDin]u
-.real_ta \\*[ta_saved]
+.real_ta
 @ .HU "Text, code, and quoted code"
 In text chunks, text is copied from input to output basically unchanged.
 However, when quoted code is included in a line of text, the quoted code
@@ -286,6 +293,9 @@ line right-justified instead of left-justified.  All of this processing is
 accomplished by calling a macro at each newline; the macro plants a
 page-position trap at the next line so that any continuation line will be
 right-justified.
+(The [[.dt]] command defines a trap for use within the current
+diversion, whereas the more common [[.wh]] is for a particular
+page position.)
 <<read and process noweb source>>=
 /^@nl/ && code == 1 { printf ".NEWLINE\n" }
 <<tmac.w>>=
@@ -303,6 +313,8 @@ right-justified.
 The newline trap is planted after each definition line, for the first
 line of code in the code chunk, and again after each newline in the
 code chunk.
+(The [[.d]] register indicates the current vertical position
+within the diversion.)
 <<plant newline trap>>=
 .nr TRAPplace \\n(.du+1u       \" location of next trap
 .dt \\n[TRAPplace]u LINETRAP   \" plant trap at next line
@@ -334,21 +346,28 @@ definition of the code chunk.
 <<read and process noweb source>>=
 /^@defn/ { name = convquote(substr($0, 7))
            lastdefnlabel = lastxreflabel
+	   if (! (name in defn))
+	   	defn[name] = "\\(=="
            printf ".DEFINITION %s \"%s\" %s %s\n",
                   tag(lastdefnlabel), name, lastxrefref, defn[name]
-           defn[name] = "\\(pl" }
+           defn[name] = "\\(pl\\(==" }
 /^@use/ { name = convquote(substr($0, 6))
-          printf "\c\n"
+          printf "\\c\n"
           printf ".USE \"%s\" %s\n", name, lastxrefref }
 @ %def name defn lastdefnlabel
+@ The original version of toroff used [[\(oG]] and [[\(cG]] for
+the double angle bracket characters.  These appear to be non-standard,
+thus we define our own strings to take their place. (A.R.)
 <<tmac.w>>=
+.ds o< <\h'-0.1m'<
+.ds c> >\h'-0.1m'>
 .de DEFINITION
 .ti -0.5i
-\\fR\\(sc\\$1	\\(oG\\$2 \\$3\\(cG \\$4\\(==\\fP
+\\fR\\(sc\\$1	\\*(o<\\$2 \\$3\\*(c>\\$4\\fP
 <<plant newline trap>>
 ..
 .de USE
-\\fR\\(oG\\$1 \\$2\\(cG\\fP\c   \" section name and original number
+\\fR\\*(o<\\$1 \\$2\\*(c>\\fP\c   \" section name and original number
 ..
 @ .P
 Processing of quoted code within definitions and uses is performed by the
@@ -358,16 +377,48 @@ code within text because the noweb markup program doesn't emit
 because the subject string is used as an argument to a macro, it would not
 possible to call the [[.BEGINQUOTEDCODE]] and [[.ENDQUOTEDCODE]] macros,
 even if noweb did emit the markers within definitions and uses.
+.P
+The original version just did [[gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s)]],
+but this does not catch the case of something like \f(CW[\&[a[i\&]\&]\&]\fP.
+A more complicated loop using [[match()]] is in order.
+It loops through the string, picking it apart, and replacing
+each quoted code section individually.
 <<functions>>=
-function convquote(s) {
+function convquote(s,	out, front, mid, tail) {
     gsub(/\[\[/, "\\*[BEGINCONVQUOTE]", s)
-    gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s); return s }
+    # gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s)
+    out = ""
+    mid = "\\*[ENDCONVQUOTE]"
+    while (match(s, /\]\]+/) != 0) {
+    	# RLENGTH is length of match, want to remove last two chars
+	# RSTART is where sequence of ]s begins
+	tail = substr(s, RSTART + RLENGTH)
+	if (RLENGTH == 2) # easy
+		front = substr(s, 1, RSTART - 1)
+	else
+		front = substr(s, 1, RSTART - 1 + RLENGTH - 2)
+	out = out front mid
+	s = tail
+    }
+    out = out s
+    return out }
+# my test program for the revised function - ADR
+# BEGIN { str = "abc[[foo[i]]]]]]]]junk"
+#	print str
+#	print convquote(str)
+#	str2 = "nothing here"
+#	print str2
+#	print convquote(str2)
+#	str3 = "abc[[foo[i]]]]]]]]junk[[bar[i]]more stuff[[baz]]"
+#	print str3
+#	print convquote(str3)
+# }
 @ %def convquote
 <<tmac.w>>=
 .ds BEGINCONVQUOTE \f[CW]
 .ds ENDCONVQUOTE   \fP
 @ .HU "Cross-referencing and indexing"
-The code for producing the \(odhypertext links\(cd at the end of each
+The code for producing the ``hypertext links'' at the end of each
 code section is given below: for each type, the beginning of the message
 is printed, items are accumulated in a list, and the list is printed
 after the number of items in the list is known.  The first time any of
@@ -390,7 +441,7 @@ This definition continued in
 This code used in
 ..
 .de XREFNOTUSED
-This code not used in this document.
+This code is not used in this document.
 .br
 ..
 @ .P
@@ -470,7 +521,7 @@ if (code) { code = 0; printf ".STARTXREF\n" }
 .ps \\n(.s*4/5
 .vs \\n(.vu*4u/5u
 .ft \\n[OLDft]
-.ad \\n[OLDad]u
+.ad \\n[OLDad]
 .dt \\n[TRAPplace]u
 .sp 0.4v
 ..
@@ -544,11 +595,15 @@ function tag(s) { if (s in tags) return tags[s]; else return "???" }
 @ %def tag
 @ .P
 To use the tags, we have to read the tags file from the back end.
+The tags file name is the basename of the file, with the suffix
+replaced with [[".nwt"]] (see the toroff script, below).
 <<awk program>>=
 /^@file / {
   if (tagsfile == "") {
     tagsfile = substr($0, 7)
     sub(".*/", "", tagsfile)
+    sub(/\.[^.]*$/, "", tagsfile)
+    tagsfile = tagsfile ".nwt"
     while (getline <tagsfile > 0) <<action for [[tags]] line>>
   }
 }
@@ -556,40 +611,69 @@ To use the tags, we have to read the tags file from the back end.
 .HU "Using \\f[CW]toroff\fP"
 Toroff is one element of the normal noweave pipeline.  Using
 toroff in its full generality is hard.  The sample program shown
-below was used by the author during the development of toroff and
-is an example of the use of toroff.  A real noweave should
-allow the user to specify the macro package rather than defaulting to
-[[-mm]], allow the user to select the noweb filters which are used,
-allow the user to specify the [[-delay]] and [[-noindex]] switches to
-toroff, allow the user to specify troff pre-processors,
-post-processors and options, and eliminate the temp output from tee
-which allowed the author to peek at the pipeline and find out why
-toroff wasn't acting as expected.  Given the shell script shown
-below, toroff could be woven by issuing the command [[xweave toroff.nw]]
-twice in succession and printed by copying [[toroff.ps]] to a PostScript
-printer.
+below 
+allows the user to specify the macro package (although it defaults to
+[[-mgm]]),
+and allows the user to specify troff pre-processors,
+post-processors and options.
+(Command line options to [[groff]] can be used to invoke tbl, pic, etc.)
+See the section below on how to generate the final formatted document.
+.P
+To avoid a race condition reading the tags file
+(troff is writing to it while the awk program is reading it),
+we first copy it for
+use by the awk program, and then remove the copy.
+The location of [[macrodir]] is likely to require customization.
 <<noroff>>=
 #!/bin/sh
 #
 # noroff -- run troff using tags file trick
 
-ROFF="psroff -t"        # produce postscript on stdout
+ROFF="groff"
 AWK=nawk
+macrodir=|LIBDIR|
 
-if [ $# -ne 1 ]; then
-  echo "Usage: noroff file" 1>&2
+opts=
+
+if [ $# -eq 0 ]; then
+  echo "Usage: noroff [groff-arguments] files" 1>&2
   exit 1
 fi
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+	-*)	opts="$opts $1"
+		shift
+		;;
+	*)	# end of options
+		break;
+		;;
+	esac
+done
+
+if [ "$opts" = "" ]
+then
+	# no options, default to -mgm
+	# groff already defaults to -Tps
+	opts="-mgm"
+fi
+# otherwise assume user passed in all the arguments they want
+
 base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
 tagsfile="$base.nwt"
-(if [ -r "$tagsfile" ]; then 
+(echo ".so $macrodir/tmac.w"
+if [ -r "$tagsfile" ]; then 
+   cp $tagsfile /tmp/tags.$$
    $AWK '<<action for [[tags]] line>>
-         <<functions>>' $tagsfile
+         <<functions>>' /tmp/tags.$$
+   rm -f /tmp/tags.$$
  fi
- cat $1) |
-($ROFF -Tps 2>$tagsfile)
+ cat "$@") |
+($ROFF $opts 2>$tagsfile)
 sed '/^###[A-Z][A-Z]*###/d' $tagsfile >&2
-@ .HU "Index of chunks and identifiers"
+@ %def macrodir
+@ .HU "Macros for indexing chunks and identifiers"
 Toroff creates macros [[.CLIST]] and [[.ILIST]] which insert the
 lists of chunks and identifiers, respectively, in the output.  These
 macros, in turn, call other macros which format the lists.  The macros
@@ -601,8 +685,8 @@ lines indented one-quarter inch.
 ..
 .de CITEM
 .ti -0.25i
-.ie '\\$3'' \\(oG\\$1 \\$2\\(cG Not used in this document.
-.el         \\(oG\\$1 \\$2\\(cG \\$3
+.ie '\\$3'' \\*(o<\\$1 \\$2\\*(c> Not used in this document.
+.el         \\*(o<\\$1 \\$2\\*(c> \\$3
 .br
 ..
 .de CLISTEND
@@ -620,7 +704,20 @@ lines indented one-quarter inch.
 .de ILISTEND
 .in -0.25i
 ..
-@ .P
+@ .HU "Using \f[CW]noweave -troff\fP and \f[CW]noroff\fP"
+To produce the final document,
+the tags file is needed for both the [[noweave]]
+and the [[noroff]] steps.  This creates a bit of a boot-strapping
+problem, since it is troff that first creates the tags file.
+The way to do it is to run [[noweave]] and [[noroff]] in turn, twice.
+For example, to make a printable version of this document, you would
+run the programs like this.
+<<Example run>>=
+noweave -index -troff roff.nw > roff.tr
+noroff roff.tr > /dev/null	# ignore warnings about CLIST and ILIST
+noweave -index -troff roff.nw > roff.tr
+noroff roff.tr > roff.ps	# print this one
+@ .HU "Index of chunks and identifiers"
 The automatically-generated index of chunks and identifiers for
 toroff is shown below.
 .S 10 12
