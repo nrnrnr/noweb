@@ -1,0 +1,119 @@
+\section{Cross-reference for noweb/latex}
+<<*>>=
+global lines, defns, uses, names, firstdefnout
+
+procedure main(args)
+  lines := []
+  defns := table()
+  uses := table()
+  names := table()
+  while put(lines, line := read()) do
+    apply(pass1, line)
+  firstdefnout := set()
+  every apply(pass2, !lines)
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+<<*>>=
+procedure pass1(name, chunkname)
+  static curfile, defined
+  initial {curfile := "????"; defined := set()}
+  case name of {
+    "file" : curfile := modid(chunkname || (chunkname[4+:3] | chunkname[4:0] | ""))
+    "defn" | "use" : {
+      if name == "defn" then tbl := defns else tbl := uses
+      if name == "defn" & not member(defined, chunkname) then {
+        label := "sublabel" 
+        insert(defined, chunkname)
+      } else 
+        label := "label"
+      /tbl[chunkname] := []
+      id := map(name, &lcase, &ucase) || ":" || curfile || ":" || 
+            modid(chunkname) || "-" || (1+*tbl[chunkname])
+      put(tbl[chunkname], id)
+      put(lines, "@literal \\" || label || "{" || id || "}")
+      names[chunkname] := lettersonly(chunkname)
+    }
+  }
+  return
+end
+<<*>>=
+procedure modid(name)
+  local key
+  static idtable, keycounts
+  initial { idtable := table() ; keycounts := table(0) }
+
+  if not member(idtable, name) then {
+    key := map(name, " \\{}-[]`#%&~_^", "**************")
+    if *key > 6 then key := key[1:4] || key[0:-3]
+    keycounts[key] +:= 1
+    idtable[name] := key || if keycounts[key] > 1 then "-" || keycounts[key] else ""
+  }
+  return idtable[name]
+end
+<<*>>=
+global thischunk
+
+procedure pass2(name, arg)
+  case name of {
+    "defn" : { 
+        thischunk := arg
+        write("@defn ", arg, "~{\\footnotesize\\Rm\\subpageref{", defns[arg][1], "}}") 
+    }
+    "use" : 
+        write("@use ", arg, "~{\\footnotesize\\Rm\\subpageref{", (\defns[arg])[1], "}}") |
+        write("@use ", arg, "~{\\footnotesize\\Rm (never defined)}")
+    "end" : {
+        if match("code", arg) & not member(firstdefnout, thischunk) then {
+          insert(firstdefnout, thischunk)
+	  if *defns[thischunk] > 1 then {
+	    writes("@literal \\alsodefined{")
+            every i := 2 to *defns[thischunk] do 
+              writes("\\\\{", defns[thischunk][i], "}")
+            write("}")
+          }
+	  if \uses[thischunk] then {
+  	    writes("@literal \\used{")
+            every i := 1 to *uses[thischunk] do 
+              writes("\\\\{", uses[thischunk][i], "}")
+            write("}")
+          } else write("@literal \\notused{", escapeTeXspecials(thischunk), "}")
+        }
+        write("@", name, " ", arg)
+      }
+    "text"  : if \arg == "\\nowebchunks" then nowebchunks()
+              else write("@text", (" " || \arg) | "")
+    default : write("@", name, (" " || \arg) | "")
+  }
+  return
+end
+<<*>>=
+procedure nowebchunks()
+  l := sort(names,2)
+  while name := get(l)[1] do {
+    write("@literal {")
+    write("@use ", name, "~{\\footnotesize\\Rm\\subpageref{", (\defns[name])[1], "}}") |
+    write("@use ", name, "~{\\footnotesize\\Rm (never defined)}")
+    write("@literal }")
+    if *l > 0 then write("@literal \\\\")
+  }
+end
+<<*>>=
+procedure lettersonly(s)
+  static keep
+  initial keep := &lcase ++ ' '
+  s := map(s)
+  r := ""
+  s ? while tab(upto(keep)) do r ||:= move(1)
+  return r
+end
+<<*>>=
+procedure escapeTeXspecials(name)
+  name ? {
+    s := ""
+    while s ||:= tab(upto('{}$&%#^_~\\')) do s ||:= "\\" || move(1)
+    return s || tab(0)
+  }
+end
