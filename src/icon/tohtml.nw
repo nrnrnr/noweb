@@ -50,11 +50,14 @@ else
 If there is no cross-reference stuff at the end, we just use [[</pre>]];
 otherwise we terminate whatever environment is used for the cross-reference stuff.
 <<code chunks>>=
-if ="@begin code " then	{ code := 1   ; writes(braw, "<pre>"); ecode := "</pre>" } else
-if ="@end code "   then { code := nil ; previscode := 1 
-                          <<dump pending cross-reference info>>
+if ="@begin code " then	{ code := 1   ; thischunk := &null
+			  <<reset cross-reference info>>
+                          writes(braw, "<pre>"); ecode := "</pre>"               } else
+if ="@end code "   then { <<dump pending cross-reference info>>
+                          code := nil ; previscode := 1 
                           writes(ecode, eraw)                                    } else
 @ %def previscode
+@ We maintain [[thischunk]] null until we've seen [[@defn]].
 
 We want to try to avoid emitting paragraph elements when the
 preceding chunk is a code chunk, as tracked by [[previscode]].
@@ -101,6 +104,9 @@ None of this crap would be necessary if HTML could anchor to empty text.
          eraw || tab(0),
   insert(defns_above, \lastxreflabel),
   lastxreflabel := &null)
+@ 
+An indexed identifier is not empty and contains no tags, so we don't 
+have to worry.
 <<index and docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)}, 
   linklabelto(lastxreflabel, lastindexref, escapeSpecials(line)),
@@ -125,15 +131,42 @@ procedure skip_tags_and_char(count)
             ((move(1) | if count > 0 then "")\1)  # succeed at end if count > 0
             
 end
+@
+The preceding scheme sometimes wraps an anchor around a tag.
+If that turns out to be bad, we could try the following alternative:
+<<funky new docs anchor>>=
+2(line ? {tab(many(' \t')); not pos(0)},
+  line ? braw || scan_initial_tags() ||
+                   linklabel(\lastxreflabel, 
+                                (tab(many(' \t')) | "") || (scan_past_char() | "*")) ||
+         eraw || tab(0),
+  insert(defns_above, \lastxreflabel),
+  lastxreflabel := &null)
+<<procedures to support new docs anchor>>=
+procedure scan_initial_tags()
+  suspend (="<" || (tab(many(' \t')) | "") ||
+              (="/" | (tag := tab(many(&letters)), map(tag) ~== "a", tag)) ||
+              tab(upto(">")) || =">" || scan_initial_tags()) | 
+          ""
+end
+
+procedure scan_past_char()
+  if any('&') & upto(';') then
+    suspend(tab(upto(';')) || =";")
+  else
+    suspend (tab(many(' \t')) | "") || tab(any(~'<'))
+end
 <<@nl>>=
 if ="@nl" & pos(0) then { write()                                                } else
 <<@defn>>=
 if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, "dfn", 
                                      thischunk := tab(0), defns[thischunk] || "=")
 			  insert(defns_above, \lastxreflabel)
+			  useitems := \useitemstab[thischunk]
 			  <<clear [[lastxref*]]>>
                           defns[thischunk] := "+"                                } else
 <<initialization>>=
+useitemstab := table()
 defns := table("")
 defns_above := set()	# keep track of defining chunks we've seen
 <<@use>>=
@@ -169,21 +202,23 @@ if ="@xref " then {
   else { fun := tab(0); arg := &null }
   case fun of { 
     <<cases for @xref>> 
-    default : arg ? warn_unknown("xref " || fun)
+    default : (\arg|"") ? warn_unknown("xref " || fun)
   }
 } else
+@
+[[useitemstab]] seems to exist to enable us to repeat the
+uses for each chunk, even though the [[noidx]] filter only provides them once.
+I think it may prove better to provide use information for each instance
+of a chunk.
 <<cases for @xref>>=
-"label"		: { <<warn if unused [[lastxreflabel]]>>; lastxreflabel := arg }
-"ref"		: { <<warn if unused [[lastxrefref]]>>;   lastxrefref   := arg }
-"prevdef"	: pendingprev   := arg
-"nextdef"	: pendingnext   := arg
-"beginuses"	: { useitems := [] }
-"useitem"	: { put(useitems, arg) }
-"enduses"	: { useitemstab[thischunk] := useitems }
-"notused"	: { <<code-to-blockquote>>
-                    writes("This code is written to a file (or else not used).<p>") }
-<<initialization>>=
-useitemstab := table()
+"label"     : { <<warn if unused [[lastxreflabel]]>>; lastxreflabel := arg }
+"ref"       : { <<warn if unused [[lastxrefref]]>>;   lastxrefref   := arg }
+"prevdef"   : pendingprev   := arg
+"nextdef"   : pendingnext   := arg
+"beginuses" : useitems := []
+"useitem"   : put(useitems, arg)
+"enduses"   : useitemstab[\thischunk] := useitems
+"notused"   : notused := arg
 <<clear [[lastxref*]]>>=
 every lastxreflabel | lastxrefref := &null
 <<warn if unused [[lastxreflabel]]>>=
@@ -203,8 +238,8 @@ procedure warn_unused_xref(tag, label)
 end  
 @
 <<dump pending cross-reference info>>=
-useitems := useitemstab[thischunk]
-if \pendingprev | \pendingnext | *\useitems > 0 then {
+useitems := useitemstab[\thischunk]
+if \pendingprev | \pendingnext | *\useitems > 0 | \notused then {
   <<code-to-blockquote>>
   <<write out uses with links>>
   if *\useitems > 0 & (\pendingprev | \pendingnext) then
@@ -220,9 +255,12 @@ if \pendingprev | \pendingnext | *\useitems > 0 then {
   else
     if \pendingnext then
       writes(linkto(pendingnext, n), " definition")
-  pendingprev := pendingnext := &null
-  useitems := &null
-  write(".<p>")
+  if \pendingprev | \pendingnext | *\useitems > 0 then
+    writes(".")
+  if \notused then
+    writes("<br>\nThis code is written to a file (or else not used).")
+  write("<p>")
+  pendingprev := pendingnext := useitems := notused := &null
 }
 <<write out uses with links>>=
 useprefix := "Used "
@@ -232,6 +270,9 @@ every i := 1 to *\useitems do {
   writes(useprefix, linkto(useitems[i], usedir || usesuffix))
   useprefix := ", "
 }
+<<reset cross-reference info>>=
+useitems := []
+notused := &null
 @
 The hack here is to put the supplementary information in a blockquote area
 after the code.
@@ -271,7 +312,7 @@ if ="@index " then {
     else { fun := tab(0); arg := &null }
     case fun of { 
       <<cases for @index>> 
-      default : arg ? warn_unknown("index " || fun)
+      default : (\arg|"") ? warn_unknown("index " || fun)
     }
   }
   # don't get any warnings if not doing indexing
@@ -282,6 +323,7 @@ the identifiers that are defined, with links to the full index.
 <<cases for @index>>=
 "use" 	    : { lastindexref := lastxrefref; lastxrefref := &null }
 "defn"      : { <<clear [[lastxref*]]>> }
+"localdefn" : { <<clear [[lastxref*]]>> }
 "nl"        : &null # do nothing -- destroys line numbering
 "begindefs" : if \localindex then
               { <<code-to-blockquote>>; writes("Defines"); comma := " " }
