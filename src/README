@@ -1,131 +1,22 @@
-This is version 2.4 of ``noweb'', a low-tech literate programming
-tool.  It probably came via anonymous ftp from princeton.edu:pub/noweb.shar.Z
-or from bellcore.com:pub/norman/noweb.shar.Z.  This version contains
-bug fixes for LaTeX code, and the distribution has been reorganized.
-The file INSTALL tells how to build and install noweb.
-
-INTRODUCTION
-
-noweb is designed to meet the needs of literate programmers while
-remaining as simple as possible.  Its primary advantages are
-simplicity, extensibility, and language-independence.  noweb uses 4
-control sequences to WEB's 27, and its manual is only two pages.
-noweb works ``out of the box'' with any programming language, and its
-formatter-dependent part is under 50 lines.  The primary sacrifice
-relative to WEB is the loss of the language-dependent features:
-prettyprinting and an index of identifiers.
-
-noweb provides extensibility by using the Unix toolkit philosophy.
-The ``notangle'' and ``noweave'' commands are built from pieces, which
-are then assembled in pipelines using shell scripts.  The pieces are:
-
-  markup	convert noweb file from human syntax to tool syntax
-  unmarkup	inverse of markup
-  nt		`tangle' the tool form of the noweb file
-  noxref	insert cross-reference information for latex
-
-These pieces are combined by the scripts in the bin directory to
-provide more than just weaving and tangling:
-
-  notangle	analog of TANGLE
-  noweave	analog of WEAVE
-  nountangle	tangle, but keep interleaved documentation in comments
-  noroots	print names of all root chunks in a noweb file
-  nocount	count number of lines of code and documentation.
-
-noweb has been used for three years both at Princeton and elsewhere.
-It has been used for tens of thousands of lines of code in such
-languages as awk, C, C++, Icon, Modula-3, Promela, and Standard ML.
-
-If you already know you want to use noweb, you need only install it
-and read the manual page.  If you're just curious about noweb, a sales
-pitch appears in the technical report in doc/ieee.tex.
+These are the base sources and documents for version 2.8a of
+``noweb'', a simple, extensible literate-programming tool.  noweb is
+available via anonymous ftp from the Comprehensive TeX Archive
+Network, in directory web/noweb.  CTAN includes hosts ftp.shsu.edu,
+ftp.tex.ac.uk, and ftp.uni-stuttgart.de.  These sites mirror the
+master directory ftp.cs.virginia.edu:pub/nr/noweb.  The file INSTALL
+tells how to build noweb.  The file FAQ answers some frequently asked
+questions about building and using noweb.
 
 
-WHAT YOU GET IN THIS DISTRIBUTION
+STRUCTURE OF THE BASE SOURCES
 
-This distribution contains the following directories:
-  bin		all the shell scripts that make up the actual commands
-  doc		man pages and a technical report
-  examples	parts of noweb programs in different languages
-  icon		Icon code for nonstandard weave and cross-referencer
-  lib		noweave's cross-referencer
-  src		source code for nt and markup
+This part of the distribution contains the following directories:
+
+  awk		pipeline stages and back ends in awk and sh
+  src		C source code for nt, markup, and finduses
+  icon		pipeline stages and back ends in Icon
+  lib		other pipeline stages and back ends, not available in Icon
+  shell		the shell scripts that make up the actual commands
   tex		supporting tex code for /usr/local/lib/tex/macros
-where appropriate, these directories have README files of their own.
+  xdoc		man pages, hacker's guide (named to be unpacked last)
   
-
-WEAVING
-
-The worst aspect of literate programming is the enormous amount of
-time wasted wrangling over what prettyprinted output should look like. 
-Although noweb does no prettyprinting, it is not entirely immune---
-several people have complained about noweave's output or have sent me
-changes that add more options to noweave.  Having been down that road
-with Spider, I won't be fooled again.  noweb doesn't try to be all
-things to all programmers, but it is very easy to change.
-
-If you don't like noweave's formatting, you can easily throw away
-noweave and make your own.  To help you get started, the bin directory
-in the distribution contains three versions of noweave:
-  noweave		the standard (supposed to be latex-proof)
-  noweave.nr		what I use (handles 90 columns of code)
-  noweave.simple	simple, uses no special TeX hacking
-The simple version can't handle code with @ signs.  The article in
-doc/ieee.tex explains the intermediate language that noweb uses to
-represent literate programs.
-
-noweb comes with two cross-referencers for use with noweave.  The
-standard one is written in awk, because that's what everybody has.
-There is also a somewhat better cross-referencer written in Icon.
-Neither cross-referencer has been thoroughly exercised.  See the
-INSTALL file for more details.
-
-noweb is designed to be extended with a language-dependent
-prettyprinter and indexer.  I haven't written one because my
-experience with Spider taught me that prettyprinting is far more
-trouble than it's worth.  If someone else wants to write one, I will
-be happy to help and advise.
-
-
-NOTES
-  doc/ieee.* contains a paper that has been submitted to IEEE Software.
-  You must `make install' before attempting to format the paper, since
-  it uses the noweb document style option.
-
-  The paper documents the representation of noweb files that is used
-  by the noweb tools, in case you want to write any tools of your own.
-  Simple tools (e.g. count the number of lines of interleaved
-  documentation) are trivial.  If you write any tools, or you want
-  tools written (e.g. prettyprinters, index generators), let me know.
-
-  The icon directory contains Icon programs that do most of the job
-  of noweave.sh and noxref.  If you want to adapt noweb to work with a
-  text processor other than TeX or latex, they might provide a better
-  starting point.  I confess that the whole system should have been
-  written in Icon from the beginning, but I'm not going to do it over.
-  Icon is available by anonymous ftp from cs.arizona.edu.
-  
-  Thanks to Dave Hanson for cpif.
-
-Send comments or questions to norman@bellcore.com.  
-
-I enjoy hearing from noweb users; if you have enjoyed noweb, why not
-send me a local postcard for my collection?  My address is:
-
-  Norman Ramsey
-  Bellcore
-  445 South Street
-  Morristown, New Jersey 07960
-               USA
-
-
-COPYRIGHT
-
-Noweb is copyright 1989-1993 by Norman Ramsey.  All rights reserved.
-
-You may use and distribute noweb for any purpose, for free.  You may
-modify noweb and create derived works, provided you retain the
-copyright notice, but the result may not be called noweb without my
-written consent.  You may not sell noweb itself, but you may do
-anything you like with programs created with noweb.

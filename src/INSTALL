@@ -1,47 +1,69 @@
+As of version 2.7, I offer a slightly better way to choose between the
+awk and Icon filters.
+
 To build noweb:
 
-  1) Bourne shell implementations differ, with the unfortunate result
-     that there is no standard way to print one backslash on standard
-     output.  The latest strategy I have tried is to use
-     `echo -n \\' by itself for backslashes; this fails on SYSV
-     echo which doesn't recognize -n.  You may have to alter
-     shell/noweave to get correct TeX goo.  shell/noweave.hpux
-     contains a sample that works on HP-UX.  shell/noweave.sgi
-     contains a sample that works on SGI Irix.
-
-  2) Choose locations for the noweb files, and set the appropriate
-     variables in the Makefile:
+  1) First point to compilers to be used to built the tools and
+     library by setting these variables in the Makefile:
        CC         the name of an ANSI C compiler
+       LIBSRC	  'awk' or 'icon', depending on which library
+     If you have Icon, it is recommended that you use the Icon version
+     of the noweb library; this code speeds up noweave by a factor of 3.
+     The Icon versions have fewer bugs and provide more filters (e.g.,
+     convert LaTeX to HTML in documentation chunks).  If you have the
+     Icon translator but not the Icon compiler set ICONC=icont in the
+     Makefile.
+
+     Now choose locations for the noweb files, and set the appropriate
+     variables in the Makefile:
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
-       LIB        a directory to store markup, unmarkup and nt
-       MAN        notangle man page will go in $MAN/man1
+       LIB        a directory to store markup, nt, noxref, ...
+       MAN        man pages will go in $MAN/man1
        TEXINPUTS  a directory TeX will look for nwmac.tex and nwkernel.tex
-     Make sure you have write permission to these directories.
-     The Makefile will barf if you make TEXINPUTS equal to the tex
-     directory of this distribution; you can fix it by commenting out
-     the `cp .. $(TEXINPUTS)' line.
+       ELISP      a directory for noweb-mode.el, for emacs 19
+     All of these files are *output* files, where noweb will place
+     binaries and man pages that are customized for your installation.
+     Therefore you should:
+       - make sure you have write permission to these directories.
+       - refrain from making them point into the noweb source distribution.
+     If you don't use emacs, just leave ELISP set to /dev/null.
 
-  3) If you have Icon and want to use its superior cross-referencer,
-     try `icont -o lib/noxref icon/noxref.icn'.  Using this
-     cross-referencer enables the \chunklist feature described in the
-     man page (\chunklist produces a sorted list of chunks, i.e., a
-     `module index').
+     If your system provides tempnam(3), noweb's indexing will be more
+     efficient if you add -DTEMPNAM to the flags given to the C compiler.
 
-  4) Fasten your seat belt and type `make'.  If you want a nonstandard
-     noweave, you can use the WEAVE variable in the Makefile; for example,
-     I use `make WEAVE=noweave.nr'.  For HP-UX you might want to try 
-     `make WEAVE=noweave.hpux'.
+  2) If your modern awk is called something other than `nawk', run the
+     `awkname' script to change all references to nawk.  For example,
+     `awkname gawk'.  You need to do this even if you have chosen
+     LIBSRC=icon, because there are a few scripts here and there that
+     are only written in awk.  If you have an HPUX system and you're
+     using the vendor-supplied awk, you have a problem---see file HPUX
+     for details.
 
-  5) You can clean up by typing `make clean'.  If you wish, you can
-     remove the C sources from the src directory by typing `cd src;
-     make veryclean', but then you will be unable to build noweb
-     unless you already have noweb.  If you're short on disk space,
-     the examples directory is the biggest pig.
+  3) Fasten your seat belt and type `make all install'.  If you want a
+     nonstandard noweave, you can use the WEAVE variable in the
+     Makefile; for example, `make WEAVE=noweave.simple'.  In contrast
+     with previous versions, the standard noweave should work with
+     HPUX and SGI Irix.
+
+  4) If you want to install contributed software, you need the
+     `contrib' hierarchy.  Get it, set the LIB variable in the
+     Makefile, and type 'make all install'.  If you just want the
+     nuweb parser, try
+	 (cd ../contrib/norman; make LIB=$LIB all install)
+     where $LIB is the noweb LIB directory.
+
+  5) On some installations, (e.g., Unix teTeX), you may have to run
+     texhash(1) before TeX or latex will see files added to TEXINPUTS.
+
+  6) You can clean up by typing `make clean'.  If you wish, you can
+     remove the pre-built sources by typing `make clobber', but then
+     you will be unable to build noweb unless you already have noweb.
 
 Instead of editing the Makefile, you can create a shell script that
 invokes make with the proper variables.  `nwmake' is an example of
 such a script; I use it to install noweb at Princeton using the Icon
 cross-referencer and our local C compiler.  If you make your own
 script, call it something else so it won't get overwritten by the
-default nwmake.
+default nwmake when you unbundle a new distribution.
 
+If you encounter a problem building noweb, try the FAQ file.
