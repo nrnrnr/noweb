@@ -6,8 +6,8 @@ Each element of the list is either a string or a reference to another
 module name.
 During expansion of a module, strings are printed and module references
 are expanded.
-The structure of module references must be a dag or else there will be
-overflow during expansion.
+The structure of module references must be a dag or else [[expand]] will
+complain about a cycle.
 <<header>>=
 typedef struct location {       /* identify lines of source */
     char *filename;
@@ -24,6 +24,7 @@ struct modpart {
 };
 
 typedef struct module {
+    char *name;
     struct modpart *head, *tail;
 } *Module;
 <<*>>=
@@ -94,29 +95,33 @@ void append(Module mp, struct modpart *p);
 Expanding modules.
 Expand returns 0 if all is well, nonzero if error.
 
-Instead of detecting a cycle in the definition-use graph, we just
-limit the depth of definition nesting to some fixed number, 
-[[maxlevel]].
-Any circular definition must eventually exceed [[maxlevel]].
+I use a [[struct parent]] chain to see what modules are being expanded, 
+so I can detect a cycle.
 
 [[partial_distance]] is the size of the line already written out when
 [[expand]] is called.
 <<header>>=
-int expand (Module mp, int indent, int partial_distance, int maxlevel, 
+typedef struct parent {
+    Module this;
+    struct parent *parent;
+} *Parent;
+
+int expand (Module mp, int indent, int partial_distance, Parent parent, 
 	    char *locformat, FILE *out);
         /* expand a module, writing to file out */
 <<C functions>>=
 static char *lastfilename = 0;
 static int lastlineno = -1;
 
-int expand (Module mp, int indent, int partial_distance, int maxlevel, 
+int expand (Module mp, int indent, int partial_distance, Parent parent,  
             char *locformat, FILE *out) {
     struct modpart *p;
     Module newmod;
     int error=Normal;
+    struct parent thismodule = { mp, parent};
         /* the value only matters when we're expanding a module */
 
-    if (maxlevel < 0) <<Dump error information and return>>
+    <<if [[mp]] is an ancestor, complain and return>>
 
     for (p=mp->head; p!=NULL; p=p->next) {
 	switch (p->ptype) {
@@ -162,24 +167,40 @@ if (newmod==NULL) {
 } else {
     int retcode;
     retcode = expand (newmod, indent + partial_distance, partial_distance,
-    		      maxlevel, locformat, out);
+    		      &thismodule, locformat, out);
     if (retcode > error) error = retcode;
 }
 partial_distance = limitcolumn(p->contents, partial_distance + 2) + 2; 
 				/* account for surrounding brackets */
 @
-<<Dump error information and return>>=
-{
-    errormsg(Fatal, "expansion factor exceeded");
-    return Fatal;
+<<if [[mp]] is an ancestor, complain and return>>=
+if (seekcycle(mp, parent)) {
+    errormsg(Error, "@<<%s@>>", mp->name);
+    return Error;
+}
+<<Function declarations>>=
+static int seekcycle(Module mp, Parent parent);
+<<C functions>>=
+static int seekcycle(Module mp, Parent parent) {
+    if (parent == NULL) {
+        return 0;
+    } else if (parent->this == mp || seekcycle(mp, parent->parent)) {
+        if (parent->this == mp)
+            fprintf(stderr, "Cyclic code chunks: ");
+        fprintf(stderr, "@<<%s@>> -> ", parent->this->name);
+        return 1;
+    } else {
+        return 0;
+    }
 }
 @
 <<header>>=
-Module newmodule(void);         /* create a new, blank module */
+Module newmodule(char *modname);         /* create a new, blank module */
 <<C functions>>=
-Module newmodule (void) {
+Module newmodule (char *modname) {
     Module p = (Module) malloc (sizeof (struct module));
     checkptr(p);
+    p->name = strsave(modname);
     p->head = p->tail = NULL;
     return p;
 }
@@ -261,6 +282,9 @@ for (p=fmt;*p;p++) {
 }
 <<RCS log>>=
 $Log:	modules.nw,v $
+# Revision 2.2  93/03/01  17:17:42  norman
+# distributed as version 2.4 (first "official" release)
+# 
 # Revision 2.1  91/10/14  14:23:32  nr
 # Distributed as version 2.0
 # 
