@@ -4,7 +4,7 @@ generated shell script.
 <<copyright notice>>=
 # Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# $Id: noweave.nw,v 1.4 1997/09/13 19:11:44 nr Exp $
+# $Id: noweave.nw,v 1.5 1997/09/13 20:29:56 nr Exp nr $
 @
 Here's the organization of the source:
 <<noweave>>=
@@ -27,6 +27,8 @@ markup=$LIB/markup backend=$LIB/totex
 wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
 noquote="-noquote" docanchor= noindex="-noindex"
 filtera= filterb= filterc= filterd= filtere=
+# following supported by change in totex back end
+noquote=
 @
 I make two passes over the arguments so as not to require that options
 be given in a certain order
@@ -416,8 +418,8 @@ Expand tabs with stops every \fIk\fP columns.
 Copy tabs to the output.
 @ \fi
 <<first pass {\tt noweave} options>>=
--v) echo 'RCS version name $Name$' 1>&2
-    echo 'RCS id $Id$' 1>&2
+-v) echo 'RCS version name $Name: v2_8a $' 1>&2
+    echo 'RCS id $Id: noweave.nw,v 1.5 1997/09/13 20:29:56 nr Exp nr $' 1>&2
     verbose=1 ;;
 <<option printout for usage>>=
 echo "-v		Print pipeline and RCS info on standard error" 1>&2
