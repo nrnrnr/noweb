@@ -8,6 +8,7 @@ opt= arg=
 for i do
 	case $i in
         -ml|-m3|-awk|-c|-w[0-9][0-9]*) ;; # deliberately ignore nountangle args
+	-)  arg="$arg '$i'" ;;
 	-*) opt="$opt '$i'" ;;
 	*)  arg="$arg '$i'" ;;
 	esac

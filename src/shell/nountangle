@@ -18,6 +18,7 @@ for i do
         -c)      format='/* %%-%ds */'   subst='gsub("\\*/", "* /", s)' ;;
         -L*) ;; # deliberately ignore requests for #line
         -w[0-9][0-9]*)    width=`echo $i | sed 's/^-w//'` ;;
+	-)  arg="$arg '$i'" ;;
         -*) opt="$opt '$i'" ;;
         *)  arg="$arg '$i'" ;;
         esac
