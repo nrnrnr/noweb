@@ -24,6 +24,7 @@ expands to an at sign, but I won't bother.
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "markup.h"
 #include "strsave.h"
 #include "errors.h"
@@ -107,11 +108,12 @@ char *mod_end(char *s, int mark) {
 Once we know how to [[mod_start]] and [[mod_end]], recognizing the
 beginning of a code chunk is easy.
 <<header>>=
-int starts_code (char *line);           /* does this line start module defn? */
+int starts_code (char *line, char *filename, int lineno);  
+				        /* does this line start module defn? */
 void getmodname(char *dest, int size, char *source);
                                         /* extract module name and put in dest */
 <<C functions>>=
-int starts_code (char *line) {
+int starts_code (char *line, char *filename, int lineno) {
     char *tail;
     if (mod_start(line,0) != line+2) return 0;
     tail = mod_end(line+2,0);
@@ -134,7 +136,7 @@ void getmodname(char *dest, int size, char *source) {
 }
 <<error exit from [[starts_code]]>>=
 {
-    errormsg(Error, "Module name doesn't end: %s", line);
+    errorat(filename, lineno, Error, "Module name doesn't end", line);
     return 0;
 }
 <<Error exit from getmodname>>= 
@@ -153,8 +155,22 @@ char *quote_end (char *s, int mark);      /* find close code quote (]]) */
 char *quote_start(char *s, int mark) {
     return find_escaped(s,"[[",NULL, mark);
 }
+@
+To find the end of a quote, I must take the last pair in a series of
+two or more right brackets.
+<<C functions>>=
 char *quote_end(char *s, int mark) {
-    return find_escaped(s,"]]",NULL, mark);
+    char *t = find_escaped(s, "]]", NULL, 0);
+    if (t == NULL) 
+        return t;
+    else {
+	t -= 2;		/* subtract length of ]] */
+        assert(t[0] == ']' && t[1] == ']');
+        while (t[2] == ']') t++;
+        assert(t[0] == ']' && t[1] == ']');
+        if (mark) *t = 0;
+	return t+2;
+    }
 }
 @
 Here we do the magic [[find_escaped]].
