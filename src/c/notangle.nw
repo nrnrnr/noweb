@@ -164,5 +164,4 @@ if (line==NULL) {
 <<Function declarations>>=
 void insist(char *line, char *keyword, char *msg);
 <<complain of botched code chunk>>=
-errormsg(Error, "Code chunk is botched in `%s', line %d:\n\t`%s'", 
-	 loc.filename, loc.lineno, line);
+errorat(loc.filename, loc.lineno, Error, "botched code chunk `%s'", line);
