@@ -999,26 +999,77 @@ documentation chunk.
 @ %def \nwixadd
 @
 \subsubsection{Subscripted identifiers}
-For indexing in code (on special occasions).
+We use either explicit subscripts or hyperlinks to point identifiers
+to their definitions.
 <<noweb.sty>>=
 \def\@nwsubscriptident#1#2{\mbox{$\mbox{#1}_{\mathrm{\subpageref{#2}}}$}}
 \def\@nwnosubscriptident#1#2{#1}
-\def\nwopt@subscriptidents{\let\nwsubscriptident=\@nwsubscriptident}
-\def\nwopt@nosubscriptidents{\let\nwsubscriptident=\@nwnosubscriptident}
-\nwopt@nosubscriptidents
+\def\@nwhyperident#1#2{\leavevmode\nwhyperreference{#2}{#1}}
+@ 
+We can use subscripts, hyperlinks, or nothing on all identifiers.
+<<noweb.sty>>=
+\def\nwopt@subscriptidents{%
+  \let\nwlinkedidentq\@nwsubscriptident
+  \let\nwlinkedidentc\@nwsubscriptident
+}
+\def\nwopt@nosubscriptidents{%
+  \let\nwlinkedidentq\@nwnosubscriptident
+  \let\nwlinkedidentc\@nwnosubscriptident
+}
+\def\nwopt@hyperidents{%
+  \let\nwlinkedidentq\@nwhyperident
+  \let\nwlinkedidentc\@nwhyperident
+}
+\def\nwopt@nohyperidents{%
+  \let\nwlinkedidentq\@nwnosubscriptident
+  \let\nwlinkedidentc\@nwnosubscriptident
+}
+@ 
+We can change only identifiers appearing in quoted code.
+<<noweb.sty>>=
+\def\nwopt@subscriptquotedidents{%
+  \let\nwlinkedidentq\@nwsubscriptident
+}
+\def\nwopt@nosubscriptquotedidents{%
+  \let\nwlinkedidentq\@nwnosubscriptident
+}
+\def\nwopt@hyperquotedidents{%
+  \let\nwlinkedidentq\@nwhyperident
+}
+\def\nwopt@nohyperquotedidents{%
+  \let\nwlinkedidentq\@nwnosubscriptident
+}
+@ 
+The default is to hyperlink everything.
+<<noweb.sty>>=
+\nwopt@hyperidents
 @ 
 \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
-.B subscriptidents, nosubscriptidents
+.B subscriptidents, nosubscriptidents, hyperidents, nohyperidents
 Controls subscripting of identifiers in code, including quoted code.
 Selecting
 .B subscriptidents
 means an identifier appearing in a code chunk (or in quoted code
 within a documentation 
 chunk) will be subscripted with the chunk number of its definition.
-Defaults to 
-.B nosubscriptidents.
+.B hyperidents
+means such identifiers will be hyperlinked to their definitions,
+provided of course that a hypertext package like
+.B hyperref
+is loaded.
+.B nosubscriptidents
+and 
+.B nohyperidents
+are equivalent, and they turn off such markings.
+The default is
+.B hyperidents.
+.TP
+.B subscriptquotedidents, nosubscriptquotedidents, hyperquotedidents, nohyperquotedidents
+Controls linking of identifiers as above, but applies only to uses of
+identifiers
+in quoted code.
 @ \fi
 @
 \subsubsection{Writing lists with commas and ``and''}
