@@ -3,7 +3,7 @@
 \usepackage{noweb,multicol}
 
 \title{Converting {\LaTeX} to HTML}
-\author{Norman Ramsey\\{\tt nr@cs.purdue.edu}}
+\author{Norman Ramsey\\{\tt nr@cs.virginia.edu}}
 
 \noweboptions{smallcode}
 \setcounter{secnumdepth}{1}
@@ -23,20 +23,75 @@ make a standalone conversion program.
 The program is roughly divided into three parts.
 Section~\ref{cs-decls} assigns a meaning (treatment) to each control
 sequence.
-It is roughly declarative, and the hope is that one day it can
-be replaced by a data file, which could be augmented dynamically.
-(The central flaw in this program is that all {\TeX} control
-sequences must be hard-wired.)
+The first part is roughly declarative, and in principle it could be
+ replaced by a data file.
+The declarations can be  augmented dynamically by putting formal
+comments in a {\LaTeX} or noweb file---the so-called
+``nifty \verb+% l2h+ escape hatch,'' which is utterly necessary and utterly
+undocumented. 
 Section~\ref{engine} describes the engine used to do the conversion,
 and
-Sections \ref{imp-decl}~and~\ref{html-format} gives the procedures that do the individual conversions.
+Sections \ref{imp-decl}~and~\ref{html-format} gives the procedures
+that do the individual conversions. 
+
+This program was motivated by my dissatisfaction with
+\texttt{latex2html}.
+In particular, \texttt{latex2html} is slow, and its output is full of
+chartjunk.
+Design decisions are driven by two goals:
+\begin{itemize}
+\item
+Translate input eagerly as it is read in, in one pass whenever
+possible.
+For example, I take care to translate the body of [[\textbf{...}]]
+without reading the entire argument.
+Instead, I open the macro by emitting [[<b>]], and I note that a
+corresponding [[</b>]] should be emitted when the matching close brace
+is reached.
+Most environments, including tables, are treated similarly.
+The result is that \texttt{l2h} is \emph{fast}; it can comfortably
+handle documents of hundreds of pages, whereas \texttt{latex2html}
+starts bogging down at around 50~pages.%
+\footnote{Measurement taken late in 1994}
+\item
+Use simple, natural translations to HTML whenever possible, and limit
+functionality to simple translation.
+For example, I do \emph{not} offer options to split documents up into
+sections and to create hyperlinks between sections---that sort of
+thing can and should be done by pure HTML tools.
+Also, I make no real attempt to do anything fancy with equations or
+pictures.
+These things have no natural equivalents in HTML.
+If you want to run {\LaTeX}, produce images, and embed them, look
+elsewhere.
+\end{itemize}
+Finally, the program has to be able to translate a fragment at a time,
+because it needs to work selectively on parts of the noweb pipeline.
+For example, the argument to a {\LaTeX} control sequence might be
+split into three pieces, one of which could be noweb quoted code.
+Passing pieces in and getting results back incrementally
+would be completely straightforward in a language with
+message-passing concurrency, but we don't have that in Icon.
+If I understood co-expressions, I might be able to use them, but
+instead I use a continuation-passing, closure-passing style,
+constantly creating actions to be executed on future input events.
+Significant events include open and close braces as well as the simple
+arrival of new text.
+This style makes sense if one has some familiarity with continuations
+\cite{appel:continuation,appel:compiling}, but for Icon programmers
+it's bizarre.
+
 
 {\bf Disclaimers}:  
-This program was a weekend hack.
-It is not going to help me get tenure.
-The nifty \verb+% l2h+ escape hatch is utterly necessary and utterly
-undocumented. 
+This program may be the worst I have ever written.
+It started as a weekend hack, then took on a life of its own.
+As I gradually assimilated the weirdness of writing
+continuation-passing code in Icon, I came up with better and better
+ways of doing things, but all the old ways are still here.
+I really ought to clean things up and document them, but that would
+not help me get tenure.
 Please excuse the weak or absent documentation.
+
 
 
 @
@@ -91,6 +146,8 @@ argblock("mathbf", "b")
 argblock("mathtt", "tt")
 ignore("mathsf")
 argblock("mathcal", "i")
+every ignore("scriptstyle"|"displaystyle"|"scriptscriptstyle")
+every ignore("mathord"|"mathbin"|"mathrel")
 @ HTML has only one size.
 <<control-sequence assignments>>=
 every ignore("tiny" | "scriptsize" | "footnotesize" | "small" | "normalsize" | 
@@ -285,7 +342,7 @@ every ignore("input" | "include" | "includeonly", "{")
 @
 \subsubsection{Line breaking}
 <<control-sequence assignments>>=
-substitution("\\", "<br>", "[")
+cstab["\\"] := Cbackback
 substitution("linebreak", "<br>")
 ignore("-")
 ignoreenv("sloppypar")
@@ -360,11 +417,14 @@ ignore("kill")
 @
 \subsubsection{{\tt array} and {\tt tabular} environment}
 <<control-sequence assignments>>=
-envblock("array",    "blockquote", &null, "[{")
-envblock("tabular",  "blockquote", &null, "[{")
-envblock("tabularx", "blockquote", &null, "[{{")
-ignore("multicolumn", "{{")
-substitution("hline", "<hr>")
+tabular("array",    "[")
+tabular("tabular",  "[")
+tabular("tabularx", "{[")
+tabular("tabular*", "{[")
+every cstab["multicolumn"|"multispan"] := Cmulticolumn
+cstab["span"] := Cspan
+cstab["noalign"] := Cnoalign
+cstab["hline"] := Chline
 ignore("cline", "{")
 @
 \subsubsection{Definitions}
@@ -396,9 +456,11 @@ fontchange("sl", "i")
 fontchange("em", "em")
 ignore("rm")		# html can't switch to default font!
 ignore("sf")
+ignore("sc")
 @ And some new ones
 <<control-sequence assignments>>=
 ignore("rmfamily")
+ignore("normalfont")
 <<control-sequence assignments>>=
 ignoreenv("document")
 <<control-sequence assignments>>=
@@ -421,18 +483,16 @@ every ignore("evensidemargin" | "marginparsep" | "marginparwidth" |
 ignoreenv("multicols", "{C")
 cstab["citeN"] := Ccite
 ignore("afterpage", "{")
-substitution("epsfig", "[EPS figure]", "{")
+every cstab["psfig"|"epsfig"] := Cepsfig
 ignore("newcolumntype", "{{")
 @
 A (perhaps vain) attempt to implement \verb+\kill+.
 <<control-sequence assignments>>=
 cstab["kill"] := Ckill
-@ 
-\subsubsection{Backslashes}
 @
 \subsection{Plain {\TeX} control sequences}
 <<control-sequence assignments>>=
-argblock("noalign", "<br>", "<br>")	# not clear what else to do...
+activesubst("~", "&nbsp;")
 argblock("centerline", "<br>", "<br>")
 substitution("cr", "<br>")
 substitution("hrule", "<hr>")
@@ -448,7 +508,6 @@ ignore("message", "{")
 ignore("relax")
 ignore("null")
 ignore("offinterlineskip")
-ignore("multispan", "{")
 ignore("omit")
 ignore("newdimen", "{")
 ignore("nobreak")
@@ -470,6 +529,7 @@ every ignore("begingroup" | "endgroup" | "bgroup" | "egroup")
 cstab["newif"]   := Cnewif
 cstab["iffalse"] := Ciffalse
 cstab["iftrue"]  := Ciftrue
+cstab["ifhtml"]  := Ciftrue  # false in LaTeX, but true when converting!
 cstab["else"]    := Celse
 cstab["fi"]      := Cfi
 cstab["ifx"] := cstab["if"] := cstab["ifnum"] := Ciffalse
@@ -479,6 +539,8 @@ Lots of assignable things:
 ignore("let", "A=")
 every ignore("hfuzz" | "parindent" | "parskip" | "baselineskip", "=")
 every ignore("hbadness" | "hsize" | "vsize" | "overfullrule" | "tabskip", "=")
+every ignore("extrarowheight" | "codemargin", "=")
+every ignore("looseness", "=")
 substitution("hskip", " ", "=")
 ignore("setbox", "{=")
 every ignore("box" | "unhbox" | "unvbox", "{")
@@ -555,7 +617,6 @@ every cstab["anoncite"|"authorcite"] := Ccite
 @
 This will always have to be patched by hand, but it may be worth it.
 <<control-sequence assignments>>=
-argblock("psfig", "<a href=\"", "\">PostScript</a>")
 ignore("pssilent")
 ignore("psnoisy")
 @
@@ -620,23 +681,25 @@ while not pos(0) do
       S.mode := S.quotemode
     }
   } else {
-    case move(1) of {
-      "\\" : {<<control sequence>>}
-      "{"  : {<<take open-group actions>>}
-      "}"  : {<<take close-group actions>>}
-      "%"  : {<<comment>>}
-      "~"  : emit_text(S, "&nbsp;")
-      "\n" : {<<newline>>}
-      "$"  : {<<dollar sign>>}
-      "&"  : {<<ampersand>>}
-      "\0" : {S.quotemode := S.mode; S.mode := "Q"; emit_text(S, "\0")}
-      # remaining cases simply escape HTML specials
-      "<"  : emit_text(S, "&lt;")
-      ">"  : emit_text(S, "&gt;")
-      "\"" : emit_text(S, "&quot;")
-    }
+    if any(S.activechars) then
+      do_activechar(S, move(1))
+    else
+      case move(1) of {
+        "\\" : {<<control sequence>>}
+        "{"  : {<<take open-group actions>>}
+        "}"  : {<<take close-group actions>>}
+        "%"  : {<<comment>>}
+        "\n" : {<<newline>>}
+        "$"  : {<<dollar sign>>}
+        "&"  : ampersand(S)
+        "\0" : {S.quotemode := S.mode; S.mode := "Q"; emit_text(S, "\0")}
+        # remaining cases simply escape HTML specials
+        "<"  : emit_text(S, "&lt;")
+        ">"  : emit_text(S, "&gt;")
+        "\"" : emit_text(S, "&quot;")
+      }
     if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
-    emit_text(S, tab(upto(specials) | 0))
+    emit_text(S, tab(upto(specials++S.activechars) | 0))
   }
 return 1(. S.the_text, S.the_text := "")  # what's been converted
 @
@@ -692,6 +755,24 @@ end
 , &null
 <<code to reset [[S]]>>=
 S.ignoring := &null
+@ 
+Active characters are like control sequences.
+The only one active by default is the~[[~]].
+<<*>>=
+global activetab, activeclosure
+procedure do_activechar(S, c)
+  (activetab[c])(S, c, activeclosure[c])
+  return
+end
+<<initialization>>=
+activetab := table(unknown_cs)
+activeclosure := table()
+<<other fields of state>>=
+, activechars
+<<initial values for other fields of state>>=
+, '~'
+<<code to reset [[S]]>>=
+S.activechars := '~'
 @
 \subsection{Action and continuation hooks}
 We provide hooks so that actions can be taken at various points.
@@ -742,22 +823,21 @@ a new input, using [[delay_newtext]].
  [[undelay_newtext]] restores actions.
 <<*>>=
 procedure delay_newtext(S)
-  S.delayed_newtext := S.newtext
+  push(S.delayed_newtext, S.newtext)
   S.newtext := []
   return
 end
 
 procedure undelay_newtext(S)
-  S.newtext := \S.delayed_newtext |
-    {write(&errout, "This can't happen: null delayed_newtext"); &null[0]}
-  S.delayed_newtext := &null
+  S.newtext := \pop(S.delayed_newtext) |
+    {write(&errout, "This can't happen: no delayed_newtext"); &null[0]}
 end
 <<other fields of state>>=
 , delayed_newtext
 <<initial values for other fields of state>>=
-, &null
+, []
 <<code to reset [[S]]>>=
-S.delayed_newtext := &null
+S.delayed_newtext := []
 @
 \subsubsection{Opening and closing groups}
 There's only one list of actions to be taken at the next open,
@@ -932,7 +1012,7 @@ until a newline is encountered, at which point it calls
 [[Ccomment]] to format the comment.
 All other new-text actions go on hold until the comment is over.
 <<comment>>=
-parse_dynamic_add()
+parse_dynamic_add(S)
 delay_newtext(S)
 eat_comment(S)
 <<*>>=
@@ -981,7 +1061,7 @@ procedure verbatim(name, output, terminator, html)
 end
 
 procedure Cverbatim(S, cs, cl)
-  S.text(S, tag(\cl.html))
+  emit_text(S, tag(\cl.html))
   delay_newtext(S)
   do_verbatim(S, cl)
   return
@@ -994,7 +1074,7 @@ input is to continue scanning.
 procedure do_verbatim(S, cl)
   if cl.output(S, tab(find(cl.terminator)), cl) then {
     =cl.terminator
-    S.text(S, endtag(\cl.html))
+    emit_text(S, endtag(\cl.html))
     undelay_newtext(S)
   } else {
      cl.output(S, tab(0), cl)
@@ -1007,15 +1087,15 @@ When writing verbatim text, we still have to convert HTML specials.
 <<*>>=
 procedure escape_HTML_specials(S, s, cl)
   s ? {
-    while S.text(S, tab(upto('&<>" '))) do
+    while emit_text(S, tab(upto('&<>" '))) do
       case move(1) of {
-        "\"" : S.text(S, "&quot;")
-        "&"  : S.text(S, "&amp;")
-        "<"  : S.text(S, "&lt;")
-        ">"  : S.text(S, "&gt;")
-        " "  : S.text(S, if \cl.translate_blank then "&middot;" else " ")
+        "\"" : emit_text(S, "&quot;")
+        "&"  : emit_text(S, "&amp;")
+        "<"  : emit_text(S, "&lt;")
+        ">"  : emit_text(S, "&gt;")
+        " "  : emit_text(S, if \cl.translate_blank then "&middot;" else " ")
       }
-    S.text(S, tab(0))
+    emit_text(S, tab(0))
   }
   return
 end
@@ -1031,9 +1111,9 @@ end
 \subsubsection{Arguments}
 It's occasionally necessary to collect the argument of a control
 sequence.
-[[short_arg]] does the job.
+[[csarg]] does the job.
 <<*>>=
-procedure short_arg(S)
+procedure csarg(S)
   return  2(="{", tab(bal('}', '{', '}')), ="}") |
            (optwhite(), 
                if ="\\" then 
@@ -1042,9 +1122,9 @@ procedure short_arg(S)
                  move(1))
 end
 @ 
-[[short_arg()]] works only if the whole
+[[csarg()]] works only if the whole
 argument is in the same line; otherwise it only returns the opening curly
-brace, `[[{]]'. Another problem with [[short_arg()]] is that it does not cope with 
+brace, `[[{]]'. Another problem with [[csarg()]] is that it does not cope with 
 [[%]] or [[\]] in the input (due to the use of the Icon function [[bal()]] to 
 balance curly brackets), as such a escaped or commented out curly brace is 
 handled incorrectly.
@@ -1055,178 +1135,92 @@ way how l2h works the Icon command associated with [[foo]] will have to
 terminate before the `[[baz}]]' gets read, and as such cannot do anything 
 useful except register a callback to finish the job.
 
-%%  This implementation has been used to solve two problems: tables with multiline
-%%  captions and problematic [[.bbl]] files due to \BibTeX\ breaking long lines at 
-%%  the 79th char and using a [[%]] to allow continuation in the next line, this 
-%%  was causing bad HTML typesetting and bad HTML links for some bibliographic
-%%  entries. In principle this implementation is general enough to be used instead
-%%  of [[short_arg()]] (and has the advantage that escaped curly brackets and comments
-%%  are handled correctly). The\index{bugs!nested multiline args} main bug (see
-%%  below) is that it uses global state and therefore multiline arguments cannot be
-%%  nested.
-
 @
 
 [[apply_arg(S, cl)]] scans an argument (preceded by optional
 whitespace), then invokes the closure on that argument.
-Its use should subsume [[short_arg]], but that may take a while yet.
+Its use should subsume [[csarg]], but that may take a while yet.
 <<*>>=
-procedure apply_arg(S, cl)
-  optwhite()
-  return (optwhite(), 
-          if ="\\" then "\\" || (tab(many(S.csletters)) | move(1))
-          else if ="{" then {
-                  delay_newtext(S)
-                  grabMultilineArg(S, "", terminateMultilineCurly, 1)
-               } else move(1))
+@ 
+[[apply_args(S, p, as, n]] scans [[n]] arguments from the
+input, puts them in a list [[args]], then calls [[p!(as ||| args)]].
+This is a bit weak, because we really want to turn off comment
+skipping for some arguments.
+N.B. the arguments are \emph{not} converted.
+<<*>>=
+procedure apply_args(S, p, as, args_wanted)
+  delay_newtext(S)
+  do_apply_args(S, closure(p, as), args_wanted, [], "", 0)
+  return
 end
 
-procedure apply_apply_arg(cl, a)
-  return cl.proc ! ([a] ||| cl.args)
+procedure do_apply_args(S, cl, wanted_count, args_seen, current_arg, brace_depth)
+  local open_comment
+  # invariant : we have an open brace
+#  pushtrace("APPLY")
+  while *args_seen < wanted_count & not pos(0) do {
+    while *args_seen < wanted_count & brace_depth = 0 & not pos(0) do {
+      tab(many(' \t\n'))
+      case c := move(1) of {
+        "\\" : put(args_seen, "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1))
+        "{"  :  { current_arg := "" ; brace_depth := 1 }
+        "}"  :  { error("Insufficient arguments to macro ", macro.name) }
+        "%"  :  if tab(upto('\n')) then ="\n" else open_comment := tab(0)
+        default : put(args_seen, c)
+      }
+    }
+    while brace_depth > 0 & not pos(0) do {
+      current_arg ||:= tab(upto('\\{}%') | 0)
+      case move(1) of {
+        "%"  :  if tab(upto('\n')) then ="\n" else open_comment := tab(0)
+        "\\" : current_arg ||:= "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1)
+        "{"  :  { current_arg ||:= "{" ; brace_depth +:= 1 }
+        "}"  :  { brace_depth -:= 1
+		  if brace_depth > 0 then
+		    current_arg ||:= "}"
+		  else {
+		    put(args_seen, current_arg)
+		    current_arg := ""
+		  }
+		}
+      }
+    }
+  }
+  if *args_seen = wanted_count then {
+    undelay_newtext(S)
+    cl.proc ! (cl.args ||| args_seen)
+  } else if \open_comment then {
+    delay_newtext(S)
+    before_next_newtext(S, skip_comment_and_continue,
+	[S, closure(do_apply_args, [S, cl, wanted_count, args_seen,
+				    current_arg, brace_depth])])
+  } else
+    before_next_newtext(S, do_apply_args, [S, cl, wanted_count, args_seen,
+					   current_arg, brace_depth])
+#  poptrace()
+  return
 end
-@ %def multilineArg(
-
-This procedure processes a single line of a multiline argument, and if the end
-of the argument was not recognized before the line finished then it uses
-[[before_next_newtext()]] to register itself to be called again to process the
-next line. The contents of the multiline argument up to this point are stored
-in [[curlyText]].
-%
-<<new l2h.nw procedures: support for multiline arg>>=
-procedure grabMultilineArg(S, curlyText, proc, curlyCount)
-   local k, start
-   start := 1 # it must be 1, not &pos, I don't exactly know why
-   <<balance curly brackets paying attention to [[%]] and [[\]]>>
-   curlyText ||:= &subject[start:&pos]
-   move(0)
-   if curlyCount < 0 then
-      stop("SoftBug in dot-l2h grabMultilineArg(), contact technical support")
-   else if curlyCount = 0 then {
-           undelay_newtext(S)
-           (\proc)(S, curlyText)
-        } else before_next_newtext(S, grabMultilineArg, [S, curlyText, proc,
-                                                                curlyCount])
-end
-@ %def grabMultilineArg(
-
-This is the loop that scans a line keeping track of the curly nesting in
-[[curlyCount]] and handling correctly comments ([[%]]) and escapes (comment,
-backslash, or curly bracket).
-%
-<<balance curly brackets paying attention to [[%]] and [[\]]>>=
-while k := move(1) do
-   if k == "%" then break
-   else if k == "{" then curlyCount +:= 1
-        else if k == "}" then {
-                curlyCount -:= 1
-                if curlyCount = 0 then break
-             } else if k == "\\" & (&subject[&pos+:1] == "}" |
-                                    &subject[&pos+:1] == "{" |
-                                    &subject[&pos+:1] == "\\" |
-                                    &subject[&pos+:1] == "%") then move(1)
-@
-
-It is necessary to do the conversion here, just returning [[contents]] for some
-reason is not enough (doing that causes a failure of [[multilineShort_Arg()]], I
-wonder why). I'm not sure if I should use a [[V]] or a [[H]] converter, I'll
-have to sharp my \TeX\ skills. Probably it is not important. The value returned
-by [[convert()]] is also garbage, [[convert()]] must have some funny
-side-effects, not calling it breaks everything. 
-
-Notice that [[contents]] for some reason has not only the arg but the command
-plus the arg, that is, is of the form [[\foo{...}]], where [[foo]] is the
-command that encapsulates the arg in the input text. Therefore we cheat
-and skip everything up to the `[[{]]' (exclusive).
-%
-<<new l2h.nw procedures: support for multiline arg>>=
-procedure terminateMultilineCurly(S, contents)
-   local k
-# write(&errout, "RAW="||image(contents))
-   k := map(cancelPercent(contents[upto('{', contents):0], multilineCharset),
-                                                                   '\n', ' ')
-# write(&errout, "MULTILINEARG="||k)
-   if \multilineProc then k:= multilineProc(multilineExtra1, multilineExtra2,
-                                    convert(converter("H"), "{" || k || "}"))
-   else k := &null
-   return k
-end
-@ %def terminateMultilineCurly(
-
-This function kills (removes from its argument) a percent sign `[[%]]'. If the
-optional argument [[sufixCharset]] is not [[&null]] then it only removes the
-[[%]] if it is followed by a char in the \emph{cset} [[sufixCharset]], in that 
-case both characters are removed.
-
-When used together with the support for multiline arguments we are interested
-in `[[cancelPercent(s, '\n')]]', when used together with [[.bbl]] \BibTeX\ files
-we are interested in `[[cancelPercent(s)]]'.
-%
-<<new l2h.nw procedures: support for multiline arg>>=
-procedure cancelPercent(s, sufixCharset)
-   local multiLine, k, result
-   result := ""
-   if s === &null then return "<NULL>"
-   s ? while k := move(1) do
-          if k == "\\" then {
-             result ||:= k   # must be made in 2 steps (escape can be last char)
-             result ||:= move(1)
-          } else if k == "%" then {
-                    if sufixCharset ~=== &null & 
-                          any(sufixCharset, &subject[&pos+:1]) then move(1)
-                    # ELSE DO NOTHING, i.e. only the % is discarded
-                 } else result ||:= k
-   return result
-end
-@ %def cancelPercent(
-
-We use these global variables to hold additional state. The main reason for
-using global variables is that I do not exactly understand all the nuances of
-l2h callbacks, and as such I have difficulty in passing information around as
-extra arguments. Provided that multiline arguments do not
-nest\index{bugs!nested multiline args} this is not a problem, however that
-could happen couldn't it?
-%
-<<new l2h.nw procedures: support for multiline arg>>=
-global multilineProc, multilineExtra1, multilineExtra2, multilineCharset
-
-procedure safeMultilineArg(S, proc, extra1, extra2, percentCharset)
-   multilineProc := proc
-   multilineExtra1 := extra1
-   multilineExtra2 := extra2
-   multilineCharset := percentCharset
-   multilineArg(S)
-   return "MEANINGLESS STRING"
-end
-
-procedure testMultilineArg(S, cs, cl)  # DEBUG
-   safeMultilineArg(S, writeSecond, &errout, '\n')
-end
-
-procedure writeSecond(stream, dummy, txt)  # DEBUG (keep undocumented)
-   write(stream, image(txt))
-end
-@ %def safeMultilineArg( testMultilineArg( multilineProc multilineExtra1 multilineExtra2 multilineCharset
-
-Here we register the debug function.
-%
-<<new l2h.nw init declarative statements>>=
-cstab["testMultilineArg"] := testMultilineArg # DEBUG
-@
-
-
+<<*>>=
+procedure skip_comment_and_continue(S, cl)
+  tab(upto('\n') | 0)
+  if pos(0) then
+    before_next_newtext(S, skip_comment_and_continue, [S, cl])
+  else {
+    ="\n"
+    undelay_newtext(S)
+#    <take actions appropriate to new text>>
+  }
+  return
+end    
 @
 \subsubsection{Misc specials}
-Ampersand is weak --- I just use some string depending on the environment.
-Tables look sort of OK.
-Notice that ampersands close and open groups.
-<<ampersand>>=
-<<take close-group actions>>
-emit_text(S, S.ampersand)
-<<take open-group actions>>
-<<other fields of state>>=
-, ampersand
-<<initial values for other fields of state>>=
-, " --- "
+Ampersands are covered in the table section (\ref{tabular}).
 @
 The dollar sign is for entering and exiting math mode:
 <<dollar sign>>=
@@ -1296,12 +1290,12 @@ procedure Citem(S, cs, cl)
     with_upto_bracket(S, "", convert_bracketed, cl)
   } else {
     skipblanks(S)
-    S.text(S, cl[1].ifnone)
+    emit_text(S, cl[1].ifnone)
   }
 end
 <<*>>=
 procedure convert_bracketed(S, contents, cl)
-  S.text(S, cl[1].before || 
+  emit_text(S, cl[1].before || 
             convert(converter("H"), "{" || contents || "}") || 
             cl[1].after)
   optwhite()
@@ -1315,14 +1309,14 @@ procedure listenv(env, html)
 end
   
 procedure Clist(S, cs, cl)
-  S.text(S, tag(cl))
+  emit_text(S, tag(cl))
   push(csclosure["item"], 
     if cs == "description" then item_cl("<dt>", "<dd>", "<dt><dd>")
     else                        item_cl("<li>", "--", "<li>"))
 end
 
 procedure Clist_end(S, cs, cl)
-  S.text(S, endtag(cl))
+  emit_text(S, endtag(cl))
   pop(csclosure["item"])
 end
 @
@@ -1334,8 +1328,8 @@ global labels_seen
 
 procedure Clabel(S, cs, cl)
   initial /labels_seen := set()
-  insert(labels_seen, l := short_arg(S)) | fail
-  S.text(S, "<a name=\"" || l || "\"><b>[*]</b></a>")
+  insert(labels_seen, l := csarg(S)) | fail
+  emit_text(S, "<a name=\"" || l || "\"><b>[*]</b></a>")
 end
 
 procedure Cref(S, cs, cl)
@@ -1343,8 +1337,8 @@ procedure Cref(S, cs, cl)
   initial /labels_seen := set()
   prefix_tag := (\cl)[1] | ""
   prefix := (\cl)[2] | ""
-  l := prefix || short_arg(S) | fail
-  S.text(S, prefix_tag || "<a href=\"#" || l || "\">[" || 
+  l := prefix || csarg(S) | fail
+  emit_text(S, prefix_tag || "<a href=\"#" || l || "\">[" || 
                  (if member(labels_seen, l) then "&lt;-" else "-&gt;") || "]</a>")
 end
 @
@@ -1370,17 +1364,17 @@ procedure do_cite(S, commentary, cl)
     optwhite()
   if pos(0) then before_next_newtext(S, do_cite, [S, commentary, cl])
   else {
-    key := short_arg(S)
+    key := csarg(S)
     \commentary := convert(converter("H"), "{" || \commentary || "}")
-    S.text(S, "<b>[cite&nbsp;")
+    emit_text(S, "<b>[cite&nbsp;")
     key ? {
       while k := tab(upto(",")) & ="," do
-        S.text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>, ")
+        emit_text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>, ")
       if k := tab(0) then
-        S.text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>")
+        emit_text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>")
     }
-    S.text(S, ", <i>" || \commentary || "</i>")
-    S.text(S, "]</b>")
+    emit_text(S, ", <i>" || \commentary || "</i>")
+    emit_text(S, "]</b>")
   }
 end
 <<*>>=
@@ -1393,17 +1387,19 @@ procedure Cbibitem(S, cs, cl)
     with_upto_bracket(S, "", finish_bibitem, [])
   } else {
     label := "<b>[" || (counter +:= 1) || "]</b>"
-    key := short_arg(S) | fail
-    S.text(S, "<a name=\"NWcite-" || key || "\">" || label || "</a> ")
+    apply_args(S, do_bibitem_key, [S, label], 1)
   }
+end
+
+procedure do_bibitem_key(S, label, key)
+  return emit_text(S, "<a name=\"NWcite-" || key || "\">" || label || "</a> ")
 end
 
 procedure finish_bibitem(S, contents, args)
   local key, label
   optwhite()
-  key := short_arg(S) | fail
   label := convert(converter("H"), "{" || contents || "}")
-  S.text(S, "<a name=\"NWcite-" || key || "\">" || label || "</a> ")
+  key := apply_args(S, do_bibitem_key, [S, label], 1)
 end
 @
 \subsubsection{Conditionals}
@@ -1460,7 +1456,7 @@ procedure Cnewif(S, cs, cl)
   if pos(0) then
     after_next_newtext(S, Cnewif, [S, cs, cl])
   else {
-    newif := short_arg(S)
+    newif := csarg(S)
     newif ?
       if ="\\if" & newcs := tab(many(S.csletters)) & pos(0) then {
         <<make [[newcs]] a new \verb+\if+-like thing>>
@@ -1483,7 +1479,245 @@ procedure Csetif(S, cs, cl)
     error("This can't happen --- setif botch (not urgent)")
   }
 end
+@ 
+\subsection{HTML support for array and tabular environments}
+We handle tables by using [[S.text]] to implement a little state machine.
+There are only two states: waiting to start a new cell, and the
+ordinary state of converting text.
+
+The rest of the state information is held in a list of [[table_info]]
+records that tell us what to expect for the next cell.
+<<*>>=
+record table_info(index,	# number of this cell in the row
+		  alignment,	# the alignment of this cell 
+		  width,	# how many columns this cell will span
+		  alignments,	# default alignments for this table
+		  brace_depth,	# size of S.closes after start of cell
+		  cell_text)	# value of S.text to use to scan this cell
+@ This state could conceivably be extended to include pre- and
+post-content for each cell, \`a la plain {\TeX}'s [[\halign]] or the
+{\LaTeX} [[<{}]] and [[>{}]] directives, but for now I won't bother.
+
+I should probably also add a [[rows_taken]] field and use it to
+implement [[multirow]] support.
 @
+Here's a stack that keeps track of all currently active tabular environments.
+<<other fields of state>>=
+, tables
+<<initial values for other fields of state>>=
+, []
+<<code to reset [[S]]>>=
+S.tables := []
+@ 
+Accumulating text forces the transition between states.
+While I'm at it, I update the state for the next cell.
+<<*>>=
+procedure start_table_cell(S, text)
+  local this, attributes
+
+  text ? {
+    tab(many(' \t\n'))
+    if pos(0) then return
+  }
+# write(&errout, "starting cell with ", image(text))
+
+  this := S.tables[1] | fatal("starting cell with no current table")
+  S.text := this.cell_text
+
+if /(\this).brace_depth then write(&errout, "starting table cell, ", image(this), " has null brace depth")
+  # use this to start the current cell
+  if this.index = 1 then emit_text(S, "<tr>")
+  attributes := \this.alignment | "align=top"
+  if this.width > 1 then attributes ||:= " colspan=" || this.width
+  emit_text(S, "<td" || attributes || ">")
+
+  # now update state for the next cell
+  this.index +:= this.width  # advance to next cell
+  this.alignment := this.alignments[this.index] | &null
+  this.width := 1
+  # can't set cell_text until we hit &
+
+  <<take open-group actions>>
+  emit_text(S, text)
+  return
+end
+@ 
+Hitting an ampersand closes and opens groups, and it advances to the
+next cell.
+<<*>>=
+procedure ampersand(S)
+  local this
+  this := S.tables[1]
+  <<take close-group actions>>
+  if /this then
+    emit_text(S, " --- ")
+  else {
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    emit_text(S, "</td>")
+    if S.text ~=== start_table_cell then
+       this.cell_text := S.text
+    S.text := start_table_cell
+    this.brace_depth := *S.closes + 1 # will open at start of cell
+#write(&errout, "set brace depth for ", image(this))
+  }
+  tab(many(' \t\n'))
+##  write(&errout, " past &, text = ", image(S.text), ", next = ",
+##  	 image(&subject[&pos:0]))
+  return
+end
+@
+The double backslash is the end of a row, unless it's buried in braces
+or there's no table.
+<<*>>=
+procedure Cbackback(S, cs, cl)
+  local this
+  this := S.tables[1]
+  cs_ignore(S, cs, "[")
+#if /(\this).brace_depth then write(&errout, image(this), " has null brace depth")
+  if /this | *S.closes > this.brace_depth then { # ordinary \\
+    S.text(S, "<br>")
+  } else {			# row terminator
+## write(&errout, "ending row with ", image(&subject[&pos:0]))
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    <<take close-group actions>>
+    emit_text(S, "</td></tr>\n")
+    tab(many(' \t\n'))
+    if S.text ~=== start_table_cell then
+      this.cell_text := S.text
+    this.index := 1
+    this.alignment := this.alignments[this.index] | &null
+    this.width := 1
+    S.text := start_table_cell
+    this.brace_depth := *S.closes + 1 # about to open
+  }
+end
+@
+A horizontal line disappears if it's in a table.
+<<*>>=
+procedure Chline(S, cs, cl)
+  if \S.tables[1] then return
+  else emit_text(S, "<hr>")
+  return
+end
+@ 
+An [[\end{tabular}]] terminates the whole affair.
+If we're at the beginning of a row, things are easy.
+Otherwise, we terminate the current row first.
+<<*>>=
+procedure Ctabular_end(S, cs, cl)
+  local this
+  if S.text ~=== start_table_cell | S.tables[1].index > 1 then {# row in progress
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    <<take close-group actions>>
+    emit_text(S, "</td></tr>")
+  }
+  if S.text === start_table_cell then # abort it
+    S.text := S.tables[1].cell_text
+  emit_text(S, "</table>")
+  xxx := pop(S.tables)
+#write(&errout, "popped ", image(xxx))
+  return
+end
+@ 
+Finally, the setup of the table itself:
+<<*>>=    
+procedure Ctabular(S, cs, cl)
+  cs_ignore(S, cs, cl, Ctabular_continue, [S])
+  return
+end
+
+procedure Ctabular_continue(S)
+  a := csarg() # alignment
+#write(&errout, "Alignment ", a)
+  emit_text(S, if upto('|', a) then "<table border>" else "<table>")
+  emit_text(S, "<!-- alignment is " || a || "-->")
+  a := alignments(a)
+  emit_text(S, "<!-- " || *a || " columns-->")
+  push(S.tables, table_info(1, a[1] | "l", 1, a, *S.closes+1, S.text))
+#write(&errout, "pushed ", image(S.tables[1]))
+  S.text := start_table_cell
+  optwhite()
+  return
+end
+@ Earlier, the initial value of [[S.tables[1].brace_depth]] was
+[[&null]], but when we had alignment of \verb+{c}+, it was never
+getting set, so I'm setting it on startup, even though I'm not sure if
+that's really right.
+<<*>>=
+procedure tabular(env, ignore)
+  begintab[env] := Ctabular
+  begincl[env] := ignore
+  endtab[env] := Ctabular_end
+  endcl[env] := ignore
+end
+@ 
+We figure alignments using the tricks in the {\LaTeX} book.
+<<*>>=
+procedure alignments(s)
+  a := []
+  s ? {
+    while not pos(0) do
+      case move(1) of {
+	"l" | "X" | "Y" | "p" : { put(a, " align=left valign=top"); skip_bracket() }
+	"c" : put(a, " align=center")
+	"r" : put(a, " align=right")
+	"m" : { put(a, " align=left valign=center"); skip_bracket() }
+	"b" : { put(a, " align=left valign=bottom"); skip_bracket() }
+	"@" | "<" | ">" | "!" : skip_bracket()
+        "|" : &null
+        default : &null		# unrecognized...
+      }
+  }
+  return a
+end
+<<*>>=
+procedure skip_bracket()
+  if ="{" then {
+    n := 1
+    while n > 0 & not pos(0) do {
+      tab(upto('{}\\') | 0)
+      case move(1) of {
+        "{" : n +:= 1
+	"}" : n -:= 1
+	"\\" : move(1)
+      }
+    }
+  }
+  return
+end
+@ 
+[[\multicolumn]] changes the width and alignment of the current cell.
+[[\multispan]] changes only the width.
+<<*>>=
+procedure Cmulticolumn(S, cs, cl)
+  local this
+  this := S.tables[1]
+  n := integer(csarg()) | error("\\multicolumn or \\multispan not followed by integer")
+  if cs == "multicolumn" then a := alignments(csarg())
+# write(&errout, "\\", cs, "  n = ", n, ",  a = ", (\a)[1] | "???", 
+#      ", text = ", image(S.text))
+  if /this then return		# \multicolumn without table?
+  this.width := n
+  this.alignment := (\a)[1]
+  return
+end
+
+procedure Cspan(S, cs, cl)
+  (\S.tables[1]).width +:= 1
+  return
+end
+@ 
+<<*>>=
+procedure Cnoalign(S, cs, cl)
+  apply_args(S, finish_noalign, [S], 1)
+  return
+end
+
+procedure finish_noalign(S, arg)
+  return if \S.ignoring then "" else 
+  accumulate_text(S, "<br>" || convert(converter("V"), "{" || arg || "}") || "<br>")
+end
+@ 
 \subsection{Reading and converting auxiliary {\LaTeX} files}
 <<*>>=
 procedure auxfile(cs, ext, placeholder, header, trailer, ignore)
@@ -1559,7 +1793,7 @@ procedure Ccontentsline(S, cs, cl)
   local type, level
   static leveltab
   initial { <<assign numbers of sections in leveltab>> }
-  l := \leveltab[short_arg()] | fail
+  l := \leveltab[csarg()] | fail
   if l > \countertab["tocdepth"] then
     cs_ignore(S, cs, "{{") # skip this one
   else {
@@ -1581,7 +1815,7 @@ global countertab
 
 procedure Csetcounter(S, cs, cl)
   local counter
-  (counter := short_arg(), countertab[counter] := integer(short_arg())) | 
+  (counter := csarg(), countertab[counter] := integer(csarg())) | 
 	cs_ignore(S, cs, "{{")
 end
 <<initialization>>=
@@ -1629,7 +1863,7 @@ end
 procedure Caccent(S, cs, cl)
   static warned
   initial warned := table()
-  arg := short_arg(S) | return
+  arg := csarg(S) | return
   if *arg = 1 & any(accent_valid[cs], arg) then
     S.text(S, "&" || arg || accent_name[cs] || ";")
   else {
@@ -1716,7 +1950,7 @@ procedure do_ignore(S, template, saved_ignore, proc, args)
                 after_next_open(S, ignore_til_close, 
 			              [S, template[2:0], saved_ignore, proc, args])
               }
-        "A" : { short_arg(S) # had better be in one input
+        "A" : { csarg(S) # had better be in one input
                 do_ignore(S, template[2:0], saved_ignore, proc, args)
               }
         "[" : if optwhite() & ="[" then {
@@ -1823,7 +2057,7 @@ procedure eat_assignment(S, proc, args)
     tab(many(hex_chars)) & optwhite()
   } else if ="\'" then {
     tab(many(oct_chars)) & optwhite()
-  } else if ="\\" then
+  } else if =("\\"|"`\\") then
     tab(many(S.csletters)) | move(1)
   undelay_newtext(S)
   (\proc)!args
@@ -1864,9 +2098,29 @@ The closure contains HTML to be written and a template to be ignored.
 record emit_ig_cl(html, template)
 
 procedure Cemit_ig(S, cs, cl)
-  S.text(S, cl.html)
+  emit_text(S, cl.html)
   if *cl.template > 0 then 
     cs_ignore(S, cs, cl.template)
+end
+@ 
+\subsubsection{Substitution for active characters}
+<<*>>=
+procedure activesubst(char, html, ignore_template)
+  local S
+  # ignore mode for now
+  activetab[char] := Cemit_ig
+  activeclosure[char] := emit_ig_cl(html, \ignore_template | "")
+  S := \dynamic_add_hack | return
+  if upto(S.activechars, char) then return # already active
+  if S.activechars ++:= cset(char) then {
+    before_next_close(S, delete_active_char, [S, char])
+  } else impossible("ugh")
+  return
+end
+
+procedure delete_active_char(S, char)
+  S.activechars --:= char
+  return
 end
 @
 \subsubsection{Substitution for environments}
@@ -1932,7 +2186,7 @@ procedure Cblock(S, cs, cl, done_ignoring)
     S.text(S, cl.left)
     after_next_open(S, before_next_close, [S, emit_text, [S, cl.right]])
   } else {
-    S.text(S, cl.left || short_arg(S) || cl.right)
+    S.text(S, cl.left || csarg(S) || cl.right)
   }
   return
 end
@@ -1964,10 +2218,10 @@ procedure expand_macro(S, macro, args)
       "raw_arg" : emit_text(S, args[a.number]) | impossible("missing arg")
       "converted_arg" : S.text(S, convert(S, "{" || args[a.number] || "}"))
     }
-  poptrace()
+#  poptrace()
   return
 end
-link pushtrace
+#link pushtrace
 @ 
 Scan arguments and hope comments in arguments just work out.  Ha ha.
 <<*>>=
@@ -2025,8 +2279,9 @@ end
 @ 
 <<*>>=
 procedure Cmacro(S, cs, cl)
-  pushtrace("MACRO")
+#  pushtrace("MACRO")
   delay_newtext(S)
+#   apply_args(S, closure(expand_macro, [cl]), cl.arg_count)
   do_macro(S, cl, [], "", 0)
   return
 end
@@ -2035,19 +2290,31 @@ Now, a {\TeX}-like macro facility in which [[#]] is used for converted
 parameters and [[#$]] for raw ones.
 <<*>>=
 procedure macro(name, arg_count, body, mode)
-  m := macro_defn(name, arg_count, [], mode)
-  body ? {
-    put(m.body, tab(upto('#') | 0))
-    while ="#" do {
-      put(m.body, ="#" | (="$", raw_arg(argnum())) | converted_arg(argnum())) |
-	                                    error("malformed macro arg #", tab(0))
-      put(m.body, tab(upto('#') | 0))
-    }
-  }
+  m := macro_defn(name, arg_count, parse_body(body), mode)
   cstab[name] := Cmacro
   csclosure[name] := m
   return
 end      
+
+procedure begin_macro(env, arg_count, body, mode)
+  m := macro_defn(env, arg_count, parse_body(body), mode)
+  begintab[env] := Cmacro
+  begincl[env] := m
+  return
+end      
+
+procedure parse_body(body)
+  b := []
+  body ? {
+    put(b, tab(upto('#') | 0))
+    while ="#" do {
+      put(b, ="#" | (="$", raw_arg(argnum())) | converted_arg(argnum())) |
+	                                    error("malformed macro arg #", tab(0))
+      put(b, tab(upto('#') | 0))
+    }
+  }
+  return b
+end
 
 procedure argnum()
   if any(&digits) then return integer(move(1)) else fail
@@ -2058,10 +2325,20 @@ And the dynamic version\ldots
 procedure l2h_macro(name, count, body[])
   count := integer(count) |
       return error("must give # of arguments to l2h macro ", name)
-  b := ""
-  every b ||:= " " || !body
-  b := b[2:0] # strip leading space if any
-  return macro(name, count, b)
+  s := ""
+  every s ||:= " " || (1(b := !body, type(b) == "string"))
+  s := s[2:0] # strip leading space if any
+  return macro(name, count, s)
+end
+@ 
+<<*>>=
+procedure l2h_environment(env, count, body[])
+  count := integer(count) |
+      return error("must give # of arguments to l2h environment ", env)
+  s := ""
+  every s ||:= " " || (1(b := !body, type(b) == "string"))
+  s := s[2:0] # strip leading space if any
+  return begin_macro(env, count, s)
 end
 @
 \subsection{Table environments}
@@ -2083,16 +2360,45 @@ end
 <<*>>=
 procedure Ctable(S, env, cl)
   local amp
-  amp := S.ampersand
-  S.ampersand := cl.amp
+##  amp := S.ampersand
+##  S.ampersand := cl.amp
   S.text(S, \cl.open)
   push(endcl[env], amp)
   cs_ignore(S, env, cl.args)
 end
 
 procedure Ctable_end(S, env, cl)
-  S.ampersand := pop(cl)
+#  S.ampersand := pop(cl)
   S.text(S, \begincl[env].close)
+end
+@ 
+\subsection{Postscript}
+<<*>>=
+procedure Cepsfig(S, cs, cl)
+  apply_args(S, do_epsfig, [S], 1)
+end
+
+procedure do_epsfig(S, arg) 
+  local args 
+  args := []
+  arg ? 
+    while not pos(0) do {
+      tab(many(' \t\n'))
+      put(args, eqsplit(tab(upto(',') | 0)))
+    }
+  if a := !args & a.name == ("file"|"figure") then
+    emit_text(S, "<a href=" || image(a.value) || "><b>[</b>PostScript figure " ||
+	          a.value || "<b>]</b></a>")
+  else
+    emit_text(S, "<b>[</b>Ill-understood PostScript figure<b>]</b>")
+end
+
+record apair(name, value)
+
+procedure eqsplit(s)
+  p := apair()
+  s ? (p.name := tab(upto('=')), ="=", p.value := tab(0))
+  return p
 end
 @
 \subsection{Control-sequence assignment}
@@ -2204,26 +2510,32 @@ csfunctions["ignoreenv"] := ignoreenv
 csfunctions["let"] := let
 csfunctions["listenv"] := listenv
 csfunctions["substitution"] := substitution
+csfunctions["activesubst"] := activesubst
 csfunctions["closure"] := let_closure
 csfunctions["let_closure"] := let_closure
 csfunctions["newcommand"] := l2h_macro
 csfunctions["macro"] := l2h_macro
+csfunctions["environment"] := l2h_environment
+csfunctions["tabular"] := tabular
 @
 Now, the tough issue is how to parse arguments.  I'm going to try the
 following initial strategy:  arguments are separated by spaces.
 To put a space within an argument, use \verb+#+.  There is no way to
 put a \verb+#+ within an argument.
 <<*>>=
+global dynamic_add_hack
 procedure parse_dynamic_add(S)
    if (optwhite(), =("l2h"|"sl2h"), skipwhite(), 
        p := tab(upto(' \t')), <<make [[p]] a good function or warn and [[fail]]>>, 
        skipwhite(), any(~'\n')) then {
      a := []
      while (any(~'\n'), l := tab(upto(' \t\n') | 0)) do {
-       put(a, if p ~=== l2h_macro then map(l, "#", " ") else l)
+       put(a, if p === (l2h_macro|l2h_environment) then l else map(l, "#", " "))
        skipwhite()
      }
+     dynamic_add_hack := S
      p!a
+     dynamic_add_hack := &null
      return
    }
 end
@@ -2286,9 +2598,11 @@ global curfile, curline
 procedure filter(name, arg) 
   static S, code
   initial S := converter("V")
+###  write("               mode ", S.mode)
   case name of {
     "begin"    : {<<out>>; if match("code ", arg) then code := 1}
-    "end"      : {<<out>>; code := &null; S.mode := "V"}
+    "end"      : {if match("docs ", arg) then <<possible paragraph>>
+                  <<out>>; code := &null; S.mode := "V"}
     "quote"    : { outtext("\0" ? convert(S)) }
     "endquote" : { outtext("\1" ? convert(S)) }
     "file"     : {<<out>>; curfile := arg; curline := 1}
@@ -2302,6 +2616,8 @@ procedure filter(name, arg)
   }
   return
 end
+<<possible paragraph>>=
+if S.mode ~== "V" then write("@text <p>")
 @  A special function is needed to implement {\tt noweb}'s quoting 
 convention within chunk names.
 <<l2h.icn>>=
@@ -2338,7 +2654,7 @@ end
 global errstatus
 procedure error(args[])
   errstatus := 1
-  return write!([&errout, (\curfile || ", ") | "", "line ", curline, ": "] ||| args)
+  return write!([&errout, (\curfile || ":") | "line ", curline, ": "] ||| args)
 end
 @
 \section{Main program for a simple converter}
@@ -2381,6 +2697,12 @@ procedure fatal(L[])
   write!(["@fatal l2h "] ||| L)
   write!([&errout, "noweb error in l2h: "] ||| L)
   exit(1)
+end
+@
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
 end
 @
 \section{Chunks}
