@@ -6,17 +6,26 @@
 
 MACROS=nwmac
 latex=0
+tex=1
 
 if [ "$1" = -l ]; then
   latex=1
+  tex=0
   shift
+elsif [ "$1" = -n ]; then
+  latex=0
+  tex=0
+  shift
+
 fi
 
 LIB=|LIBDIR|
-if [ $latex -eq 0 ]; then echo -n \\ ; echo input nwmac; 
-else echo -n \\; echo 'documentstyle[noweb]{article}'; 
-     echo -n \\ ; echo 'begin{document}' ; fi
-$LIB/markup $* | expand | sed '
+if [ $tex -eq 1 ]; then echo -n \\ ; echo input nwmac; fi
+if [ $latex -eq 1 ]; then
+    echo -n \\; echo 'documentstyle[noweb]{article}'; 
+    echo -n \\ ; echo 'begin{document}'
+fi
+$LIB/markup $* | sed '
 /^@begin code/,/^@end code/s/\\/\\\\/g
 /^@begin code/,/^@end code/s/{/\\{/g
 /^@begin code/,/^@end code/s/}/\\}/g
@@ -43,5 +52,5 @@ awk '
 /^@nl$/ { print ""; next }
 /^@text / { printf "%s", substr($0,7) ; next }
 { print }'
-if [ $latex -eq 0 ]; then echo -n \\ ; echo bye; 
-else echo -n \\; echo 'end{document}' ; fi
+if [ $tex -eq 1 ]; then echo -n \\ ; echo bye; fi
+if [ $latex -eq 1 ]; then echo -n \\; echo 'end{document}' ; fi
