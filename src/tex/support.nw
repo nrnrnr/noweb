@@ -316,63 +316,77 @@ Fiddling with it can change the appearance of the output.
 \def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt #1}.}}
 @ %def \nw@originaltextsize \nwcodecomment \nwalsodefined \nwused \nwnotused
 @ %def \nwoutput
+
+\subsection{Page ranges}
+The goal is to combine sub-page numbers in a way that makes sense.
+Multiple sub-pages of one page become that page, and individual
+pages are combined into ranges.
+(A range may be only one page.)
 <<noweb.sty>>=
 \newcount\@nwlopage\newcount\@nwhipage  % range lo..hi-1
 \newcount\@nwlosub		% subpage of lo
+\newcount\@nwhisub		% subpage of hi
 \def\@nwfirstpage#1#2{% subpage page
   \@nwlopage=#2 \@nwlosub=#1
   \advance\@nwpagecount by 1
-%%% \message{(* first page is \@subpagenum{#1}{#2} *)}%
   <<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>}
-\def\@nwfirstpagel#1{% label
-  \edef\@tempax{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempax}
 \def\@nwnextpage#1#2{% subpage page
-%%% \message{(* next page is  \@subpagenum{#1}{#2} *)}%
   \ifnum\@nwhipage=#2 
-    \advance\@nwhipage by 1 \advance\@nwpagecount by 1 \@nwlosub=0 \else
+    \advance\@nwhipage by 1 \advance\@nwpagecount by 1 \@nwhisub=#1 \else
   \ifnum#2<\@nwlopage <<new range starting with [[#2]]>>\else
   \ifnum#2>\@nwhipage <<new range starting with [[#2]]>>\else
-    \@nwlosub=0
+    \@nwlosub=0 \@nwhisub=0
   \fi\fi\fi
   }
-\def\@nwnextpagel#1{% label
-  \edef\@tempay{\noexpand\@nwnextpage\subpagepair{#1}}\@tempay}
 <<new range starting with [[#2]]>>=
-<<add range to range list>>%
-\@nwfirstpage{#1}{#2}
+<<add range to range list>>\@nwfirstpage{#1}{#2}
 <<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>=
 \@nwhipage=\@nwlopage\advance\@nwhipage by 1 
 <<add range to range list>>=
-<<set [[\@tempaz]] to page range>>
-%%% \message{(* adding page range \@tempaz *)}%
-\edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages
-                {\noexpand\\{\@tempaz}}}\@tempa
-<<set [[\@tempaz]] to page range>>=
+<<set [[\@tempaz]] to page range(s), marked with [[\\]]>>%
+\edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages{\@tempaz}}\@tempa
+<<set [[\@tempaz]] to page range(s), marked with [[\\]]>>=
 \advance\@nwhipage by -1
 \ifnum\@nwhipage=\@nwlopage
-     \edef\@tempaz{\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}%
+     \edef\@tempaz{\noexpand\noexpand\noexpand\\%
+                       {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}}%
 \else
-  \ifnum\@nwlopage<110 <<normal range>>\else
-    \count255=\@nwlopage \divide\count255 by 100 \multiply\count255 by 100
-    \ifnum\count255=\@nwlopage <<normal range>>\else
-      \count255=\@nwlopage \divide\count255 by 100
-      \@nwpagetemp=\@nwhipage \divide\@nwpagetemp by 100
-      \ifnum\count255=\@nwpagetemp %  lo--least 2 digits of hi
-        \multiply\@nwpagetemp by 100
-        \advance \@nwhipage by -\@nwpagetemp
-        <<normal range>>%
-      \else <<normal range>>%
-      \fi
+  \count255=\@nwhipage \advance\count255 by -1
+  \ifnum\count255=\@nwlopage % consecutive pages
+      \edef\@tempaz{\noexpand\noexpand\noexpand\\%
+                       {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}%
+                    \noexpand\noexpand\noexpand\\%
+                       {\@subpagenum{\number\@nwhisub}{\number\@nwhipage}}}%
+  \else <<use rules from Chicago style manual>>%
+  \fi
+\fi
+<<use rules from Chicago style manual>>=
+\ifnum\@nwlopage<110 <<normal range>>\else
+  \count255=\@nwlopage \divide\count255 by 100 \multiply\count255 by 100
+  \ifnum\count255=\@nwlopage <<normal range>>\else
+    \count255=\@nwlopage \divide\count255 by 100
+    \@nwpagetemp=\@nwhipage \divide\@nwpagetemp by 100
+    \ifnum\count255=\@nwpagetemp %  lo--least 2 digits of hi
+      \multiply\@nwpagetemp by 100
+      \advance \@nwhipage by -\@nwpagetemp
+      <<normal range>>%
+    \else <<normal range>>%
     \fi
   \fi
 \fi
 <<normal range>>=  
-\edef\@tempaz{\number\@nwlopage--\number\@nwhipage}
+\edef\@tempaz{\noexpand\noexpand\noexpand\\{\number\@nwlopage--\number\@nwhipage}}
 <<noweb.sty>>=
 \newcount\@nwpagetemp
 @
+The sequence [[\@pagesl]] makes a range of pages from a list of labels.
+[[\subpages]] works from a list of [[{{subpage}{page}}]].
 <<noweb.sty>>=
 \newcount\@nwpagecount
+\def\@nwfirstpagel#1{% label
+  \edef\@tempax{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempax}
+\def\@nwnextpagel#1{% label
+  \edef\@tempay{\noexpand\@nwnextpage\subpagepair{#1}}\@tempay}
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
