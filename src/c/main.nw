@@ -11,6 +11,7 @@ The following options are good on the command line:
                 If not given, write no {\tt\#line} numbers.
 \end{fields}
 <<*>>=
+static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -26,13 +27,15 @@ main(int argc, char **argv) {
     char *Clocformat = "#line %L \"%F\"%N";
 
     tabsize = 0;  /* default for nt is not to use tabs */
+    progname = argv[0];
+    finalstage = 1;
 
     for (i=1; i<argc; i++) {
         <<process argument [[i]]>>
     }
 
     notangle(stdin, stdout, rootname, locformat);
-    exit(errorlevel);
+    nowebexit(NULL);
     return errorlevel;  /* slay warning */
 }
 @
