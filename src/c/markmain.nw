@@ -1,0 +1,142 @@
+\section{Markup}
+This is the initial filter in the pipeline.
+Syntax from {\tt markup.ow}.
+Output may contain [[
+        @[begin|end] [code|docs] nnn ...
+        @file name
+        @name name
+        @line nnn [name]
+]]
+Here's the code that writes the output.
+We have one function to print the state, which takes care of
+[[@begin]] and [[@end]] and remembering what kind of chunk we have.
+Another function prints [[@name value]] pairs.
+<<state and printing definitions>>=
+#define CODE 1
+#define DOCS 2
+
+#define BEGIN 1
+#define END 2
+
+static char *states[] = { "bad state", "code", "docs" };
+static char *marks[]={ "bad mark", "begin", "end" };
+
+static void print_state(FILE *out, int be, int state, int count) {
+    fprintf(out, "%c%s %s %d\n", at_sign, marks[be], states[state], count);
+}
+
+static void print_pair(FILE *out, char *name, char *value) {
+    fprintf(out, "%c%s %s\n", at_sign, name, value);
+}
+@
+<<*>>=
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "errors.h"
+#include "markup.h"
+#include "getline.h"
+
+<<state and printing definitions>>
+
+void markup (FILE* in, FILE *out, char *filename) {
+    int state = DOCS;           /* what we are reading */
+    int count = 0;              /* number of current chunk, from 0 */
+    int missing_newline;        /* was last line missing a trailing \n? */
+
+    char *line = NULL;          /* buffer for input */
+#define MAX_MODNAME 255
+    char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
+                                         [[""]] if no module is being read */ 
+
+    <<copy all lines from [[in]] to [[out]], adding markup>>
+}
+@
+A {\em noweb } file consists of a sequence of
+{\em chunks,} which may appear in any order.
+{\em noweb} supports two kinds of chunks: documentation chunks and code chunks.
+Documentation chunks begin with an at sign (@) at the beginning of a line,
+followed by a space 
+(or with an at sign on a line by itself).
+They have no names.
+Code chunks begin with
+$$\hbox{\tt@<<{\em chunk name\/}@>>=}$$
+on a line by itself.
+The left double angle bracket ({\tt @<<}) must be in the first column.
+Chunks are terminated by the beginning of another chunk, or by end of file.
+If the first line in the file does not signal the beginning of a documentation
+or code chunk, the first chunk is assumed to be a documentation chunk.
+
+We implement this by just looping through the document, looking for the
+beginnings of chunks.
+We use [[state]] to keep track of what's ending.
+We add a little extra markup for file name and module names
+<<copy all lines from [[in]] to [[out]], adding markup>>=
+    print_pair(out, "file", filename);
+    print_state(out, BEGIN, state, count);
+
+    while ((line = getline(line, in)) != NULL) {
+        <<remember if a newline was missing from the last line>>
+        if (starts_doc(line)) {
+            print_state(out, END, state, count);
+            count++;
+            state = DOCS;       /* always reading docs after a stop */
+            print_state(out, BEGIN, state, count);
+            fprintf(out, "%s", first_doc_line(line));
+        } else if (starts_code(line)) {
+            print_state(out, END, state, count);
+            count++;
+            state = CODE;
+            print_state(out, BEGIN, state, count);
+            getmodname(modname,MAX_MODNAME,line);
+            print_pair(out,"name",modname);
+        } else {
+            <<Check a bunch of ``mistake indicators''>>
+            fprintf(out, "%s", line);
+        }
+    }
+    <<add a trailing newline if necessary>>
+    print_state(out, END, state, count);
+@
+We make it safe to assume henceforth that every chunk ends with newline,
+even if the file didn't end with newline.
+If the file didn't end with newline, we add a newline to the last line
+before printing the final [[@end]].
+<<remember if a newline was missing from the last line>>=
+missing_newline = line[strlen(line)-1] != '\n';
+<<add a trailing newline if necessary>>=
+if (missing_newline) putc('\n',out);
+
+@ If we missed the module definition line, this might suggest to us
+that we've made a mistake.
+<<Check a bunch of ``mistake indicators''>>=
+    if (state != CODE && (mod_start(line,0)!=NULL)) {
+        errormsg(Warning, "Warning: module start in bad state: %s", line);
+    }
+@
+Finally, we give the main program, which opens each file and passes it
+to [[markup]].
+Like many main programs, it's based on K \& R [[cat]].
+<<*>>=
+void main(int argc, char **argv) {
+
+    FILE *fp;
+    char *myself=*argv;
+
+    if (argc>1) {
+        while (--argc>0)
+          if ((fp=fopen(*++argv,"r"))==NULL) {
+              errormsg(Error, "%s: couldn't open file %s\n", myself,
+                      *argv);
+              continue;
+          }
+          else {
+              markup(fp,stdout,*argv);
+              fclose(fp);
+          }
+    } else {
+        markup(stdin,stdout,"");
+    }
+    exit(errorlevel);
+}
+

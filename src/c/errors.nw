@@ -1,0 +1,55 @@
+@ \section{Error messages}
+Here is a big set of functions that other places can call to issue
+error messages.
+Right now this is just boilerplate; one day these can be replaced
+with better messages that might help pinpoint the place where the
+error occurred.
+
+It might be worth implementing these as macros so they could indicate
+the file name and line number in the source of where they were called.
+
+[[errorlevel]] is an integer that says how bad the worst error so far
+has been.
+[[newerrorlevel]] will update it conditionally.
+Some day we should hide it and give the world a function call that
+queries it.
+<<*>>=
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "errors.h"
+
+<<C functions>>
+@
+I track degrees of error as they occur.
+<<header>>=
+enum errorlevel { Normal, Warning, Error, Fatal, Impossible };
+extern enum errorlevel errorlevel;
+<<C functions>>=
+enum errorlevel errorlevel = Normal;
+@
+The rest is just varying flavors of error messages.
+<<header>>=
+void errormsg(enum errorlevel level, char *s, ...);
+#define overflow(s) errormsg(Fatal,"Capacity exceeded: %s", s)
+#define impossible(s) errormsg(Impossible, "This can't happen: %s", s)
+#define checkptr(P) do { if (!(P)) overflow("memory"); } while (0)
+<<C functions>>=
+extern int _doprnt(const char *format, va_list args, FILE *stream);
+
+int vfprintf(FILE *stream, const char *format, va_list arg) { 
+    return _doprnt(format,arg,stream);
+}
+
+void errormsg(enum errorlevel level, char *s,...) {     
+    va_list args;                       /* see K&R, page 174 */
+    va_start(args,s);
+    if (level > errorlevel)
+        errorlevel = level;
+    vfprintf(stderr, s, args);
+    fprintf(stderr,"\n");
+    va_end(args);
+    if (level >= Fatal)
+        exit(level);
+}

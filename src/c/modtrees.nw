@@ -1,0 +1,93 @@
+@ Trees of modules.
+A table of modules with insert and lookup, but no delete.
+The key is the module name.
+<<header>>=
+Module insert (char *modname);  /* add a module to the world */
+Module lookup (char *modname);  /* return ptr to module or NULL */
+void apply_each_module(void (*fun)(Module));
+     /* apply [[fun]] to each module in the tree */
+<<*>>= 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "strsave.h"
+#include "modules.h"
+#include "modtrees.h"
+#include "errors.h"
+
+typedef struct tnode {          /* tree node */
+  struct tnode *left, *right;
+  char *modname;
+  Module data;
+} TNODE;
+
+static struct tnode *root=NULL;
+        
+<<Function declarations>>
+
+Module insert (char *modname) {
+    return insert_tree (&root, modname);
+}
+
+static Module
+insert_tree(TNODE **rootptr, char *modname) {
+     if (*rootptr==NULL) {
+         <<Allocate new tnode in **rootptr>>
+         (*rootptr)->modname = strsave(modname);
+         return (*rootptr)->data = newmodule();
+     } 
+     if (strcmp((*rootptr)->modname,modname)==0) {
+         return (*rootptr)->data;
+     } else if (strcmp((*rootptr)->modname,modname)<0) {
+         return insert_tree(&((*rootptr)->left),modname);
+     } else /* >0 */ {
+         return insert_tree(&((*rootptr)->right),modname);
+     }
+
+}
+@
+Node allocation is perfectly standard...
+<<Allocate new tnode in **rootptr>>=
+       *rootptr=(struct tnode *) malloc (sizeof(struct tnode));
+       if (*rootptr==NULL) overflow("memory allocation");
+       (*rootptr)->left = (*rootptr)->right = NULL;
+@
+<<Function declarations>>=
+static Module insert_tree(TNODE **rootptr, char *modname);
+static Module lookup_tree(TNODE **rootptr, char *modname);
+@
+<<*>>=
+Module lookup (char *modname) {
+    return lookup_tree (&root, modname);
+}
+
+static Module
+lookup_tree(TNODE **rootptr, char *modname) {
+     if (*rootptr==NULL) {
+        return NULL;
+     } 
+     if (strcmp((*rootptr)->modname,modname)==0) {
+         return (*rootptr)->data;
+     } else if (strcmp((*rootptr)->modname,modname)<0) {
+         return lookup_tree(&((*rootptr)->left),modname);
+     } else /* >0 */ {
+         return lookup_tree(&((*rootptr)->right),modname);
+     }
+}
+@
+[[apply_each_module]] takes as argument a function and applies
+it to each module in the tree.
+This makes it easy to, for example, remove trailing newlines
+from each module.
+<<*>>=
+static
+void apply_to_tree(TNODE *p, void (*fun)(Module)) {
+    if (p != NULL) {
+        apply_to_tree(p->left,fun);
+        (*fun)(p->data);
+        apply_to_tree(p->right,fun);
+    }
+}
+void apply_each_module(void (*fun)(Module)) {
+    apply_to_tree(root,fun);
+}

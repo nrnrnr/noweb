@@ -1,0 +1,207 @@
+This file is supposed to contain all the definitions of how different
+things are distinguished in the source text.
+@
+Documentation is introduced only by an at sign (@) on a line by itself
+(optionally followed by spaces).
+It continues up to new documentation or a module definition.
+A module definition is a module name, followed by one equals sign (=),
+possibly followed by white space, on a line by itself.
+A module name is any test enclosed in double angle brackets ([[@<<...@>>]]).
+The ``unnamed'' module is called * (that is, [[@<<*@>>]]).
+
+Double angle brackets may be escaped in source by preceding them with
+the at sign.
+No other character, not even the at sign, needs to be escaped.
+This makes for more readable source, but makes it impossible to put an 
+at sign immediately before a module name.
+If we liked we could try to hack this by creating a predefined module that 
+expands to an at sign, but I won't bother.
+
+<<*>>=
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include "markup.h"
+#include "strsave.h"
+#include "errors.h"
+
+<<data definitions>>
+
+<<C functions>>
+@ 
+To quote from the man page:
+{\narrower
+A 
+{\em noweb }
+file consists of a sequence of
+{\em chunks,}
+which may appear in any order.
+{\em noweb}
+supports two kinds of chunks: documentation chunks and code chunks.
+Documentation chunks begin with an at sign (@) at the beginning of a line,
+followed by a space 
+(or with an at sign on a line by itself).
+They have no names.
+Code chunks begin with
+$$\hbox{\tt@<<{\em chunk name\/}@>>=}$$
+on a line by itself.
+The left double angle bracket ({\tt @<<}) must be in the first column.
+Chunks are terminated by the beginning of another chunk, or by end of file.
+If the first line in the file does not signal the beginning of a documentation
+or code chunk, the first chunk is assumed to be a documentation chunk.
+\par}
+@
+<<data definitions>>=
+char at_sign = '@';             /* should be the only place '@' is mentioned */
+@
+<<header>>=
+extern char at_sign;                    /* the at sign */
+@
+Here's how we recognize the start of a documentation chunk, and
+extract the first line of documentation from what follows the @ sign.
+<<header>>=
+int starts_doc(char *);
+char *first_doc_line(char *);
+<<C functions>>=
+int starts_doc(char *line) {
+    return (*line==at_sign && (line[1]=='\0' || isspace(line[1])));
+}
+
+char *first_doc_line(char *line) {
+    if (line[1]!='\0' && line[1] !='\n') return line+2;
+    else return line+1;
+}
+@
+Recognizing module names (which introduce code chunks)
+and extracting them is the mission of the [[mod_start]] and [[mod_end]]
+functions.
+
+The basic idea is to find an instance of [[@<<]], while skipping every
+instance of [[@@<<]].
+That's the start of a module name.
+We find the end the same way.
+A function called [[find_escaped]] does the dirty work.
+If it succeeds, it returns a pointer to the first character after
+the special sequence, in this case the first character of the
+module name.
+(If it fails, it returns a null pointer.)
+If its [[mark]] paramter is set, it will put a [['\0']] in place
+of the special sequence, splitting the string into pieces.
+These two properties make it perfect for dissecting lines with module names.
+
+[[mod_start]] and [[mod_end]] just store the special sequences.
+<<header>>=
+char *mod_start (char *s, int mark);    /* find the first module name */
+char *mod_end (char *s, int mark);              /* find the end of module name */
+<<C functions>>=
+char *mod_start(char *s, int mark) {
+    return find_escaped(s,"@<<","@@<<", mark);
+}
+char *mod_end(char *s, int mark) {
+    return find_escaped(s,"@>>","@@>>", mark);
+}
+@
+Once we know how to [[mod_start]] and [[mod_end]], recognizing the
+beginning of a code chunk is easy.
+<<header>>=
+int starts_code (char *line);           /* does this line start module defn? */
+void getmodname(char *dest, int size, char *source);
+                                        /* extract module name and put in dest */
+<<C functions>>=
+int starts_code (char *line) {
+    char *tail;
+    if (mod_start(line,0) != line+2) return 0;
+    tail = mod_end(line+2,0);
+    if (tail == NULL) <<error exit from [[starts_code]]>>
+    if (*tail++ != '=') return 0;
+    while (isspace(*tail)) tail++;
+    return (*tail == '\0');
+}
+
+void getmodname(char *dest, int size, char *source) {
+    /* excess characters in the module name are ignored */
+    char *p = strsave(source);
+    char *q = mod_start(p,1);
+
+    if (q==NULL) <<Error exit from getmodname>>
+    if (mod_end(q,1)==NULL) <<Error exit from getmodname>>
+    strncpy(dest,q,size-1);
+    dest[size-1] = '\0';
+    free(p);
+}
+<<error exit from [[starts_code]]>>=
+{
+    errormsg(Error, "Module name doesn't end: %s", line);
+    return 0;
+}
+<<Error exit from getmodname>>= 
+{
+    free(p);
+    impossible
+        ("I couldn't manage to extract a module name, but I'm sure I saw one");
+}
+@
+Here we do the magic [[find_escaped]].
+Find an arbitrary character seqence, skipping an escaped sequence (if any),
+replacing the beginning with [['\0']] if [[mark]] is set.
+
+ If no [[search]] sequence in [[s]], returns [[NULL]].
+      Otherwise, returns a pointer to the first character after the
+      [[search]] sequence, and sets the first character to [['\0']], so
+      that [[s]] will point to the part of the string before the [[search]]
+      sequence.  The [[escape]] sequence (if any) is always skipped,
+      even if the [[search]] sequence is a substring of it.
+
+[[escape]] will be ignored if it is either the [[NULL]] pointer
+or the null string ([[""]]).
+<<header>>=
+char *find_escaped(register char *s, char *search, char *escape, int mark);
+                /* find escaped strings. See markup.nw for details */
+<<C functions>>=
+char *find_escaped(register char *s, char *search, char *escape, int mark) {
+    register char first = *search;
+    register char first_escape = (escape != NULL ? *escape : '\0');
+    int searchlen = strlen(search);
+    int escapelen = (escape != NULL ? strlen(escape) : 0);
+
+    do {
+        while (*s && *s != first && *s != first_escape) s++;
+        if (!*s) break;
+        if (first_escape && !strncmp(s,escape,escapelen)) {
+                s += escapelen;
+                continue;
+        }
+        if (!strncmp(s,search,searchlen)) break;
+        s++;
+    } while (*s != '\0');
+    /* here either s is empty or it points to the first unescaped [[search]] */
+    if (*s == '\0') return NULL;
+    if (mark) *s = '\0';
+    return s+searchlen;
+}
+@
+Finally, here with the other character stuff, we put a routine to
+translate the escape sequences.
+It's used by {\em notangle} after the module names have been extracted,
+so we can put things like [[@<<]] into program source.
+At the moment, only the module name delimiters can be escaped or need escaping.
+
+[[unescape]] returns a fresh string, allocated with [[malloc]].
+<<header>>=
+char *unescape (char *s); /* returns fresh copy of s with escapes translated */
+<<C functions>>=
+char *unescape (char *s) {
+    char *t = malloc(strlen(s)+1);
+    char *r = t;
+    checkptr(t);
+    while (*s != '\0') {
+        if (*s == at_sign) {
+            if (!strncmp(s+1,"@<<",2) || !strncmp(s+1,"@>>",2)) s++;
+        }
+        *t++ = *s++;
+    }
+    *t = '\0';
+
+    return r;
+}

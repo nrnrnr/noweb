@@ -1,0 +1,35 @@
+These functions are used to help accumulate indentations across module
+boundaries by measuring the widths of various strings
+in columns.  
+The size of things depends on [[TABSIZE]] as defined in columns.h.
+<<header>>=
+#define TABSIZE 8
+int columnwidth (char *s);      /* number of columns string occupies */
+void indent_for (int width, FILE *fp);
+                                /* indent to width; next char -> width+1 */
+<<*>>=
+#include <stdio.h>
+#include "columns.h"
+
+int columnwidth (char *s) {             /* width of a string in columns */
+    int col = 0;
+    while (*s) {
+        col++;
+        if (*s=='\t') while (col % TABSIZE != 0) col++;
+        s++;
+    }
+    return col;
+}
+
+void indent_for (int width, FILE *fp) { 
+                                /* write whitespace [[width]] columns wide */
+/*fprintf(fp,"<%2d>",width); if (width>4) {fprintf(fp,"    "); width -= 4;}*/
+    while (width>TABSIZE) {
+        putc('\t',fp);
+        width -= TABSIZE;
+    }
+    while (width>0) {
+        putc(' ',fp);
+        width--;
+    }
+}

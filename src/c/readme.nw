@@ -1,0 +1,60 @@
+Guidebook.
+
+This directory holds a low-tech tangle-like tool called notangle.
+There's no man page yet.
+The basic idea is that modules have names and the module ``*''
+is written out.
+
+Here are the files:
+
+columns.nw      Used to help accumulate indentations across module
+                boundaries by measuring the widths of various strings
+                in columns.  Depends on your notion of tabs.
+
+errors.nw       Functions that issue error messages.
+
+getline.nw      Used to read text a line at a time, no matter how
+                long lines might be.
+
+main.nw         Process options and so on before calling notangle.
+                There aren't any options yet.
+
+markup.nw       Encapsulates all the definitions of how things are
+                labeled in the text: what is a module definition,
+                what terminates it, and so on.
+
+modtrees.nw     Provides a table of modules with insert and lookup
+                (no delete).  Also can apply an arbitrary function
+                to each module in the table.
+
+modules.nw      Defines the abstraction of a module and the operations
+                on it.
+
+notangle.nw     Reads a text on one file and writes a program on another.
+                Works by reading module definitions, then expanding
+                the module ``*''.
+
+strsave.nw      Return a pointer to a fresh copy of a string.
+
+
+@ History of features.
+
+Feb 2:  improve the visual quality of the output by removing the trailing
+        newline from every module and by tracking indentation.
+
+Feb 9:  parameterize notangle by the name of the root module, and
+        make it a command line option.  This will help in writing
+        multiple outputs from a single input.
+
+March 21:
+        Make markup front end for noweave and notangle.
+        This breaks passing of options for notangle.
+        Tough.
+
+        Much improved cleanliness of implementation.
+
+@ Bugs.
+There's no distinction between errors and warnings.
+
+Also see the man page.
+<<*>>=

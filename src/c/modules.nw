@@ -1,0 +1,242 @@
+@ The internal structure of modules.
+Modules are linked lists.
+Each element of the list is either a string or a reference to another 
+module name.
+During expansion of a module, strings are printed and module references
+are expanded.
+The structure of module references must be a dag or else there will be
+overflow during expansion.
+<<header>>=
+typedef struct location {       /* identify lines of source */
+    char *filename;
+    int lineno;
+} Location;
+
+struct modpart {
+    int mtype;                  /* type of fragment: STRING or MODULE */
+    char *contents;
+    Location loc;               /* for STRING, where's it from ? */
+    struct modpart *next;
+};
+
+typedef struct module {
+    struct modpart *head, *tail;
+} *Module;
+<<*>>=
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "modules.h"
+#include "modtrees.h"
+#include "markup.h"
+#include "errors.h"
+#include "columns.h"
+
+<<Function declarations>>
+
+<<C functions>>
+@
+<<header>>=
+#define STRING 1
+#define MODULE 2
+#define addstring(MP,S,L) add_string_or_module(MP,S,STRING,&L)
+        /* add a string to a module definition */
+#define addmodule(MP,S) add_string_or_module(MP,S,MODULE,0)
+        /* add a module reference to a module definition */
+void add_string_or_module (Module mp, char *s, int type, Location *loc);
+<<C functions>>=
+void add_string_or_module (Module mp, char *s, int type, Location *loc) {
+    struct modpart *p = newmodpart(type,s,loc);
+    append (mp,p);
+}
+
+static struct modpart *
+newmodpart(int type, char *s, Location *loc) {
+    struct modpart *p = (struct modpart *) malloc (sizeof (struct modpart));
+    checkptr(p);
+    p->mtype = type;
+    p->contents = unescape(s);
+    if (loc) p->loc = *loc;
+    p->next = NULL;
+    return p;
+}
+
+static
+void append(Module mp, struct modpart *p) {
+    /* append p to mp's list of modparts */
+    if (mp->head == NULL) {
+        mp->head = mp->tail = p;
+    } else {
+        mp ->tail->next = p;
+        mp->tail = p;
+    }
+}
+@
+<<Function declarations>>=
+static struct modpart *
+newmodpart(int type, char *s, Location *loc);   /* create a new module part */
+
+static
+void append(Module mp, struct modpart *p);
+@
+Expanding modules.
+Expand returns 0 if all is well, nonzero if error.
+
+Instead of detecting a cycle in the definition-use graph, we just
+limit the depth of definition nesting to some fixed number, 
+[[maxlevel]].
+Any circular definition must eventually exceed [[maxlevel]].
+
+[[partial_distance]] is the size of the line already written out when
+[[expand]] is called.
+<<header>>=
+int expand (Module mp, int indent, int partial_distance, int maxlevel, 
+	    char *locformat, FILE *out);
+        /* expand a module, writing to file out */
+<<C functions>>=
+int expand (Module mp, int indent, int partial_distance, int maxlevel, 
+            char *locformat, FILE *out) {
+    struct modpart *p;
+    Module newmod;
+    int error=Normal;
+        /* the value only matters when we're expanding a module */
+
+    if (maxlevel < 0) <<Dump error information and return>>
+
+    for (p=mp->head; p!=NULL; p=p->next) {
+        if (p->mtype==STRING) {
+            <<print a string>>
+        } else if (p->mtype==MODULE) {
+            <<expand a module>>
+        } else {
+            impossible("Piece type is neither STRING nor MODULE");
+        }
+    }
+    return error;
+}
+@
+If the previous line was not partial, this string starts a fresh line
+and it is necessary to indent.
+When emitting [[#line]] directives, don't indent---instead try to 
+preserve the original column of the information in the source, as
+well as the line number.
+This means indenting by [[partial_distance]] if a [[#line]] directive 
+is emitted, {\em except} when it's the first line of a module (hack! hack!).
+[[printloc]] returns nonzero when [[#line]] is actually emitted.
+
+<<print a string>>=
+if (*(p->contents) != '\0') {
+    if (*locformat) {
+        if (printloc(out,locformat,p->loc,partial_distance) && (p != mp->head))
+              indent_for(partial_distance, out);
+    } else if (partial_distance == 0) {
+        indent_for(indent, out);
+    }
+    fprintf(out,"%s",p->contents);
+    <<update [[partial_distance]] after printing [[p->contents]]>>
+}
+<<expand a module>>=
+/*fprintf(stderr,"Expanding @<<%s@>>...\n", p->contents);*/
+newmod = lookup(p->contents);
+if (newmod==NULL) {
+    errormsg (Error, "undefined module name: @<<%s@>>", p->contents);
+    error=Error;
+} else {
+    int retcode;
+    retcode = expand (newmod, indent + partial_distance, partial_distance,
+    		      maxlevel, locformat, out);
+    if (retcode > error) error = retcode;
+}
+partial_distance += strlen(p->contents) + 4; /* length of brackets */
+<<update [[partial_distance]] after printing [[p->contents]]>>=
+{ int l = strlen(p->contents);
+  if (p->contents[l-1] == '\n')
+      partial_distance = 0;
+  else
+      partial_distance += l; /* doesn't handle tabs correctly! */
+}
+@
+<<Dump error information and return>>=
+{
+    errormsg(Fatal, "expansion factor exceeded");
+    return Fatal;
+}
+@
+<<header>>=
+Module newmodule(void);         /* create a new, blank module */
+<<C functions>>=
+Module newmodule (void) {
+    Module p = (Module) malloc (sizeof (struct module));
+    checkptr(p);
+    p->head = p->tail = NULL;
+    return p;
+}
+@ Cosmetic surgery for modules.
+For more elegant-looking output, we provide a primitive that removes
+the final newline from a module.
+
+We will use [[apply_each_module]] to remove trailing newlines
+from each module.
+This serves two purposes: first, our output looks nicer, and, second,
+it makes it possible to define a module that doesn't end with newline.
+
+As they are read in, all modules end with newline, by definition.
+We remove all of the trailing newlines.
+<<header>>=
+void remove_final_newline (Module mp);
+        /* remove trailing newline that must be in module */
+<<C functions>>=
+void remove_final_newline (Module mp) {
+        /* remove trailing newline that must be in module */
+    if (mp->tail==NULL) /* module has no text */
+        return;
+    if (mp->tail->mtype != STRING)
+        impossible("Module doesn't end with string");
+    else {
+        char *p = mp->tail->contents;
+        int l = strlen(p);
+        if (l==0) impossible("Module ends with null string");
+        if (p[l-1] != '\n') 
+            impossible("Module doesn't end with newline");
+        p[l-1] = '\0';
+    }
+}
+@
+Printing locations means emitting [[#line]] numbers.
+[[printloc]] emits a [[#line]] only if the line emitted is out of sequence.
+It returns nonzero when [[#line]] is emitted; zero otherwise.
+The flag [[partial]] tells whether the preceding line was partial.
+If so, then a newline is necessary before [[#line]] can be emitted.
+<<header>>=
+int printloc(FILE *fp, char *fmt, Location loc, int partial);
+<<C functions>>=
+static char* lastfilename = 0;
+static int lastlineno = -1;
+
+int printloc(FILE *fp, char *fmt, Location loc, int partial) {
+    char *p;
+    if (*fmt
+    && (loc.filename!=lastfilename || ++lastlineno != loc.lineno)) {
+        if (partial) putc('\n',fp);
+        for (p=fmt;*p;p++) {
+            if (*p == '%') {
+                if (*++p == '%') putc('%',fp);
+                else if (*p == 'F') fprintf(fp,"%s",loc.filename);
+                else if (*p == 'L') fprintf(fp,"%d",loc.lineno);
+                else <<complain about bad format character>>
+            } else putc(*p,fp);
+        }
+        lastfilename = loc.filename;
+        lastlineno = loc.lineno;
+        return 1;
+    } else return 0;
+}
+<<complain about bad format character>>=
+{ static int complained = 0;
+  if (!complained) {
+    errormsg(Error,"Bad format sequence ``%%%c'' in -L%s",*p,fmt);
+    complained = 1;
+  }
+}
+<<RCS log>>=
+$Log$

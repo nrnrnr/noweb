@@ -1,0 +1,175 @@
+@ A cheap imitation of tangle.
+The idea is a very cheap implementation of tangle.
+The markup of the file is described in file markup.ow.
+@
+The structure of the program is as follows: first we accumulate all of
+the module definitions, then we write out the definition of the
+root module (normally [["*"]]).
+The module definition information will be stored statically
+in a table supplied by [[modtrees.h]]; we'll cover the
+details later.
+<<header>>=
+void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
+<<*>>=
+#define MAX_MODNAME 255
+#define MAX_EXPANSION_LEVEL 50
+@
+<<*>>=
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "markup.h"
+#include "strsave.h"
+#include "getline.h"
+#include "modules.h"
+#include "modtrees.h"
+#include "errors.h"
+
+<<Function declarations>>
+
+void notangle (FILE* in, FILE *out, char *rootname, char *locformat) {
+    Module root = NULL; /* ptr to root module */
+
+    read_defs(in);              /* read all the definitions */
+
+    apply_each_module(remove_final_newline);
+                                /* pretty up the module texts */
+
+    root = lookup(rootname);
+    <<quit if we couldn't fint the root>>
+    (void) expand(root,0,0,MAX_EXPANSION_LEVEL,locformat,out);
+    putc('\n',out);                     /* make output end with newline */
+}
+@
+We recognize the input using matching functions, which can find [[@begin]],
+[[@end]], and other useful information.
+<<matching functions>>=
+static matches(char *line, char *search) {
+        return !strncmp(line,search,strlen(search));
+}
+static is_begin(char *line, char *type) {
+        return (*line == at_sign) && matches (line+1, "begin ")
+                && matches (line+1+6,type);
+}
+static is_end(char *line, char *type) {
+        return (*line == at_sign) && matches (line+1, "end ")
+                && matches (line+1+4,type);
+}
+@
+We loop looking for the start of a code chunk.
+When we find one, we get the name of the module in which the code
+is to appear.  
+Then we just keep adding lines to that module until
+we see a terminator.
+After we see the terminator we start all over again looking for another code
+chunk.
+<<*>>=
+<<matching functions>>
+
+void read_defs(FILE *in) {
+    char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
+                                         [[""]] if no module is being read */ 
+    Module modptr = NULL;       /* ptr to current module, or NULL */
+    char *line = NULL;          /* buffer for input */
+    Location loc;
+
+    while ((line = getline(line, in)) != NULL) {
+        if (*line == at_sign && matches(line+1,"file ")) {
+            <<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>
+            loc.lineno = 0;
+            continue;
+        } else if (!is_begin(line,"code")) {
+            if (*line != at_sign) loc.lineno++;
+            continue;
+        }
+        do { /* skip until EOF, @name, or line without initial @ */
+                line = getline(line,in);
+        } while (line != NULL && *line == at_sign && !matches(line+1,"name"));
+        <<insist on [[@name]]>>
+        loc.lineno++; /* only @name counts as a source line */
+        <<copy module name into [[modname]]>>
+        warn_dots(modname);       /* names ending in ... aren't like web */
+        modptr = insert(modname); /* find or add module in table */
+
+        line = getline(line,in);
+        while (line != NULL && *line != at_sign) {
+            loc.lineno++;
+            addline(modptr,line,loc);
+            line = getline(line,in);
+        } 
+        <<insist on [[@end code]]>>
+    }
+}
+@ When copying the module name or a file name,
+we have to strip the trailing newline.
+<<copy module name into [[modname]]>>=
+strcpy(modname,line+strlen("@name "));
+modname[strlen(modname)-1]='\0';
+<<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>=
+{ char temp[MAX_MODNAME+1];
+  if (strlen(line) >= MAX_MODNAME + strlen("@file "))
+    overflow("file name size");
+  strcpy(temp,line+strlen("@file "));
+  temp[strlen(temp)-1]='\0';
+  loc.filename = strsave(temp);
+}
+@
+Now we get into the gritty details of actually adding a line to a module.
+A line alternates strings and module references.
+[[mod_start]] and [[mod_end]] are tailored to do the job we see here.
+<<*>>=
+void addline (Module mp, char *line, Location loc) {
+    char *m;
+
+    while ((m = mod_start(line,1)) != NULL) { 
+        /* process a module reference */
+        if (*line!='\0') addstring(mp,line,loc);
+                                     /* contribute string preceding module */
+        if ((line=mod_end(m,1))==NULL) {
+            errormsg(Error, "Module doesn't end: %s", m);       
+                                     /* module references can't cross lines */
+            break;
+        } else {
+            warn_dots(m);
+            addmodule(mp,m);         /* contribute the module */
+        }
+    }
+    if (*line!='\0') addstring(mp,line,loc);
+                                     /* contribute the trailing string */
+}
+@
+In {\tt WEB}, module names ending in ``...'' may be prefixes
+for other names.
+We don't do anything like that here, but we do warn the user about
+``...'' in case he's got a file converted from {\tt WEB}.
+<<*>>=
+static
+void warn_dots(char *modname) {
+  if (!strcmp(modname+strlen(modname)-3,"...")) 
+    errormsg(Warning, "Module name @<<%s@>> isn't completed as in web", 
+             modname);
+}
+@
+This nuisance shows up because functions must be declared before use.
+<<Function declarations>>=
+void read_defs (FILE *in);              /* read module definitions */
+void addline (Module mp, char *line, Location loc);/* add a line to a module */
+static
+void warn_dots(char *modname);          /* warn about names ending in ... */
+@ Error checking is perenially dull.
+<<quit if we couldn't fint the root>>=
+    if (root==NULL) {
+        errormsg(Fatal, "The root module @<<%s@>> was not defined.", rootname);
+        return;
+    }
+<<insist on [[@name]]>>=
+if (line==NULL) {
+    impossible("End of file occurred in mid-module");
+}
+if (*line != at_sign) {
+    impossible("Module didn't have a name");
+}
+<<insist on [[@end code]]>>=
+if (!is_end(line,"code")) {
+    impossible("Code didn't end with @end code");
+}

@@ -1,0 +1,55 @@
+The following options are good on the command line:
+
+-Rname          make name the name of the root module. 
+                Default is [[@<<*@>>]].
+
+-L[format]      Use the given format to write {\tt\#line} numbers.
+                If -L is given alone, use ANSI C format.
+                If not given, write no {\tt\#line} numbers.
+
+
+<<*>>=
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "notangle.h"
+#include "errors.h"
+
+void main(int argc, char **argv) {
+    int i;
+    char *rootname = "*";       /* name of the root module */
+    char *locformat = "";
+    char *Clocformat = "#line %L \"%F\"\n";
+
+    for (i=1; i<argc; i++) {
+        <<process argument [[i]]>>
+    }
+
+    notangle(stdin,stdout, rootname, locformat);
+    exit(errorlevel);
+}
+@
+<<process argument [[i]]>>=
+if (*argv[i]=='-') {
+    <<handle option in argument [[i]]>>
+} else {
+    <<handle argument in argument [[i]]>>
+}
+@
+<<handle option in argument [[i]]>>=
+    switch (*++argv[i]) {
+        case 'R': /* change name of root module */
+            rootname = ++argv[i];
+            break;
+        case 'L': /* have a #line number format */
+            locformat = ++argv[i];
+            if (!*locformat) locformat = Clocformat;
+            break;
+        default:
+            errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
+     }
+@
+<<handle argument in argument [[i]]>>=
+errormsg(Warning,
+    "I can't handle arguments yet, so I'll just ignore %s",argv[i]);
+
