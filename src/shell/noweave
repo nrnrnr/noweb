@@ -4,53 +4,77 @@
 # See file COPYRIGHT for more information.
 # options: -l == use LaTeX
 
-MACROS=nwmac
-latex=0
-tex=1
-
-if [ "X$1" = X-l ]; then
-  latex=1
-  tex=0
-  shift
-elif [ "X$1" = X-n ]; then
-  latex=0
-  tex=0
-  shift
-
-fi
-
 LIB=|LIBDIR|
+latex=0 tex=1 xref=0
+args=
+
+for i do
+	case $i in
+	-l) latex=1 ; tex=0 ;;
+        -n) latex=0 ; tex=0 ;;
+        -x) xref=1 ; if [ $tex -eq 1 ]; then tex=0 ; latex=1; fi ;;
+        -*) echo "$0: Unrecognized argument `$i'" 1>&2 ; exit ;;
+        *)  arg="$arg '$i'" ;;
+	esac
+done
+
 if [ $tex -eq 1 ]; then echo -n \\ ; echo input nwmac; fi
 if [ $latex -eq 1 ]; then
-    echo -n \\; echo 'documentstyle[noweb]{article}'; 
+    echo -n \\; echo "documentstyle[noweb]{article}"; 
     echo -n \\ ; echo 'begin{document}'
 fi
-$LIB/markup $* | sed '
-/^@begin code/,/^@end code/s/\\/\\\\/g
-/^@begin code/,/^@end code/s/{/\\{/g
-/^@begin code/,/^@end code/s/}/\\}/g
-/^@quote$/,/^@endquote$/s/\\/\\\\/g
-/^@quote$/,/^@endquote$/s/{/\\{/g
-/^@quote$/,/^@endquote$/s/}/\\}/g
-/^@defn /s/\[\[/\\code{}/g
-/^@defn /s/\]\]/\\edoc{}/g
-/^@use /s/\[\[/\\code{}/g
-/^@use /s/\]\]/\\edoc{}/g
-s/^@file \(.*\)$/\\filename{\1}/
-s/^@quote$/@text \\code{}/
-s/^@endquote$/@text \\edoc{}/
-s/^@begin docs \([0-9]*\)$/\\begindocs{\1}/
-s/^@begin docs \([0-9]*\)[^0-9].*$/\\begindocs{\1}/
-s/^@end docs .*$/\\enddocs/
-s/^@begin code \([0-9]*\)$/\\begincode{\1}/
-s/^@begin code \([0-9]*\)[^0-9].*$/\\begincode{\1}/
-s/^@end code .*$/\\endcode/
-s/^@defn \(.*\)$/@text \\moddef{\1}\\endmoddef/
-/^@attribute .*$/d
-s/^@use \(.*\)$/@text \\LA{}\1\\RA{}/' | 
-awk '
-/^@nl$/ { print ""; next }
-/^@text / { printf "%s", substr($0,7) ; next }
-{ print }'
+
+if [ $xref -eq 0 ]; then
+  $LIB/markup $arg 
+else
+  $LIB/markup $arg | $LIB/noxref
+fi | nawk '
+/^@begin / {
+    kind = substr($0, 8)
+    kind = substr(kind, 1, index(kind, " ") - 1)
+    printf "\\begin%s{%s}\n", kind, substr($0, 8+length(kind)+1)
+}
+/^@end / {
+    kind = substr($0, 6)
+    kind = substr(kind, 1, index(kind, " ") - 1)
+    printf "\\end%s\n", kind
+    kind = ""
+}
+/^@text / {
+    line = substr($0, 7)
+    if (kind == "code" || quoting > 0) {
+      gsub("\\\\", "\\\\", line)
+      gsub("{", "\\{", line)
+      gsub("}", "\\}", line)
+    }
+    printf "%s", line
+}
+/^@nl$/ { printf "\n" }
+/^@defn / { 
+    arg = substr($0, 7)
+    gsub("\\[\\[", "\\code{}", arg)
+    gsub("\\]\\]", "\\edoc{}", arg)
+    printf "\\moddef{%s}\\endmoddef", arg
+}
+/^@use / { 
+    arg = substr($0, 6)
+    gsub("\\[\\[", "\\code{}", arg)
+    gsub("\\]\\]", "\\edoc{}", arg)
+    printf "\\LA{}%s\\RA{}", arg
+}
+/^@quote$/ {
+    quoting = 1
+    printf "\\code{}"
+}
+/^@endquote$/ {
+    quoting = 0
+    printf "\\edoc{}"
+}
+/^@file / {
+    printf "\\filename{%s}\n", substr($0, 7)
+}
+/^@literal / {
+    printf "%s", substr($0, 10)
+}'
 if [ $tex -eq 1 ]; then echo -n \\ ; echo bye; fi
 if [ $latex -eq 1 ]; then echo -n \\; echo 'end{document}' ; fi
