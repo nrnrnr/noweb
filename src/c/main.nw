@@ -1,15 +1,15 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
+\section{Tangling}
+\subsection{Main program}
 The following options are good on the command line:
-
--Rname          make name the name of the root module. 
-                Default is [[@<<*@>>]].
-
--L[format]      Use the given format to write {\tt\#line} numbers.
+\begin{fields}
+-Rname&         make name the name of the root module. 
+                Default is [[@<<*@>>]].\\
+-L[format]&     Use the given format to write {\tt\#line} numbers.
                 If -L is given alone, use ANSI C format.
                 If not given, write no {\tt\#line} numbers.
-
-
+\end{fields}
 <<*>>=
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +33,7 @@ main(int argc, char **argv) {
 
     notangle(stdin, stdout, rootname, locformat);
     exit(errorlevel);
+    return errorlevel;	/* slay warning */
 }
 @
 <<process argument [[i]]>>=
