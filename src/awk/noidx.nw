@@ -54,11 +54,13 @@ defanchors[0] = 0 ; uses[0] = 0 ; anchorlabel[0] = 0 ; indexanchorlabel[0] = 0
                 addud(chunkud, "defn", arg, lastanchorlabel)
 		thisusecount = 0
               }
-/^@use /      { arg = substr($0, 6)
-                allchunks[arg] = 1
-                slipin("@xref label " lastdefnlabel "-u" (++thisusecount))
-                addlabel(uses, arg, lastanchorlabel)
-                addud(chunkud, "use", arg, lastanchorlabel)
+/^@use /      { if (lastchunkbegin ~ /^@begin code /) {
+                  arg = substr($0, 6)
+                  allchunks[arg] = 1
+                  slipin("@xref label " lastdefnlabel "-u" (++thisusecount))
+                  addlabel(uses, arg, lastanchorlabel)
+                  addud(chunkud, "use", arg, lastanchorlabel)
+                }
               }
 @ %def allchunks lastdefnlabel
 <<first pass>>=
@@ -67,17 +69,22 @@ defanchors[0] = 0 ; uses[0] = 0 ; anchorlabel[0] = 0 ; indexanchorlabel[0] = 0
                   if (lastanchorlabel != "") addud(indexud, "use", arg, lastanchorlabel)
                 }
 /^@index defn / { arg = substr($0, 13)
-                  allidents[arg] = 1
-		  if (lastanchorlabel != "") {
-		    l = lastanchorlabel
-                  } else {
-                    l = newdocslabel()
-		    slipin("@xref label " l)
-                  }
-                  addud(indexud, "defn", arg, l)
-		  if (indexanchorlabel[arg] == "") indexanchorlabel[arg] = l
-                  slipin("@xref ref "  l) # bug fix
+	          <<handle index definition of [[arg]]>>
                 }
+/^@index localdefn / { arg = substr($0, 18)
+	          <<handle index definition of [[arg]]>>
+                }
+<<handle index definition of [[arg]]>>=
+allidents[arg] = 1
+if (lastanchorlabel != "") {
+  l = lastanchorlabel
+} else {
+  l = newdocslabel()
+  slipin("@xref label " l)
+}
+addud(indexud, "defn", arg, l)
+if (indexanchorlabel[arg] == "") indexanchorlabel[arg] = l
+slipin("@xref ref "  l) # bug fix
 @ %def allidents indexanchorlabel
 The bug fix\label{multi-def-bug}
 alluded to above occurs when there are multiple definitions of an identifier.
@@ -132,6 +139,13 @@ if (line ~ /^@begin /) {
     print line
 } else if (line ~ /^@index defn /) {
     arg = substr(line, 13)
+    thesedefns[arg] = 1
+    # no xref ref because of bug fix
+    # if (indexanchorlabel[arg] != "") 
+    #   printf "@xref ref %s\n", indexanchorlabel[arg]
+    print line
+} else if (line ~ /^@index localdefn /) {
+    arg = substr(line, 18)
     thesedefns[arg] = 1
     # no xref ref because of bug fix
     # if (indexanchorlabel[arg] != "") 
@@ -272,7 +286,8 @@ udlist[0] = 0 ;
 function uniqueid(name, key) {
   if (uidtable[name] == "") {
     key = make_key(name)
-    gsub(/[\]\[ \\{}`#%&~_^<>"-]/, "*", key)
+    # gsub(/[\]\[ \\{}`#%&~_^<>"-]/, "*", key)  # old
+    gsub(/[^a-zA-Z0-9!$()*+,./:;=?@|]/, "*", key)
     keycounts[key] = keycounts[key] + 1
     uidtable[name] = key 
     if (keycounts[key] > 1)

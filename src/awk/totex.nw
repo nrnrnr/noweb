@@ -114,7 +114,7 @@ function label2tag(label) {
 defns[0] = 0
 @ 
 <<write {\LaTeX} header>>=
-printf "\\documentstyle[noweb]{article}\\pagestyle{noweb}\\noweboptions{%s}%s",
+printf "\\documentclass{article}\\usepackage{noweb}\\pagestyle{noweb}\\noweboptions{%s}%s",
        substr($0, 15),  "\\begin{document}"
 @
 \subsection{Cross-reference and index support}
@@ -136,6 +136,8 @@ lastxreflabel = lastxrefref = ""
 /^@index nl$/               { print (code ? "\\eatline" : "%") }
 /^@index defn / {
          if (!noindex) { arg = substr($0, 13); <<handle index defn of [[arg]]>> } }
+/^@index localdefn / {
+         if (!noindex) { arg = substr($0, 18); <<handle index defn of [[arg]]>> } }
 /^@index use /  {
          if (!noindex) { arg = substr($0, 12); <<handle index use of [[arg]]>> } }
 @
@@ -281,3 +283,4 @@ function TeXliteral(arg) {
   return arg
 }
 @ %def TeXliteral
+

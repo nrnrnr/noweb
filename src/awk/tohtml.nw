@@ -69,22 +69,22 @@ we won't lose the cross-reference.
 Normally, if there's a pending anchor, we put it on the first available text line.
 <<patterns>>=
 /^@text /       { line = substr($0, 7); text += length(line)
-                  if (code)
+                  if (code) {
                     if (lastindexref != "" && line ~ /[^ \t]/) {
                       printf "%s", linkto(lastindexref, line)
                       lastindexref = ""
                     } else {
                       printf "%s", escapeSpecials(line)
                     }
-                  else if (quoting) {
+                  } else if (quoting) {
                     if (line ~ /[^ \t]/) {
-  		      printf "%s", linklabelto(lastindexref, lastxreflabel,
+  		      printf "%s", linklabelto(lastxreflabel, lastindexref,
 		                               escapeSpecials(line))
                       lastindexref = lastxreflabel = ""
                     } else {
                       printf "%s", escapeSpecials(line)
                     }
-                  else
+                  } else {
                     if (lastxreflabel != "" && line ~ /[^ \t]/) {
                       <<print docs anchor>>
                       lastxreflabel = ""
@@ -92,6 +92,7 @@ Normally, if there's a pending anchor, we put it on the first available text lin
                       printf "%s", line
                     }
                  }
+               }
 @
 We anchor on the first nonblank character of the line, unless that's
 a \TeX\ control sequence or an SGML tag.
@@ -217,7 +218,7 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 /^@xref chunkend$/    { print "" }
 /^@xref endchunks$/   { printf "</ul>%s\n", eraw }
 <<patterns>>=
-/^@index beginindex$/  { if (!noindex) { { printf "%s<ul>\n", braw } }
+/^@index beginindex$/  { if (!noindex) { printf "%s<ul>\n", braw } }
 /^@index entrybegin /  { if (!noindex) { 
                          label = $3; name = substr($0, 20 + length(label)) 
                          printf "<li>"; comma = ": "; count = 0
@@ -233,15 +234,16 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
                            printf "%s%s", comma, linkto(substr($0, 18), "D" ++count)
                        	   comma = ", " 
                        } }
-/^@index entryend$/    { if (!noindex) { { print "" } }
-/^@index endindex$/    { if (!noindex) { { printf "</ul>%s\n", eraw } }
+/^@index entryend$/    { if (!noindex) { print "" } }
+/^@index endindex$/    { if (!noindex) { printf "</ul>%s\n", eraw } }
 @
 The local identifier cross-reference doesn't show each use; it just shows
 the identifiers that are defined, with links to the full index.
 <<patterns>>=
-/^@index use/   { lastindexref = lastxrefref; lastxrefref = "" }
-/^@index defn/  { <<clear [[lastxref*]]>> }
-/^@index nl/               { }  # do nothing -- destroys line numbering
+/^@index use/       { lastindexref = lastxrefref; lastxrefref = "" }
+/^@index defn/      { <<clear [[lastxref*]]>> }
+/^@index localdefn/ { <<clear [[lastxref*]]>> }
+/^@index nl/        { }  # do nothing -- destroys line numbering
 /^@index begindefs/ { if (localindex) {
    <<code-to-blockquote>>; printf "Defines"; comma = " " 
 } }
@@ -309,7 +311,7 @@ function convquotes(s, r, i, line) {
     s = substr(s, i+2)
     if (i = match(s, "\\]\\]+")) {
       line = substr(s, 1, i-1+RLENGTH-2)
-      # line = escapeSpecials(line)  # destroys internal markup --- don't call
+      # line = escapeSpecials(line)  # destroys internal markup --- do not call
       r = r line "</code>"
       s = substr(s, i+RLENGTH)
     } else {
