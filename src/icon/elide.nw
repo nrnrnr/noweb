@@ -1,9 +1,13 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
 \section{Eliding unwanted code chunks}
 
-This filter removes from the input any code chunk matching any of the
-``globbing'' patterns given as arguments.
-I use it to put parts of reference manuals in with code, then to make
-the reference-manual chunks disappear when printing the code.
+This filter removes from the [[markup]] token stream any code chunk
+    whose name matches any of the ``globbing'' patterns given it as
+    arguments.  These are the familiar file name globbing patterns.  For
+    example: [[elide 'RefMan_Ch*']] will prevent weaving a chunk
+    defined as ``\LA{}RefMan\_Chapter\_14\RA{}''.
+
+You could also use this filter when tangling, but it's not clear why you'd want to.
 
 @
 \subsection{Eliding}
@@ -17,8 +21,10 @@ procedure main(args)
   while line := read() do
     if match("@begin code ", line) then 
       {<<see about eliding this chunk>>}
-    else
+    else {
       write(line)
+      if match("@fatal ", line) then exit(1)
+    }
   return
 end
 @
@@ -31,7 +37,7 @@ accum := [line]
 while line := read() & not match("@defn ", line) do
   put(accum, line)
 line ? {
-  ="@defn " | stop("This can't happen")
+  ="@defn " | fatal("This can't happen")
   if globmatch(!elide) then {
     while line := get(accum) | read() & not match("@end code ", line) do # drain
       if line == "@nl" then write("@index nl")  # grotesque, but may keep lines right
@@ -89,3 +95,15 @@ procedure globmatch(pattern, s)
   return if \s then s ? doglobmatch(pattern, 1)
          else doglobmatch(pattern, 1)
 end
+<<*>>=
+procedure fatal(L[])
+  write!(["@fatal elide "] ||| L)
+  write!([&errout, "noweb error in elide: "] ||| L)
+  exit(1)
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+@

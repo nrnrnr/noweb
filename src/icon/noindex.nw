@@ -6,13 +6,13 @@ That index file is read by [[\nowebindex*]].
 <<*>>=
 procedure main(args)
   if *args ~= 1 then 
-    write(&errout, "Usage: nomkidx basename")
+    write(&errout, "Usage: noindex basename")
   else {
     in := get(args)
     if in[-4:0] == ".tex" then in[-4:0] := ".aux"
     else if not (in[-4:0] == ".aux") then in ||:= ".aux"
     gobble(in, idx := [])
-    f := open(in[1:-4] || ".nwi", "w") | stop("Cannot write ", in[1:-4] || ".nwi")
+    f := open(in[1:-4] || ".nwi", "w") | fatal("Cannot write ", in[1:-4] || ".nwi")
     last := ""
     every out := stripcount(!alphasort(idx)) do
       write(f, last ~== out) & last := out
@@ -56,12 +56,12 @@ procedure sortkey(s)
     tab(many(' '))
     if ="c}" then return firstkey() || "\n" || count
     else if ="i}" then return firstkey() || "\n" || count
-    else stop("not chunk or index")
+    else fatal("not chunk or index")
   }
 end
 <<*>>=
 procedure firstkey()
-  ="{{" | stop("bad index or chunk format")
+  ="{{" | fatal("bad index or chunk format")
   s := (remove_control_sequences() ? tab(bal('}', '{', '}') | 0))
   return alphabet(s) || "\n" || s
 end
@@ -75,7 +75,7 @@ procedure alphabet(s)
       if tab(many(' \t')) then
          r ||:= " "
       else
-         r ||:= tab(many(&lcase)) | stop("This can't happen")
+         r ||:= tab(many(&lcase)) | fatal("This can't happen")
   }
   r ? { tab(many(' ')) ; return tab(0) }	# strip leading blanks
 end
@@ -88,6 +88,18 @@ procedure remove_control_sequences()
     tab(many(' \t'))
   }
   return s || tab(0)
+end
+@ 
+<<*>>=
+procedure fatal(L[])
+  write!(["@fatal noindex "] ||| L)
+  write!([&errout, "noweb error in noindex: "] ||| L)
+  exit(1)
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
 end
 @
 \section{Index}
