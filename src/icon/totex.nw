@@ -9,14 +9,18 @@ generated shell script.
 Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+global headercomment, realwrite
 procedure main(args)
   local delay, name
   <<initialization>>
   delay := !args == "-delay"
   noindex := !args == "-noindex"
   if !args == "-no-gen-comment" then &null
-  else 
-    write("% this file was generated automatically by noweave --- better not edit it")
+  else {realwrite := write; write := firstwrite}
   while inputline := read() do inputline ? {
     <<scan and convert>>
   }
@@ -291,6 +295,17 @@ if ="entryuse "            then <<SI>> { "handled by latex"	                  } 
 if ="entrydefn "           then <<SI>> { "handled by latex"                       } else
 if ="entryend"    & pos(0) then <<SI>> {                                          } else
 if ="endindex"    & pos(0) then <<SI>> {                                          } else
+@
+\subsection{HEader comments}
+This godawful hack slips in a comment without messing up our line
+numbers.
+<<*>>=
+procedure firstwrite(L[])
+  write := realwrite
+  put(L,
+      "% ===> this file was generated automatically by noweave --- better not edit it")
+  return write!L
+end
 @
 \subsection{Utility procedures}
 <<*>>=
