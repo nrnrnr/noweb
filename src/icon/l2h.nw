@@ -13,6 +13,7 @@
 \tableofcontents
 \pagenumbering{arabic}
 @
+\section{Introduction}
 This program provides an infrastructure for converting {\LaTeX} to
 HTML.
 That infrastructure can be used to make a {\tt noweb} filter or to
@@ -26,8 +27,7 @@ be replaced by a data file, which could be augmented dynamically.
 sequences must be hard-wired.)
 Section~\ref{engine} describes the engine used to do the conversion,
 and
-Section~\ref{procs} gives the procedures that do the individual conversions.
-
+Sections \ref{imp-decl}~and~\ref{html-format} gives the procedures that do the individual conversions.
 @
 \section{Descriptions of control sequences}
 \label{cs-decls}
@@ -102,7 +102,9 @@ argblockv("subsubsection", "h4", &null, "*[")
 argblockv("paragraph",     "h5", &null, "*[")     
 argblockv("subparagraph",  "h6", &null, "*[")     
 ignore("appendix")
-substitution("tableofcontents", "<!--table of contents here-->")
+auxfile("tableofcontents", "toc", "<p><b>[Table of contents]</b><p>", 
+		"<h2>Table of Contents</h2>")
+cstab["tableofcontents"] := Ctableofcontents # override to call set_toclevel
 ignore("listoftables")
 @
 \subsubsection{Mathematical formulas}
@@ -201,7 +203,7 @@ For the bibliography, I actually go grubbing for a {\tt .bbl} file if
 I can find one.
 <<control-sequence assignments>>=
 ignore("bibliographystyle", "{")
-cstab["bibliography"] := Cbibliography
+auxfile("bibliography", "bbl", "<b>[BibTeX bibliography]</b>", &null, "{")
 envblock("thebibliography", "<h2>References</h2>", "", "{")
 cstab["cite"] := Ccite
 cstab["bibitem"] := Cbibitem
@@ -260,7 +262,7 @@ ignore("addtolength", "{{")
 @
 \subsubsection{Pictures}
 <<control-sequence assignments>>=
-envblock("picture", "<b>[picture]</b>", "<b>[end picture]</b>", "((")
+envblock("picture", "<b>[picture]</b>", "", "((")
 ignore("put", "({")
 ignore("multiput", "(({{")
 ignore("dashbox", "{([")
@@ -307,8 +309,10 @@ ignore("renewenvironment", "{[{{")
 ignore("newtheorem", "{{")
 @
 \subsubsection{Numbering}
+We have to have a special [[setcounter]] so we can ignore the right stuff
+in the table of contents.
 <<control-sequence assignments>>=
-ignore("setcounter", "{{")
+cstab["setcounter"] := Csetcounter
 ignore("addtocounter", "{{")
 @
 \subsubsection{Other {\LaTeX} control sequences}
@@ -328,19 +332,25 @@ ignore("sf")
 @ And some new ones
 <<control-sequence assignments>>=
 ignore("rmfamily")
-ignore("typeout", "[{")
 <<control-sequence assignments>>=
 ignoreenv("document")
 <<control-sequence assignments>>=
 substitution("LaTeX", "LaTeX")
 <<control-sequence assignments>>=
+ignore("numberline", "{")
 ignore("protect")
+ignore("twocolumn", "C")
+ignore("typeout", "[{")
 @
 \subsection{Control sequences from various {\LaTeX} packages}
 <<control-sequence assignments>>=
-ignoreenv("multicols", "{[")
+ignoreenv("multicols", "{C")
 cstab["citeN"] := Ccite
 ignore("afterpage", "{")
+@
+A (perhaps vain) attempt to implement \verb+\kill+.
+<<control-sequence assignments>>=
+cstab["kill"] := Ckill
 @
 \subsection{Plain {\TeX} control sequences}
 <<control-sequence assignments>>=
@@ -364,7 +374,12 @@ Lots of assignable things:
 <<control-sequence assignments>>=
 ignore("let", "A=")
 every ignore("hfuzz" | "parindent" | "parskip" | "baselineskip", "=")
+every ignore("kern" | "lower" | "spacefactor", "=") # a cheat, but works
 every ignore("clubpenalty" | "widowpenalty", "=")
+@ Other stuff to be ignored:
+<<control-sequence assignments>>=
+every ignore("expandafter" | "indent" | "noindent" | "strut")
+ignore("def", 1)
 <<control-sequence assignments>>=
 substitution("TeX", "TeX")
 @
@@ -375,8 +390,6 @@ We also ignore everything before an ignored balanced-brace pair, which means
 it works for \verb+\def+.
 <<control-sequence assignments>>=
 ignore("noweboptions", 1)
-every ignore("expandafter" | "noindent" | "strut")
-ignore("def", 1)
 @
 Now, here are a couple of righteous hacks!
 The idea is that most views will ignore this stuff, but the indexer might
@@ -407,13 +420,17 @@ closures like there's no tomorrow.
 Here's the basic engine, which works by string scanning.
 The initial boilerplate sets up the second argument (if any) as
 [[&subject]].
+We have the odd specials [["\0"]] and [["\1"]], which are
+used to delimit quoted code in noweb.
+Woe betide the hapless user who has real nulls or 1s in his {\LaTeX} file.
 <<*>>=
 procedure convert(S, optstring)
   static specials
   initial { 
     <<initialization>>
     <<control-sequence assignments>>
-    specials := '\\{}<>"%$&~\n' 
+    <<assign to dynamic-add table>>
+    specials := '\\{}<>"%$&~\n\0\1' 
   }
 
   if \optstring then return optstring ? convert(S)
@@ -438,23 +455,31 @@ horizontal mode.
 <<take actions appropriate to new text>>
 if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
 S.text(S, tab(upto(specials) | 0))
-while not pos(0) do {
-  case move(1) of {
-    "\\" : {<<control sequence>>}
-    "{"  : {<<take open-group actions>>}
-    "}"  : {<<take close-group actions>>}
-    "%"  : {<<comment>>}
-    "~"  : S.text(S, " ") # should be &nbsp; but netscape doesn't support it
-    "\n" : {<<newline>>}
-    "$"  : {<<dollar sign>>}
-    "&"  : {<<ampersand>>}
-    # remaining cases simply escape HTML specials
-    "<"  : S.text(S, "&lt;")
-    ">"  : S.text(S, "&gt;")
-    "\"" : S.text(S, "&quot;")
+while not pos(0) do 
+  if S.mode == "Q" then { # quoting
+    S.text(S, tab(upto('\1') | 0))
+    if ="\1" then {
+      S.text(S, "\1")
+      S.mode := "H"
+    }
+  } else {
+    case move(1) of {
+      "\\" : {<<control sequence>>}
+      "{"  : {<<take open-group actions>>}
+      "}"  : {<<take close-group actions>>}
+      "%"  : {<<comment>>}
+      "~"  : S.text(S, " ") # should be &nbsp; but netscape doesn't support it
+      "\n" : {<<newline>>}
+      "$"  : {<<dollar sign>>}
+      "&"  : {<<ampersand>>}
+      "\0" : {S.mode := "Q"; S.text(S, "\0")}
+      # remaining cases simply escape HTML specials
+      "<"  : S.text(S, "&lt;")
+      ">"  : S.text(S, "&gt;")
+      "\"" : S.text(S, "&quot;")
+    }
+    S.text(S, tab(upto(specials) | 0))
   }
-  S.text(S, tab(upto(specials) | 0))
-}
 return 1(. S.the_text, S.the_text := "")  # what's been converted
 @
 The definition of a converter's state is distributed.
@@ -557,7 +582,8 @@ procedure delay_newtext(S)
 end
 
 procedure undelay_newtext(S)
-  S.newtext := S.delayed_newtext
+  S.newtext := \S.delayed_newtext |
+    {write(&errout, "This can't happen: null delayed_newtext"); &null[0]}
 end
 <<other fields of state>>=
 , delayed_newtext
@@ -582,6 +608,10 @@ end
 
 procedure before_next_close(S, proc, args)
   return push(S.closes[1], closure(proc, args)) # lost at top level
+end
+
+procedure after_next_close(S, proc, args)
+  return put(S.closes[1], closure(proc, args)) # lost at top level
 end
 <<take open-group actions>>=
 push(S.closes, []) # fresh set of closing tasks
@@ -618,11 +648,13 @@ S.csletters := &letters
 To execute a control sequence, look up its procedure in [[cstab]],
 and pass in the name of the control sequence, plus the closure
 argument from [[csclosure]].
+\label{cs-tables}
 <<*>>=
 global cstab, csclosure
 
 procedure do_cs(S, cs)
-  tab(many(' \t')) # skip white space and tabs following CS
+  tab(many(' \t')) # skip white space following CS
+  if pos(0) | any('\n') then before_next_newtext(S, skipblanks, [S])
   (cstab[cs])(S, cs, csclosure[cs])
   return 
 end
@@ -631,7 +663,10 @@ cstab := table(unknown_cs)
 csclosure := table()
 @
 The default action for an unknown control sequence is [[unknown_cs]].
+If the global [[show_unknowns]] is set we dump the control sequence into the 
+output in bold.  We save the unknown sequences for later warning messages.
 <<*>>=
+global show_unknowns
 procedure unknown_cs(S, cs, cl)
   if S.text === ignore_text then return # a bit of a hack
   if \show_unknowns then S.text(S, "<b>\\" || cs || "</b>")
@@ -687,6 +722,33 @@ unknown_envs := set()
 <<*>>=
 global unknown_envs
 @
+\subsection{Issuing warnings about unknown control sequences and environments}
+<<*>>=
+procedure warn_unknown(s, type, mark, rmark)
+  if *s > 0 then {
+    pushout("Unknown " || type || ": ")
+    every pushout(((\mark | "")\1) || !sort(s) || ((\rmark | "")\1) || " ")
+    pushout("\n")
+ }
+end
+<<*>>=
+procedure pushout(s)
+  static col
+  initial col := 0
+  if find("\n", s) then
+    s ? {
+      pushout(tab(upto('\n')))
+      while ="\n" do {col := 0; write(&errout)}
+      pushout(tab(0))
+    }  
+  else {
+    col +:= *s
+    if col >= 79 then {writes(&errout, "\n  "); col := *s + 2}
+    writes(&errout, s)
+  }
+  return
+end
+@
 \subsection{Procedures related to parsing {\TeX}}
 \subsubsection{Comment-skipping}
 This logic gobbles text into [[S.comment]]
@@ -694,6 +756,7 @@ until a newline is encountered, at which point it calls
 [[Ccomment]] to format the comment.
 All other new-text actions go on hold until the comment is over.
 <<comment>>=
+parse_dynamic_add()
 delay_newtext(S)
 eat_comment(S)
 <<*>>=
@@ -818,6 +881,15 @@ procedure Cnewline(S)
   if pos(0) then before_next_newtext(S, Cnewline, [S])
 end
 @
+Other procedures might want to skip white space, which includes
+newlines, but we don't want to miss a paragraph.
+<<*>>=
+procedure skipblanks(S)
+  tab(many(' \t'))
+  if ="\n" then Cnewline(S)
+  else if pos(0) then before_next_newtext(S, skipblanks, [S])
+end
+@
 Paragraphs count only in horizontal or math mode (and they better not
 happen in math mode!).
 <<*>>=
@@ -835,7 +907,7 @@ That text is never converted, but we don't want to skip blanks that
 follow it.
 <<*>>=
 procedure stop_skipping(S)
-  while S.newtext[1].proc === Cnewline do pop(S.newtext)
+  while S.newtext[1].proc === (Cnewline|skipblanks) do pop(S.newtext)
 end
 @
 \subsubsection{Items}
@@ -849,10 +921,13 @@ record item_cl(before, after, ifnone)
 procedure Citem(S, cs, cl)
   if pos(0) then 
     after_next_newtext(S, Citem, [S, cs, cl])
-  else if ="[" then
+  else if ="[" then {
+    delay_newtext(S)
     with_upto_bracket(S, "", convert_bracketed, cl)
-  else
+  } else {
+    skipblanks(S)
     S.text(S, cl[1].ifnone)
+  }
 end
 <<*>>=
 procedure convert_bracketed(S, contents, cl)
@@ -905,19 +980,28 @@ The important thing about a citation key is that it makes a hot line
 to the appropriate item in the bibliography.
 [[Ccite]] and [[Cbibitem]] work together to make it happen.
 
-I'm lazy, so I assume the citation stuff isn't split between inputs.
+Optional arg might contain blanks, so it might be split, but
+ I assume the citation key isn't split between inputs.
 <<*>>=
-procedure Ccite(S, cs, cl)
-  local commentary, key
+procedure Ccite(S, cs, cl, bracketed_text)
   if ="[" then {
-    commentary := convert(converter("H"), "{" || tab(upto(']' | 0)) || "}")
-    ="]"
+    delay_newtext(S)
+    with_upto_bracket(S, "", do_cite, cl)
+  } else
+    do_cite(S, &null, cl)
+end
+
+procedure do_cite(S, commentary, cl)
+  local key
+  if \commentary then
     optwhite()
+  if pos(0) then before_next_newtext(S, do_cite, [S, commentary, cl])
+  else {
+    key := csarg(S)
+    S.text(S, "<b>[cite <a href=\"#NWcite-" || key || "\">" || key || "</a>" ||
+              (("<i>, " || \commentary || "</i>") | "" ) ||
+              "]</b>")
   }
-  key := csarg(S)
-  S.text(S, "<b>[cite <a href=\"#NWcite-" || key || "\">" || key || "</a>" ||
-            (("<i>, " || \commentary || "</i>") | "" ) ||
-            "]</b>")
 end
 <<*>>=
 procedure Cbibitem(S, cs, cl)
@@ -942,18 +1026,31 @@ procedure finish_bibitem(S, contents, args)
   S.text(S, "<br><a name=\"NWcite-" || key || "\">" || label || "</a> ")
 end
 @
-[[Cbibliography]] reads in a BiB{\TeX} bibliography if it can find one.
+\subsection{Reading and converting auxiliary {\LaTeX} files}
 <<*>>=
-procedure Cbibliography(S, cs, cl)
-  local bibfile, T
-  if bibfile := open(basename(\curfile) || ".bbl") then {
+procedure auxfile(cs, ext, placeholder, header, ignore)
+  cstab[cs] := Cauxfile
+  csclosure[cs] := aux_cl(ext, placeholder, header, \ignore | "")
+end
+@
+[[Cauxfile]] succeeds if it finds a file, fails otherwise.
+<<*>>=
+record aux_cl(ext, placeholder, header, ignore)
+
+procedure Cauxfile(S, cs, cl)
+  local auxfile, T
+  if auxfile := open(basename(\curfile) || "." || cl.ext) then {
     T := converter("V")
-    while line := read(bibfile) do 
+    Cmakeatletter(T)
+    S.text(S, \cl.header)
+    while line := read(auxfile) do 
       S.text(S, convert(T, line || "\n"))
+    close(auxfile)
   } else {
-    S.text(S, "<b>[BibTeX bibliography]</b>")
+    S.text(S, \cl.placeholder)
   }
-  cs_ignore(S, cs, "{")
+  cs_ignore(S, cs, cl.ignore)
+  if \auxfile then return
 end
 <<*>>=
 procedure basename(name)
@@ -962,6 +1059,74 @@ procedure basename(name)
     return reverse(tab(0))
   }
 end
+@
+\subsubsection{Table of contents}
+We can build a table of contents by reading the .toc file.
+Sadly, I haven't figured out how to get hot links yet.
+<<control-sequence assignments>>=
+cstab["contentsline"] := Ccontentsline
+<<*>>=
+procedure Ctableofcontents(S, cs, cl)
+  S.mode := "V"
+  Cauxfile(S, cs, cl)
+  set_toclevel(S)
+end
+@
+[[set_toclevel]] manages the starting and ending of lists.
+With no level argument, it resets the toc to the initial level.
+<<*>>=
+procedure set_toclevel(S, l)
+  static toclevel, initiallevel
+  if /initiallevel := \l then
+    S.text(S, "<ul compact>")
+  if /l := \initiallevel then
+    S.text(S, "</ul>")
+  if /l then return  # never set a level
+  /toclevel := l
+  while toclevel < l do {
+    S.text(S, "<ul compact>")
+    toclevel +:= 1
+  }
+  while toclevel > l do {
+    S.text(S, "</ul>")
+    toclevel -:= 1
+  }
+  return
+end
+@
+Assume one table of contents per converted document.
+<<*>>=
+procedure Ccontentsline(S, cs, cl) 
+  local type, level
+  static leveltab
+  initial { <<assign numbers of sections in leveltab>> }
+  l := \leveltab[csarg()] | fail
+  if l > \countertab["tocdepth"] then
+    cs_ignore(S, cs, "{{") # skip this one
+  else {
+    set_toclevel(S, l)
+    S.text(S, "<li>")
+    after_next_open(S, after_next_close, [S, cs_ignore, [S, cs, "{"]])
+  }
+end
+<<assign numbers of sections in leveltab>>=
+l := ["part", "chapter", "section", "subsection", "subsubsection", 
+      "paragraph", "subparagraph"]
+leveltab := table()
+every i := 1 to *l do
+  leveltab[l[i]] := i - 2  # making section level 1
+@
+\subsubsection{Counters}
+<<*>>=
+global countertab
+
+procedure Csetcounter(S, cs, cl)
+  local counter
+  (counter := csarg(), countertab[counter] := integer(csarg())) | 
+	cs_ignore(S, cs, "{{")
+end
+<<initialization>>=
+countertab := table()
 @
 \subsubsection{Accents}
 This info is taken from the HTML RFC, section entitled 
@@ -1014,7 +1179,7 @@ end
 <<warn about [[cs]] with [[arg]]>>=
 /warned[cs] := set()
 if not member(warned[cs], arg) then {
-  write(&errout, "Warning: Can't handle \\", cs, " with arg ", image(arg))
+  write(&errout, "Warning: Can't handle \\", cs, " with arg `", arg, "'")
   insert(warned[cs], arg)
 }
 @
@@ -1033,6 +1198,7 @@ procedure Cfontchange(S, tex, html)
 end
 @
 \section{Implementations of declaratives}
+\label{imp-decl}
 
 \subsection{Ignoring stuff}
 There are several different kinds of things that can be ignored:
@@ -1065,53 +1231,64 @@ The major setup is replacing [[S.text]] with a function that does nothing.
 Oh, and it converts an integer template
 into that many arguments, for historical reasons.
 <<*>>=
-procedure cs_ignore(S, cs, template)
+procedure cs_ignore(S, cs, template, proc, args)
   local saved_text
   saved_text := S.text
   S.text := ignore_text
   if type(template) == "integer" then template := repl("{", template)
-  do_ignore(S, template, saved_text)
+  return do_ignore(S, template, saved_text, proc, args)
 end
 @
 Some things are easily ignored (partly because we assume they don't
 span inputs).  For others, we have special procedures.
 The brace-ignoring stuff uses the open and close hooks, because braces
 can be nested deeply.
+If non-null, [[proc]] is applied to [[args]] after everything is ignored.
 <<*>>=
-procedure do_ignore(S, template, saved_text)
+procedure do_ignore(S, template, saved_text, proc, args)
   if *template > 0 then
     if optwhite() & pos(0) then
-      after_next_newtext(S, do_ignore, [S, template, saved_text])
+      after_next_newtext(S, do_ignore, [S, template, saved_text, proc, args])
     else
       case template[1] of {
         "{" : { S.text := ignore_text
-                after_next_open(S, ignore_til_close, [S, template[2:0], saved_text])
+                after_next_open(S, ignore_til_close, 
+			              [S, template[2:0], saved_text, proc, args])
               }
         "A" : { csarg(S) # had better be in one input
-                do_ignore(S, template[2:0], saved_text)
+                do_ignore(S, template[2:0], saved_text, proc, args)
               }
         "[" : if optwhite() & ="[" then {
                 delay_newtext(S)
 		with_upto_bracket(S, "", ignore_bracket_plus,
-    			                      [S, template[2:0], saved_text])
+  		                            [S, template[2:0], saved_text, proc, args])
               } else
-                do_ignore(S, template[2:0], saved_text)
+                do_ignore(S, template[2:0], saved_text, proc, args)
+        "C" : # a total cheat, means ``copy optional arg''
+              if optwhite() & ="[" then {
+                delay_newtext(S)
+		with_upto_bracket(S, "", copy_bracket_plus,
+  		                            [S, template[2:0], saved_text, proc, args])
+              } else
+                do_ignore(S, template[2:0], saved_text, proc, args)
         "=" : { delay_newtext(S)
-                eat_assignment(S, do_ignore, [S, template[2:0], saved_text])
+                eat_assignment(S, do_ignore, [S, template[2:0], saved_text, proc,args])
               }
         "*" : { (="*", optwhite())
-                do_ignore(S, template[2:0], saved_text)
+                do_ignore(S, template[2:0], saved_text, proc, args)
               }
         "(" : { (="(", tab(upto(')')), =")", optwhite())
-                do_ignore(S, template[2:0], saved_text)
+                do_ignore(S, template[2:0], saved_text, proc, args)
               }
       }
-  else  
+  else {
     S.text := saved_text
+    (\proc)!(\args)
+  }
 end
 
-procedure ignore_til_close(S, template, saved_text)
-  before_next_close(S, do_ignore, [S, template, saved_text])
+procedure ignore_til_close(S, template, saved_text, proc, args)
+  before_next_close(S, do_ignore, [S, template, saved_text, proc, args])
 end
 <<*>>=
 procedure ignore_text(S, s)
@@ -1147,6 +1324,14 @@ To ignore brackets:
 <<*>>=
 procedure ignore_bracket_plus(S, contents, args)
   # contents are ignored
+  do_ignore!args
+end
+@ and to copy them
+<<*>>=
+procedure copy_bracket_plus(S, contents, args)
+  local text
+  text := args[3] | fail  # saved_text arg to do_ignore
+  text(S, convert(converter("H"), "{" || contents || "}"))
   do_ignore!args
 end
 @
@@ -1221,10 +1406,10 @@ end
 The [[envblock]] procedure has two forms:
 \begin{itemize}
 \item
-[[envblock(]]{\it environment}, {\it tag}[[)]] simply uses
+{}[[envblock(]]{\it environment}, {\it tag}[[)]] simply uses
 begin- and end-{\it tag} in place of the environment.
 \item
-[[envblock(]]{\it environment}, {\it left}, {\it right}, {\it
+{}[[envblock(]]{\it environment}, {\it left}, {\it right}, {\it
 ignore}[[)]] 
 puts the {\it left} text at the beginning of the environment, the {\it
 right} text at the end, plus at the beginning of the environment it
@@ -1266,13 +1451,15 @@ end
 @ There is a fine point; control sequences labelled with [[argblockv]]
 should put the converter into vertical mode.
 <<*>>=
-procedure argblockv(tex, html, right)
-  argblock(tex, html, right)
+procedure argblockv(tex, html, right, ignore)
+  argblock(tex, html, right, ignore)
   cstab[tex] := CblockV
 end
 <<*>>=
-procedure Cblock(S, cs, cl)
-  return if pos(0) then {
+procedure Cblock(S, cs, cl, done_ignoring)
+  if /done_ignoring & *cl.ignore > 0 then {
+    cs_ignore(S, cs, cl.ignore, Cblock, [S, cs, cl, 1])
+  } else if pos(0) then {
     after_next_newtext(S, do_cs, [S, cs, cl])
   } else if match("{") then {
     S.text(S, cl.left)
@@ -1280,11 +1467,13 @@ procedure Cblock(S, cs, cl)
   } else {
     S.text(S, cl.left || csarg(S) || cl.right)
   }
+  return
 end
 <<*>>=
 procedure CblockV(S, cs, cl)
   S.mode := "V"
-  return Cblock(S, cs, cl)
+  Cblock(S, cs, cl)
+  return
 end
 @
 \subsection{Table environments}
@@ -1301,7 +1490,6 @@ procedure table_env(env, args, amp, html)
   endtab[env] := Ctable_end
   endcl[env] := []
 end
-@
 <<*>>=
 procedure Ctable(S, env, cl)
   local amp
@@ -1317,8 +1505,18 @@ procedure Ctable_end(S, env, cl)
   S.text(S, endtag(\begincl[env].html))
 end
 @
+\subsection{Control-sequence assignment}
+This procedure is available to be used for dynamic assignment.
+One day we might use it to parse \verb+\let+ as well.
+<<*>>=
+procedure let(lhs, rhs)
+  cstab[lhs] := cstab[rhs]
+  csclosure[lhs] := csclosure[rhs]
+end
 @
 \section{HTML formatting}
+\label{html-format}
+
 First, generic procedures used to create beginning and ending tags.
 <<*>>=
 procedure tag(html)
@@ -1332,15 +1530,17 @@ end
 Next, a gazillion formatting procedures.
 <<*>>=
 procedure Ccomment(S)
-  S.text(S, "<!--")
-  S.comment ? {
-    while S.text(S, tab(find("--"))) do {
-      move(2)
-      S.text(S, "- - ")
+  if *S.comment > 0 then {
+    S.text(S, "<!--")
+    S.comment ? {
+      while S.text(S, tab(find("--"))) do {
+        move(2)
+        S.text(S, "- - ")
+      }
+      S.text(S, tab(0))
     }
-    S.text(S, tab(0))
+    S.text(S, "-->")
   }
-  S.text(S, "-->")
   S.comment := ""
   return
 end
@@ -1350,19 +1550,23 @@ procedure Cparagraph(S)
 end
 <<*>>=
 procedure Cmath(S)
+  <<take open-group actions>>
   S.text(S, "<i>")
 end
 
 procedure Cmath_end(S)
   S.text(S, "</i>")
+  <<take close-group actions>>
 end
 <<*>>=
 procedure Cdisplaymath(S)
+  <<take open-group actions>>
   S.text(S, "<blockquote><i>")
 end
 
 procedure Cdisplaymath_end(S)
   S.text(S, "</i></blockquote>")
+  <<take close-group actions>>
 end
 <<*>>=
 procedure Cmakeatletter(S)
@@ -1372,19 +1576,173 @@ end
 procedure Cmakeatother(S)
   S.csletters --:= '@'
 end
+@
+Approximate \verb+\kill+ by eliminating text.
+<<*>>=
+procedure Ckill(S, cs, cl)
+  S.the_text := ""
+end
 @ 
+\section{Support for adding control sequences dynamically}
+
+The idea is to use formal comments of the form:
+\begin{quote}
+\verb+% l2h function arg arg ...+
+\end{quote}
+These comments have the same effect as the procedure calls in
+the chunk [[<<control-sequence assignments>>]].
+@
+Our first step is to create a table with the names of the functions we
+recognize.
+Ordinarly this table would be distributed, but I created it after the
+fact with a little quick Unix pipeline.
+<<*>>=
+global csfunctions
+<<initialization>>=
+csfunctions := table()
+<<assign to dynamic-add table>>=
+csfunctions["argblock"] := argblock
+csfunctions["argblockv"] := argblockv
+csfunctions["envblock"] := envblock
+csfunctions["fontchange"] := fontchange
+csfunctions["ignore"] := ignore
+csfunctions["ignoreenv"] := ignoreenv
+csfunctions["let"] := let
+csfunctions["listenv"] := listenv
+csfunctions["substitution"] := substitution
+@
+Now, the tough issue is how to parse arguments.  I'm going to try the
+following initial strategy:  arguments are separated by spaces.
+To put a space within an argument, use \verb+#+.  There is no way to
+put a \verb+#+ within an argument.
+<<*>>=
+procedure parse_dynamic_add(S)
+   if (optwhite(), =("l2h"|"sl2h"), skipwhite(), 
+       p := tab(upto(' \t')), <<make [[p]] a good function or warn and [[fail]]>>, 
+       skipwhite(), any(~'\n')) then {
+     a := []
+     while any(~'\n') do {
+       put(a, map(tab(upto(' \t\n') | 0), "#", " "))
+       skipwhite()
+     }
+     p!a
+     return
+   }
+end
+<<make [[p]] a good function or warn and [[fail]]>>=
+((p := \csfunctions[p]) | 
+{ dynamic_warn(p); fail })
+<<*>>=
+procedure dynamic_warn(p)
+  static badprocs
+  initial badprocs := set()
+  if not member(badprocs, p) then {
+    write(&errout, "Warning: % l2h ", p, " not recognized -- ignored")
+    insert(badprocs, p)
+  }
+end
+@     
 \section{Miscellanous utilities}
 [[optwhite]] skips and returns optional white space.
 <<*>>=
 procedure optwhite()
   suspend tab(many(' \t')) | ""
 end
+@ [[skipwhite]] insists that there must be some white space.
+<<*>>=
+procedure skipwhite()
+  suspend tab(many(' \t'))
+end
+@
+\section{Main program for a noweb filter}
+First, this is how we use the converter as a noweb filter.
+<<l2h.icn>>=
+<<*>>
+procedure main(args)
+  local line
+  every arg := !args do
+    case arg of {
+      "-show-unknowns" : show_unknowns := 1
+      default : write(&errout, "l2h filter: unknown arg ", image(arg))
+    }
+  while line := read() do
+    apply(filter, line)
+  warn_unknown(\unknown_set, "control sequences", "\\")
+  warn_unknown(\unknown_envs, "environments", "{", "}")
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+@
+This is noweb filter machinery.  I really ought to coordinate quoted text 
+with the converter (so it always shows up in the right place), 
+but so far I'm too lazy.
+<<l2h.icn>>=
+global curfile, curline
+
+procedure filter(name, arg) 
+  static S, C, code
+  initial { S := converter("V"); C := converter("H") }
+  case name of {
+    "begin"    : {<<out>>; if match("code ", arg) then code := 1}
+    "end"      : {<<out>>; code := &null; S.mode := "V"}
+    "quote"    : { outtext("\0" ? convert(S)) }
+    "endquote" : { outtext("\1" ? convert(S)) }
+    "file"     : {<<out>>; curfile := arg; curline := 1}
+    "line"     : {<<out>>; curline := integer(arg)}
+    "defn"     : { write("@", name, " ", "{" || arg || "}" ? convert(C)); reset(C) }
+    "use"      : { write("@", name, " ", "{" || arg || "}" ? convert(C)); reset(C) }
+    "text"     : {if \code then <<out>> else outtext(arg ? convert(S))}
+    "nl"       : {if \code then <<out>> else outtext("\n" ? convert(S)); curline +:= 1}
+    default    : {<<out>>}
+  }
+  return
+end
+<<out>>=
+write("@", name, (" " || \arg) | "")
+<<l2h.icn>>=
+procedure outtext(s)
+  s ? 
+    while not pos(0) do
+      if ="\n" then write("@nl")
+      else if ="\0" then write("@quote")
+      else if ="\1" then write("@endquote")
+      else write("@text ", tab(upto('\n\0\1') | 0))
+  return
+end
+<<l2h.icn>>=
+procedure error(args[])
+  return write!([&errout, (\curfile || ", ") | "", "line ", curline, ": "] ||| args)
+end
+@
+\section{Main program for a simple converter}
+<<sl2h.icn>>=
+<<*>>
+global curfile
+
+procedure main(args)
+  S := converter("V")
+  every arg := !args do
+    if arg[1] == "-" then
+      case arg of {
+        "-show-unknowns" : show_unknowns := 1
+        default : write(&errout, "Warning: unrecognized option ", arg)
+      }
+    else if f := open(curfile <- arg) then
+      while line := read(f) do writes(convert(S, line || "\n"))
+    else
+      write(&errout, "Error: Can't open file ", arg)
+  if /curfile then
+    while line := read() do writes(convert(S, line || "\n"))
+  warn_unknown(\unknown_set, "control sequences", "\\")
+  warn_unknown(\unknown_envs, "environments", "{", "}")
+end
 @
 \section{Chunks}
 \nowebchunks
 
-\section{Index}
-\begin{multicols}{2}
+\begin{multicols}{2}[\section{Index}]
 \nowebindex
 \end{multicols}
 
