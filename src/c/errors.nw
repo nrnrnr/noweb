@@ -1,11 +1,8 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
-@ \section{Error messages}
+\subsection{Error messages}
 Here is a big set of functions that other places can call to issue
 error messages.
-Right now this is just boilerplate; one day these can be replaced
-with better messages that might help pinpoint the place where the
-error occurred.
 
 It might be worth implementing these as macros so they could indicate
 the file name and line number in the source of where they were called.
@@ -28,15 +25,17 @@ I track degrees of error as they occur.
 <<header>>=
 enum errorlevel { Normal=0, Warning, Error, Fatal, Impossible };
 extern enum errorlevel errorlevel;
+@ %def errorlevel
 <<C functions>>=
 enum errorlevel errorlevel = Normal;
 @
 The rest is just varying flavors of error messages.
 <<header>>=
 void errormsg(enum errorlevel level, char *s, ...);
-#define overflow(s) errormsg(Fatal,"Capacity exceeded: %s", s)
-#define impossible(s) errormsg(Impossible, "This can't happen: %s", s)
+#define overflow(S) errormsg(Fatal,"Capacity exceeded: %s", S)
+#define impossible(S) errormsg(Impossible, "This can't happen: %s", S)
 #define checkptr(P) do { if (!(P)) overflow("memory"); } while (0)
+@ %def errormsg overflow impossible checkptr
 <<C functions>>=
 void errormsg(enum errorlevel level, char *s,...) {     
     va_list args;                       /* see K&R, page 174 */
@@ -46,6 +45,7 @@ void errormsg(enum errorlevel level, char *s,...) {
     if (level >= Fatal)
         exit(level);
 }
+@ %def errormsg
 <<header>>=
 void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...);
 <<C functions>>=
@@ -58,6 +58,7 @@ void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {
     if (level >= Fatal)
         exit(level);
 }
+@ %def errorat
 <<set [[errorlevel]] and print [[s]] with [[args]]>>=
 if (level > errorlevel)
     errorlevel = level;
