@@ -3,8 +3,8 @@
 
 LIB=/dev/null
 SHELL=/bin/sh
-NAME="name of version checked in"
-CIMSG="message for version checked in"
+CINAME=
+CIMSG=
 RCSFILES=emptydefn toascii.nw unmarkup Makefile
 
 all: toascii
@@ -14,7 +14,7 @@ install: all
 	cp unmarkup emptydefn toascii $(LIB)
 
 checkin:
-	ci -l -n'$(NAME) -m'$(CIMSG)' $(RCSFILES)
+	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 source: toascii
 touch: toascii
@@ -24,5 +24,5 @@ toascii: toascii.nw
 	notangle -Rtoascii toascii.nw > toascii
 
 clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~
-veryclean: clean
+clobber: clean
 	rm -f toascii
