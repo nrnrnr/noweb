@@ -1,0 +1,179 @@
+% Copyright 1991 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
+\subsection{Expanding multiple files from a single source}
+This main program is used to make the monolithic {\tt noweb}
+script efficient.
+Tips of the hat to Ross Williams and Preston Briggs.
+<<*>>=
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <ctype.h>
+#include "modules.h"
+#include "modtrees.h"
+#include "notangle.h"
+#include "errors.h"
+#include "columns.h"
+#include "strsave.h"
+
+<<local prototypes>>
+
+#define Clocformat "#line %L \"%F\"%N"
+static char *locformat = Clocformat;
+
+main(int argc, char **argv) {
+    int i;
+
+    tabsize = 0;  /* default for nt is not to use tabs */
+
+    <<read standard input into tree>>
+    for (i=1; i<argc; i++) 
+      switch (*argv[i]) {
+        case '-': <<handle option in [[argv[i]]]>>                 break;
+        default:  emitfile(argv[i]);                               break;
+      }
+    exit(errorlevel);
+    return errorlevel;		/* slay warning */
+}
+@
+<<read standard input into tree>>=
+read_defs(stdin);
+apply_each_module(remove_final_newline);
+<<write out all conforming roots>>=
+apply_each_module(add_uses_to_usecounts);
+apply_each_module(emit_if_unused_and_conforming);
+<<local prototypes>>=
+void add_uses_to_usecounts(Module mp);
+void emit_if_unused_and_conforming(Module mp);
+<<*>>=
+void add_uses_to_usecounts(Module mp) {
+    Module used;
+    struct modpart *p;
+    for (p=mp->head; p!=NULL; p=p->next)
+	if (p->ptype == MODULE) {
+	    used = lookup(p->contents);
+	    if (used != NULL)
+		used->usecount++;
+	}
+}
+@ %def add_uses_to_usecounts
+
+A conforming output chunk name has no spaces and no metacharacters.
+Names with spaces are silently ignored, but names that are otherwise
+conforming but that contain metacharacters cause complaints.
+<<*>>=
+void emit_if_unused_and_conforming(Module mp) {
+    char *index;
+    if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL)
+        if (index = strpbrk(mp->name, "[](){}!$&<>*?;|^`'\\\""),
+            index == NULL || index[0] == '*' && index[1] == 0)
+  	    emitfile(mp->name);
+        else 
+	    errormsg(Error, "@<<%s@>> cannot be an output chunk; "
+                            "it contains a metacharacter", mp->name);
+}
+@ %def emit_if_unused_and_conforming
+
+<<local prototypes>>=
+static void emitfile(char *modname);
+<<*>>=
+static void emitfile(char *modname) { 
+  Module root = lookup(modname);
+  char *tempname = tempnam(".", 0);
+  FILE *fp;
+  char *lfmt, *filename;
+  <<set [[lfmt]] and [[filename]] from [[modname]]>>
+  <<complain and [[return]] if [[root == NULL]]>>
+  fp = fopen(tempname, "w");
+  if (fp == NULL) errormsg(Fatal, "Can't open temporary file %s", tempname);
+  <<expand [[root]] onto [[fp]] and close the file>>
+  <<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>
+  remove(filename);
+  if (rename(tempname, filename) != 0) { /* different file systems? (may have to copy) */
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL) {remove(tempname); <<complain about [[filename]] and [[return]]>>}
+    <<expand [[root]] onto [[fp]] and close the file>>
+    remove(tempname);
+  }
+}
+@ %def emitfile
+<<set [[lfmt]] and [[filename]] from [[modname]]>>=
+{ int n = strlen(modname) - 1;
+  if (n >= 0 && modname[n] == '*') {
+    lfmt = locformat;
+    filename = strsave(modname);
+    filename[n] = 0;
+  } else {
+    lfmt = "";
+    filename = modname;
+  }
+}
+<<expand [[root]] onto [[fp]] and close the file>>=
+resetloc();
+(void) expand(root, 0, 0, 0, lfmt, fp);
+putc('\n', fp);
+fclose(fp);
+@
+<<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>=
+{ FILE *dest, *tmp;
+  dest = fopen(filename, "r");
+  if (dest != NULL) {
+    int x, y;
+    tmp = fopen(tempname, "r");
+    assert(tmp);
+    do { 
+      x = getc(tmp);
+      y = getc(dest);
+    } while (x == y && x != EOF);
+    fclose(tmp);
+    fclose(dest);
+    if (x == y) {
+      remove(tempname);
+      return;
+    }
+  }
+}
+<<complain about [[filename]] and [[return]]>>=
+errormsg(Error, "Can't open output file %s", filename);
+return;
+<<complain and [[return]] if [[root == NULL]]>>=
+if (root == NULL) {
+  errormsg(Error, "Chunk @<<%s@>> is undefined", filename);
+  return;
+}
+<<handle option in [[argv[i]]]>>=
+    switch (*++argv[i]) {
+        case 'a':
+            if (strcmp(argv[i], "all"))
+                errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
+            else {<<write out all conforming roots>>}
+            break;
+	case 't': /* set tab size or turn off */
+	    if (isdigit(argv[i][1]))
+	        tabsize = atoi(argv[i]+1);
+	    else if (argv[i][1]==0)
+	        tabsize = 0; 		/* no tabs */
+	    else 
+	        errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
+	    break;	    
+        case 'L': /* have a #line number format */
+            locformat = argv[i] + 1;
+            if (!*locformat) locformat = Clocformat;
+            break;
+        default:
+            errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
+     }
+@
+\subsubsection{Temporary files}
+Some operating systems provide a [[tempnam]] call that makes it possible to 
+create a temporary file in the current directory.  This makes [[mnt]] more 
+efficient by making [[rename]] efficient.  If your operating system
+provides [[tempnam]], define [[TEMPNAM]] for compilation.
+<<local prototypes>>=
+#ifdef TEMPNAM
+extern char *tempnam (char *dir, char *pfx);	/* temp file in dir */
+#else
+#define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
+#endif
+@ %def tempnam

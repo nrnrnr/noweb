@@ -1,0 +1,29 @@
+\subsection{Code to recognize [[noweb]] markup on input}
+We recognize the input using matching functions, which can find [[@begin]],
+[[@end]], and other useful information.
+<<header>>=
+extern int is_keyword(char *line, char *keyword);
+extern int is_begin(char *line, char *type);
+extern int is_end(char *line, char *type);
+extern int is_index(char *line, char *type);
+<<*>>=
+#include <string.h>
+#include "match.h"
+static int matches(char *line, char *search) {
+    return !strncmp(line,search,strlen(search));
+}
+int is_keyword(char *line, char *keyword) {
+    char low_at_sign = '@';
+    return *line==low_at_sign && matches(line+1,keyword) && 
+           (line[strlen(keyword)+1]==' ' || line[strlen(keyword)+1]=='\n');
+}
+int is_begin(char *line, char *type) {
+    return is_keyword(line,"begin") && matches(line+1+6,type);
+}
+int is_end(char *line, char *type) {
+    return is_keyword(line,"end") && matches (line+1+4,type);
+}
+int is_index(char *line, char *type) {
+    return is_keyword(line,"index") && matches(line+1+6,type);
+}
+@ %def is_keyword is_begin is_end is_index

@@ -1,0 +1,326 @@
+% \documentstyle[noweb]{article}
+% 
+% \setlength{\oddsidemargin}{0in}
+% \setlength{\evensidemargin}{0in}
+% \setlength{\topmargin}{0in}
+% \addtolength{\topmargin}{-\headheight}
+% \addtolength{\topmargin}{-\headsep}
+% \setlength{\textheight}{8.9in}
+% \setlength{\textwidth}{6.5in}
+% \setlength{\marginparwidth}{0.5in}
+
+\subsection{An Efficient String Matcher (by Preston Briggs)}
+\label{preston}
+
+\subsubsection{Introduction}
+
+The obvious approach to this problem would be quite expensive for
+large documents; however, there is an interesting paper describing an
+efficient solution~\cite{aho:efficient}.
+
+\paragraph{Boilerplate} \indent\null\par
+
+<<*>>=
+<<Include files>>
+<<header>>
+<<Type definitions>>
+<<Prototypes>>
+<<Function definitions>>
+@
+<<header>>=
+<<Exported type definitions>>
+<<Exported prototypes>>
+@
+<<Include files>>=
+#include <string.h>
+@ %def strchr strcpy strlen
+<<Include files>>=
+#include <stdlib.h>
+@ %def malloc calloc free
+
+\paragraph{External Interface}
+
+The externally visible interface was designed by Norman Ramsey.
+
+We assume that [[alphanum]] and [[symbols]] point to constant
+strings; {\sl i.e.,} we don't bother to copy them into separately
+allocated space.
+
+<<Exported prototypes>>=
+Recognizer new_recognizer(char *alphanum, char *symbols);
+@ %def new_recognizer
+<<Exported type definitions>>=
+typedef struct recognizer *Recognizer;
+@ %def Recognizer
+A copy is made of the string pointed to by [[id]].
+It won't hurt to add the same identifier multiple times to a given
+recognizer.
+<<Exported prototypes>>=
+void add_ident(Recognizer r, char *id);
+void stop_adding(Recognizer r);
+@ %def add_ident stop_adding
+<<Exported prototypes>>=
+void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
+@ %def search_for_ident
+<<Exported type definitions>>=
+typedef void (*Callback) (void *closure, char *id);
+@ %def Callback
+@
+
+\subsubsection{Defining the Automata}
+
+
+<<Type definitions>>=
+typedef struct goto_node Goto_Node;
+typedef struct move_node Move_Node;
+@ %def Goto_Node Move_Node
+<<Type definitions>>=
+typedef struct name_node {
+  struct name_node *next; /* points to the next name on the output list */
+  char *name;
+} Name_Node;
+@ %def Name_Node
+<<Type definitions>>=
+struct move_node {
+  Move_Node *next;      /* points to the next node on the move list */
+  Goto_Node *state;     /* the next state for this character */
+  char c;
+};
+@ %def move_node
+<<Type definitions>>=
+struct goto_node {
+  Name_Node *output;    /* list of words ending in this state */
+  Move_Node *moves;     /* list of possible moves */
+  Goto_Node *fail;      /* and where to go when no move fits */
+  Goto_Node *next;      /* next goto node with same depth */
+};
+@ %def goto_node
+<<Type definitions>>=
+struct recognizer {
+  Goto_Node *root[128]; /* might want 256, depending on the character set */
+  char *alphas;
+  char *syms;
+  int max_depth;
+  Goto_Node **depths; /* an array, max_depth long, of lists of goto_nodes,
+                         created while adding ids, used while building
+                         the failure functions */
+};
+@ %def recognizer root depths max_depth alphas syms
+@
+
+\paragraph{A Utility Function}
+
+We need a function that, given the current state and a character, will
+return the next state as directed by the ``goto table.'' If there is
+no defined entry in the table, the function returns [[NULL]].
+<<Function definitions>>=
+static Goto_Node *goto_lookup(char c, Goto_Node *g)
+{
+  Move_Node *m = g->moves;
+  while (m && m->c != c)
+    m = m->next;
+  return m ? m->state : NULL;
+}
+@ %def goto_lookup
+@
+
+\subsubsection{Building the Automata}
+
+The [[max_depth]] should be initialized to be at least 2.
+<<Function definitions>>=
+Recognizer new_recognizer(char *alphanum, char *symbols)
+{
+  Recognizer r = (Recognizer) calloc(1, sizeof(struct recognizer));
+  r->alphas = alphanum;
+  r->syms = symbols;
+  r->max_depth = 10;
+  r->depths = (Goto_Node **) calloc(r->max_depth, sizeof(Goto_Node *));
+  return r;
+}
+@ %def Recognizer
+@
+
+\paragraph{Building the Goto Table}
+
+We assume [[id]] is at least 1 character long.
+<<Function definitions>>=
+void add_ident(Recognizer r, char *id)
+{
+  int depth = 2;
+  char *p = id;
+  char c = *p++;
+  Goto_Node *q = r->root[c];
+  if (!q) 
+    <<Create an entry for [[root[c]]]>>
+  c = *p++;
+  while (c) {
+    Goto_Node *new = goto_lookup(c, q);
+    if (!new)
+      <<Create a new goto entry and attach to [[q]]'s move list>>
+    q = new;
+    depth++;
+    c = *p++;
+  }
+  <<Set [[q->output]] to [[id]] (if not already present)>>
+}
+@ %def add_ident
+<<Create an entry for [[root[c]]]>>=
+{
+  q = (Goto_Node *) calloc(1, sizeof(Goto_Node));
+  r->root[c] = q;
+  q->next = r->depths[1];
+  r->depths[1] = q;
+}
+<<Create a new goto entry and attach to [[q]]'s move list>>=
+{
+  Move_Node *new_move = (Move_Node *) malloc(sizeof(Move_Node));
+  new = (Goto_Node *) calloc(1, sizeof(Goto_Node));
+  new_move->state = new;
+  new_move->c = c;
+  new_move->next = q->moves;
+  q->moves = new_move;
+  if (depth == r->max_depth)
+    <<Double the size of the [[depths]] array>>
+  new->next = r->depths[depth];
+  r->depths[depth] = new;
+}
+<<Double the size of the [[depths]] array>>=
+{
+  int i;
+  Goto_Node **new_depths = (Goto_Node **) calloc(2*depth, sizeof(Goto_Node *));
+  r->max_depth = 2 * depth;
+  for (i=0; i<depth; i++)
+    new_depths[i] = r->depths[i];
+  free(r->depths);
+  r->depths = new_depths;
+}
+<<Set [[q->output]] to [[id]] (if not already present)>>=
+if (!q->output) {
+  char *copy = malloc(strlen(id) + 1);
+  strcpy(copy, id);
+  q->output = (Name_Node *) malloc(sizeof(Name_Node));
+  q->output->next = NULL;
+  q->output->name = copy;
+}
+@
+
+%\newpage
+\paragraph{Building the Failure Functions}
+
+After all the strings have been added to the goto table, we can
+construct the failure functions.  It's going to be hard to explain
+this one.
+<<Function definitions>>=
+void stop_adding(Recognizer r)
+{
+  int depth;
+  for (depth=1; depth<r->max_depth; depth++) {
+    Goto_Node *g = r->depths[depth];
+    while (g) {
+      Move_Node *m = g->moves;
+      while (m) {
+        char a = m->c;
+        Goto_Node *s = m->state;
+        Goto_Node *state = g->fail;
+        while (state && !goto_lookup(a, state))
+          state = state->fail;
+        if (state)
+          s->fail = goto_lookup(a, state);
+        else
+          s->fail = r->root[a];
+        if (s->fail) {
+          Name_Node *p = s->fail->output;
+          while (p) {
+            Name_Node *q = (Name_Node *) malloc(sizeof(Name_Node));
+            q->name = p->name; /* depending on memory deallocation 
+                                  strategy, we may need to copy this */
+            q->next = s->output;
+            s->output = q;
+            p = p->next;
+          }
+        }
+        m = m->next;
+      }
+      g = g->next;
+    }
+  }
+}
+@ %def stop_adding
+@
+
+\subsubsection{Using the Automata}
+
+<<Function definitions>>=
+void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
+{
+  Goto_Node *state = NULL;
+  char *current = input;
+  char c = *current++;
+  while (c) {
+    <<Goto the next state>>
+    <<Perform the callback for any outputs>>
+    c = *current++;
+  }
+}
+@ %def search_for_ident
+@
+This is all complicated by my use of [[NULL]] to indicate the
+initial state. However, we get a nice speedup by using the [[root]]
+array instead of walking down the move list for every character.
+<<Goto the next state>>=
+{
+  while (state && !goto_lookup(c, state))
+    state = state->fail;
+  state = state ? goto_lookup(c, state) : r->root[c];
+}
+@
+
+We walk down the output list, calling [[f]] with each name that is
+not rejected (see the next section).
+<<Perform the callback for any outputs>>=
+{
+  if (state) {
+    Name_Node *p = state->output;
+    while (p) {
+      if (!reject_match(r, p->name, input, current))
+        f(closure, p->name);
+      p = p->next;
+    }
+  }
+}
+@
+
+% \newpage
+\paragraph{Rejecting Matches}
+
+A problem with simple substring matching is that the string ``he''
+would match longer strings like ``she'' and ``her.'' Norman Ramsey
+suggested examining the characters occuring immediately before and
+after a match and rejecting the match if it appears to be part of a
+longer token. Of course, the concept of {\sl token\/} is
+language-dependent, so we may be occasionally mistaken.
+For the present, we'll consider the mechanism an experiment.
+
+<<Function definitions>>=
+int reject_match(Recognizer r, char *id, char *input, char *current)
+{
+  int len = strlen(id);
+  char first = id[0];
+  char last = id[len - 1];
+  char next = *current;
+  char prev = '\0';
+  current = current - len - 1;
+  if (input <= current)
+    prev = *current;
+  if (strchr(r->alphas, first) && strchr(r->alphas, prev)) return 1;
+  if (strchr(r->alphas, last ) && strchr(r->alphas, next)) return 1;
+  if (strchr(r->syms,   first) && strchr(r->syms,   prev)) return 1;
+  if (strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
+  return 0;
+}
+@ %def reject_match
+We need a prototype for [[reject_match]], since it's referenced
+before its definition.
+
+<<Prototypes>>=
+int reject_match(Recognizer r, char *id, char *input, char *current);
