@@ -1,0 +1,31 @@
+\section{Finding Icon definitions}
+<<*>>=
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  go()
+end
+<<*>>=
+procedure postpass(name, arg)
+  static kind, definers
+  initial { kind := "bogus"
+            definers := ["global"]
+            if \showlocal then every put(definers, "local" | "static")
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if =("procedure "|"record ") then {
+            tab(many(' '))
+            writedefn(tab(upto(' ()')))
+        } else if (tab(many(' ')) | "", =!definers, tab(many(' '))) then {
+            while (not any('#')) & writedefn(tab(upto(', #'))) do tab(many(', '))
+            if not any('#') then writedefn(tab(0))
+        }
+  }
+  return
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end

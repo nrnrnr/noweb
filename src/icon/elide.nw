@@ -1,0 +1,91 @@
+\section{Eliding unwanted code chunks}
+
+This filter removes from the input any code chunk matching any of the
+``globbing'' patterns given as arguments.
+I use it to put parts of reference manuals in with code, then to make
+the reference-manual chunks disappear when printing the code.
+
+@
+\subsection{Eliding}
+The main loop simply copies the input to the output.
+We stop only if we see [[@begin code]], because that means we might
+need to elide.
+<<*>>=
+procedure main(args)
+  elide := []
+  every put(elide, globpat(!args))
+  while line := read() do
+    if match("@begin code ", line) then 
+      {<<see about eliding this chunk>>}
+    else
+      write(line)
+  return
+end
+@
+To see about eliding, we accumulate lines until we see [[@defn]].
+At that point we can either keep the chunk, which means printing the
+accumulated lines and returning to the main loop, or elide it, which
+means draining the input until the next [[@end code]].
+<<see about eliding this chunk>>=
+accum := [line]
+while line := read() & not match("@defn ", line) do
+  put(accum, line)
+line ? {
+  ="@defn " | stop("This can't happen")
+  if globmatch(!elide) then {
+    while line := get(accum) | read() & not match("@end code ", line) do # drain
+      if line == "@nl" then write("@index nl")  # grotesque, but may keep lines right
+  } else
+    every write(!accum | line)
+}
+@
+\subsection{Globbing}
+
+I do globbing in two stages: first I turn the globbing string into
+a pattern.  A pattern is a list of the following kinds of data items:
+\begin{quote}
+\begin{tabular}{ll}
+string&match that string\\
+cset&match one character in that cset\\
+nil&match anything\\
+\end{tabular}
+\end{quote}
+[[globpat]] turns a globbing string into a pattern.
+It doesn't handle the {\tt [} metacharacter, but it might one day.
+<<*>>=
+procedure globpat(s)
+  l := []
+  s ?
+    while not pos(0) do
+      put(l, 
+        if not any('?*') then
+          tab(upto('?*')|0)
+        else case move(1) of {
+          "?" : &cset
+          "*" : &null
+        })
+  return l
+end
+@
+Giving a globbing pattern [[pat]] and an index [[i]], [[doglobmatch]]
+returns the string (if any) matched by [[pat[i:0]]].
+[[doglobmatch]] scans the current subject.
+<<*>>=
+procedure doglobmatch(pat, i)
+  local p
+  suspend if p := pat[i] then
+    case type(p) of {
+      "string" : =p
+      "cset"   : tab(any(p))
+      "null"   : tab(&pos to *&subject+1)
+    } || doglobmatch(pat, i+1)
+  else (pos(0), "")
+end
+@
+[[globmatch(p)]] matches the pattern [[p]] against the current
+subject, or a subject can be supplied as the second argument.
+<<*>>=
+procedure globmatch(pattern, s)
+  return if \s then s ? doglobmatch(pattern, 1)
+         else doglobmatch(pattern, 1)
+end
