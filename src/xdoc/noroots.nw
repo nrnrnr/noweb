@@ -1,0 +1,21 @@
+<<*>>=
+.TH NOWEB 1 "local <<noweb documentation date>>"
+.SH NAME
+noroots \- print roots of a noweb file
+.SH SYNOPSIS
+.B noroots
+[file] ...
+.SH DESCRIPTION
+.I noroots
+finds the roots of a
+.I noweb
+file: it prints the names of all code chunks that are defined but not used.
+See
+.I noweb(1)
+for an explanation of
+the format of 
+.I noweb
+files.
+.SH SEE ALSO
+.I noweb(1), notangle(1)
+<<AUTHOR section>>

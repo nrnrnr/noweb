@@ -1,0 +1,28 @@
+<<*>>=
+.TH NOWEB 1 "local <<noweb documentation date>>"
+.SH NAME
+sl2h \- simple latex to HTML converter
+.SH SYNOPSIS
+\fBsl2h\fP [\fB-show-unknowns\fP] [file ...]
+.SH DESCRIPTION
+.I sl2h
+is a simple converter from
+.I latex(1)
+format to HTML
+(which can be used with, e.g., \fInetscape(1)\fP or \fIMosaic(1)\fP).
+If the \fB-show-unknowns\fP options is given, unrecognized
+.I LaTeX 
+control
+sequences appear in bold in the output.
+.I sl2h
+uses the LaTeX-generated .toc and .bbl files to help create table of contents
+and bibliography.
+.SH BUGS
+It is possible to tell
+.B sl2h
+about new control sequences by putting special TeX comments in one's 
+documentation chunks, but there's no documentation.
+Use the source, Luke.
+.SH SEE ALSO
+.I nowebfilters(7), htmltoc(1)
+<<AUTHOR section>>

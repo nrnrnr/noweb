@@ -1,0 +1,106 @@
+<<*>>=
+.TH NOWEB 7 "local <<noweb documentation date>>"
+.SH NAME
+nowebfilters \- filters and parsers for use with noweb
+.SH SYNOPSIS
+[\fBnoweave\fP|\fBnotangle\fP|\fBnoweb\fP]
+[\fB-filter\fP \fIfilter\fP|\fB-markup\fP \fIparser\fP] ...
+.SH DESCRIPTION
+This man page documents the various filters and parsers that are 
+supplied with 
+.I noweb(1).
+A filter, which transforms the pipeline representation, is used with the
+.B \-filter
+option.
+A parser, which reads a source file and emits the pipeline representation,
+is used with the
+.B \-markup
+option.
+Not all filters and parsers are available at all installations.
+.SH FILTERS
+.TP
+.B autodefs.*
+.I noweave's
+.B \-autodefs
+and 
+.B \-showautodefs
+options use these filters, which automatically find defined identifiers.
+The 
+.B *
+stands for the name of a programming language.
+.TP
+.B disambiguate
+The 
+.B disambiguate 
+filter makes it possible to abbreviate chunk names using a trailing ellipsis
+(three periods), in the style of WEB and 
+.I nuweb(1).
+.TP
+.B elide \fIpatterns\fP
+The
+.B elide
+filter
+removes from the stream any code chunk matching 
+any of the arguments.
+Each argument is a pattern in which
+.B ?
+matches any single character and
+.B * matches any sequence of characters.
+.TP
+.B emptydefn
+The 
+.B emptydefn
+filter makes an empty definition (\fB@<<@>>=\fP) an abbreviation for
+a continuation of the previous definition.
+.TP 
+\fBl2h\fP [\fB-show-unknowns\fP]
+The 
+.B l2h
+filter converts LaTeX to HTML in documentation chunks.
+If the \fB-show-unknowns\fP options is given, unrecognized LaTeX control
+sequences appear in bold in the output.
+.B l2h
+uses the LaTeX-generated .toc and .bbl files to help create table of contents
+and bibliography.
+.SH PARSERS
+A parser converts a source file to the noweb pipeline format,
+interpreting the ``markup'' in that file.
+By default, the tools use the standard noweb markup, but some installations
+may support nuweb markup as well.
+Parsers include
+.TP
+.B markup
+Converts standard
+.I noweb(1)
+markup to pipeline format.
+.TP
+.B numarkup
+Converts 
+.I nuweb(1)
+markup to noweb pipeline format.
+It is not part of the standard installation, but it can be found in \fInoweb\fP's 
+.B contrib/norman
+directory.
+.SH FILES
+All filters and parsers are stored in
+.B |LIBDIR|
+.SH BUGS
+It is possible to tell
+.B l2h
+about new control sequences by putting special TeX comments in one's 
+documentation chunks, but there's no documentation.
+Use the source, Luke.
+.PP
+.B numarkup
+loses information, e.g., about the proper treatment of tabs.
+It also doesn't compensate for \fInotangle\fP's newline-removal
+heuristic, which means results on 
+.I nuweb
+files may differ subtly from those produced by 
+.I nuweb.
+.SH SEE ALSO
+.I noweave(1), notangle(1), noweb(1)
+.br
+The
+.I "Noweb Hacker's Guide"
+<<AUTHOR section>>

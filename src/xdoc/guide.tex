@@ -1,0 +1,1093 @@
+\documentclass{article}
+\usepackage{chicago,array,tabularx,afterpage}
+% chicago bibliography style is available from CTAN; others are standard
+
+\setlength{\extrarowheight}{1pt}
+
+\title{The {\tt noweb} Hacker's Guide}
+\author{Norman Ramsey\thanks{Author's current address is Department of
+  Computer Science,
+  University of Virginia, Charlottesville, VA 22903, USA;
+send email to {\tt nr@cs.virginia.edu}.}\\Department of Computer Science\\
+Princeton University}
+\date{September 1992\\(Revised August 1994)}
+
+\setcounter{secnumdepth}{0}
+\setcounter{tocdepth}{3}
+\clubpenalty=10000
+\widowpenalty=10000
+
+\newcommand\kw[1]{\texttt{@#1}}
+\newcommand\kws[2]{\kw{#1}\hbox{\thinspace}\ldots~\kw{#2}}
+\newcommand\ikw[1]{\kw{index~#1}}
+\newcommand\ikws[2]{\ikw{#1}\hbox{\thinspace}\ldots~\ikw{#2}}
+\newcommand\xkw[1]{\kw{xref~#1}}
+\newcommand\xkws[2]{\xkw{#1}\hbox{\thinspace}\ldots~\xkw{#2}}
+
+% l2h argblock kw <tt>@ </tt>
+% l2h argblock kws <tt>@ ...#</tt>@
+% l2h argblock ikw <tt>@index# </tt>
+% l2h argblock ikws <tt>@index# ...#</tt>@index#
+% l2h argblock xkw <tt>@xref# </tt>
+% l2h argblock xkws <tt>@xref# ...#</tt>@xref#
+
+\newcommand\ltxlabel{\relax}
+\let\ltxlabel=\label
+
+% l2h let ltxlabel label
+
+\renewcommand\label{{\rm\it label\/}}
+\newcommand\tag{{\rm\it tag\/}}
+\newcommand\ident{{\rm\it ident\/}}
+
+% l2h substitution label <i>label</i>
+% l2h substitution tag <i>tag</i>
+% l2h substitution ident <i>ident</i>
+
+
+% title in a table
+
+\newcommand\ttitle[1]{\noalign{\medskip}\multicolumn{2}{c}{#1}\\\noalign{\smallskip}}
+
+% l2h argblock ttitle <br><center> </center><br>
+
+% figure hacking
+
+\newcommand\topfigrule{%
+  \vbox to 0pt{
+     \vskip 5pt
+     \centerline{\vrule height 1pt depth 0pt width 3in}
+     \vss}}
+
+\newcommand\botfigrule{%
+  \vbox to 0pt{
+     \vss
+     \centerline{\vrule height 1pt depth 0pt width 3in}
+     \vskip 5pt}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+{\tt Noweb} is unique among literate-programming tools in its
+pipelined architecture, which makes it easy for users to change
+its behavior or to add new features, without even recompiling.
+This guide describes the representation used in the
+pipeline and the behavior of the existing pipeline stages.
+Ordinary users will find nothing of interest here; the guide is
+addressed to those who want to change or extend {\tt noweb}.
+\end{abstract}
+
+\clearpage
+
+\tableofcontents
+\listoftables
+
+\newpage
+
+\section{Introduction}
+
+\citeN{ramsey:simplified} describes {\tt {\tt noweb}} from a user's
+point of view, showing its simplicity and examples of its use.
+The {\tt {\tt noweb}} tools are implemented as {\em pipelines}.
+Each pipeline begins with the {\tt noweb}
+source file.  Successive stages of the pipeline implement simple
+transformations of the source, until the desired result emerges from
+the end of the pipeline.  Figures
+\ref{fig:pipe-notangle}~and~\ref{fig:pipe-noweave} on
+page~\pageref{fig:pipe-notangle} show pipelines for
+{\tt notangle} and {\tt noweave}.  
+Pipelines are responsible for {\tt {\tt noweb}}'s
+extensibility, which enables its users to create new literate-programming
+features without having to write their own tools.
+This document explains how to change or extend {\tt noweb} by
+inserting or removing pipeline stages.
+Readers should be familiar with the {\tt {\tt noweb}} man pages, which
+describe the structure of {\tt {\tt noweb}} source files.
+
+{\tt Markup}, which is the first stage in
+every pipeline, converts {\tt noweb} source to a representation easily
+manipulated by common Unix tools like {\tt sed} and {\tt awk}, simplifying
+the construction of later pipeline stages.  Middle stages add
+information to the representation.  {\tt notangle}'s final stage converts to
+code; {\tt noweave}'s final stages convert to TeX, LaTeX or HTML.
+Middle stages are called {\em filters}, by analogy with Unix filters.
+Final stages are called {\em back ends}, by analogy with
+compilers---they don't transform {\tt {\tt noweb}}'s intermediate
+representation; they emit something else.
+
+\section{The pipeline representation}
+
+In the pipeline, every line begins with an at sign and one of the
+keywords shown in Table~\ref{table:keywords}.
+The structural keywords 
+represent the {\tt noweb} source syntax directly.
+They must appear in particular orders that reflect the
+structure of the source.
+The tagging keywords can be inserted
+essentially anywhere, and with some exceptions, they are not generated
+by {\tt markup}.
+The wrapper keywords
+mark the beginning and end of file,
+and they carry information about what formatters are supposed to do in
+the way of leading and trailing boilerplate.
+They are used by {\tt noweave} but not by {\tt notangle}, and they are
+inserted directly by the {\tt noweave} shell script, not by {\tt markup}.
+
+\begin{table}[t]
+\noindent
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+% l2h macro ttitle 1 </td></tr><tr><td colspan=2 align=center><b>#1</b></td></tr><td>
+\ttitle{Structural keywords}
+\hline
+@begin {\rm\it kind} $n$&Start a chunk\\
+@end {\rm\it kind} $n$&End a chunk\\
+@text {\rm\it string}&{\rm\it string} appeared in a chunk\\
+@nl&A newline appeared in a chunk\\
+@defn {\rm\it name}&The code chunk named {\rm\it name} is being defined\\
+@use {\rm\it name}&A reference to code chunk named {\rm\it name}\\
+@quote&Start of quoted code in a documentation chunk\\
+@endquote&End of quoted code in a documentation chunk\\
+\hline
+\ttitle{Tagging keywords}
+\hline
+@file {\rm\it filename}&Name of the file from which the chunks came\\
+@line $n$&Next text line came from source line $n$ in current file\\
+@index \ldots&Index information.\\
+@xref \ldots&Cross-reference information.\\
+\hline
+\end{tabularx}\\
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Wrapper keywords}
+\hline
+@header {\rm\it formatter options}&
+      First line, identifying formatter and options\\
+@trailer {\rm\it formatter}&Last line, identifying formatter.\\
+\hline
+\end{tabularx}\\
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Error keyword}
+\hline
+@fatal {\rm\it stagename} {\rm\it message}&
+      A fatal error has occurred.\\
+\hline
+\end{tabularx}
+
+\caption{Keywords used in {\tt noweb}'s pipeline representation}
+\ltxlabel{table:keywords}
+
+\end{table}
+
+\subsection{Structural keywords}
+
+The structural  keywords represent the chunks in the {\tt noweb} source.
+Each chunk is bracketed by a \kws{begin}{end} pair,
+and the {\it kind} of chunk is either {\tt docs} or {\tt code}.
+The \kw{begin} and \kw{end} are numbered; within a single file,
+numbers must be monotonically increasing, but they need not be
+consecutive.
+Filters may change chunk numbers at will.
+
+Depending on its kind, a chunk may contain {\em documentation} or {\em
+code}. 
+Documentation may contain text and newlines, represented by \kw{text}
+and \kw{nl}.
+It may also contain {\em quoted code} bracketed by
+\kws{quote}{endquote}.
+Every \kw{quote} must be terminated by an \kw{endquote} within the
+same chunk.
+Quoted code corresponds to the \verb+[[+\ldots \verb+]]+ construct in
+the {\tt noweb} source.
+
+Code, whether it appears in quoted code or in a code chunk,
+may contain text and newlines, and also definitions and uses of
+code chunks, marked with \kw{defn} and \kw{use}.
+The first structural keyword in any code chunk must be \kw{defn}.
+\kw{defn} may be preceded or followed by tagging keywords, but the
+next structural keyword
+must be \kw{nl}; 
+together, the \kw{defn} and \kw{nl}
+represent the initial \verb+<<chunk name>>=+
+that starts the chunk (including the terminating newline).
+
+A few facts follow from what's already stated above, but are probably
+worth noting explicitly:
+\begin{itemize}
+\item 
+Quoted code may not appear in code, nor may it appear in
+\kw{defn} or \kw{use}.
+{\tt noweave} back ends are encouraged to give \verb+[[+\ldots
+\verb+]]+ special treatment when it appears in \verb+defn+ or
+\verb+use+, so that the text contained therein is treated as if it
+were quoted code.
+\item
+The text in chunks may be distributed among as many \kw{text}
+keywords as desirable.  Any number of empty \kw{text} keywords are
+permitted.  In particular, it is not realistic to expect that a single
+line will be represented in a single \kw{text} (see the discussion of
+{\tt finduses} on page~\pageref{finduses}).
+\item
+{\tt markup} will sometimes emit \kw{use} within
+\kws{quote}{endquote}, for example from a source like \verb+[[<<chunk name>>]]+.
+\item
+No two chunks have the same number.
+\item
+Because later filters can change chunk numbers, no filter should
+plant references to chunk numbers anywhere in the pipeline.
+\end{itemize}
+
+\subsection{Tagging keywords}
+
+The structural keywords carry all the code and documentation that
+appears in a {\tt noweb} source file.
+The tagging keywords carry information about that code or
+documentation.
+The \kw{file} keyword carries the name of the source file from which the
+following lines come.
+The \kw{line} keyword give the line number of the next \kw{text} line
+within the current file (as determined by the most recent \kw{file}
+keyword). 
+The only guarantee about where these appear is that {\tt markup}
+introduces each new source file with a \kw{file} that appears between
+chunks.
+Most filters ignore \kw{file} and \kw{line}, but {\tt nt}
+respects them, so that {\tt
+notangle} can properly mark line numbers if some {\tt noweb}
+filter starts moving lines around.
+
+
+\subsubsection{Indexing and cross-reference concepts}
+
+
+The index and cross-reference commands use \label s, \ident s, and \tag s.
+A \label\ is a unique string generated to refer to some element of a
+literate program.
+They serve as labels or ``anchor points'' for back ends that are
+capable of implementing their own cross-reference.
+So, for example, the {\LaTeX} back end uses labels as arguments to \verb+\label+
+and \verb+\ref+, and the HTML back end uses labels to name and refer
+to anchors.
+Labels never contain white space, which simplifies parsing.
+The standard filters cross-reference at the chunk level, so that each
+label refers to a particular code chunk, and all references to that
+chunk use the same label.
+
+An \ident\ refers to a source-language identifier.
+{\tt Noweb}'s concept of identifier is general; an identifier is
+an arbitrary string.
+It can even contain whitespace.
+Identifiers are used as keys in the index; references to the same
+string are assumed to denote the same identifier.
+
+{\rm\it Tag\/}s are the strings used to identify components for
+cross-reference in the final document.
+For example, Classic {\tt WEB} uses consecutive ``section numbers'' to
+refer to chunks.
+{\tt Noweb}, by default, uses ``sub-page references,'' e.g., ``24b''
+for the second chunk appearing on page~24.
+The HTML back end doesn't use any tags at all; instead, it
+implements cross-referencing using the ``hot link'' mechanism.
+
+The final step of cross-referencing involves generating tags and
+associating a tag with each label.
+All the existing back ends rely on a document formatter to do this
+job, but that strategy might be worth changing.
+Computing tags within a {\tt noweb} filter could be lots easier than
+doing it in a formatter.
+For example, a filter that computed sub-page numbers by grubbing in
+{\tt .aux} files would be pretty easy to write, and it would eliminate
+a lot of squirrely {\LaTeX} code.
+
+
+\subsubsection{Index information}
+
+I've divided the index keywords into several groups.
+There seems to be a plethora of keywords, but most of them are
+straightforward representations of parts of a document produced by
+{\tt noweave}.  Readers may want to have a sample of {\tt noweave}'s
+output handy when studying this and the next section.
+
+\begin{table}
+\begin{center}
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Definitions, uses, and {\tt @ \%def}}
+\hline
+@index defn \ident&The current chunk contains a definition of \ident\\
+@index localdefn \ident&The current chunk contains a definition of
+               \ident, which is not to be visible outside this file\\
+@index use \ident&The current chunk contains a use of \ident\\
+@index nl \ident&A newline that is part of markup, not part of the chunk\\
+\hline
+\ttitle{Identifiers defined in a chunk}
+\hline
+@index begindefs&Start list of identifiers defined in this chunk\\
+@index isused \label&
+        The identifier named in the following \ikw{defitem} is used in
+        the chunk labelled by \label\\
+@index defitem \ident&
+        \ident\ is defined in this chunk, and it is used in all the
+        chunks named in the immediately preceding \ikw{isused}.\\
+@index enddefs&End list of identifiers defined in this chunk\\
+\hline
+\ttitle{Identifiers used in a chunk}
+\hline
+@index beginuses&Start list of identifiers used in this chunk\\
+@index isdefined \label&
+        The identifier named in the following \ikw{useitem} is defined in
+        the chunk labelled by \label\\
+@index useitem \ident&
+        \ident\ is used in this chunk, and it is defined in each of the
+        chunks named in the immediately preceding \ikw{isdefined}.\\
+@index enduses&End list of identifiers used in this chunk\\
+\hline
+\end{tabularx}\\
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{The index of identifiers}
+\hline
+@index beginindex&Start of the index of identifiers\\
+@index entrybegin \label\ \ident&
+        Beginning of the entry for \ident, whose first definition is
+        found at \label\\
+@index entryuse \label&
+        A use of the identifer named in the last \ikw{entrybegin}
+        occurs at the chunk labelled with \label.\\
+@index entrydefn \label&
+        A definition of the identifer named in the last \ikw{entrybegin}
+        occurs at the chunk labelled with \label.\\
+@index entryend&
+        End of the entry started by the last \ikw{entrybegin}\\
+@index endindex&End of the index of identifiers\\
+\hline
+\end{tabularx}
+\end{center}
+\caption{Indexing keywords}
+\ltxlabel{tab:index}
+\vskip -5pt
+\end{table}
+
+
+
+\paragraph{Definitions, uses, and {\tt @ \%def}}
+
+\ikw{defn}, \ikw{use}, and \ikw{nl} are the only
+\kw{index} keywords that appear in {\tt markup}'s output, and thus
+which can appear in any program.
+They may appear only within the boundaries of a code chunk (\kws{begin
+code}{end code}).
+\ikw{defn} and \ikw{use} simply indicate that the current chunk
+contains a definition or use of the identifier \ident\ which follows
+the keyword.
+The placement of \ikw{defn} need not bear a relationship to the
+text of the definition, but \ikw{use} is normally followed by a
+\kw{text} that contains the source-code text identified as the
+use.%
+\footnote{This property can't hold when one identifier is a prefix of
+another; see the description of {\tt finduses} on page~\pageref{finduses}.}
+
+Instances of \ikw{defn} normally come from one of two sources: either a
+language-dependent recognizer of definitions, or a hand-written
+\verb+@ %def+ line.
+In the latter case, the line is terminated by a newline that is
+neither part of a code chunk nor part of a documentation chunk.
+To keep line numbers accurate, that newline can't just be abandoned,
+but neither can it be represented by \kw{nl} in a documentation or
+code chunk.
+The solution is the \ikw{nl} keyword, which serves no purpose other
+than to keep track of these newlines, so that back ends can produce
+accurate line numbers.
+
+Following a suggestion by Oren Ben-Kiki,
+\ikw{localdefn} indicates a definition that is not to be visible
+outside the current file.
+It may be produced by a language-dependent recognizer or other filter.
+Because I have questions about the need for \ikw{localdefn}, there is
+officially no way to cause {\tt markup} to produce it.
+
+\paragraph{Identifiers defined in a chunk}
+
+The keywords from \ikw{begindefs} to \ikw{enddefs} are used to represent
+a more complex data structure giving the list of identifiers defined
+in a code chunk.
+The constellation represents a list of identifiers; one \ikw{defitem}
+appears for each identifier.
+The group also tells in what other chunks each identifier is used;
+those chunks are listed by \ikw{isused} keywords which appear just
+before \ikw{defitem}.
+The labels in these keywords appear in the order of the corresponding
+code chunks, and there are no duplicates.
+
+These keywords can appear anywhere inside a code chunk, but
+filters are encouraged to keep these keywords together.
+The standard
+filters guarantee that only
+\ikw{isused} and \ikw{defitem} appear between \ikw{begindef} and
+\ikw{enddef}.
+The standard filters put them at the end of the code chunk, which
+simplifies translation by the {\LaTeX} back end, but that strategy
+might change in the future.
+
+
+It should go without saying, but the keywords in these and all similar
+groups (including some \kw{xref} groups) must be properly structured.
+That is to say:
+\begin{enumerate}
+\item
+Every \ikw{begindefs} must have a matching \ikw{enddefs} within the
+same code chunk.
+\item
+\ikw{isused} and \ikw{defitem} may appear only between matching
+\ikw{begindefs} and \ikw{enddefs}.
+\item
+The damn things can't be nested.
+\end{enumerate}
+
+
+\paragraph{Identifiers used in a chunk}
+
+
+The keywords from \ikw{beginuses} to \ikw{enduses} are the dual of
+\ikw{begindef} to \ikw{enddef};
+the structure lists the identifiers used in the current code chunk,
+with cross-references to the definitions.
+Similar interpretations and restrictions apply.
+Note that an identifier can be defined in more than one chunk,
+although we expect that to be an unusual event.
+{\hfuzz=1.2pt\par}
+
+\paragraph{The index of identifiers}
+
+Keywords \ikw{beginindex} to \ikw{endindex} represent the
+complete index of all the identifiers used in the document.
+Each entry in the index is bracketed by \ikws{entrybegin}{entryend}.
+An entry provides the name of the identifier, plus the labels of all the
+chunks in which the identifier is defined or used.
+The label of the first defining chunk
+is given at the beginning of the entry so that back ends needn't
+search for it.
+{\hfuzz=4.9pt\par}
+
+Filters are encouraged to keep these keywords together.
+The standard filters put them almost at the very end of the {\tt
+noweb} file, just before the optional \kw{trailer}.
+
+
+
+\subsubsection{Cross-reference information}
+
+\newcommand\anchor{{\rmfamily\textit{anchor}}}
+
+% l2h substitution anchor <i>anchor</i>
+
+The most basic function of the cross-referencing keywords is to
+associate labels and pointers (cross-references) with elements of the
+document, which is done with the \xkw{ref} and \xkw{label} keywords.
+The other \kw{xref} keywords all express chunk cross-reference
+information that is emitted directly by one or more back ends.
+
+Chunk cross-reference introduces the idea of
+an {\anchor}, which is a label that refers to an ``interesting point''
+we identify with the
+beginning of a code chunk.
+The anchor is the place we expect to turn when we want to know about a
+code chunk;
+its exact value and interpretation depend on the back end being used.
+The standard {\LaTeX} back end uses the sub-page number of the
+defining chunk as the anchor, but the standard HTML back end uses some
+\kw{text} from the documentation chunk preceding the code chunk.
+
+
+\begin{table}
+\begin{center}
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Basic cross-reference}
+\hline
+@xref label \label&Associates \label\ with tagged item.\\
+@xref ref \label&
+        Cross-reference from tagged item to item associated with \label.\\
+\hline
+\ttitle{Linking previous and next definitions of a code chunk}
+\hline
+@xref prevdef \label&
+   The \kw{defn} from the previous definition of this chunk is
+   associated with \label.\\
+@xref nextdef \label&
+   The \kw{defn} from the next definition of this chunk is
+   associated with \label.\\
+\hline
+\ttitle{Continued definitions of the current chunk}
+\hline
+@xref begindefs&Start ``This definition is continued in \ldots''\\
+@xref defitem \label&Gives the label of a chunk in which the
+definition of the current chunk is continued.\\
+@xref enddefs&Ends the list of chunks where definition is continued.\\
+\hline
+\ttitle{Chunks where this code is used}
+\hline
+@xref beginuses&Start ``This code is used in \ldots''\\
+@xref useitem \label&Gives the label of a chunk in which this
+    chunk is used.\\
+@xref enduses&Ends the list of chunks in which this code is used.\\
+@xref notused {\rm\it name}&
+        Indicates that this chunk isn't used anywhere in this document.\\
+\hline
+\ttitle{The list of chunks}
+\hline
+@xref beginchunks&Start of the list of chunks\\
+@xref chunkbegin \label\ {\it name}&
+        Beginning of the entry for chunk {\it name}, whose {\anchor}
+        is found at \label.\\
+@xref chunkuse \label&
+        The chunk is used in the chunk labelled with \label.\\
+@xref chunkdefn \label&
+        The chunk is defined in the chunk labelled with \label.\\
+@xref chunkend&End of the entry started by the last \xkw{chunkbegin}\\
+@xref endchunks&End of the list of chunks\\
+\hline
+\ttitle{Converting labels to tags}
+\hline
+@xref tag \label\ \tag&Associates \label\ with \tag.\\
+\hline
+\end{tabularx}
+\end{center}
+\vskip -4pt
+\caption{Cross-referencing keywords}
+\ltxlabel{tab:xref}
+\vskip -3pt
+\end{table}
+
+
+
+\paragraph{Basic cross-reference}
+
+\xkw{label} and \xkw{ref} are named by analogy with the {\LaTeX}
+\verb+\label+ and \verb+\ref+ commands.
+\xkw{label} is used to associate a \label\ with a succeeding item.
+Items that can be so labelled include
+\begin{quote}
+\begin{tabularx}{\linewidth}{>{\tt}l>{\raggedright\arraybackslash}X}
+@defn&Labels the code chunk that begins with this \rlap{\kw{defn}.}\\
+                                                % cheating the line breaker
+@use&Labels this particular use.\\
+@index defn&Labels this definition of an identifier.\\
+@index use&Labels this use of an identifier.\\
+@text&Typically labels part of a documentation chunk.\\
+@end docs&Typically labels an empty documentation chunk.\\
+\end{tabularx}
+\end{quote}
+I haven't made up my mind whether this should be the complete set, but
+these are the ones used by the standard filters.
+Most back ends use the chunk as the basic unit of cross-reference, so
+the labels of \kw{defn} are the ones that are most often used.
+The HTML back end, however, does something a little different---it
+uses labels that refer to documentation preceding a chunk, because the
+typical HTML browser (Mosaic) places the label%
+\footnote{The HTML terminology calls a label an ``anchor.''}
+at the top of the screen, and using the label of the \kw{defn} would
+lose the documentation immediately preceding a chunk.
+The labels used by this back end usually point to \kw{text}, but they
+may point to \kw{end docs} when no text is available.
+
+
+\xkw{ref} is used to associate a reference with a succeeding item.
+Such items include
+\begin{quote}
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}X}
+{\tt @defn}, {\tt @use}&Refers to the label used as an {\anchor} for this chunk.\\
+\vtop{\hbox{\strut{\tt @index defn},}\hbox{\strut{\tt @index use}}}&
+  Refers to the label used as an {\anchor} for the first
+           chunk in which this identifier is defined.\\
+\end{tabularx}
+\end{quote}
+
+
+\paragraph{Linking previous and next definitions of a code chunk}
+
+\xkw{prevdef} and \xkw{nextdef} may appear anywhere in a code chunk,
+and they give the labels of the preceding and succeeding definitions
+of that code chunk, if any.
+Standard filters currently put them at the beginning of the code
+chunk, following the initial \kw{defn}, so the information can be used
+on the \kw{defn} line,
+\`a la \citeN{fraser:retargetable:book}.
+
+
+\paragraph{Continued definitions of the current chunk}
+
+The keywords ranging from \xkw{begindefs} to \xkw{enddefs} appear in the first
+definition of each code chunk.
+They provide the information needed by the ``This definition is
+continued in \ldots'' message printed by the standard {\LaTeX} back
+end.
+They can appear anywhere in a code chunk, but standard filters put
+them after all the \kw{text} and \kw{nl}s, so that back ends can just
+print out text.
+
+
+\paragraph{Chunks where this code is used}
+
+The keywords from \xkw{beginuses} to \xkw{enduses} are the dual of
+\xkw{begindefs} to \xkw{enddefs}; they show where the current chunk is
+used.
+As with \xkws{begindefs}{enddefs}, they appear only in the first
+definition of any code chunk, and they come at the end.
+Sometimes, as with root chunks, the code isn't used anywhere, in which
+case \xkw{notused} appears instead of \xkws{beginuses}{enduses}.
+The name of the current chunk appears as an argument to \xkw{notused}
+because some back ends may want to print a special message for unused
+chunks---they might be written to files, for example.
+
+\paragraph{The list of chunks}
+
+The list of chunks, which is defined by the keywords
+\xkws{beginchunks}{endchunks}, is the
+analog of the index of identifiers, but it lists all the code chunks
+in the document, not all the identifiers.
+
+Filters are encouraged to keep these keywords together.
+The standard filters put them at the end of the {\tt
+noweb} file, just before the index of identifiers.
+
+
+\paragraph{Converting labels to tags}
+
+None of the existing back ends actually computes tags; they all use
+formatting engines to do the job.
+The {\LaTeX} back end uses an elaborate macro package to compute
+sub-page numbers, and the HTML back end arranges for ``hot links'' to
+be used instead of textual tags.
+Some people have argued that literate-programming tools shouldn't require
+elaborate macro packages, that they should use the basic facilities
+provided by a formatter.  Nuweb, for example, uses standard {\LaTeX}
+commands only, but goes digging through {\tt .aux} files to find
+labels and compute sub-page numbers.
+Doing this kind of computation in a real programming language is much
+easier than doing it with {\TeX} macros, and I expect that one day
+{\tt noweb} will have a tag-computing filter, the results of
+which will be expressed using the \xkw{tag} keyword.
+
+The rules governing \xkw{tag} are that it can appear anywhere.
+None of the standard filters or back ends does anything with it.
+
+
+
+\subsection{Wrapper keywords}
+
+The wrapper keywords, \kw{header} and \kw{trailer}, are anomalous in
+that they're not generated by {\tt markup} or by any of the
+standard filters; instead they're inserted by the {\tt noweave} shell
+script at the very beginning and end of file.
+The standard {\TeX}, {\LaTeX}, and HTML back ends use them to provide
+preamble and postamble markup, i.e., boilerplate that usually has to
+surround a document.
+They're not required (sometimes you don't want that boilerplate), but
+when they appear they must be the very first and last lines in the
+file, and the formatter names must match.
+
+\subsection{Error keyword}
+
+The error keyword \kw{fatal} signifies that a fatal error as
+occurred.
+The pipeline stage originating such an error gives its own name and a
+message, and it also writes a message to standard error.
+Filters seeing \kw{fatal} must copy it to their output and terminate
+themselves with error status.
+Back ends seeing \kw{fatal} must terminate themselves with error
+status. (They should not write anything to standard error since that
+will have been done.)
+
+Using \kw{fatal} enables shell scripts to detect
+that something has gone wrong even if the only exit status they have
+access to is the
+exit status of the last stage in a pipeline.
+
+\section{Standard filters}
+
+All the standard filters, unless otherwise noted, read the {\tt noweb}
+keyword format on standard input and write it on standard output.
+Some filters may also use auxiliary files.
+
+\subsection{\tt markup}
+
+Strictly speaking, {\tt markup} is a front end, not a filter, but I
+discuss it along with filters because it generates the output that is
+massaged by all the filters.
+{\tt markup}'s output represents a sequence of files.
+Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
+followed by a sequence of chunks.
+{\tt markup} numbers chunks consecutively, starting at~0.
+It also recognizes and undoes the escape sequence for double brackets,
+e.g.~converting ``{\tt @<<}'' to ``{\tt <<}''.
+The only tagging keywords found in its output are \ikw{defn} or
+\ikw{nl}; despite what's written about it, \ikw{use} never appears.
+
+\subsection{\tt autodefs.*}
+
+I've written half a dozen language-dependent filters that use simple
+heuristics (``fuzzy parsing'' if you prefer) to try to identify
+interesting definitions of identifiers.
+Many of these doubtless rely on my own idiosyncratic coding styles,
+but all of them provide good value for little effort.
+None of them does anything more complicated than scan individual
+\kw{text} lines in code chunks, spitting out \ikw{defn}
+and \ikw{localdefn} lines after
+the \kw{text} line whenever it thinks it's found something.
+All the filters are written in Icon and use a central core defined in
+\verb+icon/defns.nw+. 
+The C filter is the most complicated; it actually tries to understand
+parts of the C grammar for declarations.
+None of these filters has any command-line options.
+
+\subsection{\tt finduses}
+
+\ltxlabel{finduses}
+
+Using code contributed by Preston Briggs, this filter makes two passes
+over its input.
+The first pass reads in all the \ikw{defn} and \ikw{localdefn} lines and builds an
+Aho-Corasick recognizer for the identifiers named therein.
+The second pass copies the input, searching for these identifiers in
+each \kw{text} line that is code.
+When it finds an identifier, {\tt finduses} breaks the \kw{text} line
+into pieces, inserting \ikw{use} immediately before the \kw{text}
+piece that contains the identifier just found.%
+\footnote{The behavior described would duplicate \kw{text} pieces
+whenever one identifier was a prefix of another.
+This event is rare, and probably undesirable, but it can happen if,
+for example, the C$++$ names {\tt MyClass} and {\tt MyClass::Function}
+are both considered identifiers.
+In this case, whatever identifier is found first is emitted first, and
+only the unemitted pieces of longer identifiers are emitted.}
+{\tt finduses} assumes that previous filters will not have broken
+\kw{text} lines in the middle of identifiers.
+
+
+The \verb+-noquote+ command-line option prevents {\tt finduses} from
+searching for uses in quoted code.
+If {\tt finduses} is given arguments, it takes those arguments to be
+file names, and it reads lists of identifiers (one per line) from the
+files so named, rather than from its input.
+This technique enables {\tt finduses} to make a single pass over its
+input; {\tt noweave} uses it to implement the {\tt -indexfrom} option.
+
+{\tt finduses} shouldn't be run before filters which, like the {\tt
+autodefs} filters, expect one line to be represented in a single
+\kw{text}.
+Filters (or back ends) that have to be run late, like 
+prettyprinters, should be prepared to deal with lines broken into
+pieces and with \kw{index} and \kw{xref} tags intercalated.
+
+\subsection{\tt noidx}
+
+{\tt noidx} computes all the index and cross-reference information
+represented by the \kw{index} and \kw{xref} keywords.
+
+The {\tt -delay} command-line option delays heading material until
+after the first chunk, and brings trailing material before the last
+chunk.
+In particular, it causes
+the list of chunks and the index of identifiers to be emitted before
+the last chunk.
+
+The {\tt -docanchor $n$} option sets the anchor for a code chunk to be
+either:
+\begin{enumerate}
+\item
+If a documentation chunk precedes the code chunk and is $n$ or more lines long, $n$
+lines from the end of that documentation chunk.
+\item
+If a documentation chunk precedes the code chunk and is fewer than $n$
+lines long, at the beginning of that documentation chunk.
+\item
+If no documentation chunk precedes the code chunk, at the beginning of
+the code chunk, just as if {\tt -docanchor} had not been used.
+\end{enumerate}
+This option is used to create anchors suitable for the HTML back end.
+
+
+\section{Standard back ends}
+
+\subsection{\tt nt}
+
+The {\tt nt} back end implements {\tt notangle}.
+It extracts the program defined by a single code chunk (expanding all
+uses to form their definitions) and writes that program on standard
+output.
+Its command-line options are:
+\begin{quote}
+\begin{tabularx}{\linewidth}{lX}
+\tt -t&Turn off expansion of tabs.\\
+\tt -t$n$&Expand tabs on $n$-column boundaries.\\
+\tt -R{\rmfamily\textit{name}}&Expand the code chunk named \textit{name}.\\
+\tt -L{\rmfamily\textit{format}}&Use \textit{format} as the format string
+        to emit line-number information.
+\end{tabularx}
+\end{quote}
+See the man page for {\tt notangle} for details on the operation of
+{\tt nt}.
+
+
+\subsection{\tt mnt}
+
+{\tt mnt} (for Multiple NoTangle) 
+is a back end that can extract several code chunks from a
+single document in a single pass.  It is used to make the {\tt noweb}
+shell script more efficient.
+In addition to the {\tt -t} and {\tt -L} options recognized by {\tt
+nt}, it recognizes {\tt -all} as an instruction to extract and write
+to files all of the code chunks that conform to the rules set out in
+the {\tt noweb} man page.
+It also accepts arguments, as well as options; each argument is taken
+to be the name of a code chunk that should be emitted to the file of
+the same name.
+Unlike {\tt nt}, {\tt mnt} has the function of {\tt cpif} built
+in---it writes to a temporary file, then overwrites an existing file
+only if the temporary file is different.
+
+
+
+\subsection{\tt tohtml}
+
+This back end emits HTML.
+It uses the formatter {\tt html} with \kw{header} and \kw{trailer} to
+emit suitable HTML boilerplate.
+For other formatters (like {\tt none}) it emits no header or trailer.
+Its command-line options are:
+\begin{quote}
+\begin{tabularx}{\linewidth}{lX}
+\tt -delay&Accepted, for compatibility with other back ends, but ignored.\\
+\tt -localindex&Produces local identifier cross-reference after each code chunk.\\
+\tt -raw&Wraps text generated for code chunks in a {\LaTeX} {\tt rawhtml}
+environment, making the whole document suitable for processing with
+{\tt latex2html}.\\
+\end{tabularx}
+\end{quote}
+
+
+\subsection{\tt totex}
+
+{\tt totex} implements both the plain {\TeX} and {\LaTeX} back ends,
+using \kw{header tex} and \kw{header latex} to distinguish them.
+When using a {\LaTeX} header, {\tt totex} places the optional text
+following the header inside a \verb+\noweboptions+ command.
+
+On the command line, the {\tt -delay} option makes {\tt totex} delay
+filename markup until after the first documentation chunk; this
+behavior makes the first documentation chunk a ``limbo''
+chunk, which can usefully contain commands like \verb+\documentclass+.
+The {\tt -noindex} option suppresses output relating to the index of
+identifiers; it is used to implement {\tt noweave -x}.
+{\hfuzz=1.2pt\par}
+
+\subsection{\tt unmarkup}
+
+{\tt unmarkup} attempts to  be the inverse of markup---a document
+already in the pipeline is converted back to {\tt noweb} source form.
+This back end is useful primarily for trying to convert other literate
+programs to {\tt noweb} form.
+It might also be used to capture and edit the output of an automatic
+definition recognizer.
+
+\section{Standard commands}
+
+
+\begin{figure}[t]
+\noindent
+\begin{tabbing}
+XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
+\>\+{\tt markup}: Convert to pipeline representation\+\\
+{\tt nt:} Extract desired chunk to standard output
+\end{tabbing}
+\caption{Stages in pipeline for {\tt notangle}}
+\ltxlabel{fig:pipe-notangle}
+
+\noindent
+\begin{tabbing}
+XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
+\>\+{\tt markup}: Convert to pipeline representation\+\\
+{\tt autodefs.c}: Find definitions in C code\+\\
+{\tt finduses -noquote}: Find uses of defined identifiers\+\\
+{\tt noidx}: Add index and cross-reference information\+\\
+{\tt totex}: Convert to {\LaTeX}
+\end{tabbing}
+\caption{Stages in pipeline for {\tt noweave -index -autodefs c}}
+\ltxlabel{fig:pipe-noweave}
+\end{figure}
+
+
+The standard commands are all written as Bourne shell scripts~\cite{kernighan:unix}.
+They assemble Unix pipelines using {\tt markup} and the filters and
+back ends described above.  They are documented in man pages, and
+there is no sense in repeating that material here.
+I do show two sample pipelines in
+Figures \ref{fig:pipe-notangle}~and~\ref{fig:pipe-noweave}.
+The source code is available in the {\tt shell} directory for those
+who want to explore further.
+
+\begin{figure}[p]
+\begin{verbatim}
+awk 'BEGIN { line = 0; capture = 0
+             format = sprintf("'"$format"'",'"$width"')
+           }
+function comment(s) {
+    '"$subst"'
+    return sprintf(format,s)
+}
+
+function grab(s) {
+  if (capture==0) print
+  else holding[line] = holding[line] s
+}
+   
+/^@end doc/ { capture = 0; holding[++line] = "" ; next }
+/^@begin doc/ { capture = 1; next }
+
+/^@text /     { grab(substr($0,7)); next}
+/^@quote$/    { grab("[[") ; next}
+/^@endquote$/ { grab("]]") ; next}
+
+/^@nl$/ { if (capture !=0 ) {
+            holding[++line] = ""
+          } else if (defn_pending != 0) {
+            print "@nl"
+            for (i=0; i<=line && holding[i] ~ /^ *$/; i++) i=i
+            for (; i<=line; i++) 
+              printf "@text %s\n@nl\n", comment(holding[i])
+            line = 0; holding[0] = ""
+            defn_pending = 0
+          } else print
+          next  
+        }
+
+/^@defn / { holding[line] = holding[line] "<"substr($0,7)">="
+            print ; defn_pending = 1 ; next }
+{ print }'
+\end{verbatim}
+\caption{{\tt awk} command used to transform documentation to comments}
+
+\smallskip
+\noindent
+\verb+$subst+, \verb+$format+, and \verb+$width+ are shell variables used
+to adapt the script for different languages.
+executing \verb+$subst+ eliminates comment-end markers (if any) from
+the documentation, and the initial \verb+sprintf+ that creates the
+{\tt awk}
+variable \verb+format+ gives the format used to print a line of
+documentation as a comment.
+
+\ltxlabel{fig:nountangle}
+\end{figure}
+
+\afterpage{\clearpage} % force figures out
+
+
+\section{Examples}
+
+I don't give examples of the pipeline
+representation; it's best just to
+play with the existing filters.
+In particular, 
+\begin{quote}
+{\tt noweave -v} {\it options} {\it inputs} {\tt >/dev/null}
+\end{quote}
+prints (on standard error) the pipeline used by {\tt noweave}
+to implement any set of {\it options}.
+In this section, I give examples of a few nonstandard filters I've
+thrown together for one purpose or another.
+
+{\hfuzz=6.8pt
+This one-line {\tt sed} command makes {\tt noweb} treat two chunk names as
+identical if they differ only in their representation of whitespace:
+\begin{verbatim}
+ sed -e '/^@use /s/[ \t][ \t]*/ /g' -e '/^@defn /s/[ \t][ \t]*/ /g'
+\end{verbatim}
+\par}
+
+This little filter, a Bourne shell script
+written in {\tt awk}~\cite{aho:awk},
+makes the definition of an empty chunk (\verb+<<>>=+)
+stand for a continuation of the previous chunk definition.
+\begin{verbatim}
+awk 'BEGIN { lastdefn = "@defn " }
+/^@defn $/ { print lastdefn; next }
+/^@defn /  { lastdefn = $0 }
+{ print }' "$@"
+\end{verbatim}
+
+
+
+To share programs with colleagues who don't enjoy literate
+programming, I use a filter, shown in Figure~\ref{fig:nountangle}, that
+places each line of documentation in a comment and moves it to
+the succeeding code chunk.
+With this filter, \verb+notangle+
+transforms a literate 
+program into a traditional commented program, without loss of
+information and with only a modest penalty in readability.
+
+
+As a demonstration, and to help convert nuweb programs to {\tt
+noweb}, I wrote a
+a 55-line Icon program that makes it possible to abbreviate chunk names
+using a trailing ellipsis, as in {\tt WEB}; it appears in the {\tt
+noweb} distribution as
+\verb+icon/disambiguate.nw+. 
+
+Kostas Oikonomou of AT\&T Bell Labs and Conrado Martinez-Parra of 
+the Univ.\ Politecnica de Catalunya in Barcelona have written filters
+that add prettyprinting to {\tt noweb}.
+Oikonomou's filters prettyprint Icon and Object-Oriented Turing;
+Martinez-Parra's filter prettyprints a variant of Dijkstra's language
+of guarded commands.
+These filters are in the noweb distribution in the \verb+contrib+ directory.
+
+It's also possible to do useful or amusing things by writing new back
+ends.
+Figure~\ref{fig:nocount} shows an {\tt awk} script that gives a count of the
+number of lines of code and of documentation in a group of {\tt noweb}
+files.
+
+\begin{figure}[!b]
+\begin{verbatim} 
+BEGIN { bogus = "this is total bogosity"
+        codecount[bogus] = -1; docscount[bogus] = -1 
+      }
+/^@file / { thisfile = $2 ; files[thisfile] = 0 }
+/^@begin code/ { code = 1 }
+/^@begin docs/ { code = 0 }
+/^@nl/ {
+  if (code == 0)
+    docscount[thisfile]++
+  else
+    codecount[thisfile]++
+}
+END { 
+  printf " Code   Docs   Both  File\n"
+  for (file in files) {
+    printf "%5d  %5d  %5d  %s\n", 
+        codecount[file], docscount[file],
+        codecount[file]+docscount[file], file
+    totalcode += codecount[file]
+    totaldocs += docscount[file]
+  } 
+  printf "%5d  %5d  %5d  %s\n", 
+      totalcode, totaldocs, totalcode+totaldocs, "Total"
+}
+\end{verbatim}
+\caption{Back end for counting lines of code and documentation}
+\ltxlabel{fig:nocount}
+
+\smallskip
+
+\noindent
+The \verb+BEGIN+ code forces \verb+codecount+ and
+\verb+docscount+ to be associative arrays; without it the increment
+operator would fail.
+\end{figure}
+
+
+
+\bibliographystyle{chicago}
+\bibliography{web,ramsey,cs}
+
+\end{document}
