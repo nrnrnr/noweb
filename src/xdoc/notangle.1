@@ -1,0 +1,218 @@
+.TH NOWEB 1 "local \- 12/8/89"
+.SH NAME
+notangle, noweave, nountangle, noroots \- noweb; a low-tech literate programming tool
+.SH SYNOPSIS
+.B notangle
+[ 
+.B -Rrootname 
+] 
+[
+.B -L[format]
+]
+[file] ...
+.br
+.B noweave [-l]
+[file] ...
+.br
+.B nountangle
+[
+.B -ml
+|
+.B -m3
+|
+.B -c
+|
+.B -awk
+] [ 
+.B -Rrootname 
+] [
+.B -wwidth
+]
+[file] ...
+.br
+.B noroots
+[file] ...
+.SH DESCRIPTION
+.I Noweb
+is a literate programming tool like Knuth's
+.I WEB,
+only simpler.
+A 
+.I noweb
+file contains program source code interleaved with documentation.
+When 
+.I notangle
+is given a 
+.I noweb
+file, it writes the program source on standard output.
+When 
+.I noweave
+is given a 
+.I noweb
+file, it reads the 
+.I noweb
+source and produces, on standard output,
+.I TeX
+source for typeset documentation.
+.I nountangle
+is a version of 
+.I notangle
+that converts a literate program into an ordinary program by
+turning interleaved documentation into comments.
+.I noroots
+finds the roots of a
+.I noweb
+file: it prints the names of all code chunks that are defined but not used.
+.SH FORMAT OF NOWEB FILES
+A 
+.I noweb 
+file is a sequence of
+.I chunks,
+which may appear in any order.
+.I noweb
+supports documentation chunks and code chunks.
+Documentation chunks begin with an at sign (@) at the beginning of a line,
+followed by a space or newline.
+They have no names.
+Code chunks begin with
+.br
+<<chunk name>>=
+.br
+on a line by itself.
+The double left angle bracket (<<) must be in the first column.
+Chunks are terminated by the beginning of another chunk, or by end of file.
+If the first line in the file does not mark the beginning of a
+chunk, it is assumed to be the first line of a documentation chunk.
+.PP
+Documentation chunks contain text that is ignored by
+.I notangle
+and copied verbatim to 
+standard output
+by
+.I noweave
+(with a few exceptions as noted below).
+.I noweave
+inserts a reference to a standard 
+.I TeX
+macro package, which defines sectioning commands like
+.B \esection.
+.PP
+Code chunk definitions are like macro definitions;
+they may contain both program source code and references to other code
+chunks.
+Several code chunks may have the same name;
+.I notangle
+concatenates their definitions to produce a single chunk,
+just as does
+.I tangle(1).
+Typically, a programmer uses
+.I noweb
+to write a program by putting the program source in a chunk named <<*>>.
+(This substitutes for 
+.I tangle's
+``unnamed module.'')
+The definition of <<*>> contains references to other chunks, and so on.
+By default, 
+.I notangle
+expands the definition of <<*>>, writing the result on the 
+standard output.
+The output of
+.I notangle
+is readable by human beings; 
+it derives sensible indentations and line breaks from the
+indentations and line breaks present in its input.
+.PP
+Code may be quoted within documentation
+chunks by placing double square brackets
+([[]]) around it.
+These double square brackets are ignored by
+.I notangle,
+but they may be used by 
+.I noweave
+to give the code different typographic treatment.
+.PP
+To use the double left or right angle bracket in code or documentation,
+not as part of a chunk name, escape the double angle bracket
+by placing an at sign in front of it (@<<).
+.SH OPTIONS
+Given
+the
+.B -Rname
+option, 
+.I notangle
+will expand the <<name>> code chunk instead of <<*>>.
+.PP
+Given the
+.B -Lformat
+option, 
+.I notangle
+will emit line number indications at module boundaries.
+A line number indication identifies the source of the line that follows it.
+In
+.B format,
+`%F' indicates the name of the source file,
+`%L' indicates the line number of the source file,
+`%N' indicates a newline,
+and `%%' indicates a percent sign.
+If 
+.B format
+is omitted, the default format is that accepted by the C preprocessor:
+.B `#line %L "%F"%N'.
+.PP
+.I nountangle
+accepts various language options that determine the format of the comments into 
+which it transforms the documentation chunks.
+.I notangle
+and
+.I nountangle
+accept (and ignore) each other's options.
+.PP
+Given the
+.B -l
+option,
+.I noweave
+will emit header and trailer stuff to make a LaTeX document.
+.SH ERROR MESSAGES
+If
+.I notangle
+or
+.I noweave
+encounters a chunk name within documentation, it assumes that this
+indicates an error, usually misspelling ``<<name>>=''.
+Other error messages should be self-explanatory.
+.PP
+It is erroneous to refer to a chunk that is never
+defined, but it is OK for chunks to be defined and not used.
+.SH FILES
+.PP
+.ta \w'+TEXINPUTS+nwkernel.texxx'u
+.nf
++LIBDIR+/markup	markup preprocessor
++LIBDIR+/unmarkup	inverts markup
++LIBDIR+/nt	notangle proper
++TEXINPUTS+/nwkernel.tex	kernel TeX macros
++TEXINPUTS+/nwmac.tex	formatting TeX macros
++TEXINPUTS+/noweb.sty	use in LaTeX documents
+.fi
+.PP
+.SH BUGS
+.I notangle 
+and
+.I nountangle
+won't work if file names or chunk names mentioned on the command line contain
+embedded single quotes.
+.PP
+Ignoring unused chunks 
+sometimes causes problems, especially in the case when a chunk has
+multiple definitions and one is misspelled;
+the misspelled definition will be silently ignored.
+.I noroots
+can be used as a sanity checker to catch this sort of mistake.
+.PP
+.I nountangle
+requires the new version of
+.I awk,
+sometimes called
+.I nawk.
+.SH AUTHOR
+Norman Ramsey, Princeton University.

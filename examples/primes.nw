@@ -1,0 +1,174 @@
+\def\nw{{\tt noweb}}
+\def\[{\ifhmode\ \fi$[\mkern-2mu[$}
+\def\]{$]\mkern-2mu]$}
+\title{Printing Primes: An example of \nw}
+@
+\section{Printing Primes: An example of \nw}
+The following program is essentially the program that appears in 
+Reference~\cite{knuth:literate}, the first article on literate programming,
+but rendered using \nw.
+An important differents is the {\tt WEB} has macros, but \nw\ does not.
+Knuth's program is itself essentially the same as Edsger Dijkstra's 
+``first example of step-wise program composition.''~\cite[pages
+26--39]{dahl:structured}.  
+
+Dijkstra's program prints a table of the first thousand prime numbers.
+We shall begin as he did, by reducing the entire program to its
+top-level description.
+
+<<*>>=
+<<program to print the first thousand prime numbers>>
+@
+\[Double brackets will be used in what follows to enclose comments
+relating to \nw\ itself.  
+This definition of the root module could have been eliminated by
+choosing to use 
+\begin{quote}
+\tt notangle -R'program to print the first thousand prime numbers'
+\end{quote}
+to extract the program.\]
+@ This program has no input, because we want to keep it simple.
+The result of the program will be to produce a list of the first
+thousand prime numbers, and this list will appear on the [[output]]
+file.
+
+Since there is no input, we declare the value [[m = 1000]] as a
+compile-time constant.
+The program itself is capable of generating the first [[m]] prime
+numbers for any positive [[m]], as long as the computer's finite
+limitations are not exceeded.
+<<program to print the first thousand prime numbers>>=
+program print_primes(output);
+  const m = 1000;
+        <<other constants of the program>>
+  var <<variables of the program>>
+    begin <<print the first [[m]] prime numbers>>
+    end.
+@
+\section{Plan of the program}
+We shall proceed to fill out the rest of the program by making
+whatever decisions seem easiest at each step; the idea will be to
+strive for simplicity first and efficiency later, in order to see
+where this leads us.
+The final program may not be optimum, but we want it to be reliable,
+well motivated, and reasonably fast.
+
+Let us decide at this point to maintain a table that includes all of
+the prime numebrs that will be generated, and to sepaerate the
+genreation problem from the printing problem.
+<<print the first [[m]] prime numbers>>=
+<<fill table [[p]] with the first [[m]] prime numbers>>;
+<<print table [[p]]>>
+@
+How should table [[p]] be represented?
+Two possibilities suggest themselves: We could construct a
+sifficiently large aray of boolean values in whith the $k$th entry is
+[[true]] if and only if the number $k$ is prime; or we could build an
+array of integers in which the $k$th entry is the $k$th prime number.
+Let us choose the latter alternatice, by introducing an intereger
+array called [[p[1..m].]]
+In the documentation becloew, the notation [[p[k] ]]will refer to the
+[[k]]th element of the array [[p]], while $p_k$ will refer to the
+$k$th prime number.
+If the program is correct [[p[k] ]]will equal $p_k$ or it will not yet
+have nbeen asigned any value.
+<<variables of the program>>=
+p: array [1..m] of integer; 
+      { the first m prime numbers, in increasing order }
+@
+\section{The output phase}
+<<other constants of the program>>=
+rr = 50;
+cc = 4;
+ww = 10;
+<<variables of the program>>=
+page_number: integer;
+page_offset: integer;
+row_offset: integer;
+c: 0..cc;
+<<print table [[p]]>>=
+begin page_number := 1; page_offset := 1;
+while page_offset <= m do
+  begin <<output a page of answers>>;
+  page_number := page_number + 1;
+  page_offset := page_poffset + rr * cc;
+  end;
+end
+<<output a page of answers>>=
+begin write('The First ');
+write(m:1);
+write(' Prime Numbers --- Page ');
+write(page_number:1); write_ln; write_ln;
+  { there's a blank line after the heading }
+for row_offset := pages_offset to page_offset + rr - 1 
+      do <<output a line of answers>>;
+page;
+end
+<<output a line of answers>>=
+begin for c := 0 to cc - 1 do
+  if for_offset + c * rr <= m then
+    write(p[row_offset + c * rr]);
+writeln;
+end
+@
+\section{Generating the primes}
+<<fill table [[p]] with the first [[m]] prime numbers>>=
+<<initialize the data structures>>
+while k < m do
+  begin <<increase [[j]] until it is the next prime number>>
+  k := k + 1; p[k] := j;
+  end
+<<variables of the program>>=
+j: integer;  { all primes <= j are in table p }
+k: 0..m;     { this many primes are in table p }
+<<increase [[j]] until it is the next prime number>>=
+repeat j := j + 2;
+  <<update variables that depend on [[j]]>>;
+  <<give to [[j_prime]] the meaning: [[j]] is a prime number>>
+until j_prime
+<<variables of the program>>=
+j_prime: boolean;
+<<initialize the data structures>>=
+j := 1; k := 1; p[1] := 2;
+<<variables of the program>>=
+ord: 2..ord_max;
+  { the smalled index >= 2 such that p_ord squared > j }
+square: integer;
+  { square = p_ord squared }
+<<initialize the data structures>>=
+ord := 2; square := 9;
+<<other constants of the program>>=
+ord_max = 30;  { p_ord_max squared must exceed p_m }
+<<update variables that depend on [[j]]>>=
+if j = square then
+  begin ord := ord + 1;
+  <<update variables that depend on [[ord]]>>
+  end
+<<update variables that depend on [[ord]]>>=
+square := p[ord] * p[ord];  { at this point ord <= k }
+@
+\section{The inner loop}
+<<give to [[j_prime]] the meaning: [[j]] is a prime number>>=
+n := 2; j_prime := true;
+while (n < ord) and j_prime do
+  begin <<if [[p[n] ]]is a factor of [[j]], set [[j_prime := false]]>>;
+  n := n + 1;
+  end
+<<variables of the program>>=
+n: 2..ord_max; { runs from 2 to ord when testing divisibility }
+<<variables of the program>>=
+mult: array [2..ord_max] of integer;
+  { runs through multiples of primes }
+<<update variables that depend on [[ord]]>>=
+mult[ord-1] := j;
+<<if [[p[n] ]]is a factor of [[j]], set [[j_prime := false]]>>=
+while mult[n] < j do
+  mult[n] := mult[n] + p[n] + p[n];
+if mult[n] = j then j_prime := false;
+@
+\section{Index}
+\[\nw\ generates no index, but standard {\LaTeX} tools can be used to
+create an index when desired.\]
+
+\bibliographystyle{unsrt}
+\bibliography{web,cs,ramsey}
