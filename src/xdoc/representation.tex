@@ -1,0 +1,90 @@
+\documentstyle[11pt]{article}
+\title{Representation used by the {\tt noweb} tools}
+\author{Norman Ramsey}
+\date{October 1991}
+\setcounter{secnumdepth}{0}
+
+\makeatletter
+\def\refno#1{\nocite{#1}\@ifundefined
+       {b@#1}{{\bf ?}\@warning
+       {Reference number `#1' on page \thepage \space undefined}}%
+{\hbox{\csname b@#1\endcsname}}}
+\makeatother
+
+\def\remark#1{\marginpar{\raggedright\hbadness=10000\footnotesize\it #1}}
+% \def\remark#1{\relax}
+
+\begin{document}
+
+%\maketitle
+\section{Representation used by the {\tt noweb} tools}
+
+{\tt Markup} converts a file from the human syntax to the format used
+by the {\tt noweb} tools, and
+{\tt unmarkup} is its inverse.
+This document is not  complete by itself, but should
+ provide enough information so programmers can examine the
+output of {\tt markup} and write tools that manipulate that output.
+Study of the existing tools, especially {\tt nountangle} and {\tt
+unmarkup}, is recommended.
+
+Every line begins with {\tt @} and a key word.
+The possible lines are:
+\begin{quote}
+\begin{tabular}{ll}
+\tt @begin {\it kind} $n$&Start a chunk\\
+\tt @end {\it kind} $n$&End a chunk\\
+\tt @text {\it string}&{\it string} appeared in a chunk\\
+\tt @nl&A newline\\
+\tt @defn {\it name}&The code chunk named {\it name} is being defined\\
+\tt @use {\it name}&A reference to code chunk named {\it name}\\
+\tt @quote&Start of quoted code in a documentation chunk\\
+\tt @endquote&End of quoted code in a documentation chunk\\
+\tt @file {\it filename}&Name of the file from which the chunks came\\
+\tt @literal {\it text}&Used internally by {\tt noxref} and {\tt noweave}\\
+\end{tabular}
+\end{quote}
+
+{\tt Markup} expands tabs on input (tab stops are every 8~columns).
+It numbers each chunk, starting at~0.
+It also recognizes and undoes all the appropriate escape sequences,
+for example converting {\tt @<<} to {\tt <<}.
+
+{\tt Markup}'s output is a sequence of files.
+Each file is represented by a ``{\tt @file~{\it filename}}'' line,
+followed by a sequence of chunks.
+
+The representation of a documentation chunk is
+\begin{quote}
+\begin{tabular}{ll}
+\tt @begin docs $n$&where $n$ is the chunk number.\\
+{\it docline}&repeated an arbitrary number of times.\\
+\tt @end docs $n$
+\end{tabular}
+\end{quote}
+where {\it docline} may be {\tt @text}, {\tt @nl}, {\tt @quote}, or
+{\tt @endquote}.
+Every {\tt @nl} corresponds to the corresponding newline in the
+human-readable form.
+Quotes must be balanced and may not be nested.
+
+The representation of a code chunk is
+\begin{quote}
+\begin{tabular}{ll}
+\tt @begin code $n$&where $n$ is the chunk number.\\
+\tt @defn {\it name}&name of this chunk.\\
+\tt @nl&The newline following {\tt <<{\it name}>>=} in the original file\\
+{\it codeline}&repeated an arbitrary number of times.\\
+\tt @end code $n$
+\end{tabular}
+\end{quote}
+where {\it codeline} may be {\tt @text}, {\tt @nl}, or {\tt @use}.
+
+{\tt noxref} may add lines of the form
+\begin{quote}
+\tt @literal {\it text}
+\end{quote}
+These lines are used to pass literal {\LaTeX} code through the second
+stage of {\tt noweave} without any alteration.
+
+\end{document}
