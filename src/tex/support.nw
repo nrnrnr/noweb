@@ -9,7 +9,7 @@
 \begin{document}
 \maketitle
 \tableofcontents
-@ 
+@
 This document describes the {\TeX} code that supports {\tt noweave}
 and {\tt noweb}.  Those interested in customizing their output should
 focus on Section~\ref{section:sty}.  
@@ -521,10 +521,10 @@ usuall by making [[\rightskip]] naturally zero but stretchable.
 @ %def \nwcodecomment 
 This stuff is used at the end of a chunk.
 <<noweb.sty>>=
-\def\@nwalsodefined#1{\nwcodecomment{This definition is continued \nwpageprep\ \@pagesl{#1}.}}
-\def\@nwused#1{\nwcodecomment{This code is used \nwpageprep\ \@pagesl{#1}.}}
-\def\@nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
-\def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt \@stripstar#1*\stripped}.}}
+\def\@nwalsodefined#1{\nwcodecomment{\@nwlangdepdef\ \nwpageprep\ \@pagesl{#1}.}}
+\def\@nwused#1{\nwcodecomment{\@nwlangdepcud\ \nwpageprep\ \@pagesl{#1}.}}
+\def\@nwnotused#1{\nwcodecomment{\@nwlangdeprtc.}}
+\def\nwoutput#1{\nwcodecomment{\@nwlangdepcwf\ {\Tt \@stripstar#1*\stripped}.}}
 \def\@stripstar#1*#2\stripped{#1}
 @ %def \nwalsodefined \nwused \nwnotused \nwoutput
 <<add [[\nwcodecommentsep]] if this is the first [[\nwcodecomment]]>>=
@@ -689,8 +689,8 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 [[\nwpageword]] and [[\nwpageprep]] let you change the wording of the cross-reference 
 information.
 <<noweb.sty>>=
-\def\nwpageword{chunk}	% was page
-\def\nwpageprep{in}	% was on
+\def\nwpageword{\@nwlangdepchk}  % chunk, was page
+\def\nwpageprep{\@nwlangdepin}     % in, was on
 <<warn of undefined reference to [[#1]] and add page ??>>=
 <<warn of undefined reference to [[#1]]>>%
 \nwix@cons\nw@pages{\\{\bf ??}}
@@ -1178,10 +1178,10 @@ Plus [[\\]] is applied to each element of the list.
   {\nwix@listcount{#1}\@commacount=\nwix@counter
    \let\@comma@each=\\%
    \ifcase\@commacount\let\\=\@comma@each\or\let\\=\@comma@each\or
-     \def\\{\def\\{ and \@comma@each}\@comma@each}\else
+     \def\\{\def\\{ \@nwlangdepand\ \@comma@each}\@comma@each}\else
      \def\\{\def\\{, %
                    \advance\@commacount by \m@ne
-                   \ifnum\@commacount=1 and~\fi\@comma@each}\@comma@each}\fi
+                   \ifnum\@commacount=1 \@nwlangdepand~\fi\@comma@each}\@comma@each}\fi
    #1}}
 @ %def \@commacount \commafy
 
@@ -1228,7 +1228,7 @@ definitions.
   {{\Tt \@car#1\@nil}%
   \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
 \def\nwidentuses#1{% list of index pairs
-  \nwcodecomment{Uses \let\\=\nwix@id@defs\commafy{#1}.}}
+  \nwcodecomment{\@nwlangdepuss\ \let\\=\nwix@id@defs\commafy{#1}.}}
 @ %def \nwidentuses \nwix@id@defs
 The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
@@ -1240,16 +1240,16 @@ if none of the identifiers defined is ever used.
 \def\nwix@id@uses#1#2{% {ident}{label}
   \nwix@usecount{#2}\ifnum\nwix@counter>0
     {\advance\leftskip by \codemargin
-     \nwcodecomment{{\Tt #1}, used \nwpageprep\ \@pagesl{\nwix@uses{#2}}.}}%
+     \nwcodecomment{{\Tt #1}, \@nwlangdepusd\ \nwpageprep\ \@pagesl{\nwix@uses{#2}}.}}%
   \else
     \ifnw@hideunuseddefs\else
-      {\advance\leftskip by \codemargin \nwcodecomment{{\Tt #1}, never used.}}%
+      {\advance\leftskip by \codemargin \nwcodecomment{{\Tt #1}, \@nwlangdepnvu.}}%
     \fi
   \fi}
 \def\nwidentdefs#1{% list of index pairs
   \ifnw@hideunuseddefs\nwix@totaluses{#1}\else\nwix@listcount{#1}\fi
   \ifnum\nwix@counter>0
-    \nwcodecomment{Defines:}%
+    \nwcodecomment{\@nwlangdepdfs:}%
     {\def\\##1{\nwix@id@uses ##1}#1}%
   \fi}
 <<noweb.sty>>=
@@ -1351,7 +1351,7 @@ Use an index generated with
    \def\nwixadds@c##1{\nw@onechunk##1}%
    \def\nwixaddsx##1##2{\@nameuse{nwixadds@##1}{##2}}%
    \begin{thenowebchunks}\@input{\jobname.nwi}\end{thenowebchunks}}}
-    \@namedef{r@nw@notdef}{{0}{(never defined)}}
+    \@namedef{r@nw@notdef}{{0}{(\@nwlangdepnvd)}}
 <<noweb.sty>>=
 \def\nw@chunkunderlinedefs{% {list of labels with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
@@ -1499,6 +1499,178 @@ macros to work in their environment.
 \def\nwbackslash{\char92}
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
+@
+\subsection{Language-dependent macros} 
+
+Miguel Filgueiras
+(DCC-FCUP \& LIACC, Universidade do Porto) provided some changes to
+add multilingual support for the words Noweb uses in indexing and
+cross-reference.
+He inserted macros that are defined by, e.g., [[\noweboptions{english}]].
+The Noweb package uses the
+(apparently standard) {\LaTeX} macro [[\languagename]] to select a
+language at load time.
+If the \texttt{babel} package is
+loaded (with the appropriate language name) before Noweb is loaded, 
+the Noweb package will select language appropriately, provided the
+language is one of those Noweb supports.
+Mr.~Filgueiras provided support for English,
+Portuguese, German, and French. 
+He notes that the French is
+faulty; the translations may be poort, and there are
+bugs in the implementation that he could not solve.
+
+\label{subsection:langdeps}
+
+The language-dependent macros are defined here in each supported
+language in a different subsubsection.
+
+The choice of language depends on testing the [[\languagename]]
+macro. There must be a more elegant way of coding the tests below\ldots
+<<noweb.sty>>=
+<<language support>>
+\ifx\languagename\undefined % default is English
+  \nwoptions{english}
+\else
+  \@ifundefined{nwopt@\languagename}
+     {\nwoptions{english}}
+     {\expandafter\nwoptions\expandafter{\languagename}}
+\fi
+@ 
+\subsubsection{Support for English}
+
+This describes the original English text.
+<<language support>>=
+\def\nwopt@english{%
+  \def\@nwlangdepdef{This definition is continued}%
+  \def\@nwlangdepcud{This code is used}%
+  \def\@nwlangdeprtc{Root chunk (not used in this document)}%
+  \def\@nwlangdepcwf{This code is written to file}%
+  \def\@nwlangdepchk{chunk}%
+  \def\@nwlangdepin{in}%
+  \def\@nwlangdepand{and}%
+  \def\@nwlangdepuss{Uses}%
+  \def\@nwlangdepusd{used}%
+  \def\@nwlangdepnvu{never used}%
+  \def\@nwlangdepdfs{Defines}%
+  \def\@nwlangdepnvd{never defined}%
+}
+\let\nwopt@american\nwopt@english
+@ 
+
+@
+\subsubsection{Support for Portuguese}
+
+This contains the text in Portuguese.
+<<language support>>=
+\def\nwopt@portuges{%
+  \def\@nwlangdepdef{Defini\c{c}\~ao continuada em}%
+  % This definition is continued
+  \def\@nwlangdepcud{C\'odigo usado em}%
+  % This code is used
+  \def\@nwlangdeprtc{Fragmento de topo (sem uso no documento)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Este c\'odigo foi escrito no ficheiro}%
+  % This code is written to file
+  \def\@nwlangdepchk{fragmento}%
+  % chunk
+  \def\@nwlangdepin{no(s)}%
+  % in
+  \def\@nwlangdepand{e}%
+  % and
+  \def\@nwlangdepuss{Usa}%
+  % Uses
+  \def\@nwlangdepusd{usado}%
+  % used
+  \def\@nwlangdepnvu{nunca usado}%
+  % never used
+  \def\@nwlangdepdfs{Define}%
+  % Defines
+  \def\@nwlangdepnvd{nunca definido}%
+  % never defined
+}
+@
+\subsubsection{Support for French}
+
+This is a tentative translation to French that should probably be
+corrected by some French native speaker\ldots
+
+There are problems with using accents: on the [[\@nwlangdepnvd]] macro
+(which apparently is not used in the context of [[\nwcodecomment]]),
+and in some other macros (\LaTeX{} complains about missing
+[[\endcsname]]). This should be fixed by someone with experience in
+using \TeX\ldots
+<<language support>>=
+\def\nwopt@frenchb{%
+  \def\@nwlangdepdef{Cette d\'efinition suit dans}%
+  % This definition is continued
+  \def\@nwlangdepcud{Ce code est employ\'e dans}%
+  % This code is used
+  \def\@nwlangdeprtc{Morceau racine (pas employ\'e dans ce document)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Ce code est \'ecrit dans le fichier}%
+  % This code is written to file
+  \def\@nwlangdepchk{morceau}%
+  % chunk
+  \def\@nwlangdepin{dans le(s)}%
+  % in
+  \def\@nwlangdepand{et}%
+  % and
+  \def\@nwlangdepuss{Il emploie}%
+  % Uses
+  \def\@nwlangdepusd{employ\'{e}}%
+  % used
+  \def\@nwlangdepnvu{jamais employ\'{e}}%
+  % never used
+  \def\@nwlangdepdfs{Il d\'{e}fine}%
+  % Defines
+  % Cannot use the accent here: \def\@nwlangdepnvd{jamais d\'{e}fini}%
+  \def\@nwlangdepnvd{jamais defini}%
+  % never defined
+}
+\let\nwopt@french\nwopt@frenchb
+@
+\subsubsection{Support for German}
+
+This is a translation to German by Sabine Broda (DCC-FCUP \& LIACC,
+Universidade do Porto).
+<<language support>>=
+\def\nwopt@german{%
+  \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
+  % This definition is continued
+  \def\@nwlangdepcud{Dieser Code wird benutzt}%
+  % This code is used
+  \def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}%
+  % Root chunk (not used in this document)
+  \def\@nwlangdepcwf{Dieser Code schreibt man zum File}%
+  % This code is written to file
+  \def\@nwlangdepchk{Teil}%
+  % chunk
+  \def\@nwlangdepin{im}%
+  % in
+  \def\@nwlangdepand{und}%
+  % and
+  \def\@nwlangdepuss{Benutztt}%
+  % Uses
+  \def\@nwlangdepusd{benutzt}%
+  % used
+  \def\@nwlangdepnvu{nicht benutzt}%
+  % never used
+  \def\@nwlangdepdfs{Definiert}%
+  % Defines
+  \def\@nwlangdepnvd{nicht definiert}%
+  % never defined
+}
+\let\nwopt@ngerman\nwopt@german
+@
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B english, french, german, portuges
+Write cross-reference information in the language specified.
+Defaults to 
+.B english.
+@ \fi
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
