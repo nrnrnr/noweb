@@ -62,8 +62,11 @@ void stop_adding(Recognizer r);
 <<Exported prototypes>>=
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
 @ %def search_for_ident
+
+[[instance]] is a pointer to the place within [[input]] that we
+saw the identifier.
 <<Exported type definitions>>=
-typedef void (*Callback) (void *closure, char *id);
+typedef void (*Callback) (void *closure, char *id, char *instance);
 @ %def Callback
 @
 
@@ -283,7 +286,7 @@ not rejected (see the next section).
     Name_Node *p = state->output;
     while (p) {
       if (!reject_match(r, p->name, input, current))
-        f(closure, p->name);
+        f(closure, p->name, current - strlen(p->name));
       p = p->next;
     }
   }
