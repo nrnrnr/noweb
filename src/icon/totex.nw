@@ -10,8 +10,8 @@ Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: totex.nw,v 1.4 1997/09/13 20:16:31 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 global headercomment, realwrite
 procedure main(args)
@@ -81,9 +81,21 @@ if ="@end docs " then  	{ if \delay & match(0) then <<delay for [[@end docs]]>>
 			  else writes("\\nwenddocs{}")                           } else
 <<@text>>=
 if ="@text " then 	{ text +:= *(line := tab(0))
-                          writes(if \quoting then TeXliteral(line)
-                                 else if \code then escape(line, '{}\\')
-                                 else line)                                      } else
+                          writes(if \quoting then <<possibly indexed quoted [[line]]>>
+                                 else if \code then <<possibly indexed code [[line]]>>
+                                 else line)
+                          lastindexref := &null                                  } else
+<<possibly indexed quoted [[line]]>>=
+if /noindex & \lastindexref then 
+  "\\nwlinkedidentq{" || TeXliteral(line) || "}{" || lastindexref || "}"
+else 
+  TeXliteral(line)
+<<possibly indexed code [[line]]>>=
+if /noindex & \lastindexref then 
+  "\\nwlinkedidentc{" ||   escape(line, '{}\\') || "}{" || lastindexref || "}"
+else 
+  escape(line, '{}\\')
+
 <<@nl>>=
 if ="@nl" & pos(0) then { if /code then {<<print [[\nwdocspar]] if no [[text]]>>}
                           if \quoting then writes("\\nwnewline")
@@ -246,11 +258,12 @@ writes("\\nwindexdefn{\\nwixident{", TeXliteral(name := tab(0)), "}}{", indexlab
 The {\LaTeX} back end ignores uses in code; they get bundled up by a previous filter
 (the cross-referencer) and handled elsewhere.
 <<handle index use>>=
-if /code then {
+if /code & /quoting then {
   writes("\\protect\\nosublabel{", \lastxreflabel, "}")
   writes("\\protect\\nwindexuse{\\nwixident{", TeXliteral(name := tab(0)), "}}{", 
                 indexlabel(name), "}{", \lastxrefref, "}")
 }
+lastindexref := lastxrefref
 <<clear [[lastxref*]]>>
 @
 Here's the local identifier cross-reference that appears at the end of a code chunk.
@@ -350,7 +363,7 @@ procedure TeXliteral(arg)
 					  "&", "&",
 					  "#", "#",
 					  "^", "char94", 
-                      "_", "_",
+                                          "_", "_",
 					  "%", "%",
 					  "~", "char126"]
             code := table()
