@@ -1,6 +1,7 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
-\section{Markup}
+\section{Converting a {\tt noweb} file to tool markup}
+\subsection{Main program}
 This is the initial filter in the pipeline.
 Syntax from {\tt markup.ow}.
 Output may contain [[
@@ -8,27 +9,46 @@ Output may contain [[
         @text <line of text>
         @quote
         @endquote
+        @defn <module name>
         @use <module name>
         @nl
         @file <filename>
-        @name <module name>
-        @line nnn [name]
+        @line nnn
+	@index [defn|use] <indexed string>
+	@index nl	
+	@literal <literal text for weave or other tool>
 ]]
 Here's the code that writes the output.
 We have one function to print the state, which takes care of
 [[@begin]] and [[@end]] and remembering what kind of chunk we have.
 Another function prints [[@name value]] pairs.
 If the [[value]] has a trailing newline, the pair is followed by [[@nl]].
-<<state and printing definitions>>=
-typedef enum state {Code=1, Docs=2} State;
-typedef enum mark {Begin=1, End=2} Mark;
 
-static char *states[] = { "bad state", "code", "docs" };
-static char *marks[]={ "bad mark", "begin", "end" };
+If the only way index entries were created was by tools, life would be easy.
+Permitting index definitions in the input causes two complications.
+First, it introduces newlines that don't belong to any chunk, but that must be counted.
+Second, it introduces a special state, [[CodeIndex]]
+in which a code chunk is about to be terminated
+but won't be until there are no more index definitions.
+<<state and printing definitions>>=
+typedef enum state {Code=1, Docs=2, CodeIndex=3} State;
+typedef enum mark {Begin=1, End=2} Mark;
+typedef enum index {Defn=1, Use=2, Newline=3} Index;
+
+static char *states[]  = { "bad state", "code", "docs", "code" };
+static char *marks[]   = { "bad mark", "begin", "end" };
+static char *indices[] = { "bad index", "defn", "use", "nl" };
 static char low_at_sign = '@';
 
 static void print_state(FILE *out, Mark be, State state, int count) {
     fprintf(out, "%c%s %s %d\n", low_at_sign, marks[be], states[state], count);
+}
+
+static void print_index(FILE *out, Index idx, char *arg) {
+    if (arg)
+        fprintf(out, "%cindex %s %s\n", low_at_sign, indices[idx], arg);
+    else
+        fprintf(out, "%cindex %s\n",    low_at_sign, indices[idx]);
 }
 
 static void print_pair(FILE *out, char *name, char *value) {
@@ -41,7 +61,7 @@ static void print_pair(FILE *out, char *name, char *value) {
     } else
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
-@
+@ %def state mark index print_state print_index print_pair
 <<*>>=
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,7 +90,7 @@ void markup (FILE* in, FILE *out, char *filename) {
 
     <<copy all lines from [[in]] to [[out]], adding markup>>
 }
-@
+@ %def markup
 A {\em noweb } file consists of a sequence of
 {\em chunks,} which may appear in any order.
 {\em noweb} supports two kinds of chunks: documentation chunks and code chunks.
@@ -95,40 +115,44 @@ code is started by a module definition, which must appear on a line by itself.
 Documentation is started by a character sequence, 
 and arbitrary documentation text can follow on the same line.
 <<copy all lines from [[in]] to [[out]], adding markup>>=
-    print_pair(out, "file", filename);
-    print_state(out, Begin, state, count);
-
-    while ((line = getline_expand(in)) != NULL) {
-	lineno++;
-        <<remember if a newline was missing from the last line>>
-        if (starts_code(line, filename, lineno)) {
+print_pair(out, "file", filename);
+print_state(out, Begin, state, count);
+while ((line = getline_expand(in)) != NULL) {
+    lineno++;
+    <<remember if a newline was missing from the last line>>
+    if (starts_code(line, filename, lineno)) {
+        <<complain and correct unmatched open quote, if any>>
+        print_state(out, End, state, count);
+        count++;
+        state = Code;
+        print_state(out, Begin, state, count);
+        getmodname(modname,MAX_MODNAME,line);
+        print_pair(out,"defn",modname);
+        print_pair(out,"nl",0);     /* could be implicit but this is better */
+    } else if (is_def(line)) {
+        <<emit index definitions and index newline>>
+	if (state == Code)
+	    state = CodeIndex;
+    } else {
+        if (starts_doc(line) || state == CodeIndex) {
             <<complain and correct unmatched open quote, if any>>
             print_state(out, End, state, count);
             count++;
-            state = Code;
+            state = Docs;       /* always reading docs after a stop */
             print_state(out, Begin, state, count);
-            getmodname(modname,MAX_MODNAME,line);
-            print_pair(out,"defn",modname);
-            print_pair(out,"nl",0);     /* could be implicit but this is better */
-        } else {
-            if (starts_doc(line)) {
-                <<complain and correct unmatched open quote, if any>>
-                print_state(out, End, state, count);
-                count++;
-                state = Docs;       /* always reading docs after a stop */
-                print_state(out, Begin, state, count);
+	    if (starts_doc(line))
                 line = first_doc_line(line);
-            }
-            <<Check a bunch of ``mistake indicators''>>
-            switch(state) {
-                case Code: <<convert a code line>> break;
-                case Docs: <<convert a documentation line>> break;
-                default: impossible("bad state");
-            }    
         }
+        <<Check a bunch of ``mistake indicators''>>
+        switch(state) {
+            case Code: <<convert a code line>> break;
+            case Docs: <<convert a documentation line>> break;
+            default: impossible("bad state");
+        }    
     }
-    <<add a trailing newline if one was missing>>
-    print_state(out, End, state, count);
+}
+<<add a trailing newline if one was missing>>
+print_state(out, End, state, count);
 @
 We make it safe to assume henceforth that every chunk ends with newline,
 even if the file didn't end with newline.
@@ -146,8 +170,8 @@ while ((mark = mod_start(line,1)) != NULL) {
     if (*line) print_pair(out, "text",unescape(line)); 
                                    /* emit string before module */
     if ((line=mod_end(mark,1))==NULL) { /* no matching @>>; treat @<< as text */
-        line = mark - 2;	/* back up; point to @<< */
-        *line = '<';		/* restore missing < (was '\0') */
+        line = mark - 2;        /* back up; point to @<< */
+        *line = '<';            /* restore missing < (was '\0') */
         break;
     } else {  
         print_pair(out, "use",mark);       /* emit the module */
@@ -156,6 +180,7 @@ while ((mark = mod_start(line,1)) != NULL) {
 if (*line) print_pair(out, "text",unescape(line)); 
                                   /* contribute the trailing string */
 @ To convert documentation lines, we have to track the quoting brackets.
+Note that [[if (quoting = !quoting)]] is a simultaneous toggle and test.
 <<convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
        line = mark) {
@@ -164,6 +189,21 @@ for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL;
     if (quoting = !quoting) last_open_quote = lineno;
 }
 if (*line) print_pair(out, "text", unescape(line)); 
+@
+<<emit index definitions and index newline>>=
+line = remove_def_marker(line);
+while (*line && isspace(*line)) line++;
+while (*line) {
+  char tmp;
+  char *s = line+1;
+  while (*s && !isspace(*s)) s++;
+  tmp = *s; *s = 0;
+  print_index(out, Defn, line);
+  *s = tmp;
+  while (isspace(*s)) s++;
+  line = s;
+}
+print_index(out, Newline, 0);
 <<complain and correct unmatched open quote, if any>>=
 if (quoting) {
     errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
@@ -188,15 +228,15 @@ main(int argc, char **argv) {
     int i;
 
     for (i = 1; i < argc && argv[i][0] == '-' && argv[i][1] != 0; i++)
-	switch(argv[i][1]) {
-	    case 't': <<handle [[-t]]>> break;
+        switch(argv[i][1]) {
+            case 't': <<handle [[-t]]>> break;
             default : errormsg(Error, "%s: unknown option -%c\n", myself, argv[i][1]);
                       break;
         }
     if (i < argc)
         for (; i < argc; i++) {
             if (!strcmp(argv[i], "-")) {
-	        markup(stdin,stdout,"");
+                markup(stdin,stdout,"");
             } else 
                 if ((fp=fopen(argv[i],"r"))==NULL)
                     errormsg(Error, "%s: couldn't open file %s\n", myself, argv[i]);
@@ -208,12 +248,13 @@ main(int argc, char **argv) {
     else
         markup(stdin,stdout,"");
     exit(errorlevel);
+    return errorlevel; 		/* slay warning */
 }
 @
 <<handle [[-t]]>>=
 if (isdigit(argv[i][2]))
     tabsize = atoi(argv[i]+2);
 else if (argv[i][2]==0)
-    tabsize = 0; 		/* no tabs */
+    tabsize = 0;                /* no tabs */
 else 
     errormsg(Error, "%s: ill-formed option %s\n", myself, argv[i]);
