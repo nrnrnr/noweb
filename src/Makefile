@@ -25,10 +25,12 @@ TANGLEOBJS=notangle.o getline.o modules.o modtrees.o strsave.o \
 MARKUPOBJS=markmain.o strsave.o markup.o errors.o getline.o columns.o
 FILES=columns.nw errors.nw getline.nw main.nw markmain.nw markup.nw \
 	modtrees.nw modules.nw notangle.nw readme.nw strsave.nw
+SHELLS=notangle.sh nountangle.sh noweave.sh noroots.sh unmarkup
 SRCS=columns.h errors.h getline.h markup.h modtrees.h \
 	modules.h notangle.h strsave.h \
 	columns.c errors.c getline.c main.c markmain.c markup.c \
 	modtrees.c modules.c notangle.c readme.c strsave.c
+NAME='name of RCS version'
 
 NOTANGLE=notangle
 
@@ -49,20 +51,20 @@ markup:	$(MARKUPOBJS)
 	$(CC) $(CFLAGS) -o markup $(MARKUPOBJS)
 
 install:	nt markup notangle.sh noweave.sh nountangle.sh noroots.sh
-		sed 's@|LIBDIR|@$(LIB)@' notangle.sh > $(BIN)/notangle
-		sed 's@|LIBDIR|@$(LIB)@' noweave.sh  > $(BIN)/noweave
-		sed 's@|LIBDIR|@$(LIB)@' nountangle.sh  > $(BIN)/nountangle
-		sed 's@|LIBDIR|@$(LIB)@' noroots.sh  > $(BIN)/noroots
+		sed "s@|LIBDIR|@$(LIB)@" notangle.sh > $(BIN)/notangle
+		sed "s@|LIBDIR|@$(LIB)@" noweave.sh  > $(BIN)/noweave
+		sed "s@|LIBDIR|@$(LIB)@" nountangle.sh  > $(BIN)/nountangle
+		sed "s@|LIBDIR|@$(LIB)@" noroots.sh  > $(BIN)/noroots
 		chmod +x $(BIN)/notangle $(BIN)/noweave $(BIN)/nountangle $(BIN)/noroots
 		strip nt markup
 		cp nt markup unmarkup $(LIB)
 		chmod +x $(LIB)/unmarkup
 		cp nwkernel.tex nwmac.tex noweb.sty $(TEXINPUTS)
-		sed  -e 's@|LIBDIR|@$(LIB)@' -e 's@|TEXINPUTS|@$(TEXINPUTS)@' notangle.1 > $(MAN)/man$(MANEXT)/notangle.$(MANEXT)
+		sed  -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" notangle.1 > $(MAN)/man$(MANEXT)/notangle.$(MANEXT)
 		cd $(MAN)/man$(MANEXT); /bin/rm -f noweave.$(MANEXT) noweb.$(MANEXT) nountangle.$(MANEXT) noroots.$(MANEXT)
 		cd $(MAN)/man$(MANEXT); ln notangle.$(MANEXT) noweave.$(MANEXT); ln notangle.$(MANEXT) noweb.$(MANEXT) ; ln notangle.$(MANEXT) nountangle.$(MANEXT) ; ln notangle.$(MANEXT) noroots.$(MANEXT)
 
-clean: ;	rm -f *.makelog *.log *.blg *.dvi *.o *.toc *~ nt markup x*.h *.st *.stl
+clean: ;	rm -f *.makelog *.log *.blg *.dvi *.o *.toc *~ nt markup x*.h *.st *.lt *.stl
 		rm -f primes.aux primes.tex primes.bbl
 
 boot: ;		touch *.c *.h
@@ -71,7 +73,10 @@ veryclean:	clean
 		rm -f $(SRCS)
 
 bundle:		clean
-		bundle README Makefile [a-z]* > ../nwbundle
+		bundle COPYRIGHT README Makefile [a-z]* > ../nwbundle
+
+checkin:	$(FILES) $(SHELLS) notangle.1 Makefile README COPYRIGHT
+		ci -n'$(NAME)' -l -f -m'checked in as version named $(NAME)' $(FILES) $(SHELLS) notangle.1 Makefile README COPYRIGHT
 
 columns.o:	columns.h
 errors.o:	errors.h
