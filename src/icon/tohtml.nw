@@ -1,3 +1,6 @@
+\documentstyle[noweb]{article}
+\pagestyle{noweb}
+\begin{document}
 \section{Converting {\tt noweb} markup to {\tt HTML}}
 This copyright applies both to the {\tt noweb} source and to the
 generated code.
@@ -15,11 +18,12 @@ document before converting the document with {\tt latex2html}.
 # Don't try to understand this file!  Look at icon/tohtml.nw in the noweb source!
 
 procedure main(args)
-  local delay, raw, where, localindex
+  local delay, raw, where, localindex, noindex
   <<initialization>>
   every braw | eraw := ""
   delay := !args == "-delay"
-  localindex := !args == "-localindex"	# produce local identifier xref?
+  noindex := !args == "-noindex"
+  localindex := (/noindex, !args == "-localindex") # produce local identifier xref?
   raw := !args == "-raw"
   if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
   while inputline := read() do inputline ? {
@@ -37,7 +41,10 @@ end
 <<@xref>>
 <<@index>>
 <<others>>
-  nil	# matches last else
+if ="@" then  						# follows last else
+  warn_unknown(1(tab(upto(' ')|0), pos(0) | move(1)))
+else
+  write(&errout, "Botched line in noweb pipeline: ", tab(0))
 @ 
 [[ecode]] is the marker used at the end of the current code chunk.
 If there is no cross-reference stuff at the end, we just use [[</pre>]];
@@ -65,40 +72,80 @@ if ="@end docs " then  	{ write(braw, linklabel(\lastxreflabel, "*"), eraw)
                           lastxreflabel := &null                                 } else
 @
 Normally, if there's a pending anchor, we put it on the first available text line.
+There's a bit of a fine point that crops up if the very first piece of text
+is quoted code.  In that case we have to attach both the label for the
+{\it docs} anchor and the ref for the {\it index} anchor.
 <<@text>>=
 if ="@text " then 	{ text +:= *(line := tab(0))
-			  if \quoting | \code then
-			    writes((<<index anchor>>) | escapeSpecials(line))
-		          else
+			  if \code then
+			    writes((<<index anchor>>)          | escapeSpecials(line))
+		          else if \quoting then
+			    writes((<<index and docs anchor>>) | escapeSpecials(line))
+                          else
                             writes((<<docs anchor>>) | line)                } else
 <<index anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)}, 
-  linkto(\lastindexref, line),
+  linkto(\lastindexref, escapeSpecials(line)),
   lastindexref := &null)
+@
+We anchor on the first nonblank character of the line, unless that's
+an SGML tag, in which case we have to
+try to skip past.  If it's an anchor tag, we give up, just
+inserting a {\tt*} to anchor to.
+None of this crap would be necessary if HTML could anchor to empty text.
 <<docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)},
   line ? braw || linklabel(\lastxreflabel, 
                            (tab(many(' \t')) | "") || 
-                            (if any('\\{}') then "*" else move(1))) ||
+                            (skip_tags_and_char() | "*")) ||
          eraw || tab(0),
+  insert(defns_above, \lastxreflabel),
   lastxreflabel := &null)
+<<index and docs anchor>>=
+2(line ? {tab(many(' \t')); not pos(0)}, 
+  linklabelto(lastxreflabel, lastindexref, escapeSpecials(line)),
+  lastxreflabel := lastindexref := &null)
+@
+Skip as many tags as possible, then skip a character, but
+never skip an anchor ([[<a>]]) tag, because that might mess things up big time.
+Argument is number of tags already skipped; if nonzero, we're willing to succeed
+at the end of the string.
+<<*>>=
+procedure skip_tags_and_char(count)
+  local tag
+  /count := 0
+  if any('&') & upto(';') then
+    suspend(tab(upto(';')) || =";")
+  else if any('<') then
+    suspend ="<" || (tab(many(' \t')) | "") ||
+            (="/" | (tag := tab(many(&letters)), map(tag) ~== "a", tag)) ||
+            tab(upto(">")) || =">" || skip_tags_and_char(count+1)
+  else
+    suspend (tab(many(' \t')) | "") || 
+            ((move(1) | if count > 0 then "")\1)  # succeed at end if count > 0
+            
+end
 <<@nl>>=
 if ="@nl" & pos(0) then { write()                                                } else
 <<@defn>>=
-if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, 
-                                     "dfn", name := tab(0), defns[name] || "=")
-                          defns[name] := "+"                                     } else
+if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, "dfn", 
+                                     thischunk := tab(0), defns[thischunk] || "=")
+			  insert(defns_above, \lastxreflabel)
+			  <<clear [[lastxref*]]>>
+                          defns[thischunk] := "+"                                } else
 <<initialization>>=
 defns := table("")
+defns_above := set()	# keep track of defining chunks we've seen
 <<@use>>=
-if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0))    } else 
+if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0)) 
+       	                  <<clear [[lastxref*]]>>                                } else
 @
 Writing a chunk involves creating an anchor for it.
 <<*>>=
 procedure writechunk(label, ref, tag, name, suffix)
   /suffix := ""
   writes(linklabelto(label, ref, 
-    "<" || tag || ">&lt;" || convquotes(name) || "&gt;" || suffix || "</" || tag || ">"))
+                     sgmlwrap(tag, "&lt;" || convquotes(name) || "&gt;" || suffix)))
   return
 end
 @
@@ -126,33 +173,65 @@ if ="@xref " then {
   }
 } else
 <<cases for @xref>>=
-"label"		: lastxreflabel := arg
-"ref"		: lastxrefref   := arg
+"label"		: { <<warn if unused [[lastxreflabel]]>>; lastxreflabel := arg }
+"ref"		: { <<warn if unused [[lastxrefref]]>>;   lastxrefref   := arg }
 "prevdef"	: pendingprev   := arg
 "nextdef"	: pendingnext   := arg
-"beginuses"	: { <<dump pending cross-reference info>>           
-                    <<code-to-blockquote>>
-                    writes("This code is used ")
-                    comma := ""; where := "here"; count := 1 }
-"useitem"	: { writes(comma, linkto(arg, where || (1 < count | "")))
-                    comma := ","; where := "U"; count +:= 1 }
-"enduses"	: writes(".<p>")
+"beginuses"	: { useitems := [] }
+"useitem"	: { put(useitems, arg) }
+"enduses"	: { useitemstab[thischunk] := useitems }
 "notused"	: { <<code-to-blockquote>>
                     writes("This code is written to a file (or else not used).<p>") }
+<<initialization>>=
+useitemstab := table()
 <<clear [[lastxref*]]>>=
 every lastxreflabel | lastxrefref := &null
+<<warn if unused [[lastxreflabel]]>>=
+warn_unused_xref("label", \lastxreflabel)
+<<warn if unused [[lastxrefref]]>>=
+warn_unused_xref("ref", \lastxrefref)
+<<*>>=
+procedure warn_unused_xref(tag, label)
+  static warned
+  initial warned := set()
+  if not member(warned, tag) then {
+    insert(warned, tag)
+    write(&errout, "Warning: internal inconsistency in noweb (not urgent)---")
+    write(&errout, "\tnever used @xref ", tag, " ", label)
+  }
+  return
+end  
+@
 <<dump pending cross-reference info>>=
-if \pendingprev | \pendingnext then {<<code-to-blockquote>>}
-if \pendingprev then
-  if \pendingnext then
-    write(linkto(pendingprev, "Previous"), " and ",
-          linkto(pendingnext, "next"), " definitions.<p>")
+useitems := useitemstab[thischunk]
+if \pendingprev | \pendingnext | *\useitems > 0 then {
+  <<code-to-blockquote>>
+  <<write out uses with links>>
+  if *\useitems > 0 & (\pendingprev | \pendingnext) then
+    writes("; ")
+  p := if *\useitems > 0 then "previous" else "Previous"
+  n := if *\useitems > 0 then "next"     else "Next"
+  if \pendingprev then
+    if \pendingnext then
+      writes(linkto(pendingprev, p), " and ",
+             linkto(pendingnext, "next"), " definitions")
+    else
+      writes(linkto(pendingprev, p), " definition")
   else
-    write(linkto(pendingprev, "Previous"), " definition.<p>")
-else
-  if \pendingnext then
-    write(linkto(pendingnext, "Next"), " definition.<p>")
-every pendingprev | pendingnext := &null
+    if \pendingnext then
+      writes(linkto(pendingnext, n), " definition")
+  pendingprev := pendingnext := &null
+  useitems := &null
+  write(".<p>")
+}
+<<write out uses with links>>=
+useprefix := "Used "
+every i := 1 to *\useitems do {
+  usedir := if member(defns_above, useitems[i]) then "above" else "below"
+  usesuffix := if *\useitems > 1 then " (" || i || ")" else ""
+  writes(useprefix, linkto(useitems[i], usedir || usesuffix))
+  useprefix := ", "
+}
 @
 The hack here is to put the supplementary information in a blockquote area
 after the code.
@@ -168,7 +247,7 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 "begindefs" | "defitem" | "enddefs" : &null
 @
 <<cases for @xref>>=
-"beginchunks" : { write(braw, "<h2>List of Chunks</h2><ul>") }
+"beginchunks" : { write(braw, "<ul>") }
 "chunkbegin"  : { writes("<li>"); comma := ": "; count := 0
                   arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
                   writechunk(&null, ref, "i", name) }
@@ -177,7 +256,7 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 "chunkend"    : write()
 "endchunks"   : write("</ul>", eraw)
 <<cases for @index>>=
-"beginindex"  : { write(braw, "<h2>Index</h2><ul>") }
+"beginindex"  : { write(braw, "<ul>") }
 "entrybegin"  : { writes("<li>"); comma := ": "; count := 0
                   arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
                   writes(linklabelto("NWI-" || escapeSpecials(name), ref, name)) }
@@ -185,31 +264,34 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 "entrydefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
 "entryend"    : write()
 "endindex"   : write("</ul>", eraw)
-@
 <<@index>>=
 if ="@index " then {
-  if fun := tab(upto(' ')) then {move(1); arg := tab(0)}
-  else { fun := tab(0); arg := &null }
-  case fun of { 
-    <<cases for @index>> 
-    default : arg ? warn_unknown("index " || fun)
+  if /noindex then {
+    if fun := tab(upto(' ')) then {move(1); arg := tab(0)}
+    else { fun := tab(0); arg := &null }
+    case fun of { 
+      <<cases for @index>> 
+      default : arg ? warn_unknown("index " || fun)
+    }
   }
+  # don't get any warnings if not doing indexing
 } else
 @
 The local identifier cross-reference doesn't show each use; it just shows
 the identifiers that are defined, with links to the full index.
 <<cases for @index>>=
-"use" 	    : { lastindexref := lastxrefref; <<clear [[lastxref*]]>> }
+"use" 	    : { lastindexref := lastxrefref; lastxrefref := &null }
 "defn"      : { <<clear [[lastxref*]]>> }
 "nl"        : &null # do nothing -- destroys line numbering
 "begindefs" : if \localindex then
               { <<code-to-blockquote>>; writes("Defines"); comma := " " }
 "isused"    : &null
 "defitem"   : if \localindex then { 
-                writes(comma, linkto("NWI-" || escapeSpecials(arg), escapeSpecials(arg)))
+                writes(comma, linkto("NWI-" || escapeSpecials(arg), 
+                                sgmlwrap("code", escapeSpecials(arg))))
                 comma := ", "
               }
-"enddefs"   : if \localindex then write("; click for index entry.<p>")
+"enddefs"   : if \localindex then write(" (links are to index).<p>")
 "beginuses" | "isdefined" | "useitem" | "enduses" : &null  # use local links
 @
 \subsection{Support functions}
@@ -232,6 +314,12 @@ end
 
 procedure linklabel(label, contents)
   return linklabelto(label, &null, contents)
+end
+@
+Another support function is used for wrapping tags around text:
+<<*>>=
+procedure sgmlwrap(tag, s)
+  return "<" || tag || ">" || s || "</" || tag || ">"
 end
 @
 Lucky for us, {\tt HTML} has few special characters.  Unlucky for us,
@@ -261,7 +349,7 @@ convention within chunk names.
 <<*>>=
 procedure convquotes(s)
   r := ""
-  escapeSpecials(s) ? {
+  s ? {  # don't call escapeSpecials on s; it destroys internal markup
     while r ||:= tab(find("[[")) do {
       ="[[" | stop("impossible missing [[")
       r ||:= "<code>" || tab(find("]]"))
@@ -278,8 +366,10 @@ procedure warn_unknown(tag)
   static warned
   initial warned := set()
   if not member(warned, tag) then {
-    write(&errout, "Warning: unrecognized escape @", tag, tab(0))
+    write(&errout, "Warning: unrecognized escape @", tag, " ", tab(0))
     insert(warned, tag)
   }
   return
 end
+@
+\end{document}
