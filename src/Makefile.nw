@@ -7,7 +7,7 @@ This nonsense is the result.  (Too bad mk isn't everywhere.)
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
-CC=gcc
+CC=gcc -ansi -pedantic
 CFLAGS=
 # If you have Icon, you should use the Icon versions of the noweb pipeline.
 # Set LIBSRC=icon
@@ -84,12 +84,20 @@ done
 install-man:
 	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
 	<<ordinary pages>>
+@ 
+Slackware no longer uses preformatted compressed pages, just
+compressed pages.
+<<*>>=
+install-gzipped-man:
+	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
+	<<compressed pages>>
 <<*>>=
 install-preformat-man:
+	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
 	-mkdir $(MAN) $(CATDIR) $(CAT7DIR) 2>/dev/null
 	<<preformatted compressed pages>>
 <<generate chunks>>=
-NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle sl2h htmltoc"
+NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h htmltoc"
 NORMAL7PAGES="nowebstyle nowebfilters"
 LINKPAGES="noweave nountangle"
 
@@ -107,6 +115,22 @@ done
 for i in $LINKPAGES; do
   echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT)'
   echo '(cd $(MANDIR); ln notangle.$(MANEXT)' "$i"'.$(MANEXT))'
+done
+
+echo '@<<compressed pages@>>='
+
+for i in $NORMALPAGES; do
+  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+	"xdoc/$i.1" ' | gzip -9 > $(MANDIR)/'"$i"'.$(MANEXT).gz'
+done
+for i in $NORMAL7PAGES; do
+  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+	"xdoc/$i.7" ' | gzip -9 > $(MAN7DIR)/'"$i"'.$(MAN7EXT).gz'
+done
+
+for i in $LINKPAGES; do
+  echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT).gz'
+  echo '(cd $(MANDIR); ln notangle.$(MANEXT).gz' "$i"'.$(MANEXT).gz)'
 done
 
 echo '@<<preformatted compressed pages@>>='
@@ -128,6 +152,7 @@ done
 install-tex:
 	-mkdir $(TEXINPUTS) 2>/dev/null
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
+	-texhash
 
 install-elisp:
 	-mkdir $(ELISP) 2>/dev/null
