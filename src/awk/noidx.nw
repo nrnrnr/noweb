@@ -282,12 +282,15 @@ function listget(l, i, n, a) {
 udlist[0] = 0 ;
 @
 [[uniqueid]] eliminates both {\TeX} and HTML specials.
+Escaping the [[/]] in the character class in the regexp pattern works
+around a bug in many awks.
+Unpalatable, but what can one do?
 <<functions>>=      
 function uniqueid(name, key) {
   if (uidtable[name] == "") {
     key = make_key(name)
     # gsub(/[\]\[ \\{}`#%&~_^<>"-]/, "*", key)  # old
-    gsub(/[^a-zA-Z0-9!$()*+,./:;=?@|]/, "*", key)
+    gsub(/[^a-zA-Z0-9!$()*+,.\/:;=?@|]/, "*", key)
     keycounts[key] = keycounts[key] + 1
     uidtable[name] = key 
     if (keycounts[key] > 1)
