@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 4 -*-
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 \subsection{Error messages}
@@ -25,9 +26,26 @@ I track degrees of error as they occur.
 <<header>>=
 enum errorlevel { Normal=0, Warning, Error, Fatal, Impossible };
 extern enum errorlevel errorlevel;
+extern int finalstage; /* set nonzero if this main() is a final stage */
+extern char *progname; /* set to name of program if main() is a filter */
 @ %def errorlevel
 <<C functions>>=
 enum errorlevel errorlevel = Normal;
+int finalstage = 0;
+char *progname = NULL;
+@ 
+If an error occurred, one can exit with the proper notice on the
+filter:
+<<header>>=
+extern void nowebexit(char *optional_msg);
+@ 
+<<C functions>>=
+void nowebexit(char *msg) {
+  if (!finalstage && errorlevel > Normal)
+    printf("@fatal %s %s\n", progname != NULL ? progname : "a-noweb-filter",
+	   msg != NULL ? msg : "an unspecified error occurred");
+  exit(errorlevel);
+}
 @
 The rest is just varying flavors of error messages.
 <<header>>=
@@ -43,7 +61,7 @@ void errormsg(enum errorlevel level, char *s,...) {
     <<set [[errorlevel]] and print [[s]] with [[args]]>>
     va_end(args);
     if (level >= Fatal)
-        exit(level);
+        nowebexit(s);
 }
 @ %def errormsg
 <<header>>=
@@ -56,7 +74,7 @@ void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {
     <<set [[errorlevel]] and print [[s]] with [[args]]>>
     va_end(args);
     if (level >= Fatal)
-        exit(level);
+        nowebexit(s);
 }
 @ %def errorat
 <<set [[errorlevel]] and print [[s]] with [[args]]>>=
