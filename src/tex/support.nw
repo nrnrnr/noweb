@@ -1,20 +1,32 @@
 \documentstyle[noweb,twoside]{article}
-\pagestyle{noweb}\raggedbottom
-\noweboptions{longchunks,webnumbering}
+\pagestyle{noweb}
+\noweboptions{longchunks,smallcode}
 \title{{\TeX} support for {\tt noweb}}
 \author{Norman Ramsey}
+\newcommand{\stylehook}{\marginpar{\raggedright\sl Style hook}}
 \begin{document}
 \maketitle
 \tableofcontents
-@
+@ 
 This document describes the {\TeX} code that supports {\tt noweave}
 and {\tt noweb}.  Those interested in customizing their output should
-focus on Section~\ref{section:sty}.
+focus on Section~\ref{section:sty}.  
+Hooks you can easily use (apart from those provided by
+[[\noweboptions]]) are indicated by marginal notes.
+This file contains both plain {\TeX} and {\LaTeX} support:
+<<nwmac.tex>>=
+% nwmac.tex -- plain TeX support for noweb
+% DON'T read or edit this file!  Use ...noweb-source/tex/support.nw instead.
+<<noweb.sty>>=
+% noweb.sty -- LaTeX support for noweb
+% DON'T read or edit this file!  Use ...noweb-source/tex/support.nw instead.
+@
+
 \section{Basic {\TeX} support for {\tt noweb}}
 This basic code is used for both {\TeX} and {\LaTeX}.
 The first step is to define [[\codehsize]], which is the width in
 which code is set, and [[\codemargin]], which is the amount by which
-it is indented.
+it is indented.\stylehook
 <<kernel>>=
 % make \hsize in code sufficient for 88 columns
 \setbox0=\hbox{\tt m}
@@ -81,12 +93,21 @@ category codes in order to set a module (chunk) name.
 
 {\tt noweave} brackets uses of chunk names with [[\LA]] and [[\RA]], which
 handle the angle brackets, font, and environment.
+
+As it stands, chunk names can be broken across lines (or pages).  This
+could result in unnecessary page breaks in code
+(c.f.~p.~\pageref{sec:pagebreaking}).  [[\let\\maybehbox=\mbox]] to
+\stylehook
+avoid breaking them
+(or to make them work in math mode); this is done in code chunks, but could be done
+in general.
 <<kernel>>=
-\def\LA{\begingroup\setupmodname\It$\langle${}}
-\def\RA{\/$\rangle$\endgroup}
+\def\LA{\begingroup\maybehbox\bgroup\setupmodname\It$\langle$}
+\def\RA{\/$\rangle$\egroup\endgroup}
 \def\code{\leavevmode\begingroup\setupcode\newlines}
 \def\edoc{\endgroup}
-@ %def \LA \RA \code \edoc
+\let\maybehbox\relax
+@ %def \LA \RA \code \edoc \maybehbox
 
 [[\equivbox]] and [[\plusequivbox]] are used to set the
 ``\unhcopy\equivbox''
@@ -101,17 +122,60 @@ either [[\endmoddef]] or [[\plusendmoddef]].
 \setbox\plusequivbox=\hbox{$\mathord{+}\mathord{\equiv}$}
 % \moddef can't have an argument because there might be \code...\edoc
 \def\moddef{\leavevmode\kern-\codemargin\LA}
-\def\endmoddef{\RA\unhcopy\equivbox}
-\def\plusendmoddef{\RA\unhcopy\plusequivbox}
+\def\endmoddef{\RA\ifmmode\equiv\else\unhcopy\equivbox\fi}
+\def\plusendmoddef{\RA\ifmmode\mathord{+}\mathord{\equiv}\else\unhcopy\plusequivbox\fi}
 @ %def \equivbox \plusequivbox \moddef \endmoddef \plusendmoddef
+@
+Within a code environment, margin tags might be used to mark sub-page
+numbers in the margins, separated by [[\nwmarginglue]].\stylehook
+The interaction with [[\moddef]] involves tricky kerning.
+The tag itself is displayed using [[\nwthemargintag]]
+<<noweb.sty>>=
+\def\nwopt@nomargintag{\let\nwmargintag=\@gobble}
+\def\nwopt@margintag{%
+  \def\nwmargintag##1{\leavevmode\llap{##1\kern\nwmarginglue\kern\codemargin}}}
+\def\nwopt@margintag{%
+  \def\nwmargintag##1{\leavevmode\kern-\codemargin\nwthemargintag{##1}\kern\codemargin}}
+\def\nwthemargintag#1{\llap{#1\kern\nwmarginglue}}
+\nwopt@margintag
+\newdimen\nwmarginglue
+\nwmarginglue=0.3in
+@ %def \nwmargintag margintag nomargintag \nwmarginglue
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B margintag
+Put the sub-page number (tag) of each code-chunk definition in the
+left margin. (Default)
+.TP
+.B nomargintag
+Don't use margin tags.
+@ \fi
+[[\nwtagstyle]] determines the style in which tags are displayed.\stylehook
+<<noweb.sty>>=
+\def\nwtagstyle{\footnotesize\Rm}
+@
 <<kernel>>=
 \def\chunklist{%
 \errhelp{I changed \chunklist to \nowebchunks.  
 I'll try to avoid such incompatible changes in the future.}%
 \errmessage{Use \string\nowebchunks\space instead of \string\chunklist}}
 \def\nowebchunks{\message{<Warning: You need noweave -x to use \string\nowebchunks>}}
-\def\nowebindex{\message{<Warning: You need noweave -idx to use \string\nowebindex>}}
+\def\nowebindex{\message{<Warning: You need noweave -index to use \string\nowebindex>}}
 @ %def \chunklist \nowebchunks \nowebindex
+@ We have to be careful with font-changing in the presence of
+different font-selection schemes.  In the \LaTeX{} New Font Selection
+Scheme something like [[\it\tt]] will attempt to use an italic
+typewriter font.  Thus we define new commands like [[\Tt]] which will
+work with both the Plain and old and new \LaTeX{} schemes.  (Note that
+NFSS will be standard in the next version of \LaTeX.)  A problem with
+these definitions arises with NFSS: in math mode the won't work
+unless the {\tt oldlfont} backwards-compatibility option is in effect.
+For the moment, you can get round this by using [[\mbox]].
+
+If you wanted code set in a different font, you could re-define
+[[\Tt]].\stylehook{}  [\LaTeX2e actually behaves like OFSS, but the
+extra [[\reset@font]] does no harm.]
 <<kernel>>=
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
@@ -119,13 +183,14 @@ I'll try to avoid such incompatible changes in the future.}%
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % plain
 \else\ifx\selectfont\undefined
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
-  \let\reset@font=\relax
 \else                                       % LaTeX NFSS
   \def\Rm{\reset@font\rm}
   \def\It{\reset@font\it}
   \def\Tt{\reset@font\tt}
-\fi
-\fi
+  \def\Bf{\reset@font\bf}
+\fi\fi
+\ifx\reset@font\undefined \let\reset@font=\relax \fi
+@ %def \Rm \Tt \It \Bf
 @
 \clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}
@@ -142,10 +207,10 @@ I'll try to avoid such incompatible changes in the future.}%
     \@ifundefined{nwopt@\@nwoption}{%
         \@latexerr{There is no such noweb option as '\@nwoption'}\@eha}{%
         \csname nwopt@\@nwoption\endcsname}}}
-@
+@ %def \noweboptions
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
-code is indented by [[\codemargin]].
+code is indented by [[\codemargin]].\stylehook
 <<noweb.sty>>=
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
@@ -155,44 +220,78 @@ the wide code lines.
 It may be emitted by {\tt noweave -shift}, or it might be given by a user.
 <<noweb.sty>>=
 \def\nwopt@shift{%
-  \dimen0=-0.8in
+  \dimen@=-0.8in
   \if@twoside                 % Values for two-sided printing:
-     \advance\evensidemargin by \dimen0
+     \advance\evensidemargin by \dimen@
   \else                       % Values for one-sided printing:
-     \advance\evensidemargin by \dimen0
-     \advance\oddsidemargin by \dimen0
+     \advance\evensidemargin by \dimen@
+     \advance\oddsidemargin by \dimen@
   \fi
+%  \advance \marginparwidth -\dimen@
 }
-\def\nwopt@noshift{}
+\let\nwopt@noshift\@empty
 @ %def shift noshift
 
 \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
 .B shift
-Shift the output text to the left so that long code lines won't extend
-off the right-hand side of the page, as in
-.B noweave \-shift.
+Shift text to the left so that long code lines won't extend
+off the right-hand side of the page.
 @ \fi
 
+\subsection{Page-breaking strategy}\label{sec:pagebreaking}
+
+We want to insert penalties aiming for:
+\begin{enumerate}
+\item 
+No page breaks in the middle of a code chunk unless necessary to avoid
+an overfull vbox;
+\item 
+Documentation immediately preceding a code chunk should appear on
+the same page as that code chunk unless doing so would violate rule 1.
+\end{enumerate}
+[[\filbreak]] is useful for this sort of thing (see {\em The \TeX
+  book\/}) and is used to encourage breaks at the right places between
+chunks.  Appropriate penalties are inserted elsewhere, between code
+lines in particular.
+
 \subsection{Environments for setting code}
-[[\@begincode]] is probably cribbed from some early version of
-{\LaTeX}'s [[verbatim]] environment.
-[[\nowebsize]] governs the size at which code is set; users who want
-to minimize code can [[\let\nowebsize=\small]].
-If I ever understood why all the rest of that crap is here, I don't now.
+
+[[\nwbegincode]] and [[\nwendcode]] are used by {\tt noweave} to bracket
+code chunks.
+The [[webcode]] environment is intended for users who want to paste
+{\tt noweave} output into papers.
+
+The definition of [[\nwbegincode]] is based on the verbatim
+implementation in {\tt verbatim.sty}, which will, presumably be in the
+next version of \LaTeX\@.  One thing it does differently, apart from
+the catcode changes is setting [[\linewidth]]; this will avoid some
+overfull hboxen when the code lines are too long, but the lines won't
+be broken anyhow (even within chunk names because of the
+[[\maybehbox]] definition).
 <<noweb.sty>>=
-\def\@begincode{\parindent\z@\parfillskip\@flushglue\parskip\z@
-  \item[]\vskip\parskip
-  \def\baselinestretch{1.0}\small\nowebsize
-  \leftskip\@totalleftmargin\rightskip\z@
-  \advance\leftskip\codemargin
-  \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
-  \obeylines \Tt \catcode``=13 \@noligs \setupcode}
-\let\nowebsize=\normalsize
-@ %def \@begincode \nowebsize
+\def\nwbegincode#1{%
+  \begingroup
+  <<[[\nwbegincode]] separation and penalties>>
+  \@begincode }
+\def\nwendcode{\endtrivlist \endgroup \filbreak} % keeps code on 1 page
+
+\newenvironment{webcode}{%
+  \@begincode
+}{%
+  \endtrivlist}
+@ %def \nwbegincode \nwendcode webcode
+@ This is just common code between [[\nwbegincode]] and [[webcode]].
 <<noweb.sty>>=
-\def\nwopt@smallcode{\let\nowebsize=\relax}
+\def\@begincode{%
+  <<[[\trivlist]] clich\'e (\`a la {\Tt verbatim})>>
+  \linewidth\codehsize
+  <<[[\obeylines]] setup>>
+  <<zap ligatures, fix spaces>>
+  \nowebsize \setupcode
+  \let\maybehbox\mbox }
+@ %def \@begincode
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
@@ -203,87 +302,82 @@ Set code in
 font instead of 
 .B "\\\\normalsize."
 @ \fi
-
-
-[[\begincode]] and [[\endcode]] are used by {\tt noweave} to bracket
-code chunks.
-The [[webcode]] environment is intended for users who want to paste
-{\tt noweave} output into papers.
-
-[[\noindent]] puts {\LaTeX} into horizontal mode so that lines can follow without
-indentation if there is no following [[\par]].  The [[\hfil]] afterwards is
-some glue so that it there are lines following immediately, it will
-be possible to break there.  If I forced a break with [[\break]], that
-would be wrong because a following [[\par]] would leave us with an
-underfull (empty!) hbox.
+@ [[\nowebsize]] governs the size at which code is set; users who want
+to minimize code can [[\let\nowebsize=\small]].  [[\nwcodetopsep]] is
+the glue placed before code chunks.\stylehook
 <<noweb.sty>>=
-\def\begincode#1{\par\vskip3pt
-    \penalty500
-    \noindent\hbox to \hsize\bgroup
-    \@current@textwidth=\hsize
-    \begin{minipage}{\codehsize}%
-    \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces\parskip=\z@}
-\def\endcode{\end{trivlist}\vskip0.1pt\@endparenv\end{minipage}\hss\egroup\hfil}
-
-\newenvironment{webcode}{%
-      \par\vskip3pt\noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
-             \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}{%
-      \strut\end{trivlist}\vskip0.1pt\end{minipage}\hss\egroup\hfil}
-@ %def \begincode \endcode webcode 
-
-Within a code environment, margin tags might be used to mark sub-page
-numbers in the margins:
+  \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
+  \let\nowebsize=\normalsize
+  \def\nwopt@smallcode{\let\nowebsize=\small}
+@ %def  \nwcodetopsep \nowebsize smallcode
+@ Maybe the penalties ought to be parameters\dots
+<<[[\nwbegincode]] separation and penalties>>=
+  \topsep \nwcodetopsep
+  \@beginparpenalty \@highpenalty
+  \@endparpenalty -\@highpenalty
+@ 
+The [[\trivlist]] clich\'e isn't quite a clich\'e because we adjust
+[[\leftskip]] for indentation by [[\codemargin]] and adjust
+[[\rightskip]] to allow lines up to [[\codehsize]] long without
+overfull boxen
+($\mbox{[[\codehsize]]}=\mbox{[[\hsize]]}+\mbox{[[\rightskip]]}$).
+Note that [[\hsize]] isn't altered.
+<<[[\trivlist]] clich\'e (\`a la {\Tt verbatim})>>=
+  \trivlist \item[]%
+  \leftskip\@totalleftmargin \advance\leftskip\codemargin
+  \rightskip\hsize \advance\rightskip -\codehsize
+  \parskip\z@ \parindent\z@ \parfillskip\@flushglue
+@ The penalty inserted between verbatim lines would normally be
+[[\interlinepenalty]], but we want to prohibit breaks there.
+<<[[\obeylines]] setup>>=
+  \@@par
+  \def\par{\leavevmode\null \@@par \penalty\nwcodepenalty}%
+  \obeylines
+@ [[\nwcodepenalty]] is the penalty for breaking between lines in a
+code chunk.  If you set it to 10000, code will never be broken across
+pages.\stylehook{}  I guess this should be settable in [[\noweboptions]].
 <<noweb.sty>>=
-\def\nwopt@nomargintag{\let\nwmargintag=\@gobble}
-\def\nwopt@margintag{%
-  \def\nwmargintag##1{\leavevmode\llap{##1\kern0.3in\kern\codemargin}}}
-\nwopt@margintag
-@ %def \nwmargintag margintag nomargintag 
-\iffalse
-<<man page: [[\noweboptions]]>>=
-.TP
-.B margintag
-Put the sub-page number (tag) of each code-chunk definition in the
-left margin. (Default)
-.TP
-.B nomargintag
-Don't use margin tags.
-@ \fi
-[[\nwtagstyle]] determines the style in which tags are displayed.
-<<noweb.sty>>=
-\ifx\reset@font\undefined
-  \let\reset@font=\relax
-\fi
-\def\nwtagstyle{\reset@font\footnotesize\rm}
+\newcount\nwcodepenalty  \nwcodepenalty=\@highpenalty
+@ The [[\catcode`\-=12]] accounts for the addition of [[-]] to the
+list of characters reset by [[\@noligs]] in \LaTeX2e.
+<<zap ligatures, fix spaces>>=
+  \catcode`\`\active \@noligs \catcode`\-=12
+  \setupcode \frenchspacing \@vobeyspaces
+@ %def \nwcodepenalty
 @
-{\tt noweave} uses [[\begindocs{nnn}]] and [[\enddocs]] to bracket
+{\tt noweave} uses [[\nwbegindocs{nnn}]] and [[\nwenddocs]] to bracket
 documentation chunks.
 If a documentation chunk does not continue the current paragraph, 
-{\tt noweave} inserts [[\nwdocspar]], which in turn uses
-[[\@maybreak]] in an attempt to keep the documentation chunk on the
-same page as the code chunk that follows it.
+{\tt noweave} inserts [[\nwdocspar]], which uses
+[[\filbreak]] in an attempt to keep the documentation chunk on the
+same page as the code chunk that follows it.  (The code chunk will
+have another [[\filbreak]] after it---see [[\nwbegincode]].)
+[[\nwbegindocs]] doesn't start a
+new paragraph if the previous chunk didn't end one, i.e.\ didn't enter
+vmode; if it does start a new one, it's only indented by the use of
+[[\nwdocspar]].
 <<noweb.sty>>=
-\def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1 }
-\newcommand{\maybreak}{\@maybreak}
-\def\begindocs#1{\relax\ifvmode\@maybreak{1in}\fi}
-\def\enddocs{\relax}
-\def\nwdocspar{\par\ifx\@textbottom\relax\@maybreak{1in}\else\@maybreak{5pt}\fi}
-\def\nwdocspar{\par\@maybreak{2in}}
-\def\raggedbottom{\def\@textbottom{\vskip \z@ plus2in }\let\@texttop\relax}
-@ %def \@maybreak \maybreak \begindocs \nwdocspar \enddocs
+\def\nwbegindocs#1{\ifvmode\noindent\fi}
+\let\nwenddocs=\relax
+\let\nwdocspar=\filbreak
+@ %def \nwbegindocs \nwdocspar \nwenddocs
+The page-breaking strategy implies ragged bottom pages, so we should
+turn it on in general (this is relevant for the {\tt report} style):
+<<noweb.sty>>=
+\raggedbottom
 <<nwmac.tex>>=
 \def\nwdocspar{\par\semifilbreak}
 @
 
 {\tt noweave} brackets quoted code with [[\code]] and [[\edoc]], which handle
-font and environment for code.
+the font and environment for code.
 Because quoted code often appears in arguments, {\tt noweave} now
 (with version 2.5)
 escapes all {\TeX} specials within it, so the category-code changes
 aren't strictly necessary.
 <<noweb.sty>>=
 \def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
-\def\edoc{\endgroup} 
+\let\edoc=\endgroup
 @ %def \code \edoc
 @
 \subsection{The {\tt noweb} page style}
@@ -307,15 +401,15 @@ otherwise they are ignored.
            \Rm \today\hfil{\Tt\leftmark}\qquad\thepage}}% Right heading.
     \let\@evenhead\@oddhead
   \fi
-  \def\chaptermark##1{}%
-  \def\sectionmark##1{}%
-  \def\subsectionmark##1{}%
-  \def\subsubsectionmark##1{}%
-  \def\paragraphmark##1{}%
-  \def\subparagraphmark##1{}%
+  \let\chaptermark\@gobble
+  \let\sectionmark\@gobble
+  \let\subsectionmark\@gobble
+  \let\subsubsectionmark\@gobble
+  \let\paragraphmark\@gobble
+  \let\subparagraphmark\@gobble
   \def\filename##1{\markboth{##1}{##1}\let\filename=\@laterfilename}%
 }
-\def\@laterfilename#1{\vfil\eject\markboth{#1}{#1}}
+\def\@laterfilename#1{\clearpage \markboth{#1}{#1}}
 \let\filename=\@gobble
 @ %def \@original@textwidth \ps@noweb \filename
 @
@@ -327,21 +421,39 @@ If unused chunks are output chunks, a filter can slip in
 The style uses [[\nwcodecomment]] for all annotations that follow code
 chunks.
 Fiddling with it can change the appearance of the output.
+Note that [[\nwcodecomment]] is used after [[\nwbegincode]], with
+[[\obeylines]] in efect.  Since linebreaking can occur here, we need
+to change the [[\interlinepenalty]].
+A little vertical space ([[\nwcodecommentsep]]\stylehook) appears before the first
+comment.
+
+We firkled with [[\rightskip]] in [[\nwbegincode]] above; now we want to
+reset it so that paragraphs are the normal width ([[\textwidth]],
+possibly less [[\codemargin]]) and set ragged right.  This is done as
+usuall by making [[\rightskip]] naturally zero but stretchable.
 <<noweb.sty>>=
-\newdimen\@current@textwidth
-\def\nwcodecomment#1{\@@par
+\def\nwcodecomment#1{\@@par\penalty\nwcodepenalty
+    <<add [[\nwcodecommentsep]] if this is the first [[\nwcodecomment]]>>%
     \hspace{-\codemargin}{%
-        \hsize=\@current@textwidth\textwidth=\@current@textwidth
-        \advance\rightskip by 0pt plus1in
-        \let\\\relax\footnotesize\Rm #1\hfil\@@par}}
+        \rightskip=0pt plus1in
+        \interlinepenalty\nwcodepenalty
+        \let\\\relax\footnotesize\Rm #1\@@par\penalty\nwcodepenalty}}
+@ %def \nwcodecomment 
+<<noweb.sty>>=
 \def\nwalsodefined#1{\nwcodecomment{This definition is continued \nwpageprep\ \@pagesl{#1}.}}
 \def\nwused#1{\nwcodecomment{This code is used \nwpageprep\ \@pagesl{#1}.}}
 \def\nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
 \def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt \@stripstar#1*\stripped}.}}
 \def\@stripstar#1*#2\stripped{#1}
-@ %def \@current@textwidth \nwcodecomment \nwalsodefined \nwused \nwnotused
-@ %def \nwoutput
-
+@ %def \nwalsodefined \nwused \nwnotused \nwoutput
+<<add [[\nwcodecommentsep]] if this is the first [[\nwcodecomment]]>>=
+\if@firstnwcodecomment
+  \vskip\nwcodecommentsep\penalty\nwcodepenalty\@firstnwcodecommentfalse
+\fi
+<<noweb.sty>>=
+\newskip\nwcodecommentsep \nwcodecommentsep=3pt plus 1pt minus 1pt
+\newif\if@firstnwcodecomment\@firstnwcodecommenttrue
+@
 \subsection{Page ranges}
 The goal is to combine sub-page numbers in a way that makes sense.
 Multiple sub-pages of one page become that page, and individual
@@ -349,15 +461,15 @@ pages are combined into ranges.
 (A range may be only one page.)
 <<noweb.sty>>=
 \newcount\@nwlopage\newcount\@nwhipage  % range lo..hi-1
-\newcount\@nwlosub		% subpage of lo
-\newcount\@nwhisub		% subpage of hi
+\newcount\@nwlosub              % subpage of lo
+\newcount\@nwhisub              % subpage of hi
 \def\@nwfirstpage#1#2{% subpage page
   \@nwlopage=#2 \@nwlosub=#1
-  \advance\@nwpagecount by 1
-  <<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>}
+  \advance\@nwpagecount by \@ne
+  <<$\mbox{[[\@nwhipage]]} := \mbox{[[\@nwlopage]]}+1$>>}
 \def\@nwnextpage#1#2{% subpage page
   \ifnum\@nwhipage=#2 
-    \advance\@nwhipage by 1 \advance\@nwpagecount by 1 \@nwhisub=#1 \else
+    \advance\@nwhipage by \@ne \advance\@nwpagecount by \@ne \@nwhisub=#1 \else
   \ifnum#2<\@nwlopage <<new range starting with [[#2]]>>\else
   \ifnum#2>\@nwhipage <<new range starting with [[#2]]>>\else
     \@nwlosub=0 \@nwhisub=0
@@ -365,33 +477,33 @@ pages are combined into ranges.
   }
 <<new range starting with [[#2]]>>=
 <<add range to range list>>\@nwfirstpage{#1}{#2}
-<<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>=
-\@nwhipage=\@nwlopage\advance\@nwhipage by 1 
+<<$\mbox{[[\@nwhipage]]} := \mbox{[[\@nwlopage]]}+1$>>=
+\@nwhipage=\@nwlopage\advance\@nwhipage by \@ne 
 <<add range to range list>>=
 <<set [[\@tempa]] to page range(s), marked with [[\\]]>>%
 \edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages{\@tempa}}\@tempa
 <<set [[\@tempa]] to page range(s), marked with [[\\]]>>=
-\advance\@nwhipage by -1
+\advance\@nwhipage by \m@ne
 \ifnum\@nwhipage=\@nwlopage
      \edef\@tempa{\noexpand\noexpand\noexpand\\%
-                       {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}}%
+                       {\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}}%
 \else
-  \count255=\@nwhipage \advance\count255 by -1
-  \ifnum\count255=\@nwlopage % consecutive pages
+  \count@=\@nwhipage \advance\count@ by \m@ne
+  \ifnum\count@=\@nwlopage % consecutive pages
       \edef\@tempa{\noexpand\noexpand\noexpand\\%
-                       {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}%
+                       {\nwthepagenum{\number\@nwlosub}{\number\@nwlopage}}%
                     \noexpand\noexpand\noexpand\\%
-                       {\@subpagenum{\number\@nwhisub}{\number\@nwhipage}}}%
+                       {\nwthepagenum{\number\@nwhisub}{\number\@nwhipage}}}%
   \else <<use rules from Chicago style manual>>%
   \fi
 \fi
 <<use rules from Chicago style manual>>=
 \ifnum\@nwlopage<110 <<normal range>>\else
-  \count255=\@nwlopage \divide\count255 by 100 \multiply\count255 by 100
-  \ifnum\count255=\@nwlopage <<normal range>>\else
-    \count255=\@nwlopage \divide\count255 by 100
+  \count@=\@nwlopage \divide\count@ by 100 \multiply\count@ by 100
+  \ifnum\count@=\@nwlopage <<normal range>>\else
+    \count@=\@nwlopage \divide\count@ by 100
     \@nwpagetemp=\@nwhipage \divide\@nwpagetemp by 100
-    \ifnum\count255=\@nwpagetemp %  lo--least 2 digits of hi
+    \ifnum\count@=\@nwpagetemp %  lo--least 2 digits of hi
       \multiply\@nwpagetemp by 100
       \advance \@nwhipage by -\@nwpagetemp
       <<normal range>>%
@@ -425,8 +537,12 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
             \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
   <<add range to range list>>\let\\=\relax
   \nwpageword\ifnum\@nwpagecount=1 \else s\fi~\commafy{\nw@pages}}
-\def\nwpageword{page}
-\def\nwpageprep{on}
+@
+[[\nwpageword]] and [[\nwpageprep]] let you change the wording of the cross-reference 
+information.
+<<noweb.sty>>=
+\def\nwpageword{chunk}	% was page
+\def\nwpageprep{in}	% was on
 <<warn of undefined reference to [[#1]] and add page ??>>=
 <<warn of undefined reference to [[#1]]>>%
 \nwix@cons\nw@pages{\\{\bf ??}}
@@ -462,7 +578,8 @@ they all must depend on hacks in the [[.aux]] file or a similar one.
 Joachim Schrod's [[fnpag.sty]] does the same sort of thing differently
 to this \LaTeX-specific approach.  See [[latex.tex]] for enlightenment
 on the cross-referencing mechanism and the \LaTeX{} internals used
-below.
+below.  [DL: The internals change in \LaTeX2e compared with
+\LaTeX~2.09.  The code here still works, though.]
 
 @
 The [[\subpageref]] macro first does a normal [[\pageref]].  If the
@@ -476,8 +593,7 @@ defining the [[2on]] bit appropriately.
     {\pageref{#1}}%
     {\@ifundefined{2on\@pageref{#1}}%
       {\pageref{#1}}%
-      {\expandafter\expandafter\expandafter\@subpagenum\csname r@#1\endcsname}}}
-\def\@subpagenum#1#2{#2\ifnum#1=0 \else\@alph{#1}\fi}
+      {\expandafter\expandafter\expandafter\nwthepagenum\csname r@#1\endcsname}}}
 @ %def \subpageref
 [[\subpagepair]] produces a [[{subpage}{page}]] pair.
 <<noweb.sty>>=
@@ -581,7 +697,35 @@ We use Rainer's new expandable definitions of [[\ref]] and
 @ %def \ref \pageref
 @
 
+Here a a couple of hooks for formatting sub-page numbers,
+which can be alphbetic, numeric, or omitted.\stylehook
+<<noweb.sty>>=
+\def\@alphasubpagenum#1#2{#2\ifnum#1=0 \else\@alph{#1}\fi}
+\def\@nosubpagenum#1#2{#2}
+\def\@numsubpagenum#1#2{#2\ifnum#1=0 \else.\@arabic{#1}\fi}
+\def\nwopt@nosubpage{\let\nwthepagenum=\@nosubpagenum\nwopt@nomargintag}
+\def\nwopt@numsubpage{\let\nwthepagenum=\@numsubpagenum}
+\def\nwopt@alphasubpage{\let\nwthepagenum=\@alphasubpagenum}
+\nwopt@alphasubpage
+@ %def \nwthepagenum nosubpage numsubpage alphasubpage
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B alphasubpage, numsubpage, nosubpage
+Number chunks by the number of the page on which they appear,
+followed by an alphabetic (numeric, not used) ``sub-page'' indicator.
+Defaults to 
+.B alphasubpage.
+.B nosubpage
+implies
+.B nomargintag.
+@ \fi
+@
+
 \subsection{{\tt WEB}-like chunk numbering}
+Here's a righteous hack: we get the effect of WEB-like chunk numbers
+just by redefining [[\sublabel]] to use a counter instead of the current page number.
+Since the numbers are all distinct, no sub-page number is ever used.
 <<noweb.sty>>=
 \newcount\nw@chunkcount
 \nw@chunkcount=\@ne
@@ -634,9 +778,18 @@ documentation chunk.
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
 @ %def \nwixadd
 [[\nwbs]] is used in the printable form of identifiers to represent a backslash.
+[[\nwbraces]] is used to give escaped braces the appropriate treatment.
 <<kernel>>=
 \chardef\nwbs=`\\
-@
+\def\donwbraces{\chardef\{='173 \chardef\}='175 }
+% don't use `\{ literals since those are latex `fragile'
+@ %def \donwbraces \nwbs
+<<nwmac.tex (after kernel)>>=
+\let\nwbraces=\donwbraces
+@ %def \nwbraces
+<<noweb.sty>>=
+\def\nwbraces{\protect\donwbraces}
+@ %def \nwbraces
 \subsubsection{Writing lists with commas and ``and''}
 You get one of
 \begin{itemize}
@@ -653,7 +806,7 @@ Plus [[\\]] is applied to each element of the list.
    \ifcase\@commacount\let\\=\@comma@each\or\let\\=\@comma@each\or
      \def\\{\def\\{ and \@comma@each}\@comma@each}\else
      \def\\{\def\\{, %
-                   \advance\@commacount by -1
+                   \advance\@commacount by \m@ne
                    \ifnum\@commacount=1 and~\fi\@comma@each}\@comma@each}\fi
    #1}}
 @ %def \@commacount \commafy
@@ -686,9 +839,9 @@ display information.
 <<noweb.sty>>=
 \newcount\nwix@counter
 \def\nwix@listcount#1{% {list with \\}
-  {\count255=0
-   \def\\##1{\advance\count255 by 1 }%
-   #1\global\nwix@counter=\count255 }}
+  {\count@=0
+   \def\\##1{\advance\count@ by \@ne }%
+   #1\global\nwix@counter=\count@ }}
 \def\nwix@usecount#1{\nwix@listcount{\nwix@uses{#1}}}
 \def\nwix@defcount#1{\nwix@listcount{\nwix@defs{#1}}}
 @ %def \nwix@listcount \nwix@usecount \nwix@defcount
@@ -707,9 +860,9 @@ The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
 <<noweb.sty>>=
 \def\nwix@totaluses#1{% list of index pairs
-  {\count255=0
-   \def\\##1{\nwix@usecount{\@cdr##1\@nil}\advance\count255 by\nwix@counter}%
-   #1\global\nwix@counter\count255 }}
+  {\count@=0
+   \def\\##1{\nwix@usecount{\@cdr##1\@nil}\advance\count@ by\nwix@counter}%
+   #1\global\nwix@counter\count@ }}
 \def\nwix@id@uses#1#2{% {ident}{label}
   \nwix@usecount{#2}\ifnum\nwix@counter>0
     {\advance\leftskip by \codemargin
@@ -733,9 +886,8 @@ if none of the identifiers defined is ever used.
 <<man page: [[\noweboptions]]>>=
 .TP
 .B hideunuseddefs
-Omit identifiers that are defined but never used from
-the identifier cross-reference after each code chunk.
-(As suggested by Preston Briggs.)
+Omit defined but unused identifiers from
+the local identifier cross-reference (Preston Briggs).
 @ \fi
 <<noweb.sty>>=
 \def\nwopt@noidentxref{%
@@ -746,7 +898,7 @@ the identifier cross-reference after each code chunk.
 <<man page: [[\noweboptions]]>>=
 .TP
 .B noidentxref
-Omit the identifier cross-reference after each code chunk.
+Omit the local identifier cross-reference which follows each code chunk.
 @ \fi
 
 \subsubsection{Support for chunk and identifier indices}
@@ -760,7 +912,7 @@ The index in the back shows absolutely all the pages.
 \def\nw@indexline#1#2{%
    {\indent {\Tt #1}: \nw@underlinedefs\@nameuse{nwixl@#2}\par}}
 
-\newenvironment{thenowebindex}{\parindent=-10pt \parskip=0pt 
+\newenvironment{thenowebindex}{\parindent=-10pt \parskip=\z@ 
         \advance\leftskip by 10pt 
         \advance\rightskip by 0pt plus1in\par\@afterindenttrue
     \def\\##1{\nw@indexline##1}}{}
@@ -771,7 +923,16 @@ The information comes from the list [[nwisx@i]].
   \@ifundefined{nwixs@i}%
      {\@warning{The \string\nowebindex\space is empty}}%
      {\begin{thenowebindex}\@nameuse{nwixs@i}\end{thenowebindex}}}
-@ That list is created by calls to [[\nwixlogsorted{i}]].
+@
+Here's a more efficient version for the external case:
+<<noweb.sty>>=
+\def\nowebindex@external{%
+  {\let\nwixadds@c=\@gobble
+   \def\nwixadds@i##1{\nw@indexline##1}%
+   \def\nwixaddsx##1##2{\@nameuse{nwixadds@##1}{##2}}%
+   \begin{thenowebindex}\@input{\jobname.nwi}\end{thenowebindex}}}
+@ 
+That list ([[nwisx@i]]) is created by calls to [[\nwixlogsorted{i}]].
 <<noweb.sty>>=
 \def\nwixlogsorted#1#2{% list data
    \@bsphack\if@filesw 
@@ -784,28 +945,54 @@ The information comes from the list [[nwisx@i]].
   \@ifundefined{nwixs@#1}%
     {\global\@namedef{nwixs@#1}{\\{#2}}}%
     {\expandafter\nwix@cons\csname nwixs@#1\endcsname{\\{#2}}}}
+\let\nwixaddsx=\@gobbletwo
+@
+If an external index is used, we need a [[.nwi]] file,
+[[\nwixadds]] is to be ignored, and we use [[\nwixaddsx]].
+<<noweb.sty>>=
+\def\nwopt@externalindex{%
+  \ifx\nwixadds\@gobbletwo % already called
+  \else
+    \let\nwixaddsx=\nwixadds \let\nwixadds=\@gobbletwo
+    \let\nowebindex=\nowebindex@external
+    \let\nowebchunks=\nowebchunks@external
+  \fi}
+@ 
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B externalindex
+Use an index generated with 
+.I noindex(1)
+(q.v.).
+@ \fi
 @
 <<noweb.sty>>=
 \def\nowebchunks{%
   \@ifundefined{nwixs@c}%
      {\@warning{The are no \string\nowebchunks}}%
-     {\thenowebchunks{\@nameuse{nwixs@c}}}}
-\@namedef{r@nw@notdef}{{0}{(never defined)}}
-
+     {\begin{thenowebchunks}\@nameuse{nwixs@c}\end{thenowebchunks}}}
+\def\nowebchunks@external{%
+  {\let\nwixadds@i=\@gobble
+   \def\nwixadds@c##1{\nw@onechunk##1}%
+   \def\nwixaddsx##1##2{\@nameuse{nwixadds@##1}{##2}}%
+   \begin{thenowebchunks}\@input{\jobname.nwi}\end{thenowebchunks}}}
+    \@namedef{r@nw@notdef}{{0}{(never defined)}}
+<<noweb.sty>>=
 \def\nw@chunkunderlinedefs{% {list of labels with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
   \def\nwixd##1{\\\underline{\subpageref{##1}}\let\\\nw@comma}%
   \def\nwixu##1{\\\subpageref{##1}\let\\\nw@comma}}
-
+<<noweb.sty>>=
 \def\nw@onechunk#1#2#3{% {name}{label of first definition}{list with \nwixd, \nwixu}
   \@ifundefined{r@#2}{}{%
     \indent\LA #1~{\nwtagstyle\subpageref{#2}}\RA 
     \if@nwlongchunks{~\nw@chunkunderlinedefs#3}\fi\par}}
-
-\def\thenowebchunks#1{\vskip3pt{%
-  \parskip=0pt\parindent=-10pt \advance\leftskip by 10pt
+<<noweb.sty>>=
+\newenvironment{thenowebchunks}{\vskip3pt
+  \parskip=\z@\parindent=-10pt \advance\leftskip by 10pt
   \advance\rightskip by 0pt plus10pt \@afterindenttrue
-  \def\\##1{\nw@onechunk##1}#1}}
+  \def\\##1{\nw@onechunk##1}}{}
 <<noweb.sty>>=
 \newif\if@nwlongchunks
 \@nwlongchunksfalse
@@ -822,8 +1009,11 @@ show page numbers of definitions and uses of each chunk.
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
+
+First we make [[@]] a letter so that we can use `private' macro names.
 <<nwmac.tex>>=
-%\magnification=\magstephalf
+\catcode`\@=11
+<<nwmac.tex>>=
 % scale cmbx10 instead of using cmbx12 because {\LaTeX} does, so fonts exist
 \font\twlbf=cmbx10 scaled \magstep1
 \font\frtbf=cmbx10 scaled \magstep2
@@ -896,8 +1086,8 @@ show page numbers of definitions and uses of each chunk.
 @ %def \startsection
 <<nwmac.tex>>=
 \def\settocparms#1{
-        \count255=#1
-        \ifnum\count255<1
+        \count@=#1
+        \ifnum\count@<1
             \def\tocskip{\vskip3ptplus1in\penalty-100
                         \vskip0ptplus-1in}%
             \def\tocstyle{\bf}
@@ -905,8 +1095,8 @@ show page numbers of definitions and uses of each chunk.
         \else
             \def\tocskip{}
             \def\tocstyle{\rm}
-            \dimen0=2em \advance\count255 by -1 \dimen0=\count255\dimen0
-            \edef\tocindent{\the\dimen0}
+            \dimen@=2em \advance\count@ by \m@ne \dimen@=\count@\dimen@
+            \edef\tocindent{\the\dimen@}
         \fi
 }
 @ %def \settocparms
@@ -923,22 +1113,23 @@ show page numbers of definitions and uses of each chunk.
 \def\paragraph#1{\startsection{4}{0pt}{1.5ex}{0ex}{\it}{#1}}
 
 <<kernel>>
+<<nwmac.tex (after kernel)>>
 
 \def\filename#1{\vfil\eject\mark{#1}}
 
-\def\begindocs#1{\filbreak}
-\def\enddocs{\par}
-\def\begincode#1{\par\nobreak
+\def\nwbegindocs#1{\filbreak}
+\def\nwenddocs{\par}
+\def\nwbegincode#1{\par\nobreak
   \begingroup\setupcode\newlines\parindent=0pt\parskip=0pt
   \let\oendmoddef=\endmoddef \let\oplusendmoddef=\plusendmoddef
   \def\endmoddef{\oendmoddef\par}\def\plusendmoddef{\oplusendmoddef\par}%
   \hsize=\codehsize\noindent\bchack}
-\def\endcode{\endgroup}
+\def\nwendcode{\endgroup}
 {\catcode`\^^M=\active % make CR an active character
   \gdef\bchack#1^^M{\relax#1}%
 }
 @ %def \section \chapter \section \subsection \subsubsection \paragraph
-@ %def \begindocs \enddocs \begincode \endcode \filename
+@ %def \nwbegindocs \nwenddocs \nwbegincode \nwendcode \filename
 <<nwmac.tex>>=
 \edef\contentsfile{\jobname.toc } % file that gets table of contents info
 \def\readcontents{\expandafter\input \contentsfile}
@@ -985,10 +1176,13 @@ show page numbers of definitions and uses of each chunk.
 
 \let\begindocument=\relax
 @ %def \listlevel \itemwidth \itemize \enditemize
+Finally we make [[@]] `other' again.
+<<nwmac.tex>>=
+\catcode`\@=12
 @
 \section{Chunks} \nowebchunks
 \twocolumn[\section{Index}]
-\nowebindex
+\nowebindex*
 @
 \end{document}
 
