@@ -19,7 +19,7 @@ void main(int argc, char **argv) {
     int i;
     char *rootname = "*";       /* name of the root module */
     char *locformat = "";
-    char *Clocformat = "#line %L \"%F\"\n";
+    char *Clocformat = "#line %L \"%F\"%N";
 
     for (i=1; i<argc; i++) {
         <<process argument [[i]]>>
