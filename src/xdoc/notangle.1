@@ -6,7 +6,7 @@ notangle, noweave, nountangle, noroots \- noweb, a literate programming tool
 [\fB-R\fProotname] 
 [\fB-L\fP[format]] [file] ...
 .br
-\fBnoweave\fP [\fB-l\fP] [file] ...
+\fBnoweave\fP [\fB-l\fP|\fB-n\fP] [file] ...
 .br
 \fBnountangle\fP [\fB-ml\fP|\fB-m3\fP|\fB-c\fP|\fB-awk\fP] [\fB-R\fProotname] 
 [\fB-w\fPwidth] [file] ...
@@ -44,6 +44,7 @@ turning interleaved documentation into comments.
 finds the roots of a
 .I noweb
 file: it prints the names of all code chunks that are defined but not used.
+A `-' in place of a file name refers to standard input.
 .SH FORMAT OF NOWEB FILES
 A 
 .I noweb 
@@ -143,7 +144,8 @@ The
 .B -l
 option makes
 .I noweave
-emit header and trailer for a \fILaTeX\fP document.
+emit header and trailer for a \fILaTeX\fP document instead of for a \fITeX\fP document.
+The \fB-n\fP option suppresses the emission of header and trailer.
 .SH ERROR MESSAGES
 If
 .I notangle
