@@ -2,8 +2,8 @@
 CC=lcc -A
 CFLAGS=-g
 
-# BIN is where the commands (notangle, noweave, luddite) will land
-# LIB is where the pieces of the pipes (nt, markup) will be stored
+# BIN is where the commands (notangle, noweave, nountangle, noroots) land
+# LIB is where the pieces of the pipes (nt, markup, unmarkup) are stored
 # MAN is the root of your local man pages directory
 # MANEXT is the extension for your commands' man pages (usually 1 or l)
 # TEXINPUTS is the directory for TeX macro files

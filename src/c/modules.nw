@@ -249,6 +249,9 @@ for (p=fmt;*p;p++) {
 }
 <<RCS log>>=
 $Log:	modules.nw,v $
+# Revision 1.3  91/10/09  14:22:59  nr
+# added %N format specifier
+# 
 # Revision 1.2  91/10/09  14:10:57  nr
 # added a third kind of module: now have strings, modules, and newlines
 # added newline support in creating and expanding modules

@@ -1,9 +1,18 @@
+This is version 2.0 of `noweb', a low-tech literate programming tool.
+In this version I changed the low-level representation of noweb files
+to make it easier to implement tools.  This version is upward
+compatible with previous versions of noweb, but with the following
+changes:
+  noweave is much more reliable
+  two new tools, nountangle and noroots, have been added
+  some tools support new command-line options
+
 `noweb' is built from pieces, which are then assembled in pipelines
 using shell scripts.  Three important pieces are:
 
-   markup	convert noweb file from human syntax to program syntax
-   unmarkup	inverse of markup, or nearly so
-   nt		`tangle' the program form of the noweb file
+  markup	convert noweb file from human syntax to tool syntax
+  unmarkup	inverse of markup
+  nt		`tangle' the tool form of the noweb file
 
 These pieces are pipelined with various awk and sed scripts by the
 following Bourne shell scripts
@@ -13,8 +22,8 @@ following Bourne shell scripts
   nountangle.sh	script for nountangle
   noroots.sh	script for noroots
 
-noweb is written in ANSI C, so an ANSI C compiler is required.  
-To build noweb:
+nt and markup are written in ANSI C, so an ANSI C compiler is
+required.  To build noweb:
 
   1) Right after unbundling the distribution: `make boot'.  This sets
      the timestamps right so noweb can be booted from the distributed
@@ -25,11 +34,13 @@ To build noweb:
   3) Bourne shell implementations differ, with the unfortunate result
      that there is no standard way to print one backslash on standard
      output.  The latest strategy I have tried is to use
-     `echo -n \\' by itself for backslashes.
+     `echo -n \\' by itself for backslashes; this fails on SYSV
+     echo which doesn't recognize -n.  You may have to alter
+     noweave.sh to get correct TeX goo.
 
   4) Choose locations for the noweb files, and set the appropriate
      variables in the Makefile:
-       BIN	  on $PATH, will hold notangle, noweave, luddite
+       BIN	  on $PATH, will hold notangle, noweave, noroots, ...
        LIB	  a place to store markup, unmarkup and nt
        MAN	  notangle man page will go in $MAN/man1
        TEXINPUTS  a place TeX will look for nwmac.tex and nwkernel.tex
@@ -38,12 +49,12 @@ To build noweb:
 
 Notes: 
 
-  Using noweb with latex has not been thoroughly debugged.  noweave -l
-  is set up to make a single latex document, not a chapter.
+  Using noweb with latex has not been thoroughly exercised.
+  noweave -l is set up to make a single latex document, not a chapter.
 
   If you want to tinker with the appearance of the output, nwmac.tex
   can be changed at will, but nwkernel.tex should not be changed
-  unless you know what you're doing.
+  unless you know what you're doing (and you change noweave.sh).
 
   tose.* contains a paper that has been submitted to the IEEE
   Transactions on Software Engineering.  You must `make install'
@@ -52,14 +63,14 @@ Notes:
 
   representation.tex documents the representation of noweb files that
   is used by the noweb tools, in case you want to write any tools of
-  your own.  Simple one-off tools (e.g. count the number of lines of
+  your own.  Simple tools (e.g. count the number of lines of
   interleaved documentation) are trivial.  If you write any tools, or
   you want tools written (e.g. prettyprinters, index generators), let
   me know.
 
-Comments or questions to nr@princeton.edu.  I enjoy hearing from noweb
-users; if you have enjoyed noweb, why not send me a local postcard for
-my collection?  My address is:
+Send comments or questions to nr@princeton.edu.  I enjoy hearing from
+noweb users; if you have enjoyed noweb, why not send me a local
+postcard for my collection?  My address is:
 
   Norman Ramsey
   Department of Computer Science
