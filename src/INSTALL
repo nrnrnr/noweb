@@ -5,24 +5,38 @@ To build noweb:
      output.  The latest strategy I have tried is to use
      `echo -n \\' by itself for backslashes; this fails on SYSV
      echo which doesn't recognize -n.  You may have to alter
-     bin/noweave to get correct TeX goo.
+     shell/noweave to get correct TeX goo.  shell/noweave.hpux
+     contains a sample that works on HP-UX.  shell/noweave.sgi
+     contains a sample that works on SGI Irix.
 
   2) Choose locations for the noweb files, and set the appropriate
      variables in the Makefile:
+       CC         the name of an ANSI C compiler
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
-       LIB        a place to store markup, unmarkup and nt
+       LIB        a directory to store markup, unmarkup and nt
        MAN        notangle man page will go in $MAN/man1
-       TEXINPUTS  a place TeX will look for nwmac.tex and nwkernel.tex
-     Make sure you have write permission to these places.
-     Set CC in the Makefile to point to an ANSI C compiler.
+       TEXINPUTS  a directory TeX will look for nwmac.tex and nwkernel.tex
+     Make sure you have write permission to these directories.
+     The Makefile will barf if you make TEXINPUTS equal to the tex
+     directory of this distribution; you can fix it by commenting out
+     the `cp .. $(TEXINPUTS)' line.
 
   3) If you have Icon and want to use its superior cross-referencer,
-     try 'icont -o lib/noxref icon/noxref.icn'.  \chunklist
-     on a line by itself expands to a list of chunks (`module index').
+     try `icont -o lib/noxref icon/noxref.icn'.  Using this
+     cross-referencer enables the \chunklist feature described in the
+     man page (\chunklist produces a sorted list of chunks, i.e., a
+     `module index').
 
   4) Fasten your seat belt and type `make'.  If you want a nonstandard
      noweave, you can use the WEAVE variable in the Makefile; for example,
-     I use `make WEAVE=noweave.nr'.
+     I use `make WEAVE=noweave.nr'.  For HP-UX you might want to try 
+     `make WEAVE=noweave.hpux'.
+
+  5) You can clean up by typing `make clean'.  If you wish, you can
+     remove the C sources from the src directory by typing `cd src;
+     make veryclean', but then you will be unable to build noweb
+     unless you already have noweb.  If you're short on disk space,
+     the examples directory is the biggest pig.
 
 Instead of editing the Makefile, you can create a shell script that
 invokes make with the proper variables.  `nwmake' is an example of
