@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]; then set install; fi  # "$@" breaks make for empty args
+icont -o lib/noxref icon/noxref.icn
+/bin/make CC="lcc -A" BIN=/usr/local/bin LIB=/usr/local/lib/noweb MAN=/cmnusr/local/man TEXINPUTS=/cmnusr/local/lib/tex/inputs WEAVE=noweave.nr "$@"

@@ -1,22 +1,45 @@
-\def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
-\let\filbreak=\semifilbreak
-\raggedbottom
-\def\begindocument{\begin{document}}
-
 \input nwkernel
 
-\def\begincode#1{\begin{trivlist}\item[]\setupcode\parindent=1.5em\indent\bchack}
-\def\endcode{\end{trivlist}}
-\def\begindocs#1{\relax}
-\let\enddocs=\relax
-\def\webcode{\begin{trivlist}\item[]\setupcode\parindent=1.5em\bchack}
-\let\endwebcode=\endcode
+\codemargin=10pt
+\advance\codehsize by \codemargin	% make room for indentation of code
 
-\let\chunklist=\relax
+\def\@begincode{\par\linewidth\codehsize\hsize\codehsize\textwidth\codehsize
+  \parindent\z@\parfillskip\@flushglue\parskip\z@
+  \item[]\if@minipage\else\vskip\parskip\fi
+  \def\baselinestretch{1.0}\small\normalsize
+  \leftskip\@totalleftmargin\rightskip\z@
+  \advance\leftskip\codemargin
+  \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
+  \obeylines \tt \catcode``=13 \@noligs \setupcode}
+
+\def\begincode#1{\begin{trivlist}\@begincode \frenchspacing\@vobeyspaces\parskip=\z@}
+\def\endcode{\@endparenv\end{trivlist}}
+\def\webcode{\begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}
+\def\endwebcode{\end{trivlist}}
+
+\def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
+\def\edoc{\endgroup}
+
+\def\begindocs#1{\relax}
+\def\enddocs{\relax}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% fix bug in {\LaTeX} headers 
+
+% dreadful hack to fix bug in {\LaTeX} output routine (page number too
+% far to right
+
+% no patch for footers is possible
+
+\let\@original@specialbopemit=\@specialbopemit
+\def\@specialbopemit{\textwidth=\@original@textwidth\@original@specialbopemit}
+\newdimen\@original@textwidth
+\@original@textwidth=\textwidth
+
 
 %%%%%%%%%%%%%%%% following code supports cross-referencing
 % lists of page references cause all the trouble
-
 
 \def\alsodefined#1{\hspace{-\parindent}{\footnotesize\rm 
 	This definition is continued on \pages{#1}.}}

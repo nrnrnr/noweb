@@ -20,4 +20,14 @@ To build noweb:
      try 'icont -o lib/noxref icon/noxref.icn'.  \chunklist
      on a line by itself expands to a list of chunks (`module index').
 
-  4) Fasten your seat belt and type `make'.
+  4) Fasten your seat belt and type `make'.  If you want a nonstandard
+     noweave, you can use the WEAVE variable in the Makefile; for example,
+     I use `make WEAVE=noweave.nr'.
+
+Instead of editing the Makefile, you can create a shell script that
+invokes make with the proper variables.  `nwmake' is an example of
+such a script; I use it to install noweb at Princeton using the Icon
+cross-referencer and our local C compiler.  If you make your own
+script, call it something else so it won't get overwritten by the
+default nwmake.
+

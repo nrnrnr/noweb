@@ -1,13 +1,15 @@
 #!/bin/sh
-nawk 'BEGIN { defns[0] = 0 ; uses[0] = 0 ; dcounts[0] = 0 ; firstdef[0] = 0
-              ucounts[0] = 0 ; idtable[0] = 0 ; keycounts[0] = 0 ; firstdefnout[0] = 0 }
+nawk 'BEGIN { defns[0] = 0 ; uses[0] = 0 ; dcounts[0] = 0 ; firstdef[0] = 0; 
+              ucounts[0] = 0 ; idtable[0] = 0 ; keycounts[0] = 0 ; firstdefnout[0] = 0;
+              filetable[0] = 0 }
 { lines[nextline++] = $0 }
 /^@defn / { logname("DEFN", defns, dcounts, substr($0, 7)) }
 /^@use /  { logname("USE", uses, ucounts, substr($0, 6)) }
+/^@file / { curfile = modid(substr($0, 7)) }
 
 function logname(which, tbl, counts, name, id) {
   counts[name] = counts[name] + 1
-  id = which modid(name) "-" counts[name]
+  id = which curfile "-" modid(name) "-" counts[name]
   tbl[name] = tbl[name] id " "
   lines[nextline++] = "@literal \\label{" id "}"
   if (which == "DEFN" && firstdef[name] == "") firstdef[name] = id
@@ -54,7 +56,7 @@ END {
               printf "\\\\{%s}", a[j]
             printf "}\n@nl\n"
           } else 
-              printf "@literal \notused\n@nl\n"
+              printf "@literal \\notused\n@nl\n"
         }
         print lines[i]
     } else

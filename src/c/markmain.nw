@@ -46,9 +46,11 @@ static void print_pair(FILE *out, char *name, char *value) {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "errors.h"
 #include "markup.h"
 #include "getline.h"
+#include "columns.h"
 
 <<state and printing definitions>>
 
@@ -180,22 +182,35 @@ void main(int argc, char **argv) {
 
     FILE *fp;
     char *myself=*argv;
+    int i;
 
-    if (argc>1) {
-        while (--argc>0)
-          if (!strcmp(*++argv, "-")) 
-	      markup(stdin,stdout,"");
-          else if ((fp=fopen(*argv,"r"))==NULL) {
-              errormsg(Error, "%s: couldn't open file %s\n", myself,
-                      *argv);
-              continue;
-          } else {
-              markup(fp,stdout,*argv);
-              fclose(fp);
-          }
-    } else {
+    for (i = 1; i < argc && argv[i][0] == '-' && argv[i][1] != 0; i++)
+	switch(argv[i][1]) {
+	    case 't': <<handle [[-t]]>> break;
+            default : errormsg(Error, "%s: unknown option -%c\n", myself, argv[i][1]);
+                      break;
+        }
+    if (i < argc)
+        for (; i < argc; i++) {
+            if (!strcmp(argv[i], "-")) 
+	        markup(stdin,stdout,"");
+            else 
+                if ((fp=fopen(argv[i],"r"))==NULL)
+                    errormsg(Error, "%s: couldn't open file %s\n", myself, argv[i]);
+                else {
+                    markup(fp,stdout,argv[i]);
+                    fclose(fp);
+                }
+        }
+    else
         markup(stdin,stdout,"");
-    }
     exit(errorlevel);
 }
-
+@
+<<handle [[-t]]>>=
+if (isdigit(argv[i][2]))
+    tabsize = atoi(argv[i]+2);
+else if (argv[i][2]==0)
+    tabsize = 0; 		/* no tabs */
+else 
+    errormsg(Error, "%s: ill-formed option %s\n", myself, argv[i]);

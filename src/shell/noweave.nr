@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# Copyright 1991, 1992, 1993 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 # options: -l == use LaTeX  -x == generate LaTeX cross-reference goo
 
@@ -23,6 +23,9 @@ done
 if [ $tex -eq 1 ]; then echo -n \\ ; echo input nwmac; fi
 if [ $latex -eq 1 ]; then
     echo -n \\; echo "documentstyle[noweb]{article}"; 
+    for i in oddsidemargin evensidemargin; do
+        echo -n \\; echo -n "advance" ; echo -n \\ ; echo "$i -0.4in"
+    done
     echo -n \\ ; echo 'begin{document}'
 fi
 

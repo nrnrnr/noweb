@@ -1,4 +1,4 @@
-.TH NOWEB 1 "local \- 10/10/91"
+.TH NOWEB 1 "local \- 2/26/93"
 .SH NAME
 notangle, noweave, nountangle, noroots \- noweb, a literate programming tool
 .SH SYNOPSIS
@@ -6,7 +6,7 @@ notangle, noweave, nountangle, noroots \- noweb, a literate programming tool
 [\fB-R\fProotname] 
 [\fB-L\fP[format]] [file] ...
 .br
-\fBnoweave\fP [\fB-l\fP|\fB-n\fP] [file] ...
+\fBnoweave\fP [\fB-l\fP|\fB-n\fP|\fB-x\fP] [file] ...
 .br
 \fBnountangle\fP [\fB-ml\fP|\fB-m3\fP|\fB-c\fP|\fB-awk\fP] [\fB-R\fProotname] 
 [\fB-w\fPwidth] [file] ...
@@ -106,8 +106,9 @@ to give the code special typographic treatment.
 .PP
 If the double left or right angle bracket is to be used 
 in code or documentation,
-not as part of a chunk name, it must be preceded by an at sign
-(e.g. \fB@<<\fP).
+not as part of a chunk name, it should be preceded by an at sign
+(e.g. \fB@<<\fP), although the at sign is not required if there is no 
+matching double bracket.
 .SH OPTIONS
 Given the \fB-R\fIname\fR option, 
 .I notangle
@@ -123,12 +124,23 @@ In
 `%L' indicates the line number of the source file,
 `%N' indicates a newline,
 and `%%' indicates a percent sign.
+A sign and digit may be inserted between the percent sign and the `L',
+in which case the line number will be adjusted by that amount.
 If 
 .I format
 is omitted, the default format is that accepted by the C preprocessor:
-.B 
-`#line %L "%F"%N'.
-.R
+`\fB#line %L "%F"%N\fR'.
+When using the \fB-L\fIformat\fR option, 
+.I notangle
+ensures that all text appears in the same column in input and output.
+.PP
+By default, \fInotangle\fP and \fInoweave\fP expand tabs with stops every 8 columns.
+The \fB-t\fP\fIk\fP option makes \fInotangle\fP 
+copy tabs untouched from input to output and use tabs for indentation, assuming stops
+every \fIk\fP columns.
+The \fB-t\fP\fIk\fP option makes \fInoweave\fP expand 
+tabs with stops every \fIk\fP columns.
+The \fB-t\fP option makes \fInoweave\fP copy tabs to its output.
 .PP
 .I nountangle
 accepts various language options that determine the format of the comments into 
@@ -146,6 +158,26 @@ option makes
 .I noweave
 emit header and trailer for a \fILaTeX\fP document instead of for a \fITeX\fP document.
 The \fB-n\fP option suppresses the emission of header and trailer.
+The \fB-x\fP option makes
+.I noweave
+add a page number to each chunk name and generate \fILaTeX\fP 
+cross-reference information
+for the chunks.
+When
+.B noweave -x
+is used, the control sequence
+.B "\\\\chunklist"
+expands to a section containing a sorted list of all code chunks.
+.PP
+Output from \fInoweave\fP that lacks header and trailer can
+be used in \fITeX\fP documents that include `nwmac'
+and in  \fILaTeX\fP documents that  use the `noweb' document-style 
+option.
+That 
+style option defines a `webcode' environment, in which you can place fragments of 
+code, and in which
+only backslash and curly braces have their special meanings;
+all other characters are taken literally.
 .SH ERROR MESSAGES
 If
 .I notangle
@@ -168,7 +200,6 @@ defined, but it is OK for chunks to be defined and not used.
 |TEXINPUTS|/nwmac.tex	formatting TeX macros
 |TEXINPUTS|/noweb.sty	use in LaTeX documents
 .fi
-.PP
 .SH BUGS
 .I notangle 
 and
@@ -188,6 +219,21 @@ requires the new version of
 .I awk,
 assumed to be called
 .I nawk.
+DEC
+.I nawk
+has a bug in that that causes 
+.B noweave
+to fail to translate backslashes correctly.
+GNU 
+.I gawk
+is reported to work.
+.PP
+A bug in the LaTeX output routine sometimes results in skewed headers or footers.
+noweb.sty contains code that fixes headers for some versions of latex.tex.
+.PP
+At some sites,
+\fB\\chunklist\fR may produce a harmless warning message instead of a sorted list of
+code chunks.
 .SH AUTHOR
-Norman Ramsey, Princeton University.
-Internet address \fBnr@princeton.edu\fP.
+Norman Ramsey, Bellcore.
+Internet address \fBnorman@bellcore.com\fP.

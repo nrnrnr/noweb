@@ -14,8 +14,10 @@ The following options are good on the command line:
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "notangle.h"
 #include "errors.h"
+#include "columns.h"
 
 void main(int argc, char **argv) {
     int i;
@@ -23,11 +25,13 @@ void main(int argc, char **argv) {
     char *locformat = "";
     char *Clocformat = "#line %L \"%F\"%N";
 
+    tabsize = 0;  /* default for nt is not to use tabs */
+
     for (i=1; i<argc; i++) {
         <<process argument [[i]]>>
     }
 
-    notangle(stdin,stdout, rootname, locformat);
+    notangle(stdin, stdout, rootname, locformat);
     exit(errorlevel);
 }
 @
@@ -40,6 +44,14 @@ if (*argv[i]=='-') {
 @
 <<handle option in argument [[i]]>>=
     switch (*++argv[i]) {
+	case 't': /* set tab size or turn off */
+	    if (isdigit(argv[i][1]))
+	        tabsize = atoi(argv[i]+1);
+	    else if (argv[i][1]==0)
+	        tabsize = 0; 		/* no tabs */
+	    else 
+	        errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
+	    break;	    
         case 'R': /* change name of root module */
             rootname = ++argv[i];
             break;

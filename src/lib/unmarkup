@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+
+nawk '
+/^@file / {
+#  if (file) printf "EndOf%s\n", file
+#  file = substr($0,7);
+#  printf "diff %s - <<'"'EndOf%s'"'\n", file, file
+}
+
+END { 
+#  if (file) printf "EndOf%s\n", file
+}
+
+/^@begin docs 0$/ { next }
+/^@begin docs / { printf "@ " }
+/^@end docs / { }
+
+/^@begin code / { }
+/^@defn / { printf "<<%s>>=", substr($0,7) }
+
+/^@text $/ {next}
+/^@text / { 
+  gsub("<<", "@<<");
+  gsub(">>", "@>>");
+  printf "%s", substr($0,7) 
+}
+/^@quote$/    { printf("[[") }
+/^@endquote$/ { printf("]]") }
+/^@nl$/       { printf "\n"}
+
+/^@use / { printf "<<%s>>", substr($0,6) }' $* | sed 's/^@ $/@/'

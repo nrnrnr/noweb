@@ -26,7 +26,7 @@ queries it.
 @
 I track degrees of error as they occur.
 <<header>>=
-enum errorlevel { Normal, Warning, Error, Fatal, Impossible };
+enum errorlevel { Normal=0, Warning, Error, Fatal, Impossible };
 extern enum errorlevel errorlevel;
 <<C functions>>=
 enum errorlevel errorlevel = Normal;

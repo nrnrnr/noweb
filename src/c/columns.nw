@@ -3,21 +3,30 @@
 These functions are used to help accumulate indentations across module
 boundaries by measuring the widths of various strings
 in columns.  
-The size of things depends on [[TABSIZE]] as defined in columns.h.
+The size of things depends on [[tabsize]] as defined in columns.h.
+If [[tabsize == 0]], tabs shouldn't be touched on input and won't be 
+generated on output.
 <<header>>=
-#define TABSIZE 8
-int columnwidth (char *s);      /* number of columns string occupies */
-void indent_for (int width, FILE *fp);
+extern int tabsize;
+extern int columnwidth (char *s);      /* number of columns string occupies */
+extern int limitcolumn (char *s, int startcolumn);
+				/* width of startcolumn blanks plus s */
+extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
 <<*>>=
 #include <stdio.h>
 #include "columns.h"
 
+int tabsize = 8;
+
 int columnwidth (char *s) {             /* width of a string in columns */
-    int col = 0;
+  return limitcolumn(s, 0);
+}
+
+int limitcolumn (char *s, int col) {
     while (*s) {
         col++;
-        if (*s=='\t') while (col % TABSIZE != 0) col++;
+        if (*s=='\t' && tabsize > 0) while (col % tabsize != 0) col++;
         s++;
     }
     return col;
@@ -26,12 +35,13 @@ int columnwidth (char *s) {             /* width of a string in columns */
 void indent_for (int width, FILE *fp) { 
                                 /* write whitespace [[width]] columns wide */
 /*fprintf(fp,"<%2d>",width); if (width>4) {fprintf(fp,"    "); width -= 4;}*/
-    while (width>TABSIZE) {
-        putc('\t',fp);
-        width -= TABSIZE;
-    }
-    while (width>0) {
-        putc(' ',fp);
+    if (tabsize > 1)
+        while (width >= tabsize) {
+            putc('\t', fp);
+            width -= tabsize;
+        }
+    while (width > 0) {
+        putc(' ', fp);
         width--;
     }
 }

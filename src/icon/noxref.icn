@@ -1,13 +1,12 @@
 # xref -- cross-reference for noweb/latex
 
-# noweave in Icon
-
-global lines, defns, uses, firstdefnout
+global lines, defns, uses, names, firstdefnout
 
 procedure main(args)
   lines := []
   defns := table()
   uses := table()
+  names := table()
   while put(lines, line := read()) do
     apply(pass1, line)
   firstdefnout := set()
@@ -19,25 +18,33 @@ procedure apply(pass, line)
 end
 
 procedure pass1(name, chunkname)
-  if name == ("defn" | "use") then {
-     if name == "defn" then tbl := defns else tbl := uses
-     /tbl[chunkname] := []
-     id := map(name, &lcase, &ucase) || modid(chunkname) || "-" || (1+*tbl[chunkname])
-     put(tbl[chunkname], id)
-     put(lines, "@literal \\label{" || id || "}")
+  static file
+  initial file := "????"
+  case name of {
+    "file" : file := chunkname || (chunkname[4+:3] | "")  # hack key generation
+    "defn" | "use" : {
+      if name == "defn" then tbl := defns else tbl := uses
+      /tbl[chunkname] := []
+      id := map(name, &lcase, &ucase) || ":" || modid(file) || ":" || 
+            modid(chunkname) || ":" || (1+*tbl[chunkname])
+      put(tbl[chunkname], id)
+      put(lines, "@literal \\label{" || id || "}")
+      names[chunkname] := lettersonly(chunkname)
+    }
   }
   return
 end
 
 procedure modid(name)
+  local key
   static idtable, keycounts
   initial { idtable := table() ; keycounts := table(0) }
 
   if not member(idtable, name) then {
-    key := map(name, "\\{}-[]", "******")
+    key := map(name, " \\{}-[]", "_******")
     if *key > 6 then key := key[1:4] || key[0:-3]
     keycounts[key] +:= 1
-    idtable[name] := key || "-" || keycounts[key]
+    idtable[name] := key || if keycounts[key] > 1 then "-" || keycounts[key] else ""
   }
   return idtable[name]
 end
@@ -71,7 +78,30 @@ procedure pass2(name, arg)
         }
         write("@", name, " ", arg)
       }
+    "text"  : if \arg == "\\chunklist" then chunklist()
+              else write("@text", (" " || \arg) | "")
     default : write("@", name, (" " || \arg) | "")
   }
   return
+end
+
+procedure chunklist()
+  l := sort(names,2)
+  write("@text \\section*{List of chunk names}")
+  write("@nl")
+  every name := (!l)[1] do {
+    write("@use ", name, "~{\\footnotesize\\rm\\pageref{", defns[name][1], "}}") |
+    write("@use ", name, "~{\\footnotesize\\rm (never defined)}")
+    write("@text \\\\\n@nl")
+  }
+  write("@nl")
+end
+
+procedure lettersonly(s)
+  static keep
+  initial keep := &lcase ++ ' '
+  s := map(s)
+  r := ""
+  s ? while tab(upto(keep)) do r ||:= move(1)
+  return r
 end

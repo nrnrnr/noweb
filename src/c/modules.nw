@@ -30,6 +30,7 @@ typedef struct module {
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "modules.h"
 #include "modtrees.h"
 #include "errors.h"
@@ -146,7 +147,7 @@ if (*(p->contents) != '\0') {
         indent_for(indent, out);
     }
     fprintf(out,"%s",p->contents);
-    partial_distance += strlen(p->contents);
+    partial_distance = limitcolumn(p->contents, partial_distance);
 }
 <<print a newline>>=
 partial_distance = 0;
@@ -164,7 +165,8 @@ if (newmod==NULL) {
     		      maxlevel, locformat, out);
     if (retcode > error) error = retcode;
 }
-partial_distance += strlen(p->contents) + 4; /* length of brackets */
+partial_distance = limitcolumn(p->contents, partial_distance + 2) + 2; 
+				/* account for surrounding brackets */
 @
 <<Dump error information and return>>=
 {
@@ -238,6 +240,14 @@ for (p=fmt;*p;p++) {
             case 'N': putc('\n',fp);                            break;
             case 'F': fprintf(fp,"%s",loc.filename);            break;
             case 'L': fprintf(fp,"%d",loc.lineno);              break;
+            case '-': case '+': 
+                        if (isdigit(p[1]) && p[2] == 'L') {
+                          fprintf(fp, "%d", *p == '+' ? loc.lineno + (p[1] - '0')
+                                                      : loc.lineno - (p[1] - '0'));
+                          p += 2;
+                        } else
+                          <<complain about bad format character>>
+                      break;            
             default:  <<complain about bad format character>>   break;
         }
     } else putc(*p,fp);
@@ -251,6 +261,9 @@ for (p=fmt;*p;p++) {
 }
 <<RCS log>>=
 $Log:	modules.nw,v $
+# Revision 2.1  91/10/14  14:23:32  nr
+# Distributed as version 2.0
+# 
 # Revision 2.0  91/10/10  14:43:32  nr
 # Distributed as version 2.0
 # 

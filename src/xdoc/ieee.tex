@@ -1,11 +1,21 @@
+\newif\iftr
+\trfalse		% set true for princeton tech report style
+\iftr
+\documentstyle[11pt,noweb,tr]{article}
+\else
 \documentstyle[11pt,noweb]{article}
-\title{Literate Programming Tools Need Not Be Complex}
+\fi
+\title{Literate-Programming Tools Need Not Be Complex}
 \author{Norman Ramsey\\Department of Computer Science, Princeton University\\
 35 Olden Street, Princeton, New Jersey 08544}
-%\reportno{CS-TR-351-91}
-\date{October 1991}
+\iftr\reportno{CS-TR-351-91}
+\date{October 1991\\Revised August 1992}
+\else
+\date{August 1992}
+\fi
 \setcounter{secnumdepth}{0}
-
+\clubpenalty=10000
+\widowpenalty=10000
 \makeatletter
 \def\refno#1{\nocite{#1}\@ifundefined
        {b@#1}{{\bf ?}\@warning
@@ -30,27 +40,36 @@ experimentation with literate programming.
  {\tt noweb} provides much of the functionality of
 {\tt WEB}, with a fraction of the complexity.
 {\tt noweb} is independent of the target programming language, and its
-formatter-dependent part is a 40-line shell script. 
+formatter-dependent part is less than 40~lines.
 {\tt noweb} is extensible, because it uses two
-representations of programs: one easily manipulated by authors and one
+representations of programs: one easily edited by authors and one
 easily manipulated by tools.
-I give examples of the use of {\tt noweb} and I mention
- applications that have been written
-using {\tt noweb} with different programming languages.
+
+This paper explains how to use the {\tt noweb} tools and gives
+examples of their use.
+It sketches the implementation of the tools and describes how new
+tools are added to the set.
+Because 
+{\tt WEB} and {\tt noweb} overlap, but each does some things that the
+other cannot,
+this paper enumerates the differences.
 \end{abstract}
 
+\iftr\else
 \begin{center}\small
 {\bf Key words:}
 literate~programming, readability, programming~environments
 \end{center}
+\fi
 
 \section{Introduction}
 When literate programming was
 introduced, it was synonymous with {\tt WEB}, a tool
-for writing literate Pascal programs~\cite{knuth:literate}.
+for writing literate Pascal programs~\cite[Chapter~4]{knuth:literate:book}.
 The idea attracted attention; several examples of literate
 programs were published, and a special forum was created to discuss literate
-programming~\cite{denning:announcing,gries:pearls,bentley:lp1,bentley:lp2}.
+programming~%
+\cite{denning:announcing,gries:pearls,knuth:literate:book,thimbleby:review}.
 {\tt WEB} was  adapted to programming languages other than
 Pascal~\cite{guntermann:cweb,levy:cweb,ramsey:building,sewell:mangle,thimbleby:cweb}.
 %
@@ -59,8 +78,8 @@ Some found {\tt WEB} not worth the trouble, as did
 one author of the program appearing in Appendix~C
 of Reference~\refno{sewell:weaving}.
 Others built their own systems for literate
- programming~\cite{hamilton:expanding,cvw:loom}. 
-The literate programming forum was dropped, on the grounds that
+ programming.  % ~\cite{hamilton:expanding,cvw:loom}. 
+The literate-programming forum was dropped, on the grounds that
 literate programming had become the province of those who could build
 their own tools~\cite{cvw:assessment}.
 
@@ -103,18 +122,13 @@ simple and independent of the target programming language.
 {\tt noweb} is designed 
 around one idea: writing named chunks of code in any order, with
 interleaved documentation. 
-Like {\tt WEB}, and like all literate programming tools, it can
+Like {\tt WEB}, and like all literate-programming tools, it can
 be used to write a program in pieces and to present those pieces in
 an order that helps explain the program.
-{\tt noweb} makes two contributions.
-It provides functionality
-comparable to that of {\tt WEB}, without the complexity, and it is extensible.
-It achieves its extensibility
- by using two representations of literate programs:
- one that is simple for authors to read and edit, and one that 
-is simple for programs to read and transform.
+{\tt noweb}'s value lies in its simplicity, which shows that the idea
+of literate programming does not require the complexity of {\tt WEB}.
 
-\section{{\tt noweb}} % , a minimal literate programming system}
+\section{{\tt noweb}} % , a minimal literate-programming system}
 A {\tt noweb} file contains program source code interleaved with documentation.
 When {\tt notangle} is given a {\tt noweb} file, it writes the program
  on standard output. 
@@ -181,8 +195,8 @@ chunk, it is assumed to be the first line of a documentation chunk.
 Documentation chunks contain text that is ignored by {\tt notangle}
 and copied verbatim to standard output by
 {\tt noweave} (except for quoted code).   
-{\tt Noweave} can work with {\LaTeX}~\cite{lamport:latex}, or it can
-insert a reference to 
+{\tt noweave} can work with {\LaTeX}, or it can use
+% insert a reference to 
 a {\TeX} macro package, supplied with {\tt noweb}, that defines
 commands like \verb+\chapter+ and \verb+\section+.
 
@@ -201,24 +215,25 @@ chunks with respect to the chunks in which they appear.
 
 Code may be quoted within documentation chunks by placing double
 square brackets around it ({\tt [[...]]}). 
-These double square brackets are ignored by {\tt notangle,} but they
+These double square brackets are ignored by {\tt notangle}, but they
 are used by {\tt noweave} to give code special typographic
 treatment.
 
-If the double left or right angle % or square 
-bracket is to be used in code or documentation,
-not as part of a chunk name, it must be preceded by an at sign
-(e.g.~``{\tt @<<}''). 
+If double left and right angle brackets are not paired, they are
+treated as literal ``{\tt<<}'' and ``{\tt>>}''.  Users can force any
+such brackets, even paired brackets, to be treated as literal by
+preceding the brackets by an at sign (e.g.~``{\tt @<<}'').
 
 Figure~\ref{sample-input} shows a fragment of a {\tt noweb} program
 that computes prime numbers.
 The program is derived from the example used in
-Reference~\refno{knuth:literate}, and Figure~\ref{sample-input} should
-be compared with Figure~2b of Reference~\refno{knuth:literate}.
+Reference~\refno{knuth:literate:book}, Chapter~4, and Figure~\ref{sample-input} should
+be compared with Figure~2b of that paper.
 Figure~\ref{noweave-output} shows the program after processing by {\tt
 noweave} and {\LaTeX}.
 Figure~\ref{notangle-output} shows the beginning of the program as
 extracted by {\tt notangle}.
+A complete example program accompanies this paper.
 
 \begin{figure}
 \begin{verbatim}
@@ -280,66 +295,8 @@ program print_primes(output);
 Experimenting with \verb+noweb+ is easy.
 {\tt noweb} has little syntax: definition and use of code chunks, marking of
 documentation chunks, quoting of code, and quoting of brackets.
-The manual fits on two pages.
-%% Most programs can be converted to \verb+noweb+ programs by making the
-%% first line \verb+<<*>>=+.
-\verb+noweb+ is independent of the target programming
-language, and its formatter-dependent part is a 40-line script.
-
-{\tt WEB}'s  original {\tt TANGLE} removed white space and folded
-lines to fill each line with tokens,
-making its output unreadable~\cite[Figure~3]{knuth:literate}.
-Later adaptations preserved line breaks but removed other white space.
-Those who experimented with {\tt WEB} but didn't like it had to
-edit {\tt TANGLE}'s output by hand in order to recover a readable, compilable
-program.
-\verb+noweb+ makes it easy to abandon an experiment, because 
-\verb+notangle+'s output is readable.
-Because \verb+notangle+ preserves indentation, it can be used with
-languages like Miranda~\cite{turner:miranda} and
-Haskell~\cite{hudak:report}, in which indentation is significant.
- {\tt TANGLE} cannot.
-
-% \begin{figure}
-% \begin{center}
-% \noindent
-% \begin{minipage}[t]{2.5in}
-% \begin{quote}\tt\obeyspaces
-% <<*>>=\\
-% one <<two>> <<three>>\\
-% <<two>>=\\
-% first of two\\
-% second of two\\
-% third of two\\
-% <<three>>=\\
-% first of three\\
-% \mbox{}\ second of three\\
-% \mbox{}\ \ third of three
-% \end{quote}
-% \end{minipage}\hfil
-% \begin{minipage}[t]{2.5in}
-% \begin{quote}\tt\obeyspaces
-% one\ first\ of\ two\\
-% \mbox{}\ \ \ \ second\ of\ two\\
-% \mbox{}\ \ \ \ third\ of\ \rlap{two\ first\ of\ three}\\
-% \mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ second\ of\ three}\\
-% \mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ \ third\ of\ three}
-% \end{quote}
-% \end{minipage}
-% \end{center}
-% \leavevmode\noindent
-% \hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
-% \medskip
-% \begin{quote} 
-% Those who dislike literate programming can use {\tt notangle} once,
-% discard the original input, and work only with the output.
-% Preserving indentation makes the output readable.
-% It is also useful for programmers working in languages with no support
-% for preprocessors, or where newlines or indentation are significant.
-% \end{quote} 
-% \caption{{\tt notangle} preserving indentation}
-% \label{indentation}
-% \end{figure}
+\verb+noweb+ can be used with any programming language, and its 
+manual fits on two pages. 
 
 \begin{figure}
 \begin{verbatim}
@@ -360,28 +317,6 @@ program print_primes(output);
 \end{figure}
 
 
-% \begin{figure}
-% \begin{verbatim}
-% #line 41 "primes.nw"
-% program print_primes(output);
-%   const m = 1000;
-% 
-% #line 81 "primes.nw"
-% rr = 50;
-% cc = 4;
-% ww = 10;
-% #line 141 "primes.nw"
-% ord_max = 30;  { p_ord_max squared must exceed p_m }
-% #line 43 "primes.nw"
-% 
-%   var
-% \end{verbatim}
-% \hbox{\hskip2em\vdots}
-% \caption{Part of primes program as written by {\tt notangle -L}}
-% \label{notangle-L-output}
-% \end{figure}
-
-
 On a large project, it is essential that compilers and other tools be
 able to refer to locations in the \verb+noweb+ source, even though
 they work with \verb+notangle+'s output~\cite{ramsey:literate}.
@@ -390,58 +325,11 @@ that inform compilers of the placement of lines
 in the \verb+noweb+ source.
 It also preserves the columns in which
 tokens appear.
-% Figure~\ref{renumbering} shows an example using the line number
-% pragmas recognized by the C~preprocessor.
-% The empty line in the figure contains the blank that appeared on
-% line~2 between ``\verb+<<two>>+'' and ``\verb+<<three>>+.''
-
-
-
-% \begin{figure}
-% \begin{center}
-% \noindent
-% \begin{minipage}[t]{2.5in}
-% \begin{quote}\tt\obeyspaces
-% <<*>>=\\
-% one <<two>> <<three>>\\
-% <<two>>=\\
-% first of two\\
-% second of two\\
-% third of two\\
-% <<three>>=\\
-% first of three\\
-% \mbox{}\ second of three\\
-% \mbox{}\ \ third of three
-% \end{quote}
-% \end{minipage}\hfil
-% \begin{minipage}[t]{2.5in}
-% \begin{quote}\tt
-% \#line 2 "test.nw"\\
-% one\\
-% \#line 4 "test.nw"\\
-% first of two\\
-% second of two\\
-% third of two\\
-% \#line 2 "test.nw"\\
-% \mbox{\hskip 1em}\\
-% \#line 8 "test.nw"\\
-% first of three\\
-% \mbox{}\ second of three\\
-% \mbox{}\ \ third of three
-% \end{quote}
-% \end{minipage}
-% \end{center}
-% \leavevmode\noindent
-% \hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
-% \begin{quote} 
-% Those who like literate programming can keep (and edit) the original
-% source, giving {\tt notangle}'s output to their compilers.
-% Preserving position information makes compiler messages refer to
-% locations in the original source.
-% \end{quote} 
-% \caption{{\tt notangle} preserving position information}
-% \label{renumbering}
-% \end{figure}
+If \verb+notangle+ is not given the \verb+-L+ option, it respects the
+indentation of its input, making its output easy to read.
+Large programs may also benefit from cross-reference information.
+If given the \verb+-x+ option, {\tt noweave} uses {\LaTeX}
+to show on what pages each chunk is defined and used.
 
 
 {\tt WEB} files map one to one with to both programs and documents.
@@ -449,14 +337,16 @@ The mapping of \verb+noweb+ files to programs is many to many; the
 mapping of files to documents is many to one.
 Source files are combined by listing their names on \verb+notangle+'s
 or \verb+noweave+'s command line.
-Different programs may be extracted by specifying the names
+Many programs may be extracted from one source by specifying the names
 of different root chunks, using \verb+notangle+'s \verb+-R+ command-line
 option.
 
 %\clearpage % fixes bad break
 The simplest example of a one-to-many mapping of programs is that of putting
-C~header and source in a single {\tt noweb} file.
-Here are example rules for {\tt make}~\cite{feldman:make}:%
+C~header and program in a single {\tt noweb} file.
+The header comes from the root chunk \LA{}header\RA{}, and the program
+from the default root chunk, \LA{}*\RA{}.
+The following rules for {\tt make} automate the process:%
 \footnote{Using \verb+cmp+ avoids touching the header file when its contents
 haven't changed.
 This trick is explained on pages 265--266 of Reference~\refno{kernighan:unix}.}
@@ -467,10 +357,6 @@ foo.h: foo.nw
         notangle -Rheader foo.nw > xfoo.h
         -cmp -s xfoo.h foo.h || cp xfoo.h foo.h
 \end{verbatim}
-I have used {\tt noweb}'s one-to-many mapping to combine several Modula-3 interfaces and
-modules that
-gradually reveal the definition of a partially opaque
-type~\cite[Chapter~6]{nelson:systems}. 
 A more interesting example is using {\tt noweb} to
 interleave different languages in one source file. 
 I wrote an \verb+awk+
@@ -478,45 +364,177 @@ script that read a machine description and emitted a disassembler for
 that machine, and I used {\tt noweb} to combine the script and description
 in a single file, so I could place each part of the input next to the
 code that processed that input. 
+The machine description was in the root chunk \LA{}opcodes
+table\RA{}, and the \verb+awk+ script in the default root chunk.
 The processing steps were:
 {\par\advance\hsize by 2in % avoid complaints about overfull box in verbatim
 \begin{verbatim}
 notangle opcodes.nw > opcodes.awk
-notangle -R'opcode table' opcodes.nw | awk -f opcodes.awk > disassem.sml
+notangle -R'opcode table' opcodes.nw | 
+awk -f opcodes.awk > disassem.sml
 \end{verbatim}
 }
 
 Many-to-one mapping of source to program can be used to obtain
 effects similar to those of Ada or Modula-3 generics.
-If one puts 
-generic code in a specially named chunk in a \verb+noweb+
-file, e.g.~\verb+generic_list.nw+, one can then
-``instantiate'' the code by putting a reference to that chunk in a
-different file, e.g.~\verb|uses_list.nw|.
-The instantiation takes the form:
+Figure~\ref{generic-example} shows generic C code that supports lists.
+The code can be
+``instantiated'' by combining it with another \verb+noweb+ file.
+\verb+pair_list.nw+, shown in Figure~\ref{pair-list-example}, specifies
+ lists of integer pairs.
+The two are combined by applying \verb+notangle+ to them both:
 \begin{verbatim}
-notangle uses_list.nw generic_list.nw > instantiated_code.c
+notangle pair_list.nw generic_list.nw > pair_list.c
 \end{verbatim} 
 {\tt noweb} has no parameter mechanism, so the ``generic'' code must
 refer to a fixed set of symbols, and it cannot be checked for errors
-except by compiling \verb+instantiated_code.c+.
+except by compiling \verb+pair_list.c+.
 These restrictions make {\tt noweb} a poor approximation to real
 generics, but useful nevertheless.
 
+\begin{figure}
+\begindocs{0}
+This list code supports circularly-linked lists represented by a
+pointer to the last element.  It is intended to be combined with other
+{\tt noweb} code that defines \LA{}fields of a list element\RA{} (the fields
+found in an element of a list) and that uses \LA{}list
+declarations\RA{} and \LA{}list definitions\RA.
+\enddocs
+\begincode{1}
+\moddef{list declarations}\endmoddef
+typedef struct list \{
+  \LA{}fields of a list element\RA{}
+  struct list *_link;
+\} *List;
+
+extern List singleton(void);    /* singleton list, uninitialized fields */
+extern List append(List, List); /* destructively append two lists */
+#define last(l)   (l)
+#define head(l)   ((l) ? (l)->next : 0)
+#define forlist(p,l) for (p=head(l); p; p=(p==last(l) ? 0 : p->next))
+\endcode
+\begincode{2}
+\moddef{list definitions}\endmoddef
+List append (List left, List right) \{
+    List temp;
+    if (left == 0)  return right;
+    if (right == 0) return left;
+    temp = left->_link; left->_link = right->_link; right->_link = temp;
+    return right;
+\}
+\endcode
+\unskip\hbox{\hskip2em\vdots}
+\caption{Generic code for implementing lists in C}
+\label{generic-example}
+\end{figure}
+
+\begin{figure}
+\begincode{1}
+\moddef{*}\endmoddef
+\LA{}list declarations\RA{}
+\LA{}list definitions\RA{}
+\endcode
+\begincode{2}
+\moddef{fields of a list element}\endmoddef
+int x;
+int y;
+\endcode
+\caption{Program to instantiate lists of integer pairs}
+\label{pair-list-example}
+\end{figure} 
+
+I have used \verb+noweb+ for small programs written in various
+languages, including C, Icon, \verb+awk+, and Modula-3.
+Larger projects have included a code generator for 
+Standard ML of New Jersey (written in Standard ML) and 
+a multi-architecture debugger, written in Modula-3, C, and
+assembly language.
+A colleague used \verb+noweb+ to write an experimental file
+system in C++.
+
+\unskip
+\vskip0pt plus12pt\penalty-200\vskip0pt plus-12pt
+\noindent The sizes of these programs are  % try for better page break
+\nobreak
+\begin{quote}\nobreak
+\catcode`\?=\active\def?{\phantom{0}}
+\catcode`\*=\active\def*{\phantom{,}}
+\leavevmode\rlap{\begin{tabular}{lcc}
+Program&Documentation lines&Total lines\\
+\noalign{\smallskip}
+{\tt markup} and {\tt nt}&?*400&?1,200\\
+ML code generator&?*900&?2,600\\
+Debugger&1,400&11,000\\
+File system&4,400&27,000
+\end{tabular}}
+\end{quote}
 
 \section{Representation of {\tt noweb} files}
 
 The \verb+noweb+ syntax is easy to read, write, and edit, but it is
 not easily manipulated by programs.
-The \verb+noweb+ tools use a representation that is easily manipulated
-by commonly used Unix tools like {\tt sed} and {\tt awk}~\cite{kernighan:unix};
- \verb+markup+ converts a \verb+noweb+ program
-to this representation.
+To make it easy to extend \verb+noweb+, I have written
+\verb+markup+, which converts \verb+noweb+ source to 
+ a representation that is easily manipulated
+by commonly used Unix tools like {\tt sed} and {\tt awk}.
+In this representation,
+every line begins with {\tt @} and a key word.
+The possibilities are:
+\begin{quote}
+\leavevmode\rlap{\begin{tabular}{ll}
+\tt @begin {\it kind} $n$&Start a chunk\\
+\tt @end {\it kind} $n$&End a chunk\\
+\tt @text {\it string}&{\it string} appeared in a chunk\\
+\tt @nl&A newline\\
+\tt @defn {\it name}&The code chunk named {\it name} is being defined\\
+\tt @use {\it name}&A reference to code chunk named {\it name}\\
+\tt @quote&Start of quoted code in a documentation chunk\\
+\tt @endquote&End of quoted code in a documentation chunk\\
+\tt @file {\it filename}&Name of the file from which the chunks came\\
+\tt @literal {\it text}&{\tt noweave} copies {\it text} to output\\
+\end{tabular}}
+\end{quote}
+{\tt markup} numbers each chunk, starting at~0.
+It also recognizes and undoes the escape sequence for double brackets,
+e.g.~converting ``{\tt @<<}'' to ``{\tt <<}''.
+{\tt markup}'s output represents a sequence of files.
+Each file is represented by a ``{\tt @file~{\it filename}}'' line,
+followed by a sequence of chunks.
+
+The representation of a documentation chunk is
+\begin{quote}
+\begin{tabular}{ll}
+\tt @begin docs $n$&where $n$ is the chunk number.\\
+{\it docline}&repeated an arbitrary number of times.\\
+\tt @end docs $n$
+\end{tabular}
+\end{quote}
+where {\it docline} may be {\tt @text}, {\tt @nl}, {\tt @quote}, or
+{\tt @endquote}.
+Every {\tt @nl} corresponds to a newline in the original file.
+{\tt markup} guarantees that quotes are balanced and not nested.
+
+\vskip0pt plus12pt\penalty-200\vskip0pt plus-12pt
+The representation of a code chunk is
+\begin{quote}
+\leavevmode\rlap{\begin{tabular}{ll}
+\tt @begin code $n$&where $n$ is the chunk number.\\
+\tt @defn {\it name}&name of this chunk.\\
+\tt @nl&The newline following {\tt <<{\it name}>>=} in the original file\\
+{\it codeline}&repeated an arbitrary number of times.\\
+\tt @end code $n$
+\end{tabular}}
+\end{quote}
+where {\it codeline} may be {\tt @text}, {\tt @nl}, or {\tt @use}.
+
+The \verb+noweb+ tools are implemented by piping the output of
+\verb+markup+ to other programs.
 \verb+notangle+ is a Unix shell script that builds a
 pipeline between \verb+markup+ and \verb+nt+, which reads
 and expands definitions of code chunks.
-\verb+noweave+ pipes the output of \verb+markup+ to a 40-line
-\verb+sed+~script that inserts appropriate {\TeX} or {\LaTeX} formatting commands.
+\verb+noweave+ pipes the output of \verb+markup+ to a 24-line
+\verb+awk+~script that inserts appropriate {\TeX} or {\LaTeX}
+formatting commands.
 
 Having a format easily read by programs makes {\tt noweb} extensible;
 one can manipulate literate programs using Unix shell scripts and
@@ -525,61 +543,177 @@ To be able to share programs with colleagues who don't enjoy literate
 programming, I modified \verb+notangle+ by adding to its pipeline a
 stage that
 places each line of documentation in a comment and moves it to
-the succeeding code chunk.  The resulting script transforms a literate
+the succeeding code chunk.  The resulting script, \verb+nountangle+,
+transforms a literate 
 program into a traditional commented program, without loss of
-information and with only a moderate penalty in readability.
-A second simple tool finds all the roots in a {\tt noweb} file, making
+information and with only a modest penalty in readability.
+Figure~\ref{nountangle-output} shows the results of applying
+\verb+nountangle+ to the prime-number program shown in
+Figure~\ref{sample-input}. 
+\verb+noweave+'s cross-reference generation is also implemented as an
+extension; the output of \verb+markup+ is piped through an \verb+awk+
+script that uses \verb+@literal+ to insert {\LaTeX} cross-reference
+commands.
+Another simple tool finds all the roots in a {\tt noweb} file, making
 it easy to find definitions where chunk names have been misspelled.
+
+\begin{figure}
+\begin{webcode}\parindent=0pt
+\{ This program has no input, because we want to keep it    \}
+\{ simple.  The result of the program will be to produce a  \}
+\{ list of the first thousand prime numbers, and this list  \}
+\{ will appear on the [[output]] file.                      \}
+\hbox{\hskip2em\tt\vdots}
+\{ <program to print the first thousand prime numbers>=     \}
+program print_primes(output);
+  const m = 1000;
+        \{ \\section-The output phase-                               \}
+        \{                                                          \}
+        \{ <other constants of the program>=                        \}
+        rr = 50;
+        cc = 4;
+        ww = 10;
+        \{ <other constants of the program>=                        \}
+        ord_max = 30;  \{ p_ord_max squared must exceed p_m \}
+  var \{ How should table [[p]] be represented? Two possibilities \}
+      \{ suggest themselves: We could construct a sufficiently    \}
+\hbox{\hskip2em\tt\vdots}
+\end{webcode} 
+\caption{Output produced by {\tt nountangle} from
+Figure~\protect\ref{sample-input}}
+\label{nountangle-output}
+\end{figure}
+
+
+
+
+\section{Comparing {\tt WEB} and {\tt noweb}}
+
+Unlike {\tt WEB},
+\verb+noweb+ is independent of the target programming language.
+{\tt WEB} tools can be generated for many programming languages, 
+but those languages must be lexically similar to C.
+For example, {\tt WEB} can't handle the \verb+awk+ regular-expression
+notation ``\verb+/+\ldots\verb+/+''; every such expression must quoted
+using {\tt WEB}'s ``verbatim'' control sequence.
+The effort required to 
+generate {\tt WEB} tools is significant; the prospective user must
+write a specification of several hundred 
+lines.
+
+Being independent of the target programming language makes {\tt noweb}
+simpler, but it also means that {\tt noweb} can do less.
+Most of the differences between {\tt WEB} and {\tt noweb} arise
+because {\tt WEB} has language-dependent features that are not present
+in \verb+noweb+.
+These features include 
+prettyprinting, 
+typesetting comments using {\TeX},
+generating an index of identifiers, 
+expanding macros, 
+evaluating constant expressions, 
+and 
+converting string literals to indices into a ``string pool.''
+Among these features, 
+\verb+noweb+ users are most likely to miss prettyprinting and the
+index of identifiers. 
+
+
+Some differences arise because {\tt WEB} and \verb+noweb+ implement
+similar features differently. 
+{\tt WEB}'s  original {\tt TANGLE} removed white space and folded
+lines to fill each line with tokens,
+making its output unreadable~\cite[Chapter~4, Figure~3]{knuth:literate:book}.
+Later adaptations preserved line breaks but removed other white space.
+By default, \verb+notangle+ preserves whitespace and maintains
+indentation when expanding chunks.
+It can therefore be used with
+languages like Miranda and
+Haskell, in which indentation is significant.
+{\tt TANGLE} cannot.
+
+{\tt WEB}'s {\tt WEAVE} assigns a number to each chunk, and its cross-reference
+information refers to chunk numbers, not page numbers.
+\verb+noweb+ uses {\LaTeX} to emit cross-reference information that
+refers to page numbers.
+Anyone who has read a large literate program will
+appreciate the difference.
+
+{\tt WEB} works poorly with \LaTeX; \LaTeX\ constructs cannot
+be used in {\tt WEB} source, and getting {\tt WEAVE} output
+to work in \LaTeX\ documents requires tedious adjustments by hand.
+\verb+noweb+ works with both plain {\TeX} and {\LaTeX}.
+Both {\tt WEAVE} and {\tt noweave} depend on the text formatter in two
+ways: the source of the program itself, and the supporting macros.
+{\tt WEAVE}'s source (written using {\tt WEB} for C) is
+several thousand lines long, and the formatting code is not isolated.
+{\tt noweave}'s source is a 57-line shell script, and only 31 of those
+lines have to do with formatting.
+Both 
+{\tt WEAVE} and {\tt noweave} use about 200 lines of supporting macros
+for plain {\TeX}.
+\verb+noweb+ uses another 80 lines to support {\LaTeX}, most of which
+is used to eliminate duplicate page numbers in cross-reference lists.
+
+{\tt noweb} has
+two features that weren't in the original {\tt WEB}, but that appeared in
+some of {\tt WEB}'s later adaptations.
+They are the ability to inform the compiler of the original locations
+of source lines and the ability to extract more than one program from
+a single source file.
+
+Reviewers have had many expectations of literate-programming
+tools~\cite{thimbleby:review,cvw:assessment}.
+The most important is {\em verisimilitude}: a single
+input should produce both compilable program and publishable document,
+warranting the correctness of the document.
+Others include flexible order of elaboration,
+ability to develop program and documentation concurrently in one
+place, cross-references, and indexing.
+{\tt WEB} satisfies all these expectations, and {\tt noweb} satisfies
+all but one (it does not provide automatic indexing). 
 
 \section{Discussion}
 
-I have used \verb+noweb+ for a number of small C~programs (including
-\verb+noweb+ itself), for a code generator for 
-the Standard ML of New Jersey compiler (written in Standard
-ML)~\cite{appel:smlnj}, and 
-for a multi-architecture debugger, written in Modula-3 with some C and
-assembly language.
-\verb+markup+ and \verb+nt+ are \verb+noweb+ programs written in~C;
-they are about 1200~lines of source of which about 400~lines are
-interleaved documentation.
-The code generator required 2600 lines, of which 900 lines were
-interleaved documentation.
-The debugger required 11,000~lines, of which 1,400 were interleaved
-documentation.
-A colleague used \verb+noweb+ to write an experimental file
-system in C++~\cite{staelin:high}; he wrote 27,000~lines, of which
-4,400 were interleaved documentation. 
+
 
 {\tt WEB} takes the monolithic approach to literate programming---it
 does everything.
 {\tt noweb}'s approach is to compose
 simple tools that manipulate files in the {\tt noweb} format. 
-Such tools might be used to provide features found in {\tt WEB} but
-not in {\tt noweb}, including cross-referencing of chunks, automatic
-index generation, macro processing, prettyprinting code, typesetting
-comments using {\TeX}, and converting string literals to indices into a
-``string pool.''
-Of these tools only the first could be language-independent.
-An interactive browser for {\tt noweb} files would provide the
-environment described in Reference~\refno{brown:interactive} to
-programmers using any mix of languages.
+Existing Unix tools provide some of the {\tt WEB} features that
+aren't found in \verb+noweb+.
+Unix supplies two macro processors: the C
+preprocessor and the \verb+m4+ macro processor.
+\verb+xstr+ extracts string literals.
+\verb+patch+ provides a form of version control similar to {\tt WEB}'s
+change files.
+Few of {\tt WEB}'s remaining features will be missed; for example, many compilers
+evaluate constant expressions at compile time.
+Experience with {\tt WEB} has suggested that prettyprinting may be
+more trouble than it is worth, and that the index of identifiers,
+while useful, is not a necessity~\cite{ramsey:literate}.
 
-% 
-% {\tt WEB} source that is edited is very different from the typeset
-% version that can be read.
-% The differences can be confusing.
-% Because programs are edited more often than read, much of the benefit
-% of having typeset documentation is lost.
-% \verb+noweave+ solves part of this problem by presenting the code
-% chunks exactly as written.
-% This solution might be improved by using \verb+noweb+ with a
-% formatting tool like \verb+notex+~\cite{lipton:notex}, which produces
-% typeset documents from well-formatted ASCII text containing no
-% additional markup. 
+Three things distinguish {\tt noweb} from previous work.
+{\tt noweb} takes as simple as possible a view of literate programming
+and the tools needed to implement it. 
+Instead of relying on a generator or re-implementation to support
+different programming languages, {\tt noweb} is independent of the
+target programming language.
+{\tt noweave}'s dependence on its typesetter is small and isolated,
+instead of being distributed throughout a large implementation.
+
+Experimenting with {\tt noweb} is easy because the tools are simple
+and they work with any language.
+If the experiment is unsatisfying, it is easy to abandon, because 
+\verb+notangle+'s output, unlike {\tt TANGLE}'s, is readable.
+\verb+noweb+ is simpler than {\tt WEB} and is easier to use and
+understand, but it does less.
+I argue, however, that the benefit of {\tt WEB}'s extra features is
+outweighed by cost of the extra complexity,
+making \verb+noweb+  better for writing literate programs.
 
 \verb+noweb+ can be obtained by 
-% sending electronic mail to \verb+nr@princeton.edu+%
-% or by 
 anonymous {\tt ftp} from  {\tt
 princeton.edu}, in file {\tt pub/noweb.shar.Z}.
 
@@ -587,10 +721,17 @@ princeton.edu}, in file {\tt pub/noweb.shar.Z}.
 Mark Weiser's invaluable encouragement provided the impetus for me to
 write this paper, which I did while visiting the Computer
 Science Laboratory of the Xerox Palo Alto Research Center.
+Comments from David Hanson and from the anonymous referees stimulated
+me to improve the paper.
 The development of {\tt noweb} was supported by a Fannie and John Hertz
 Foundation Fellowship.
 
 \bibliographystyle{abbrv}
 \bibliography{web,cs,ramsey,ml}
+
+\iftr
+\clearpage
+\input wc
+\fi
 
 \end{document}
