@@ -49,6 +49,7 @@ Module newmodule (char *modname) {
 }
 @ %def newmodule
 <<*>>=
+static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -169,9 +170,6 @@ int expand (Module mp, int indent, int partial_distance, Parent parent,
     return error;
 }
 @ %def expand
-<<set [[thismodule = {mp, parent}]]>>=
-thismodule.this = mp;
-thismodule.parent = parent;
 @
 If the previous line was not partial, this string starts a fresh line
 and it is necessary to indent.
@@ -199,7 +197,14 @@ partial_distance = 0;
 putc('\n', out);
 lastlineno++;
 @
-When we're expanding a module, the partial distance becomes the new indentation level.
+Previously, when we expanded a module, the partial distance became the
+new indentation level.  This was clearly wrong when we were at the
+beginning of the line, so I just hacked a special case for no
+[[locformat]] and zero [[partial_distance]].  It's essentially what
+would be done above for a string of length zero if that weren't hacked
+out as a special case.
+This change probably blows the case where the module being expanded is
+empty.
 <<expand a module>>=
 newmod = lookup(p->contents);
 if (newmod==NULL) {
@@ -207,6 +212,10 @@ if (newmod==NULL) {
     error=Error;
 } else {
     int retcode;
+    if (*locformat == 0 && partial_distance == 0) {
+        indent_for(indent, out);
+        partial_distance = indent;
+    }
     retcode = expand (newmod, partial_distance, partial_distance,
                       &thismodule, locformat, out);
     if (retcode > error) error = retcode;
@@ -214,6 +223,9 @@ if (newmod==NULL) {
 partial_distance = limitcolumn(p->contents, partial_distance + 2) + 2; 
                                 /* account for surrounding brackets */
 @
+<<set [[thismodule = {mp, parent}]]>>=
+thismodule.this = mp;
+thismodule.parent = parent;
 <<if [[mp]] is an ancestor, complain and return>>=
 if (seekcycle(mp, parent)) {
     errormsg(Error, "@<<%s@>>", mp->name);
