@@ -1,5 +1,6 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
+\subsection{Identifying the special {\tt noweb} control sequences}
 This file is supposed to contain all the definitions of how different
 things are distinguished in the source text.
 @
@@ -34,7 +35,7 @@ expands to an at sign, but I won't bother.
 <<C functions>>
 @ 
 To quote from the man page:
-{\narrower
+\begin{quote} 
 A 
 {\em noweb }
 file consists of a sequence of
@@ -53,11 +54,11 @@ The left double angle bracket ({\tt @<<}) must be in the first column.
 Chunks are terminated by the beginning of another chunk, or by end of file.
 If the first line in the file does not signal the beginning of a documentation
 or code chunk, the first chunk is assumed to be a documentation chunk.
-\par}
+\end{quote} 
 @
 <<data definitions>>=
 char at_sign = '@';             /* should be the only place '@' is mentioned */
-@
+@ %def at_sign
 <<header>>=
 extern char at_sign;                    /* the at sign */
 @
@@ -75,7 +76,31 @@ char *first_doc_line(char *line) {
     if (line[1]!='\0' && line[1] !='\n') return line+2;
     else return line+1;
 }
-@
+@ %def starts_doc first_doc_line
+An index line is a special case of starting documentation.
+<<header>>=
+int is_def(char *);
+char *remove_def_marker(char *);
+<<data definitions>>=
+static char def_marker[] = " %def ";
+#define def_length (6)
+<<C functions>>=
+int is_def(char *line) {
+    <<first time through, assert we got the length right>>
+    return (*line==at_sign && !strncmp(line+1, def_marker, def_length));
+}
+
+char *remove_def_marker(char *line) {
+    return line+1+def_length;
+}
+<<first time through, assert we got the length right>>=
+{ static int checked = 0;
+  if (!checked) {
+    assert(strlen(def_marker) == def_length);
+    checked = 1;
+  }
+}
+@ %def is_def remove_def_marker
 Recognizing module names (which introduce code chunks)
 and extracting them is the mission of the [[mod_start]] and [[mod_end]]
 functions.
@@ -104,7 +129,7 @@ char *mod_start(char *s, int mark) {
 char *mod_end(char *s, int mark) {
     return find_escaped(s,"@>>","@@>>", mark);
 }
-@
+@ %def mod_start mod_end
 Once we know how to [[mod_start]] and [[mod_end]], recognizing the
 beginning of a code chunk is easy.
 <<header>>=
@@ -134,6 +159,7 @@ void getmodname(char *dest, int size, char *source) {
     dest[size-1] = '\0';
     free(p);
 }
+@ %def starts_code getmodname
 <<error exit from [[starts_code]]>>=
 {
     errorat(filename, lineno, Error, "Module name doesn't end", line);
@@ -146,7 +172,7 @@ void getmodname(char *dest, int size, char *source) {
         ("I couldn't manage to extract a module name, but I'm sure I saw one");
 }
 @
-Finding code-quoting brackets is a straightforward application of 
+Finding code-quoting brackets is a simple application of 
 [[find_escaped]].
 <<header>>=
 char *quote_start (char *s, int mark);    /* find open code quote ([[) */
@@ -155,7 +181,7 @@ char *quote_end (char *s, int mark);      /* find close code quote (]]) */
 char *quote_start(char *s, int mark) {
     return find_escaped(s,"[[",NULL, mark);
 }
-@
+@ %def quote_start
 To find the end of a quote, I must take the last pair in a series of
 two or more right brackets.
 <<C functions>>=
@@ -172,7 +198,8 @@ char *quote_end(char *s, int mark) {
 	return t+2;
     }
 }
-@
+@ %def quote_end
+
 Here we do the magic [[find_escaped]].
 Find an arbitrary character seqence, skipping an escaped sequence (if any),
 replacing the beginning with [['\0']] if [[mark]] is set.
@@ -211,7 +238,8 @@ char *find_escaped(register char *s, char *search, char *escape, int mark) {
     if (mark) *s = '\0';
     return s+searchlen;
 }
-@
+@ %def find_escaped
+
 Finally, here with the other character stuff, we put a routine to
 translate the escape sequences.
 It's used by {\em notangle} after the module names have been extracted,
@@ -236,3 +264,4 @@ char *unescape (char *s) {
 
     return r;
 }
+@ %def unescape
