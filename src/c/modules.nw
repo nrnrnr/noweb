@@ -1,6 +1,10 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
-@ The internal structure of modules.
+@ 
+\subsection{The internal structure of modules (chunks)}
+This code is so old, it dates back to when I used to call ``chunks'' ``modules.''
+@
+\subsubsection{Assembling modules from parts}
 Modules are linked lists.
 Each element of the list is either a string or a reference to another 
 module name.
@@ -22,11 +26,28 @@ struct modpart {
     Location loc;               /* for String, where's it from ? */
     struct modpart *next;
 };
-
+@ %def Location parttype modpart
+In order to facilitate expansion of all roots (and to identify roots), 
+I keep a use counter in each module.
+<<header>>=
 typedef struct module {
     char *name;
+    int usecount;
     struct modpart *head, *tail;
 } *Module;
+@ %def module Module
+<<header>>=
+Module newmodule(char *modname);         /* create a new, blank module */
+<<C functions>>=
+Module newmodule (char *modname) {
+    Module p = (Module) malloc (sizeof (struct module));
+    checkptr(p);
+    p->name = strsave(modname);
+    p->usecount = 0;
+    p->head = p->tail = NULL;
+    return p;
+}
+@ %def newmodule
 <<*>>=
 #include <stdio.h>
 #include <string.h>
@@ -39,7 +60,7 @@ typedef struct module {
 #include "strsave.h"
 
 <<Function declarations>>
-
+<<local data>>
 <<C functions>>
 @
 <<header>>=
@@ -49,12 +70,14 @@ typedef struct module {
         /* add a module reference to a module definition (stripping final newline) */
 #define addnewline(MP) add_part(MP,0,NEWLINE,0)
 void add_part (Module mp, char *s, Parttype type, Location *loc);
+@ %def addstring addmodule addnewline
 <<C functions>>=
 void add_part (Module mp, char *s, Parttype type, Location *loc) {
     struct modpart *p = newmodpart(type,s,loc);
     append (mp,p);
 }
-
+@ %def add_part
+<<C functions>>=
 static struct modpart *
 newmodpart(int type, char *s, Location *loc) {
     struct modpart *p = (struct modpart *) malloc (sizeof (struct modpart));
@@ -68,7 +91,8 @@ newmodpart(int type, char *s, Location *loc) {
     p->next = NULL;
     return p;
 }
-
+@ %def newmodpart
+<<C functions>>=
 static
 void append(Module mp, struct modpart *p) {
     /* append p to mp's list of modparts */
@@ -79,6 +103,7 @@ void append(Module mp, struct modpart *p) {
         mp->tail = p;
     }
 }
+@ %def append
 <<strip final newline from p->contents>>=
 { int k = strlen(p->contents)-1;
   if (p->contents[k] == '\n') p->contents[k] = '\0';
@@ -92,12 +117,10 @@ newmodpart(int type, char *s, Location *loc);   /* create a new module part */
 static
 void append(Module mp, struct modpart *p);
 @
-Expanding modules.
-Expand returns 0 if all is well, nonzero if error.
-
-I use a [[struct parent]] chain to see what modules are being expanded, 
-so I can detect a cycle.
-
+\subsubsection{Expanding modules}
+[[expand]] returns 0 if all is well, nonzero if error.
+A [[struct parent]] chain lists modules currently being expanded, 
+so I can detect cycles.
 [[partial_distance]] is the size of the line already written out when
 [[expand]] is called.
 <<header>>=
@@ -109,18 +132,27 @@ typedef struct parent {
 int expand (Module mp, int indent, int partial_distance, Parent parent, 
 	    char *locformat, FILE *out);
         /* expand a module, writing to file out */
-<<C functions>>=
+@ %def Parent
+<<local data>>=
 static char *lastfilename = 0;
 static int lastlineno = -1;
-
+@ %def lastfilename lastlineno
+<<header>>=
+void resetloc(void);
+<<C functions>>=
+void resetloc(void) {
+  lastfilename = 0;
+  lastlineno = -1;
+}
+<<C functions>>=
 int expand (Module mp, int indent, int partial_distance, Parent parent,  
             char *locformat, FILE *out) {
     struct modpart *p;
     Module newmod;
     int error=Normal;
-    struct parent thismodule = { mp, parent};
-        /* the value only matters when we're expanding a module */
+    struct parent thismodule; /* the value only matters when we're expanding a module */
 
+    <<thismodule = {mp, parent};>>
     <<if [[mp]] is an ancestor, complain and return>>
 
     for (p=mp->head; p!=NULL; p=p->next) {
@@ -133,6 +165,10 @@ int expand (Module mp, int indent, int partial_distance, Parent parent,
     }
     return error;
 }
+@ %def expand
+<<thismodule = {mp, parent};>>=
+thismodule.this = mp;
+thismodule.parent = parent;
 @
 If the previous line was not partial, this string starts a fresh line
 and it is necessary to indent.
@@ -159,7 +195,6 @@ partial_distance = 0;
 putc('\n', out);
 lastlineno++;
 <<expand a module>>=
-/*fprintf(stderr,"Expanding @<<%s@>>...\n", p->contents);*/
 newmod = lookup(p->contents);
 if (newmod==NULL) {
     errormsg (Error, "undefined module name: @<<%s@>>", p->contents);
@@ -193,18 +228,58 @@ static int seekcycle(Module mp, Parent parent) {
         return 0;
     }
 }
-@
+@ %def seekcycle
+
+Printing locations means emitting [[#line]] numbers.
+[[printloc]] emits a [[#line]] only if the line emitted is out of sequence.
+It returns nonzero when [[#line]] is emitted; zero otherwise.
+The flag [[partial]] tells whether the preceding line was partial.
+If so, then a newline is necessary before [[#line]] can be emitted.
 <<header>>=
-Module newmodule(char *modname);         /* create a new, blank module */
+int printloc(FILE *fp, char *fmt, Location loc, int partial);
 <<C functions>>=
-Module newmodule (char *modname) {
-    Module p = (Module) malloc (sizeof (struct module));
-    checkptr(p);
-    p->name = strsave(modname);
-    p->head = p->tail = NULL;
-    return p;
+int printloc(FILE *fp, char *fmt, Location loc, int partial) {
+    char *p;
+    if (*fmt
+    && (loc.filename!=lastfilename || lastlineno != loc.lineno)) {
+        if (partial) putc('\n',fp);
+        <<write out the line number pragma>>
+        lastfilename = loc.filename;
+        lastlineno = loc.lineno;
+        return 1;
+    } else return 0;
 }
-@ Cosmetic surgery for modules.
+@ %def printloc
+<<write out the line number pragma>>=
+for (p = fmt; *p; p++) {
+    if (*p == '%') {
+        switch (*++p) {
+            case '%': putc('%', fp);                             break;
+            case 'N': putc('\n', fp);                            break;
+            case 'F': fprintf(fp, "%s", loc.filename);           break;
+            case 'L': fprintf(fp, "%d", loc.lineno);             break;
+            case '-': case '+': 
+                        if (isdigit(p[1]) && p[2] == 'L') {
+                          fprintf(fp, "%d", *p == '+' ? loc.lineno + (p[1] - '0')
+                                                      : loc.lineno - (p[1] - '0'));
+                          p += 2;
+                        } else
+                          <<complain about bad format character>>
+                      break;            
+            default:  <<complain about bad format character>>   break;
+        }
+    } else putc(*p, fp);
+}
+<<complain about bad format character>>=
+{ static int complained = 0;
+  if (!complained) {
+    errormsg(Error,"Bad format sequence ``%%%c'' in -L%s",*p,fmt);
+    complained = 1;
+  }
+}
+@
+
+\subsubsection{Other operations on completed modules}
 For more elegant-looking output, we provide a primitive that removes
 the final newline from a module.
 
@@ -233,71 +308,4 @@ void remove_final_newline (Module mp) {
         p->next = NULL;
     }
 }
-@
-Printing locations means emitting [[#line]] numbers.
-[[printloc]] emits a [[#line]] only if the line emitted is out of sequence.
-It returns nonzero when [[#line]] is emitted; zero otherwise.
-The flag [[partial]] tells whether the preceding line was partial.
-If so, then a newline is necessary before [[#line]] can be emitted.
-<<header>>=
-int printloc(FILE *fp, char *fmt, Location loc, int partial);
-<<C functions>>=
-int printloc(FILE *fp, char *fmt, Location loc, int partial) {
-    char *p;
-    if (*fmt
-    && (loc.filename!=lastfilename || lastlineno != loc.lineno)) {
-        if (partial) putc('\n',fp);
-        <<write out the line number pragma>>
-        lastfilename = loc.filename;
-        lastlineno = loc.lineno;
-        return 1;
-    } else return 0;
-}
-<<write out the line number pragma>>=
-for (p=fmt;*p;p++) {
-    if (*p == '%') {
-        switch (*++p) {
-            case '%': putc('%',fp);                             break;
-            case 'N': putc('\n',fp);                            break;
-            case 'F': fprintf(fp,"%s",loc.filename);            break;
-            case 'L': fprintf(fp,"%d",loc.lineno);              break;
-            case '-': case '+': 
-                        if (isdigit(p[1]) && p[2] == 'L') {
-                          fprintf(fp, "%d", *p == '+' ? loc.lineno + (p[1] - '0')
-                                                      : loc.lineno - (p[1] - '0'));
-                          p += 2;
-                        } else
-                          <<complain about bad format character>>
-                      break;            
-            default:  <<complain about bad format character>>   break;
-        }
-    } else putc(*p,fp);
-}
-<<complain about bad format character>>=
-{ static int complained = 0;
-  if (!complained) {
-    errormsg(Error,"Bad format sequence ``%%%c'' in -L%s",*p,fmt);
-    complained = 1;
-  }
-}
-<<RCS log>>=
-$Log:	modules.nw,v $
-# Revision 2.2  93/03/01  17:17:42  norman
-# distributed as version 2.4 (first "official" release)
-# 
-# Revision 2.1  91/10/14  14:23:32  nr
-# Distributed as version 2.0
-# 
-# Revision 2.0  91/10/10  14:43:32  nr
-# Distributed as version 2.0
-# 
-# Revision 1.3  91/10/09  14:22:59  nr
-# added %N format specifier
-# 
-# Revision 1.2  91/10/09  14:10:57  nr
-# added a third kind of module: now have strings, modules, and newlines
-# added newline support in creating and expanding modules
-# 
-# Revision 1.1  1991/08/23  23:39:22  ramsey
-# Initial revision
-#
+@ %def remove_final_newline
