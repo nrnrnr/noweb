@@ -1,5 +1,6 @@
 ;; noweb-mode.el - edit noweb files with GNU Emacs
 ;; Copyright (C) 1995 by Thorsten.Ohl @ Physik.TH-Darmstadt.de
+;;     with a little help from Norman Ramsey <norman@bellcore.com>
 ;; 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -15,7 +16,8 @@
 ;; along with this program; if not, write to the Free Software
 ;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ;; 
-;; $Id: noweb-mode.el,v 1.7 1995/05/26 11:51:49 ohl Exp $
+;; $Id: noweb-mode.el,v 1.17 1995/06/25 17:27:36 ohl Exp $
+;; $Name$
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; THIS IS UNRELEASED CODE: IT IS MISSING FUNCTIONALITY AND IT NEEDS CLEANUP ;;
@@ -27,13 +29,42 @@
 ;; (setq auto-mode-alist (append (list (cons "\\.nw$" 'noweb-mode))
 ;;			      auto-mode-alist))
 
+;; NEWS:
+;;
+;;   * [tho] M-n q, aka: M-x noweb-fill-chunk
+;;
+;;   * [tho] M-n TAB, aka: M-x noweb-complete-chunk
+;;
+;;   * [tho] noweb-occur
+;;
+;;   * [nr] use `M-n' instead of `C-c n' as default command prefix
+;;
+;;   * [nr] don't be fooled by
+;;
+;;     	   @
+;;     	   <<foo>>=
+;;     	   int foo;
+;;     	   @ %def foo
+;;     	   Here starts a new documentation chunk!
+;;     	   <<bar>>=
+;;     	   int bar;
+;;
+;;  * [nr] switch mode changing commands off during isearch-mode
+;;
+;;  * [tho] noweb-goto-chunk proposes a default
+;;
+
 ;; TODO:
 ;;
-;;   * wrapped NOWEB-GOTO-NEXT and NOWEB-GOTO-PREVIOUS
+;;   * replace obscure hacks like `(stringp (car (noweb-find-chunk)))'
+;;     by something more reasonable like `(noweb-code-chunkp)'.
+;;
+;;   * _maybe_ replace our `noweb-chunk-vector' by text properties.  We
+;;     could then use highlighting to jazz up the visual appearance.
+;;
+;;   * wrapped `noweb-goto-next' and `noweb-goto-previous'
 ;;
 ;;   * more range checks and error exits
-;;
-;;   * a chunk menu
 ;;
 ;;   * commands for tangling, weaving, etc.
 ;;
@@ -43,7 +74,7 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.7 1995/05/26 11:51:49 ohl Exp $")
+  "$Id: noweb-mode.el,v 1.17 1995/06/25 17:27:36 ohl Exp $")
 
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.
@@ -72,19 +103,21 @@ This is the place to overwrite keybindings of the other modes.")
   "Major mode for editing documentation chunks.")
 
 (defvar noweb-code-mode 'fundamental-mode
-  "Major mode for editing code chunks.")
+  "Major mode for editing code chunks.  This is set to FUNDAMENTAL-MODE
+by default, but you might want to change this in the Local Variables
+section of your file to something more appropriate, like C-MODE,
+FORTRAN-MODE, or even INDENTED-TEXT-MODE.")
 
 (defvar noweb-chunk-vector nil
   "Vector of the chunks in this buffer.")
 
-(defvar noweb-isearch-in-progress nil 
-  "If non-nil, an incremental search is in progress, and noweb should
-   avoid switching modes, since that seems to knock us right out of
-   I-Search mode")
-
 (defvar noweb-narrowing nil
   "If not NIL, the display will always be narrowed to the
 current chunk pair.")
+
+(defvar noweb-electric-@-and-< t
+  "If not nil, the keys `@' and `<' will be bound to NOWEB-ELECTRIC-@
+and NOWEB-ELECTRIC-<, respectively.")
 
 
 ;;; Setup
@@ -95,7 +128,7 @@ current chunk pair.")
   "Keymap for noweb mode menu commands.")
 
 (defvar noweb-mode nil
-  "Buff local variable, T iff this buffer is edited in noweb mode.")
+  "Buffer local variable, T iff this buffer is edited in noweb mode.")
 
 (if (not (assq 'noweb-mode minor-mode-alist))
     (setq minor-mode-alist (append minor-mode-alist
@@ -107,9 +140,9 @@ current chunk pair.")
   (noweb-mode))
 
 (defun noweb-mode ()
-  "Minor meta mode for editing noweb files.  `Meta' refers to the fact
-that this minor mode is switching major modes depending on the location
-of point.
+  "Minor meta mode for editing noweb files.
+`Meta' refers to the fact that this minor mode is switching major
+modes depending on the location of point.
 
 The following special keystrokes are available in noweb mode:
 
@@ -136,14 +169,23 @@ Copying/Killing/Marking/Narrowing:
 \\[widen] \twiden
 \\[noweb-toggle-narrowing] \ttoggle auto narrowing
 
+Filling:
+\\[noweb-fill-chunk] \tfill the chunk at point according to mode.
+\\[noweb-fill-paragraph-chunk] \tfill the paragraph at point, restricted to chunk.
+
 Insertion:
-\\[noweb-new-chunk] \tinsert a new chunk
+\\[noweb-insert-mode-line] \tinsert a line to set this file's code mode
+\\[noweb-new-chunk] \tinsert a new chunk at point
+\\[noweb-complete-chunk] \tcomplete the chunk name before point.
+\\[noweb-electric-@] \tinsert a `@' or start a new doc chunk.
+\\[noweb-electric-<] \tinsert a `<' or start a new code chunk.
 
 Modes:
 \\[noweb-set-doc-mode] \tchange the major mode for editing documentation chunks
 \\[noweb-set-code-mode] \tchange the major mode for editing code chunks
 
 Misc:
+\\[noweb-occur] \tfind all occurrences of the current chunk
 \\[noweb-update-chunk-vector] \tupdate the markers for chunks
 \\[noweb-describe-mode] \tdescribe noweb-mode
 \\[noweb-mode-version] \tshow noweb-mode's version in the minibuffer
@@ -151,20 +193,26 @@ Misc:
   (interactive)
   (mapcar 'noweb-make-variable-permanent-local
 	  '(noweb-mode
+	    noweb-narrowing
 	    noweb-chunk-vector
 	    post-command-hook
+	    isearch-mode-hook
+	    isearch-mode-end-hook
 	    noweb-doc-mode
 	    noweb-code-mode))
   (setq noweb-mode t)
   (noweb-setup-keymap)
   (add-hook 'post-command-hook 'noweb-post-command-hook)
+  (add-hook 'noweb-select-doc-mode-hook 'noweb-auto-fill-doc-mode)
+  (add-hook 'noweb-select-code-mode-hook 'noweb-auto-fill-code-mode)
   (add-hook 'isearch-mode-hook 'noweb-note-isearch-mode)
   (add-hook 'isearch-mode-end-hook 'noweb-note-isearch-mode-end)
   (run-hooks 'noweb-mode-hook)
   (message "nobweb mode: use `M-x noweb-describe-mode' for further information"))
 
 (defun noweb-setup-keymap ()
-  ""
+  "Setup the noweb-mode keymap.  This function is rerun every time the
+major modes changes, because it might have grabbed the keys."
   (if noweb-mode-prefix-map
       nil
     (setq noweb-mode-prefix-map (make-sparse-keymap))
@@ -173,85 +221,101 @@ Misc:
       nil
     (setq noweb-mode-menu-map (make-sparse-keymap "Noweb"))
     (noweb-bind-menu))
+  (if noweb-electric-@-and-<
+      (progn
+	(local-set-key "@" 'noweb-electric-@)
+	(local-set-key "<" 'noweb-electric-<)))
+  (local-set-key "\M-q" 'noweb-fill-paragraph-chunk)
   (local-set-key noweb-mode-prefix noweb-mode-prefix-map)
   (local-set-key [menu-bar noweb] (cons "Noweb" noweb-mode-menu-map)))
 
-(defun noweb-bind-keys ()
-  "Establish noweb mode key bindings."
-  (define-key noweb-mode-prefix-map "\C-n" 'noweb-next-chunk)
-  (define-key noweb-mode-prefix-map "\C-p" 'noweb-previous-chunk)
-  (define-key noweb-mode-prefix-map "\M-n" 'noweb-goto-next)
-  (define-key noweb-mode-prefix-map "\M-p" 'noweb-goto-previous)
-  (define-key noweb-mode-prefix-map "c" 'noweb-next-code-chunk)
-  (define-key noweb-mode-prefix-map "C" 'noweb-previous-code-chunk)
-  (define-key noweb-mode-prefix-map "d" 'noweb-next-doc-chunk)
-  (define-key noweb-mode-prefix-map "D" 'noweb-previous-doc-chunk)
-  (define-key noweb-mode-prefix-map "g" 'noweb-goto-chunk)
-  (define-key noweb-mode-prefix-map "\C-l" 'noweb-update-chunk-vector)
-  (define-key noweb-mode-prefix-map "w" 'noweb-copy-chunk-as-kill)
-  (define-key noweb-mode-prefix-map "W" 'noweb-copy-chunk-pair-as-kill)
-  (define-key noweb-mode-prefix-map "k" 'noweb-kill-chunk)
-  (define-key noweb-mode-prefix-map "K" 'noweb-kill-chunk-pair)
-  (define-key noweb-mode-prefix-map "m" 'noweb-mark-chunk)
-  (define-key noweb-mode-prefix-map "M" 'noweb-mark-chunk-pair)
-  (define-key noweb-mode-prefix-map "n" 'noweb-narrow-to-chunk)
-  (define-key noweb-mode-prefix-map "N" 'noweb-narrow-to-chunk-pair)
-  (define-key noweb-mode-prefix-map "t" 'noweb-toggle-narrowing)
-  (define-key noweb-mode-prefix-map "i" 'noweb-new-chunk)
-  (define-key noweb-mode-prefix-map "v" 'noweb-mode-version)
-  (define-key noweb-mode-prefix-map "h" 'noweb-describe-mode)
-  (define-key noweb-mode-prefix-map "\C-h" 'noweb-describe-mode))
-
-(defun noweb-bind-menu ()
-  "Establish noweb mode menu bindings."
-  (define-key noweb-mode-menu-map [noweb-mode-version]
-    '("Version" . noweb-mode-version))
-  (define-key noweb-mode-menu-map [noweb-describe-mode]
-    '("Help" . noweb-describe-mode))
-  (define-key noweb-mode-menu-map [separator-noweb-help] '("--"))
-  (define-key noweb-mode-menu-map [noweb-update-chunk-vector]
-    '("Update the chunk vector" . noweb-update-chunk-vector))
-  (define-key noweb-mode-menu-map [noweb-new-chunk]
-    '("Insert new chunk" . noweb-new-chunk))
-  (define-key noweb-mode-menu-map [separator-noweb-chunks] '("--"))
-  (define-key noweb-mode-menu-map [noweb-toggle-narrowing]
-    '("Toggle auto narrowing" . noweb-toggle-narrowing))
-  (define-key noweb-mode-menu-map [noweb-narrow-to-chunk-pair]
-    '("Narrow to chunk pair" . noweb-narrow-to-chunk-pair))
-  (define-key noweb-mode-menu-map [noweb-narrow-to-chunk]
-    '("Narrow to chunk" . noweb-narrow-to-chunk))
-  (define-key noweb-mode-menu-map [noweb-mark-chunk-pair]
-    '("Mark chunk pair" . noweb-mark-chunk-pair))
-  (define-key noweb-mode-menu-map [noweb-mark-chunk]
-    '("Mark chunk" . noweb-mark-chunk))
-  (define-key noweb-mode-menu-map [noweb-kill-chunk-pair]
-    '("Kill chunk pair" . noweb-kill-chunk-pair))
-  (define-key noweb-mode-menu-map [noweb-kill-chunk]
-    '("Kill chunk" . noweb-kill-chunk))
-  (define-key noweb-mode-menu-map [noweb-copy-chunk-pair-as-kill]
-    '("Copy chunk pair" . noweb-copy-chunk-pair-as-kill))
-  (define-key noweb-mode-menu-map [noweb-copy-chunk-as-kill]
-    '("Copy chunk" . noweb-copy-chunk-as-kill))
-  (define-key noweb-mode-menu-map [separator-noweb-move] '("--"))
-  (define-key noweb-mode-menu-map [noweb-next-doc-chunk]
-    '("Next documentation chunk" . noweb-next-doc-chunk))
-  (define-key noweb-mode-menu-map [noweb-previous-doc-chunk]
-    '("Previous documentation chunk" . noweb-previous-doc-chunk))
-  (define-key noweb-mode-menu-map [noweb-next-code-chunk]
-    '("Next code chunk" . noweb-next-code-chunk))
-  (define-key noweb-mode-menu-map [noweb-previous-code-chunk]
-    '("Previous code chunk" . noweb-previous-code-chunk))
-  (define-key noweb-mode-menu-map [noweb-goto-chunk]
-    '("Goto chunk" . noweb-goto-chunk))
-  (define-key noweb-mode-menu-map [noweb-goto-next]
-    '("Next chunk of same name" . noweb-goto-next))
-  (define-key noweb-mode-menu-map [noweb-goto-previous]
-    '("Previous chunk of same name" . noweb-goto-previous))
-  (define-key noweb-mode-menu-map [noweb-next-chunk]
-    '("Next chunk" . noweb-next-chunk))
-  (define-key noweb-mode-menu-map [noweb-previous-chunk]
-    '("Previous chunk" . noweb-previous-chunk)))
-
+    (defun noweb-bind-keys ()
+      "Establish noweb mode key bindings."
+      (define-key noweb-mode-prefix-map "\C-n" 'noweb-next-chunk)
+      (define-key noweb-mode-prefix-map "\C-p" 'noweb-previous-chunk)
+      (define-key noweb-mode-prefix-map "\M-n" 'noweb-goto-next)
+      (define-key noweb-mode-prefix-map "\M-m" 'noweb-insert-mode-line)
+      (define-key noweb-mode-prefix-map "\M-p" 'noweb-goto-previous)
+      (define-key noweb-mode-prefix-map "c" 'noweb-next-code-chunk)
+      (define-key noweb-mode-prefix-map "C" 'noweb-previous-code-chunk)
+      (define-key noweb-mode-prefix-map "d" 'noweb-next-doc-chunk)
+      (define-key noweb-mode-prefix-map "D" 'noweb-previous-doc-chunk)
+      (define-key noweb-mode-prefix-map "g" 'noweb-goto-chunk)
+      (define-key noweb-mode-prefix-map "\C-l" 'noweb-update-chunk-vector)
+      (define-key noweb-mode-prefix-map "\M-l" 'noweb-update-chunk-vector)
+      (define-key noweb-mode-prefix-map "w" 'noweb-copy-chunk-as-kill)
+      (define-key noweb-mode-prefix-map "W" 'noweb-copy-chunk-pair-as-kill)
+      (define-key noweb-mode-prefix-map "k" 'noweb-kill-chunk)
+      (define-key noweb-mode-prefix-map "K" 'noweb-kill-chunk-pair)
+      (define-key noweb-mode-prefix-map "m" 'noweb-mark-chunk)
+      (define-key noweb-mode-prefix-map "M" 'noweb-mark-chunk-pair)
+      (define-key noweb-mode-prefix-map "n" 'noweb-narrow-to-chunk)
+      (define-key noweb-mode-prefix-map "N" 'noweb-narrow-to-chunk-pair)
+      (define-key noweb-mode-prefix-map "t" 'noweb-toggle-narrowing)
+      (define-key noweb-mode-prefix-map "\t" 'noweb-complete-chunk)
+      (define-key noweb-mode-prefix-map "q" 'noweb-fill-chunk)
+      (define-key noweb-mode-prefix-map "i" 'noweb-new-chunk)
+      (define-key noweb-mode-prefix-map "o" 'noweb-occur)
+      (define-key noweb-mode-prefix-map "v" 'noweb-mode-version)
+      (define-key noweb-mode-prefix-map "h" 'noweb-describe-mode)
+      (define-key noweb-mode-prefix-map "\C-h" 'noweb-describe-mode))
+    
+  (defun noweb-bind-menu ()
+    "Establish noweb mode menu bindings."
+    (define-key noweb-mode-menu-map [noweb-mode-version]
+      '("Version" . noweb-mode-version))
+    (define-key noweb-mode-menu-map [noweb-describe-mode]
+      '("Help" . noweb-describe-mode))
+    (define-key noweb-mode-menu-map [separator-noweb-help] '("--"))
+    (define-key noweb-mode-menu-map [noweb-occur]
+      '("Chunk occurrences" . noweb-occur))
+    (define-key noweb-mode-menu-map [noweb-update-chunk-vector]
+      '("Update the chunk vector" . noweb-update-chunk-vector))
+    (define-key noweb-mode-menu-map [noweb-new-chunk]
+      '("Insert new chunk" . noweb-new-chunk))
+    (define-key noweb-mode-menu-map [noweb-fill-chunk]
+      '("Fill current chunk" . noweb-fill-chunk))
+    (define-key noweb-mode-menu-map [noweb-complete-chunk]
+      '("Complete chunk name" . noweb-complete-chunk))
+    (define-key noweb-mode-menu-map [separator-noweb-chunks] '("--"))
+    (define-key noweb-mode-menu-map [noweb-toggle-narrowing]
+      '("Toggle auto narrowing" . noweb-toggle-narrowing))
+    (define-key noweb-mode-menu-map [noweb-narrow-to-chunk-pair]
+      '("Narrow to chunk pair" . noweb-narrow-to-chunk-pair))
+    (define-key noweb-mode-menu-map [noweb-narrow-to-chunk]
+      '("Narrow to chunk" . noweb-narrow-to-chunk))
+    (define-key noweb-mode-menu-map [noweb-mark-chunk-pair]
+      '("Mark chunk pair" . noweb-mark-chunk-pair))
+    (define-key noweb-mode-menu-map [noweb-mark-chunk]
+      '("Mark chunk" . noweb-mark-chunk))
+    (define-key noweb-mode-menu-map [noweb-kill-chunk-pair]
+      '("Kill chunk pair" . noweb-kill-chunk-pair))
+    (define-key noweb-mode-menu-map [noweb-kill-chunk]
+      '("Kill chunk" . noweb-kill-chunk))
+    (define-key noweb-mode-menu-map [noweb-copy-chunk-pair-as-kill]
+      '("Copy chunk pair" . noweb-copy-chunk-pair-as-kill))
+    (define-key noweb-mode-menu-map [noweb-copy-chunk-as-kill]
+      '("Copy chunk" . noweb-copy-chunk-as-kill))
+    (define-key noweb-mode-menu-map [separator-noweb-move] '("--"))
+    (define-key noweb-mode-menu-map [noweb-next-doc-chunk]
+      '("Next documentation chunk" . noweb-next-doc-chunk))
+    (define-key noweb-mode-menu-map [noweb-previous-doc-chunk]
+      '("Previous documentation chunk" . noweb-previous-doc-chunk))
+    (define-key noweb-mode-menu-map [noweb-next-code-chunk]
+      '("Next code chunk" . noweb-next-code-chunk))
+    (define-key noweb-mode-menu-map [noweb-previous-code-chunk]
+      '("Previous code chunk" . noweb-previous-code-chunk))
+    (define-key noweb-mode-menu-map [noweb-goto-chunk]
+      '("Goto chunk" . noweb-goto-chunk))
+    (define-key noweb-mode-menu-map [noweb-goto-next]
+      '("Next chunk of same name" . noweb-goto-next))
+    (define-key noweb-mode-menu-map [noweb-goto-previous]
+      '("Previous chunk of same name" . noweb-goto-previous))
+    (define-key noweb-mode-menu-map [noweb-next-chunk]
+      '("Next chunk" . noweb-next-chunk))
+    (define-key noweb-mode-menu-map [noweb-previous-chunk]
+      '("Previous chunk" . noweb-previous-chunk)))
+  
 (defun noweb-make-variable-permanent-local (var)
   "Declare VAR buffer local, but protect it from beeing killed
 by major mode changes."
@@ -260,32 +324,20 @@ by major mode changes."
 
 (defun noweb-note-isearch-mode ()
   "Take note of an incremental search in progress"
-  (setq noweb-isearch-in-progress 't))
+  (remove-hook 'post-command-hook 'noweb-post-command-hook))
 
 (defun noweb-note-isearch-mode-end ()
   "Take note of an incremental search having ended"
-  (setq noweb-isearch-in-progress nil))
+  (add-hook 'post-command-hook 'noweb-post-command-hook))
 
 (defun noweb-post-command-hook ()
   "The hook being run after each command in noweb mode."
-  (if noweb-isearch-in-progress
-      'do-nothing
-    (noweb-select-mode)
-    ;; reinstall our keymap if the major mode screwed it up:
-    (noweb-setup-keymap)))
+  (noweb-select-mode)
+  ;; reinstall our keymap if the major mode screwed it up:
+  (noweb-setup-keymap))
 
 
 ;;; Chunks
-
-(defun noweb-bol () "Return position of beginning of line"
-  (save-excursion (beginning-of-line) (point)))
-
-(defun noweb-eol () "Return position of end of line"
-  (save-excursion (end-of-line) (point)))
-
-(defun noweb-this-line () "Return curent line as string"
-  (interactive)
-  (buffer-substring (noweb-bol) (noweb-eol)))
 
 (defun noweb-update-chunk-vector ()
   "Scan the whole buffer and place a marker at each \"^@\" and \"^<<\".
@@ -296,9 +348,6 @@ Record them in NOWEB-CHUNK-VECTOR."
     (let ((chunk-list (list (cons 'doc (point-marker)))))
       (while (re-search-forward "^\\(@\\( %def\\)?\\|<<\\(.*\\)>>=\\)" nil t)
 	(goto-char (match-beginning 0))
-	; (if (eq (point) (point-min)) nil (backward-char)) ; want mode change at bol
-        ;  NO! -- blows insertion
-
 	;; If the second subexpression matched, we're still in a code
 	;; chunk (sort of), so don't place a marker here.
 	(if (not (match-beginning 2))
@@ -310,40 +359,35 @@ Record them in NOWEB-CHUNK-VECTOR."
 				'doc)
 			      (point-marker))
 			chunk-list))
-	    ;; Here, should scan forward either to /^[^@]/, which will
-	    ;; start a docs dchunk, or to /^<<.*>>=$/, which will
-	    ;; start a code chunk.  I don't know enough emas lisp to
-	    ;; do it, so I just set a chunk.
-	    (progn
-	      (next-line 1)
-	      (while (eq (string-match "@ %def" (noweb-this-line)) 0)
-		(next-line 1))
-	      (setq chunk-list
-		    ;; Now we can tell code vs docs
-		    (cons 
-		     (cons
-		      (if (eq (string-match "<<\\(.*\\)>>=" (noweb-this-line))
-			      0)
-			  (buffer-substring (match-beginning 1) (match-end 1))
-			'doc)
-		      (point-marker))
-		     chunk-list))))
+	  ;; Scan forward either to !/^@ %def/, which will start a docs chunk,
+	  ;; or to /^<<.*>>=$/, which will start a code chunk.
+	  (progn
+	    (next-line 1)
+	    (while (looking-at "@ %def")
+	      (next-line 1))
+	    (setq chunk-list
+		  ;; Now we can tell code vs docs
+		  (cons (cons (if (looking-at "<<\\(.*\\)>>=")
+				  (buffer-substring (match-beginning 1) (match-end 1))
+				'doc)
+			      (point-marker))
+			chunk-list))))
 	(next-line 1))
       (setq chunk-list (cons (cons 'doc (point-max-marker)) chunk-list))
       (setq noweb-chunk-vector (vconcat (reverse chunk-list))))))
 
 (defun noweb-find-chunk ()
-  ""
+  "Return a pair consisting of the name (or 'DOC) and the
+marker of the current chunk."
   (if (not noweb-chunk-vector)
       (noweb-update-chunk-vector))
   (aref noweb-chunk-vector (noweb-find-chunk-index-buffer)))
 
 (defun noweb-find-chunk-index-buffer ()
-  ""
+  "Return the index of the current chunk in NOWEB-CHUNK-VECTOR."
   (noweb-find-chunk-index 0 (1- (length noweb-chunk-vector))))
 
 (defun noweb-find-chunk-index (low hi)
-  ""
   (if (= hi (1+ low))
       low
     (let ((med (/ (+ low hi) 2)))
@@ -352,14 +396,15 @@ Record them in NOWEB-CHUNK-VECTOR."
 	(noweb-find-chunk-index med hi)))))
 
 (defun noweb-chunk-region ()
-  ""
+  "Return a pair consisting of the beginning and end of the current chunk."
   (interactive)
   (let ((start (noweb-find-chunk-index-buffer)))
     (cons (marker-position (cdr (aref noweb-chunk-vector start)))
 	  (marker-position (cdr (aref noweb-chunk-vector (1+ start)))))))
 
 (defun noweb-chunk-pair-region ()
-  ""
+  "Return a pair consisting of the beginning and end of the current pair of
+documentation and code chunks."
   (interactive)
   (let* ((start (noweb-find-chunk-index-buffer))
 	 (end (1+ start)))
@@ -372,25 +417,190 @@ Record them in NOWEB-CHUNK-VECTOR."
 	    (marker-position (cdr (aref noweb-chunk-vector (1+ end))))))))
 
 (defun noweb-chunk-vector-aref (i)
-  ""
   (if (< i 0)
       (error "Before first chunk."))
   (if (>= i (length noweb-chunk-vector))
       (error "Beyond last chunk."))
   (aref noweb-chunk-vector i))
 
+(defun noweb-complete-chunk ()
+  "Complete the chunk name before point, if any."
+  (interactive)
+  (if (stringp (car (aref noweb-chunk-vector
+			  (noweb-find-chunk-index-buffer))))
+      (let ((end (point))
+	    (beg (save-excursion
+		   (if (re-search-backward "<<"
+					   (save-excursion
+					     (beginning-of-line)
+					     (point))
+					   t)
+		       (match-end 0)
+		     nil))))
+	(if beg
+	    (let* ((pattern (buffer-substring beg end))
+		   (alist (noweb-build-chunk-alist))
+		   (completion (try-completion pattern alist)))
+	      (cond ((eq completion t))
+		    ((null completion)
+		     (message "Can't find completion for \"%s\"" pattern)
+		     (ding))
+		    ((not (string= pattern completion))
+		     (delete-region beg end)
+		     (insert completion)
+		     (if (not (looking-at ">>"))
+			 (insert ">>")))
+		    (t
+		     (message "Making completion list...")
+		     (with-output-to-temp-buffer "*Completions*"
+		       (display-completion-list (all-completions pattern alist)))
+		     (message "Making completion list...%s" "done"))))
+	  (message "Not at chunk name...")))
+    (message "Not in code chunk...")))
+
+
+;;; Filling, etc
+
+(defun noweb-hide-code-quotes ()
+  "Replace all non blank characters in [[...]] code quotes
+in the current buffer (you might want to narrow to the interesting
+region first) by `*'.  Return a list of pairs with the position and
+value of the original strings." 
+  (save-excursion
+    (let ((quote-list nil))
+      (goto-char (point-min))
+      (while (re-search-forward "\\[\\[" nil 'move)
+	(let ((beg (match-end 0))
+	      (end (if (re-search-forward "\\]\\]" nil t)
+		       (match-beginning 0)
+		     (point-max))))
+	  (goto-char beg)
+	  (while (< (point) end)
+	    ;; Move on to the next word:
+	    (let ((b (progn
+		       (skip-chars-forward " \t\n" end)
+		       (point)))
+		  (e (progn
+		       (skip-chars-forward "^ \t\n" end)
+		       (point))))
+	      (if (> e b)
+		  ;; Save the string and a marker to the end of the 
+		  ;; replacement text.  A marker to the beginning is
+		  ;; useless.  See NOWEB-RESTORE-CODE-QUOTES.
+		  (save-excursion
+		    (setq quote-list (cons (cons (copy-marker e)
+						 (buffer-substring b e))
+					   quote-list))
+		    (goto-char b)
+		    (insert-char ?* (- e b) t)
+		    (delete-char (- e b))))))))
+      (reverse quote-list))))
+
+(defun noweb-restore-code-quotes (quote-list)
+  "Reinsert the strings modified by `noweb-hide-code-quotes'."
+  (save-excursion
+    (mapcar '(lambda (q)
+	       (let* ((e (marker-position (car q)))
+		      ;; Slightly inefficient, but correct way to find
+		      ;; the beginning of the word to be replaced.
+		      ;; Using the marker at the beginning will loose
+		      ;; if whitespace has been rearranged
+		      (b (save-excursion
+			   (goto-char e)
+			   (skip-chars-backward "*")
+			   (point))))
+		 (delete-region b e)
+		 (goto-char b)
+		 (insert (cdr q))))
+	    quote-list)))
+
+(defun noweb-fill-chunk ()
+  "Fill the current chunk according to mode.
+Run `fill-region' on documentation chunks and `indent-region' on code
+chunks."
+  (interactive)
+  (save-restriction
+    (noweb-narrow-to-chunk)
+    (if (stringp (car (noweb-find-chunk)))
+	(progn
+	  ;; Narrow to the code section proper; w/o the first and any
+	  ;; index declaration lines.
+	  (narrow-to-region (progn
+			      (goto-char (point-min))
+			      (forward-line 1)
+			      (point))
+			    (progn
+			      (goto-char (point-max))
+			      (forward-line -1)
+			      (while (looking-at "@")
+				(forward-line -1))
+			      (forward-line 1)
+			      (point)))
+	  (if (or indent-region-function indent-line-function)
+	      (indent-region (point-min) (point-max) nil)
+	    (error "No indentation functions defined in %s!" major-mode)))
+      (let ((quote-list (noweb-hide-code-quotes)))
+	(fill-region (point-min) (point-max))
+	(noweb-restore-code-quotes quote-list)))))
+
+(defun noweb-fill-paragraph-chunk (&optional justify)
+  "Fill a paragraph in the current chunk."
+  (interactive "P")
+  (noweb-update-chunk-vector)
+  (save-restriction
+    (noweb-narrow-to-chunk)
+    (if (stringp (car (noweb-find-chunk)))
+	(progn
+	  ;; Narrow to the code section proper; w/o the first and any
+	  ;; index declaration lines.
+	  (narrow-to-region (progn
+			      (goto-char (point-min))
+			      (forward-line 1)
+			      (point))
+			    (progn
+			      (goto-char (point-max))
+			      (forward-line -1)
+			      (while (looking-at "@")
+				(forward-line -1))
+			      (forward-line 1)
+			      (point)))
+	  (fill-paragraph justify))
+      (let ((quote-list (noweb-hide-code-quotes)))
+	(fill-paragraph justify)
+	(noweb-restore-code-quotes quote-list)))))
+
+(defun noweb-auto-fill-doc-chunk ()
+  "Replacement for `do-auto-fill'."
+  (save-restriction
+    (narrow-to-region (car (noweb-chunk-region))
+		      (save-excursion
+			(end-of-line)
+			(point)))
+    (let ((quote-list (noweb-hide-code-quotes)))
+      (do-auto-fill)
+      (noweb-restore-code-quotes quote-list))))
+
+(defun noweb-auto-fill-doc-mode ()
+  "Install the improved auto fill function, iff necessary."
+  (if auto-fill-function
+      (setq auto-fill-function 'noweb-auto-fill-doc-chunk)))
+
+(defun noweb-auto-fill-code-mode ()
+  "Install the default auto fill function, iff necessary."
+  (if auto-fill-function
+      (setq auto-fill-function 'do-auto-fill)))
 
 ;;; Marking
 
 (defun noweb-mark-chunk ()
-  ""
+  "Mark the current chunk."
   (interactive)
   (let ((r (noweb-chunk-region)))
     (goto-char (car r))
     (push-mark (cdr r) nil t)))
 
 (defun noweb-mark-chunk-pair ()
-  ""
+  "Mark the current pair of documentation and code chunks."
   (interactive)
   (let ((r (noweb-chunk-pair-region)))
     (goto-char (car r))
@@ -400,7 +610,9 @@ Record them in NOWEB-CHUNK-VECTOR."
 ;;; Narrowing
 
 (defun noweb-toggle-narrowing (&optional arg)
-  ""
+  "Toggle if we should narrow the display to the current pair of
+documentation and code chunks after each movement.  With argument:
+switch narrowing on."
   (interactive "P")
   (if (or arg (not noweb-narrowing))
       (progn
@@ -410,13 +622,13 @@ Record them in NOWEB-CHUNK-VECTOR."
     (widen)))
 
 (defun noweb-narrow-to-chunk ()
-  ""
+  "Narrow the display to the current chunk."
   (interactive)
   (let ((r (noweb-chunk-region)))
     (narrow-to-region (car r) (cdr r))))
 
 (defun noweb-narrow-to-chunk-pair ()
-  ""
+  "Narrow the display to the current pair of documentation and code chunks."
   (interactive)
   (let ((r (noweb-chunk-pair-region)))
     (narrow-to-region (car r) (cdr r))))
@@ -425,25 +637,25 @@ Record them in NOWEB-CHUNK-VECTOR."
 ;;; Killing
 
 (defun noweb-kill-chunk ()
-  ""
+  "Kill the current chunk."
   (interactive)
   (let ((r (noweb-chunk-region)))
     (kill-region (car r) (cdr r))))
 
 (defun noweb-kill-chunk-pair ()
-  ""
+  "Kill the current pair of chunks."
   (interactive)
   (let ((r (noweb-chunk-pair-region)))
     (kill-region (car r) (cdr r))))
 
 (defun noweb-copy-chunk-as-kill ()
-  ""
+  "Place the current chunk on the kill ring."
   (interactive)
   (let ((r (noweb-chunk-region)))
     (copy-region-as-kill (car r) (cdr r))))
 
 (defun noweb-copy-chunk-pair-as-kill ()
-  ""
+  "Place the current pair of chunks on the kill ring."
   (interactive)
   (let ((r (noweb-chunk-pair-region)))
     (copy-region-as-kill (car r) (cdr r))))
@@ -522,13 +734,30 @@ chunk from point, else goto to the -Nth code chunk from point."
   (let* ((completion-ignore-case t)
 	 (alist (noweb-build-chunk-alist))
 	 (chunk (completing-read
-		 "Chunk: " alist nil t nil noweb-chunk-history)))
+		 "Chunk: " alist nil t
+		 (noweb-goto-chunk-default)
+		 noweb-chunk-history)))
     (goto-char (cdr (assoc chunk alist))))
   (if noweb-narrowing
       (noweb-narrow-to-chunk-pair)))
 
+(defun noweb-goto-chunk-default ()
+  (save-excursion
+    (if (re-search-backward "<<"
+			    (save-excursion
+			      (beginning-of-line)
+			      (point))
+			    'move)
+	(goto-char (match-beginning 0)))
+    (if (re-search-forward "<<\\(.*\\)>>"
+			   (save-excursion
+			     (end-of-line)
+			     (point))
+			   t)
+	(buffer-substring (match-beginning 1) (match-end 1))
+      nil)))
+
 (defun noweb-build-chunk-alist ()
-  ""
   (if (not noweb-chunk-vector)
       (noweb-update-chunk-vector))
   ;; The naive recursive solution will exceed MAX-LISP-EVAL-DEPTH in
@@ -537,11 +766,12 @@ chunk from point, else goto to the -Nth code chunk from point."
   (let ((alist nil)
 	(i (1- (length noweb-chunk-vector))))
     (while (>= i 0)
-      (let ((chunk (aref noweb-chunk-vector i)))
-	(if (stringp (car chunk))
-	    (setq alist (cons (cons (car chunk)
-				    (marker-position (cdr chunk)))
-			      alist))))
+      (let* ((chunk (aref noweb-chunk-vector i))
+	     (name (car chunk))
+	     (marker (cdr chunk)))
+	(if (and (stringp name)
+		 (not (assoc name alist)))
+	    (setq alist (cons (cons name marker) alist))))
       (setq i (1- i)))
     alist))
 
@@ -570,27 +800,89 @@ chunk from point, else goto to the -Nth code chunk from point."
       (noweb-narrow-to-chunk-pair)))
 
 (defun noweb-goto-previous (&optional cnt)
-  ""
+  "Goto the previous chunk."
   (interactive "p")
   (noweb-goto-next (- cnt)))
+
+(defun noweb-occur (arg)
+  "Find all occurences of the current chunk.
+This function simply runns OCCUR on \"<<NAME>>\"."
+  (interactive "P")
+  (let ((n (if (and arg
+		    (numberp arg))
+	       arg
+	     0))
+	(idx (noweb-find-chunk-index-buffer)))
+    (if (stringp (car (aref noweb-chunk-vector idx)))
+	(occur (regexp-quote (concat "<<"
+				     (car (aref noweb-chunk-vector idx))
+				     ">>"))
+	       n)
+      (setq idx (1+ idx))
+      (while (not (stringp (car (aref noweb-chunk-vector idx))))
+	(setq idx (1+ idx)))
+      (occur (regexp-quote (concat "<<"
+				   (car (aref noweb-chunk-vector idx))
+				   ">>"))
+			   n))))
 
 
 ;;; Insertion
 
 (defun noweb-new-chunk (name)
-  ""
+  "Insert a new chunk."
   (interactive "sChunk name: ")
-  (noweb-next-doc-chunk)
   (insert "@ \n<<" name ">>=\n")
   (save-excursion
     (insert "@ %def \n"))
   (noweb-update-chunk-vector))
 
+(defun noweb-at-beginning-of-line ()
+  (equal (save-excursion
+	   (beginning-of-line)
+	   (point))
+	 (point)))
+
+(defun noweb-electric-@ (arg)
+  "Smart incarnation of `@', starting a new documentation chunk, maybe.
+If given an numerical argument, it will act just like the dumb `@'.
+Otherwise and if at the beginning of a line in a code chunk:
+insert \"@ \" and update the chunk vector."
+  (interactive "P")
+  (if arg
+      (self-insert-command (if (numberp arg) arg 1))
+    (if (and (noweb-at-beginning-of-line)
+	     (stringp (car (noweb-find-chunk))))
+	(progn
+	  (insert "@ ")
+	  (noweb-update-chunk-vector))
+      (self-insert-command 1))))
+
+(defun noweb-electric-< (arg)
+  "Smart incarnation of `<', starting a new code chunk, maybe.
+If given an numerical argument, it will act just like the dumb `<'.
+Otherwise and if at the beginning of a line in a documentation chunk:
+insert \"<<>>=\" and a newline if necessary.  Leave point in the middle
+and and update the chunk vector."
+  (interactive "P")
+  (if arg
+      (self-insert-command (if (numberp arg) arg 1))
+    (if (and (noweb-at-beginning-of-line)
+	     (not (stringp (car (noweb-find-chunk)))))
+	(progn
+	  (insert "<<")
+	  (save-excursion
+	    (insert ">>=")
+	    (if (not (looking-at "\\s *$"))
+		(newline)))
+	  (noweb-update-chunk-vector))
+      (self-insert-command 1))))
+
 
 ;;; Modes
 
 (defun noweb-select-mode ()
-  ""
+  "Select NOWEB-DOC-MODE or NOWEB-CODE-MODE, as appropriate."
   (interactive)
   (if (stringp (car (noweb-find-chunk)))
       ;; Inside a code chunk
@@ -620,25 +912,30 @@ chunk from point, else goto to the -Nth code chunk from point."
 ;;; Misc
 
 (defun noweb-mode-version ()
-  ""
+  "Echo the RCS identification of noweb mode."
   (interactive)
   (message "Thorsten's noweb-mode (PRERELEASE). RCS: %s"
 	   noweb-mode-RCS-Id))
 
 (defun noweb-describe-mode ()
-  ""
+  "Describe noweb mode."
   (interactive)
   (describe-function 'noweb-mode))
+
+(defun noweb-insert-mode-line (arg)
+  "Insert line that will set the noweb mode of this file in emacs"
+  (interactive "CNoweb code mode for this file: ")
+  (insert "% -*- mode: Noweb; noweb-code-mode: " (symbol-name arg) " -*-\n"))
 
 
 ;;; Debugging
 
 (defun noweb-log (s)
-  ""
   (let ((b (current-buffer)))
     (switch-to-buffer (get-buffer-create "*noweb-log*"))
+    (goto-char (point-max))
     (setq buffer-read-only nil)
-    (insert s "\n")
+    (insert s)
     (setq buffer-read-only t)
     (switch-to-buffer b)))
 
