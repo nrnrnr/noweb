@@ -1,0 +1,23 @@
+#!/bin/sh
+# set -x
+LIB=+LIBDIR+
+$LIB/markup $* | awk '
+BEGIN { announce = 0 }
+/^@file / {
+  if (announce) {
+    for (chunk in defined) {
+      if (defined[chunk]==1 && used[chunk]==0) printf "<<%s>>\n", chunk
+      defined[chunk] = 0
+    }
+  }
+  print substr($0,7) ":"
+  announce = 1
+}
+/^@defn / { chunk=substr($0,7) ; defined[chunk]=1 }
+/^@use / { chunk=substr($0,6) ; used[chunk]=1 }
+END {
+  for (chunk in defined) {
+    if (defined[chunk]==1 && used[chunk]==0) printf "<<%s>>\n", chunk
+    defined[chunk] = 0
+  }
+}'
