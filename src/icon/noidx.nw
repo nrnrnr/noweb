@@ -1,0 +1,283 @@
+\documentstyle[noweb]{article}
+\pagestyle{noweb}
+\begin{document}
+@
+\section{Cross-reference and index support}
+Here is is.
+<<*>>=
+global lines				# all the input lines
+
+procedure main(args)
+  lines := []
+  <<initialization>>
+  while put(lines, line := read()) do
+    apply(pass1, line)
+  every apply(pass2, !lines)
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+@
+<<*>>=
+global curfile
+<<initialization>>=
+curfile := "standard input?"		# unique tag for current file
+<<*>>=
+procedure pass1(name, arg)
+  static thislabel
+  case name of {
+    "file" : curfile := modid(arg || (arg[4+:3] | arg[4:0] | ""))
+    "defn" : {
+        insert(allchunks, arg)
+        d := pull(lines)
+        put(lines, "@thislabel " || (thislabel := newlabel("DEFN", defns, arg)))
+        put(lines, d)		# make label show up BEFORE defn
+      }
+    "use"  : {
+        insert(allchunks, arg)
+        addlabel(uses, arg, thislabel)
+    }
+    "index" :
+      arg ? if insert(if ="defn " then defnidents else if="use "then useidents, 
+                      ident := tab(0)) then
+        /indexlabels[ident] := indexlabel(ident)
+  }
+  return
+end
+@ %def allchunks defnidents useidents indexlabels defns uses
+<<*>>=
+global allchunks, defnidents, useidents, indexlabels, defns, uses
+<<initialization>>=
+every allchunks | defnidents | useidents := set()
+every indexlabels | defns | uses := table()
+@ %def  allchunks defnidents useidents indexlabels defns uses foo$bar
+<<*>>=
+procedure pass2(name, arg)
+  static thischunk, thesedefns, theseuses
+  static thislabel # null for docs chunk, sub-page label for code chunk
+  static firstdefnout
+  initial firstdefnout := set()
+  case name of {
+    "thislabel" :
+       write("@literal \\sublabel{", thislabel := arg, "}")
+    "begin" : {
+       <<copy [[name]] and [[arg]] to output>>
+       <<shift [[name]] and [[arg]]>>
+       every thesedefns | theseuses := set()
+       if name == "docs" then thislabel := &null
+    }
+    "defn" : { 
+        thischunk := arg
+	write("@literal \\let\\pages=\\subpages")
+        write("@literal \\leavevmode\\llap{\\footnotesize\\Rm\\subpageref{", thislabel, 
+                        "}\\kern0.3in\\kern\\codemargin}")
+        write("@defn ", arg, "~{\\footnotesize\\Rm\\subpageref{", defns[arg][1], "}}") 
+    }
+    "use" : 
+        write("@use ", arg, "~{\\footnotesize\\Rm\\subpageref{", (\defns[arg])[1], "}}") |
+        write("@use ", arg, "~{\\footnotesize\\Rm (never defined)}")
+    "index" : {
+       write("@", name, " ", arg)
+       <<shift [[name]] and [[arg]]>>
+       if name == "defn" then {
+           <<emit an index definition>>
+           insert(thesedefns, arg)
+       } else if name == "use" then
+           insert(theseuses, arg)
+    }
+    "end" : {
+        if match("code", arg) then {<<write cross-reference>>}
+        write("@", name, " ", arg)
+      }
+    "text"  : if      /thislabel & \arg == "\\nowebchunks" then nowebchunks()
+              else if /thislabel & \arg == "\\nowebindex"  then nowebindex()
+              else write("@text", (" " || \arg) | "")
+    default : <<copy [[name]] and [[arg]] to output>>
+  }
+  return
+end
+@ %def thischunk thislabel thesedefns theseuses
+<<emit an index definition>>=
+if /thislabel then
+  write("@literal \\freeindexdefn{", TeXliteral(arg), "}",
+        "{", indexlabels[arg], "}")
+else
+  write("@literal \\boundindexdefn{", TeXliteral(arg), "}",
+                          "{", indexlabels[arg], "}{", thislabel, "}")
+<<write cross-reference>>=
+<<write index cross-reference>>
+<<if first definition, write chunk cross-reference>>
+<<write index cross-reference>>=
+theseuses --:= thesedefns
+if *thesedefns > 0 then {
+  l := alphasort(thesedefns)
+  write("@literal \\nwidentdefs{")
+  while write("@literal \\\\{{", TeXliteral(ident := get(l)), "}",
+                                "{", indexlabels[ident], "}}")
+  write("@literal }")
+}
+if *theseuses > 0 then {
+  l := alphasort(theseuses)
+  write("@literal \\nwidentuses{")
+  every write("@literal \\\\{{", TeXliteral(ident := !l), "}",
+                                "{", indexlabels[ident], "}}")
+  write("@literal }")
+  every write("@literal \\boundindexuse{", TeXliteral(ident := !l), "}",
+                          "{", indexlabels[ident], "}{", thislabel, "}")
+}
+<<if first definition, write chunk cross-reference>>=
+if not member(firstdefnout, thischunk) then {
+  insert(firstdefnout, thischunk)
+  if *defns[thischunk] > 1 then {
+    writes("@literal \\alsodefined{")
+    every i := 2 to *defns[thischunk] do 
+      writes("\\\\{", defns[thischunk][i], "}")
+    write("}")
+  }
+  if \uses[thischunk] then {
+    writes("@literal \\used{")
+    every i := 1 to *uses[thischunk] do 
+      writes("\\\\{", uses[thischunk][i], "}")
+    write("}")
+  } else write("@literal \\notused{", TeXliteral(thischunk), "}")
+}
+<<shift [[name]] and [[arg]]>>=
+{ arg ? { name := tab(upto(' ')|0); arg := if =" " then tab(0) else &null } }
+<<copy [[name]] and [[arg]] to output>>=
+write("@", name, (" " || \arg) | "")
+<<*>>=
+procedure newlabel(which, tbl, arg)
+  local label
+  which := map(which, &lcase, &ucase)   # DEFN | USE | IDXDEF
+  /tbl[arg] := []
+  label := which || ":" || curfile || ":" || modid(arg) || "-" || (1+*tbl[arg])
+  return addlabel(tbl, arg, label)
+end
+
+procedure addlabel(tbl, arg, label)
+  /tbl[arg] := []
+  if tbl[arg][-1] == label then &null
+  else put(tbl[arg], label)
+  return label
+end
+<<*>>=      
+procedure modid(name)
+  local key
+  static idtable, keycounts
+  initial { idtable := table() ; keycounts := table(0) }
+
+  if not member(idtable, name) then {
+    key := map(name, " \\{}-[]`#%&~_^", "**************")
+    if *key > 6 then key := key[1:4] || key[0:-3]
+    keycounts[key] +:= 1
+    idtable[name] := key || if keycounts[key] > 1 then "-" || keycounts[key] else ""
+  }
+  return idtable[name]
+end
+<<*>>=
+procedure nowebchunks()
+  l := alphasort(allchunks)
+  while name := get(l) do {
+    write("@literal %")
+    write("@nl")
+    write("@literal {")
+    write("@use ", name, "~{\\footnotesize\\Rm\\subpageref{", (\defns[name])[1], "}}") |
+    write("@use ", name, "~{\\footnotesize\\Rm (never defined)}")
+    write("@literal }")
+    if *l > 0 then write("@literal \\\\")
+  }
+end
+<<*>>=
+procedure nowebindex()
+  l := alphasort(useidents)
+  write("@literal \\begin{thenowebindex}")
+  while name := get(l) do {
+    write("@literal %")
+    write("@nl")
+    write("@literal \\\\{{", TeXliteral(name), "}",
+                           "{", indexlabels[name], "}}")
+  }
+  write("@literal \\end{thenowebindex}")
+end
+<<*>>=
+procedure alphasort(x)
+  t := table()
+  every s := !x do t[s] := sortkey(s)
+  t := sort(t, 2)
+  l := []
+  every put(l, (!t)[1])
+  return l
+end
+<<*>>=
+procedure sortkey(s)
+  static keep
+  initial keep := &lcase ++ ' '
+  s := map(s)
+  r := ""
+  s ? while tab(upto(keep)) do r ||:= move(1)
+  return r || "\n" || s         # relies on \n sorting lower than other chars
+end
+@ %def sortkey
+<<*>>=
+procedure indexlabel(ident)
+  static badset, trans
+  initial {
+    <<initialize [[trans]]>>
+    badset := ''
+    every badset ++:= key(trans)
+  }
+  ident ? {
+    s := ""
+    while s ||:= tab(upto(badset)) do s ||:= ":" || trans[move(1)]
+    return s || tab(0)
+  }
+end
+<<initialize [[trans]]>>=
+trans := table()
+trans[" "] := "sp"      # space
+trans["#"] := "has"     # hash
+trans["$"] := "do"      # dollar
+trans["%"] := "pe"      # percent
+trans["&"] := "am"      # ampersand
+trans[","] := "com"     # commad
+trans[":"] := "col"     # colon
+trans["\\"] := "bs"      # backslash
+trans["^"] := "hat"     # hat
+trans["_"] := "un"      # underscore
+trans["{"] := "lb"      # left brace
+trans["}"] := "rb"      # right brace
+trans["~"] := "ti"      # tilde
+@ %def indexlabel
+<<*>>=
+global TeXspecials
+procedure escape(line, chars)
+  line ? {
+    s := ""
+    while s ||:= tab(upto(chars)) do s ||:= "\\" || move(1)
+    return s || tab(0)
+  }
+end
+@ %def escape
+<<*>>=
+procedure TeXliteral(arg)
+  escape(arg, TeXspecials) ? {
+    s := ""
+    while s ||:= tab(find("\\\\")) do {
+      move(2)
+      s ||:= "{\\nwbs}"
+    }
+    return s || tab(0)
+  }
+end
+<<initialization>>=
+TeXspecials := '\\{}$&#^_ ~%'
+@ %def TeXspecials
+
+\section{List of chunks}
+\nowebchunks
+
+\twocolumn
+\section{Index}
+\nowebindex
+\end{document}
