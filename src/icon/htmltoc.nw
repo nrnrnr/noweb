@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
 \title{htmltoc -- A Table of Contents Generater for HTML}
 \author{stephen parker\thanks{Revisions by Norman Ramsey}\\
 	 \texttt{stephen@stephen.uk.eu.org}}
@@ -49,16 +50,18 @@ generate a TOC before the actual material.  Since we'd like
 HTMLtoc to run in a pipeline we actually store the entire
 input in a list named [[file]].
 <<Procedures>>=
-procedure	readfile()
+procedure	readfile(f)
+	local old_contents
 	intoc := &null
-	contents := list()
+	contents := []
+        old_contents := []
 	no := 0
 
 	file := list()
-	while l := read() do {
-		l ? {
-			<<handle line>>
-		}
+	while l := read(f) do l ? { <<handle line>> }
+        if \intoc then {
+           push(old_contents, sentinel_end)
+           every l := !copy(old_contents) do l ? { <<handle line>> }
 	}
 
 	return file
@@ -71,6 +74,9 @@ if =sentinel then {
 	put(file, l)
 } else if =sentinel_end then {
 	intoc := &null
+	put(file, l)
+} else if \intoc then {
+        put(old_contents, l)
 } else if /intoc then {
 	if <<[[l]] includes a header>> then {
 		<<add header line to [[contents]] and [[file]]>>
@@ -116,7 +122,7 @@ this harsh rule may be relaxed in future.
 We also avoid adding the line ``Contents'' to the contents.
 <<Procedures>>=
 procedure addcontents(no, n, s)
-	if map(s) ~== "contents" then
+	if map(s) ~== "contents" & find(n, toclevels) then
 		put(contents, ioc(no, n, strip_tags(s)))
 	return
 end
@@ -135,15 +141,24 @@ header level in the integer variable [[level]].  As
 we iterate through the [[contents]] list we insert \verb|<ul compact>|s and
 \verb|</ul>|s as required for formatting.
 <<Procedures>>=
+global minlevel
+
+procedure tocindent(level)
+  return repl("  ", level-minlevel)
+end
+
 procedure	writetoc()
-	level := 0
+	local level
+	minlevel := 99
+        every minlevel >:= (!contents).level 
+	level := minlevel - 1 # triggers opening list
 
 	every l := !contents do {
 		<<adjust [[level]] to [[l.level]]>>
-		write(repl("\t", level), "<li><a href=\"#toc", l.number, "\">", l.text, "</a></li>")
+		write(tocindent(level),
+		      "<li><a href=\"#toc", l.number, "\">", l.text, "</a></li>")
 	}
 	<<close any lists>>
-
 end
 @ We write out a \verb|</ul>| for each level we are beyond the
 current item, and a \verb|<ul compact>| for each level we are below
@@ -151,40 +166,51 @@ the current.  The call to [[repl()]] merely writes the correct
 number of tabs so as to make the contents look ok.
 <<adjust [[level]] to [[l.level]]>>=
 while level > l.level do {
+	write(tocindent(level), "</ul>")
 	level -:= 1
-	write(repl("\t", level), "</ul>")
 }
 while level < l.level do {
 	level +:= 1
-	write(repl("\t", level), "<ul compact>")
+	write(tocindent(level), "<ul compact>")
 }
 @ At the end of the contents we need to write as many
 \verb|</ul>|s as are required.
 <<close any lists>>=
-while level > 0 do {
+while level >= minlevel do {
+	write(tocindent(level), "</ul>")
 	level -:= 1
-	write(repl("\t", level), "</ul>")
 }
-@ The [[main()]] procedure simply reads the input using
+@ The [[add_contents()]] procedure simply reads the input using
 [[readfile()]] then writes it out again.  If the
 sentinel line is found then the TOC is written at
 that point.
 <<Procedures>>=
-procedure	main()
-	file := readfile()
+procedure add_contents(f)
+	file := readfile(f)
 
 	every l := !file do {
-		l ? {
-			if =sentinel then
-				writetoc()
-			else
-				write(l)
-		}
+	        write(l)
+		if match(sentinel, l) then writetoc()
 	}
+end
+@ 
+[[main]] makes the program read its arguments or act as a filter.
+<<Procedures>>=
+global toclevels
+procedure main(args)
+  if args[1] ? (="-", toclevels := tab(many(&digits)), pos(0)) then get(args)
+  else toclevels := "2345"
+  if *args = 0 then add_contents(&input)
+  else every add_contents(openfile(!args))
+  return
+end
+
+procedure openfile(f)
+  return open(f) | stop("Cannot open file ", f)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id$" ||
-         "$Name$"
+  return "$Id: htmltoc.nw,v 1.1 1997/09/13 20:13:13 nr Exp nr $" ||
+         "$Name: v2_8a $"
 end
 @
