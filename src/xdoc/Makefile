@@ -22,10 +22,13 @@ source: $(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
 
-www: $(WWW)/guide.ps $(WWW)/guide.html
+www: $(WWW)/onepage.ps $(WWW)/guide.ps $(WWW)/guide.html
 
 checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
+
+$(WWW)/onepage.ps: onepage.ps
+	cp onepage.ps $(WWW)
 
 $(WWW)/guide.ps: guide.ps
 	cp guide.ps $(WWW)
@@ -72,6 +75,13 @@ wc.tex: ../../examples/wc.nw
 techrep.dvi: techrep.tex wc.tex
 	latex '\scrollmode \input '"techrep"
 	while grep -s 'Rerun to get cross-references right' techrep.log; do latex '\scrollmode \input '"techrep"; done
+
+onepage.dvi: onepage.tex
+	latex '\scrollmode \input '"onepage"
+	while grep -s 'Rerun to get cross-references right' onepage.log; do latex '\scrollmode \input '"onepage"; done
+
+onepage.ps: onepage.dvi
+	dvips -o onepage.ps onepage
 
 guide.dvi: guide.tex
 	latex '\scrollmode \input '"guide"
