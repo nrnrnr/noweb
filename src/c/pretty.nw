@@ -1,0 +1,258 @@
+\section{Prettyprinting}
+
+\subsection{API for prettyprinting}
+
+Here is a suitable API for a prettyprinter for noweb.
+Input to be prettyprinted is a sequence of strings, newlines, and
+chunks used.  A [[STRING]] is always free of newlines.
+<<API for prettyprinter>>=
+typedef enum parttype {
+  START_OF_CHUNK=1, END_OF_CHUNK, STRING, USE_CHUNK, NEWLINE, 
+  LITERAL, DEFINITION, WHATSIT
+} Parttype;
+@ The prettyprinter calls back into the application as follows:
+<<API for prettyprinter>>=
+typedef void (*PrettyPrinterCallback) (void *closure, Parttype type, char *contents);
+@ The [[contents]] must be
+\begin{quote}
+\begin{tabular}{ll}
+[[START_OF_CHUNK]]&The name of the chunk being prettyprinted\\
+[[END_OF_CHUNK]]&[[NULL]]\\
+[[STRING]]&A string with no newlines\\
+[[LITERAL]]${}^*$&A string with no newlines, to get no further formatting\\
+[[USE_CHUNK]]&The name of the chunk referred to\\
+[[NEWLINE]]&[[NULL]]\\
+[[DEFINITION]]${}^*$&An identifier whose definition is in this chunk.\\
+[[WHATSIT]]&An uninterpreted string passed to the callback function
+\end{tabular}
+\end{quote}
+Items marked with a star ($*$) are legal only when the prettyprinter
+is calling back into the application.
+The identifier given in [[DEFINITION]] isn't printed, so if the
+prettyprinter wants to print it, it has to send it twice.
+@ 
+The prettyprinter exports two calls to the application.
+<<API for prettyprinter>>=
+typedef struct prettyprinter *PrettyPrinter;
+
+extern PrettyPrinter new_prettyprinter(PrettyPrinterCallback callback, void *closure);
+extern void prettyprint(PrettyPrinter pp, Parttype type, char *contents);
+@ The prettyprinter accepts calls to the [[prettyprint]] procedure.
+Any call to [[prettyprint]] may result in one or more callbacks to the
+procedure registered when [[new_prettyprinter]] is called.
+For any given [[PrettyPrinter]], the application must call
+[[prettyprint]] with [[type==END_OF_CHUNK]] exactly once, and that
+call must be the last call.
+
+<<header>>=
+<<API for prettyprinter>>
+@ 
+\subsection{Calling the prettyprinter}
+
+The assumption here is that we have zero or more prettyprinters
+satisfying the interface above---what are the mechanics of getting
+something prettyprinted.
+We select a prettyprinter based on 
+the name of the root chunk.
+
+Because we want to support either a two-pass or one-pass algorithm, 
+we don't say how lines will come in or go out, but we do say that we
+will strip all the trailing newlines.
+<<definitions>>=
+void pretty (char *getline(void *in), void *in,
+             void  putline(void *out, char *line), void *out,
+             PrettyPrinter make_pp(void *cl, char *name), void *cl) 
+{
+    char *line = NULL;          /* buffer for input */
+    PrettyPrinter pp;
+    Location loc;
+
+    while ((line = getline(in)) != NULL) {
+	<<adjust [[loc]] if needed>>
+	<<if not [[@begin code]], copy line and [[continue]]>>
+	putline(out, line);
+
+        for (line = getline(in); 
+             line && !is_keyword(line,"defn") && !is_keyword(line,"text");
+             line = getline(in)
+        ) putline(out, line);
+        insist(line,"defn","code chunk had no definition line");
+	putline(out, line);
+        pp = make_pp(cl, line+6); /* use chunk name */
+        if (!pp) { <<copy code chunk to [[out]]>>; continue; }
+
+        for (; line && !is_keyword(line, "nl") ;) { 
+          line = getline(in); putline(out, line); 
+        }
+        insist(line,"nl","definition line not followed by newline");
+        loc.lineno++;
+	for (line = getline(in); 
+             line != NULL && !is_end(line,"code"); 
+             line = getline(in))
+        {
+            <<adjust [[loc]] if needed>>
+            if (is_keyword(line,"nl")) {
+                prettyprint(pp, NEWLINE, NULL);
+            } else if (is_keyword(line,"text")) {
+                prettyprint(pp, STRING, line+1+4+1);
+            } else if (is_keyword(line,"use")) {
+                prettyprint(pp, USE_CHUNK, line+1+3+1);
+            } else {
+                prettyprint(pp, WHATSIT, line);
+            }
+        }
+	prettyprint(pp, END_OF_CHUNK, NULL);
+        <<if [[line==NULL]] die of premature end of file>>
+	putline(out, line);
+    }
+}
+<<if not [[@begin code]], copy line and [[continue]]>>=
+if (!is_begin(line, "code")) {
+    putline(out, line);
+    continue;
+}
+<<copy code chunk to [[out]]>>=
+while ((line = getline(in)) != NULL) {
+    putline(out, line);
+    if (is_end(line, "code")) break;
+}
+@
+<<adjust [[loc]] if needed>>=
+{ if (is_keyword(line, "nl") || is_index(line, "nl")) {
+      loc.lineno++;
+  } else if (is_keyword(line,"file")) {
+      loc.filename = strsave(line + 6);
+      loc.lineno = 1;
+  } else if (is_keyword(line, "line")) {
+      <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>
+      loc.lineno--;
+  }
+}
+@
+<<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>=
+{ char *temp = line+6;
+  <<fail if string [[temp]] contains a non-digit>>
+  loc.lineno = atoi(temp);
+}
+<<fail if string [[temp]] contains a non-digit>>=
+{ char *p;
+  for (p = temp; *p; p++)
+    if (!isdigit(*p)) 
+      errormsg(Error, "non-numeric line number in `@line %s'", temp);
+}
+<<definitions>>=
+void insist(char *line, char *keyword, char *msg) {
+  <<if [[line==NULL]] die of premature end of file>>
+  if (!is_keyword(line,keyword))
+    impossible(msg);
+}
+<<if [[line==NULL]] die of premature end of file>>=
+if (line==NULL) {
+    impossible("End of file occurred in mid-module");
+}
+<<declarations>>=
+void insist(char *line, char *keyword, char *msg);
+@ 
+\subsection{Simple callback procedure}
+We've got a callback to do I/O
+<<definitions>>=
+typedef struct io {
+  FILE *out;
+  void (*putline)(void *out, char *line);
+} *IO;
+
+static void write_pretty(void *closure, Parttype type, char *contents) {
+  IO io = (IO) closure;
+  switch(type) {
+    case START_OF_CHUNK: break;
+    case END_OF_CHUNK:   break;
+    case STRING:    	 fprintf(io->out, "@text %s\n",       contents); break;
+    case LITERAL:    	 fprintf(io->out, "@literal %s\n",    contents); break;
+    case USE_CHUNK:      fprintf(io->out, "@use %s\n",        contents); break;
+    case NEWLINE:        io->putline(io->out, "@nl");			 break;
+    case DEFINITION:     fprintf(io->out, "@index defn %s\n", contents); break;
+    case WHATSIT:   	 io->putline(io->out, contents);		 break;
+    default: assert(0);
+  }
+}
+@ 
+
+\subsection{Sketch for a two-pass driver}
+The best plan would be to use a two-pass driver.
+On the first pass it would
+\begin{itemize}
+\item
+Read in all lines and builds a def-use tree.
+\item
+Decide on a prettyprinter for each root, either using the root name
+or a suffix (and probably based on info from the command line as well
+as defaults).
+\item
+Propagate info from parents to children.
+Inconsistent children (distinct prettyprinters) become new roots.
+\end{itemize}
+Then on the second pass it could use the propagated info to select a
+prettyprinter for each chunk.
+
+\subsection{One-pass driver}
+This just uses a single prettyprinter.
+This means get and put are just I/O.
+<<one-pass definitions>>=
+static char *get_stripped(void *in) {
+  FILE *fp = (FILE *)in;
+  char *line = getline(fp);
+  if (line) {
+    int i = strlen(line) - 1;
+    if (i >= 0 && line[i] == '\n') line[i] = 0;
+  }
+  return line;
+}
+
+static void put_stripped(void *out, char *line) {
+  FILE *fp = (FILE *)out;
+  fputs(line, fp);
+  fputc('\n', fp);
+}
+@ 
+If we only ever use a single prettyprinter, we make the closure the
+I/O closure.
+As a trick, we return no prettyprinter if the chunk name has a blank.
+<<one-pass definitions>>=
+static PrettyPrinter make_pp(void *cl, char *name) {
+  if (strchr(name, ' ')) return NULL;  
+  return new_prettyprinter(write_pretty, cl);
+}
+@ 
+The program is always a filter, so it uses stdin and stdout.
+<<one-pass definitions>>=
+main (int argc, char *argv[]) {
+  struct io io;
+  io.out = stdout;
+  io.putline = put_stripped;
+  pretty(get_stripped, stdin, put_stripped, stdout, make_pp, &io);
+  return 0;
+}
+@
+\subsection{Boilerplate}
+<<*>>=
+static char rcsid[] = "$Id$";
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <assert.h>
+#include "strsave.h"
+#include "getline.h"
+#include "match.h"
+#include "errors.h"
+#include "pretty.h"
+
+typedef struct location {       /* identify lines of source */
+    char *filename;
+    int lineno;
+} Location;
+
+<<declarations>>
+<<definitions>>
+<<one-pass definitions>>
+

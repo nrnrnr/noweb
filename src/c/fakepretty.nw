@@ -1,0 +1,84 @@
+\section{A fake prettyprinter}
+This ``prettyprinter'' builds a code brick.
+<<*>>=
+static char rcsid[] = "$Id$";
+#include <string.h>
+#include <ctype.h>
+#include <assert.h>
+#include <stdlib.h>
+#include "pretty.h"
+
+struct prettyprinter { 
+  int column; 
+  int trailswhite;
+  PrettyPrinterCallback callback;
+  void *cb;
+};
+<<*>>=
+static void addwhite(PrettyPrinter pp) {
+  if (!pp->trailswhite) {
+    pp->callback(pp->cb, STRING, " ");  
+    pp->column++;
+    pp->trailswhite = 1;
+  }
+}
+<<*>>=
+static void flushout(PrettyPrinter pp) {
+  if (pp->column > 0) {
+    pp->callback(pp->cb, NEWLINE, (char *)0);
+    pp->column = 0;
+    pp->trailswhite = 1;
+  }
+}
+<<*>>=
+static void addthing(PrettyPrinter pp, Parttype type, char *contents) {
+  addwhite(pp);
+  if (pp->column + strlen(contents) > 70) flushout(pp);
+  pp->callback(pp->cb, type, contents);
+  pp->column += strlen(contents);
+  pp->trailswhite = 0;
+}  
+#define addtoken(PP,T) addthing(pp, STRING, T)
+#define adduse(PP,C) addthing(pp, USE_CHUNK, C)
+@
+<<*>>=
+void prettyprint(PrettyPrinter pp, Parttype type, char *contents) {
+  switch(type) {
+    case START_OF_CHUNK: break;
+    case END_OF_CHUNK:   if (pp->column > 0) flushout(pp); break;
+    case STRING:    	 <<write tokens>> break;
+    case USE_CHUNK:      adduse(pp, contents); break;
+    case NEWLINE:        addwhite(pp); break; 
+    case WHATSIT:   	 pp->callback(pp->cb, type, contents); break;
+    default: assert(0);
+  }
+}
+
+PrettyPrinter new_prettyprinter(PrettyPrinterCallback callback, void *closure) {
+  PrettyPrinter pp = (PrettyPrinter) malloc(sizeof *pp);
+  pp->callback = callback;
+  pp->cb = closure;
+  pp->column = 0;
+  pp->trailswhite = 0;
+  return pp;
+}
+@ 
+<<write tokens>>=
+{ char *p = contents; 
+  char *q;
+
+  while (*p && isspace(*p)) p++;
+  while (*p) {
+    for (q = p; *q && !isspace(*q); q++);
+    { char c = *q;
+      *q = 0;
+      addtoken(pp, p);
+      *q = c;
+    }
+    p = q;
+    while (*p && isspace(*p)) p++;
+  }
+}
+@ 
+
+
