@@ -138,7 +138,7 @@ checkin:
 	for i in lib tex xdoc; do (cd $$i; make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
 	for i in c icon awk; do (cd $$i; ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
 	(cd elisp; ci -l $(CINAME) $(CIMSG) *.el)
-	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README COPYRIGHT nwmake *.nw
+	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL README COPYRIGHT nwmake *.nw
 
 source: 
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make CPIF=">" source); done
