@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
 \documentstyle[noweb]{article}
 \pagestyle{noweb}
 \begin{document}
@@ -18,14 +19,19 @@ document before converting the document with {\tt latex2html}.
 # Don't try to understand this file!  Look at icon/tohtml.nw in the noweb source!
 
 procedure main(args)
-  local delay, raw, where, localindex, noindex
+  local delay, raw, where, localindex, noindex, shortxref
   <<initialization>>
   every braw | eraw := ""
   delay := !args == "-delay"
   noindex := !args == "-noindex"
+  shortxref := if !args == "-longxref" then &null else 1
   localindex := (/noindex, !args == "-localindex") # produce local identifier xref?
   raw := !args == "-raw"
   if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
+  if !args == "-no-gen-comment" then &null
+  else 
+    write("<!-- this file was generated automatically by noweave",
+          " --- better not edit it-->")
   while inputline := read() do inputline ? {
     <<scan and convert>>
   }
@@ -41,10 +47,12 @@ end
 <<@xref>>
 <<@index>>
 <<others>>
-if ="@" then  						# follows last else
+if match("@fatal ") then {				# follows last else
+  exit(1)
+} else if ="@" then 
   warn_unknown(1(tab(upto(' ')|0), pos(0) | move(1)))
 else
-  write(&errout, "Botched line in noweb pipeline: ", tab(0))
+  fatal("Botched line in noweb pipeline: ", tab(0))
 @ 
 [[ecode]] is the marker used at the end of the current code chunk.
 If there is no cross-reference stuff at the end, we just use [[</pre>]];
@@ -53,7 +61,7 @@ otherwise we terminate whatever environment is used for the cross-reference stuf
 if ="@begin code " then	{ code := 1   ; thischunk := &null
 			  <<reset cross-reference info>>
                           writes(braw, "<pre>"); ecode := "</pre>"               } else
-if ="@end code "   then { <<dump pending cross-reference info>>
+if ="@end code "   then { <<dump pending cross-reference info (long form)>>
                           code := nil ; previscode := 1 
                           writes(ecode, eraw)                                    } else
 @ %def previscode
@@ -93,10 +101,14 @@ if ="@text " then 	{ text +:= *(line := tab(0))
 @
 We anchor on the first nonblank character of the line, unless that's
 an SGML tag, in which case we have to
-try to skip past.  If it's an anchor tag, we give up, just
-inserting a {\tt*} to anchor to.
+skip past. 
 None of this crap would be necessary if HTML could anchor to empty text.
 <<docs anchor>>=
+1(line ? skip_white_tags() || 
+         braw || linklabel(\lastxreflabel, skip_chars()) || eraw || tab(0),
+  insert(defns_above, \lastxreflabel),
+  lastxreflabel := &null)
+<<old docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)},
   line ? braw || linklabel(\lastxreflabel, 
                            (tab(many(' \t')) | "") || 
@@ -112,10 +124,40 @@ have to worry.
   linklabelto(lastxreflabel, lastindexref, escapeSpecials(line)),
   lastxreflabel := lastindexref := &null)
 @
-Skip as many tags as possible, then skip a character, but
-never skip an anchor ([[<a>]]) tag, because that might mess things up big time.
+Skip as many tags as possible.
 Argument is number of tags already skipped; if nonzero, we're willing to succeed
 at the end of the string.
+<<*>>=
+procedure skip_white_tags()
+  suspend thewhite() ||
+             ((="<" || thewhite() || (="/" || thewhite() | "") ||
+                  (tab(many(&letters)) | ="!--") || 
+                   tab(upto(">")) || =">" || skip_white_tags() |
+              "") \ 1)
+end
+<<*>>=
+procedure skip_chars()
+  if not any('<') & upto('<') then
+    suspend tab(upto('<'))
+  else if any('&') & upto(';') then
+    suspend (tab(upto(';')) || =";")
+  else if (any('<') & upto('>')) | any(' \t') then
+    (write(&errout, "broken skip_chars, report to nr@cs.virginia.edu: ", image(tab(0))),
+     &fail)
+  else if any('<') then
+    (write(&errout, "warning: can't find end of HTML tag: ", image(tab(0)),
+	   "\n\tquoted code embedded in comment?"), &fail)
+  else if pos(0) then 
+    fail
+  else
+    suspend tab(0)
+end
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+procedure thewhite()
+  return optwhite() \ 1
+end
 <<*>>=
 procedure skip_tags_and_char(count)
   local tag
@@ -124,8 +166,13 @@ procedure skip_tags_and_char(count)
     suspend(tab(upto(';')) || =";")
   else if any('<') then
     suspend ="<" || (tab(many(' \t')) | "") ||
-            (="/" | (tag := tab(many(&letters)), map(tag) ~== "a", tag)) ||
-            tab(upto(">")) || =">" || skip_tags_and_char(count+1)
+            (="/" | (tag := tab(many(&letters)))) ||
+            tab(upto(">")) || =">" || 
+            (if map(tag) == "a" then 
+               tab(upto("<")) || ="<" || optwhite() || ="/" || optwhite() || 
+               (("A"|"a") == tab(many(&letters))) || optwhite || =">"
+             else "") ||
+             skip_tags_and_char(count+1)
   else
     suspend (tab(many(' \t')) | "") || 
             ((move(1) | if count > 0 then "")\1)  # succeed at end if count > 0
@@ -157,12 +204,14 @@ procedure scan_past_char()
     suspend (tab(many(' \t')) | "") || tab(any(~'<'))
 end
 <<@nl>>=
-if ="@nl" & pos(0) then { write()                                                } else
+if ="@nl" & pos(0) then { <<show definitions and uses on definition line---once>>
+			  write()                                                } else
 <<@defn>>=
 if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, "dfn", 
                                      thischunk := tab(0), defns[thischunk] || "=")
 			  insert(defns_above, \lastxreflabel)
 			  useitems := \useitemstab[thischunk]
+			  pendinguses := 1
 			  <<clear [[lastxref*]]>>
                           defns[thischunk] := "+"                                } else
 <<initialization>>=
@@ -237,31 +286,56 @@ procedure warn_unused_xref(tag, label)
   return
 end  
 @
-<<dump pending cross-reference info>>=
-useitems := useitemstab[\thischunk]
-if \pendingprev | \pendingnext | *\useitems > 0 | \notused then {
-  <<code-to-blockquote>>
-  <<write out uses with links>>
-  if *\useitems > 0 & (\pendingprev | \pendingnext) then
-    writes("; ")
-  p := if *\useitems > 0 then "previous" else "Previous"
-  n := if *\useitems > 0 then "next"     else "Next"
-  if \pendingprev then
-    if \pendingnext then
-      writes(linkto(pendingprev, p), " and ",
-             linkto(pendingnext, "next"), " definitions")
-    else
-      writes(linkto(pendingprev, p), " definition")
-  else
-    if \pendingnext then
-      writes(linkto(pendingnext, n), " definition")
-  if \pendingprev | \pendingnext | *\useitems > 0 then
-    writes(".")
-  if \notused then
-    writes("<br>\nThis code is written to a file (or else not used).")
-  write("<p>")
-  pendingprev := pendingnext := useitems := notused := &null
+<<show definitions and uses on definition line---once>>=
+if \shortxref & (\pendinguses | \pendingprev | \pendingnext | \notused) then {
+  <<write out definition-line markup>>
+  pendinguses := pendingprev := pendingnext := notused := &null
 }
+<<write out definition-line markup>>=
+if \pendinguses & *\useitems > 0 then {
+  writes(" <b>(")
+  every i := 1 to *\useitems do {
+    usedir := if member(defns_above, useitems[i]) then "&lt;-U" else "U-&gt;"
+    writes(if i > 1 then " " else "", linkto(useitems[i], usedir))
+  }
+  writes(")</b>")
+}
+if \pendingprev | \pendingnext then {
+  writes(" <b>[")
+  writes(linkto(\pendingprev, "&lt;-"))
+  writes("D")
+  writes(linkto(\pendingnext, "-&gt;"))
+  writes("]</b>")
+}
+<<dump pending cross-reference info (long form)>>=
+if /shortxref then {
+  useitems := useitemstab[\thischunk]
+  if \pendingprev | \pendingnext | (\pendinguses, (*\useitems > 0 | \notused)) then {
+    <<code-to-blockquote>>
+    <<write out uses with links>>
+    useitemstab[\thischunk]
+    if *\useitems > 0 & (\pendingprev | \pendingnext) then
+      writes("; ")
+    p := if *\useitems > 0 then "previous" else "Previous"
+    n := if *\useitems > 0 then "next"     else "Next"
+    if \pendingprev then
+      if \pendingnext then
+        writes(linkto(pendingprev, p), " and ",
+               linkto(pendingnext, "next"), " definitions")
+      else
+        writes(linkto(pendingprev, p), " definition")
+    else
+      if \pendingnext then
+        writes(linkto(pendingnext, n), " definition")
+    if \pendingprev | \pendingnext | *\useitems > 0 then
+      writes(".")
+    if \notused then
+      writes("<br>\nThis code is written to a file (or else not used).")
+    write("<p>")
+    pendinguses := pendingprev := pendingnext := useitems := notused := &null
+  } 
+} else
+  &null
 <<write out uses with links>>=
 useprefix := "Used "
 every i := 1 to *\useitems do {
@@ -324,16 +398,30 @@ the identifiers that are defined, with links to the full index.
 "use" 	    : { lastindexref := lastxrefref; lastxrefref := &null }
 "defn"      : { <<clear [[lastxref*]]>> }
 "localdefn" : { <<clear [[lastxref*]]>> }
-"nl"        : &null # do nothing -- destroys line numbering
-"begindefs" : if \localindex then
-              { <<code-to-blockquote>>; writes("Defines"); comma := " " }
+"nl"        : &null # do nothing -- no hope of keeping line numbering
+@
+I tried an abbreviated index format at the end of the chunk, but it looks
+so bad that I've punted on it (for now).  Hence the [[\uglyindex]].
+<<cases for @index>>=
+"begindefs" : if \localindex then {
+	        <<dump pending cross-reference info (long form)>>
+                if /uglyindex | /shortxref then {
+                  <<code-to-blockquote>>
+                  writes("Defines ") 
+                } else {
+                  writes("<hr><b>[</b>")
+                }
+                comma := "" 
+              }
 "isused"    : &null
 "defitem"   : if \localindex then { 
                 writes(comma, linkto("NWI-" || escapeSpecials(arg), 
                                 sgmlwrap("code", escapeSpecials(arg))))
-                comma := ", "
+                comma := if /uglyindex | /shortxref then ", " else "<b>,</b> "
               }
-"enddefs"   : if \localindex then write(" (links are to index).<p>")
+"enddefs"   : if \localindex then 
+                write(if /uglyindex | /shortxref then " (links are to index).<p>" 
+                      else "<b>]</b>")
 "beginuses" | "isdefined" | "useitem" | "enduses" : &null  # use local links
 @
 \subsection{Support functions}
@@ -393,10 +481,10 @@ procedure convquotes(s)
   r := ""
   s ? {  # don't call escapeSpecials on s; it destroys internal markup
     while r ||:= tab(find("[[")) do {
-      ="[[" | stop("impossible missing [[")
+      ="[[" | fatal("impossible missing [[")
       r ||:= "<code>" || tab(find("]]"))
       r ||:= tab(many(']')-2)
-      ="]]" | stop("impossible missing ]]")
+      ="]]" | fatal("impossible missing ]] in ", image(s))
       r ||:= "</code>"
     }
     return r || tab(0)
@@ -414,4 +502,16 @@ procedure warn_unknown(tag)
   return
 end
 @
+<<*>>=
+procedure fatal(L[])
+  write!([&errout, "noweb error in tohtml: "] ||| L)
+  exit(1)
+end
+@ 
 \end{document}
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+@
