@@ -15,6 +15,7 @@ details later.
 <<header>>=
 void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
 <<*>>=
+static char rcsid[] = "$Id$";
 #define MAX_MODNAME 255
 @
 <<*>>=
@@ -65,6 +66,7 @@ void read_defs(FILE *in) {
     Location loc;
 
     while ((line = getline(in)) != NULL) {
+        if (is_keyword(line, "fatal")) exit(1);
         <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>
         <<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>
         insist(line,"defn","code chunk had no definition line");
