@@ -3,30 +3,40 @@ This is the initial filter in the pipeline.
 Syntax from {\tt markup.ow}.
 Output may contain [[
         @[begin|end] [code|docs] nnn ...
-        @file name
-        @name name
+        @text <line of text>
+        @quote
+        @endquote
+        @use <module name>
+        @nl
+        @file <filename>
+        @name <module name>
         @line nnn [name]
 ]]
 Here's the code that writes the output.
 We have one function to print the state, which takes care of
 [[@begin]] and [[@end]] and remembering what kind of chunk we have.
 Another function prints [[@name value]] pairs.
+If the [[value]] has a trailing newline, the pair is followed by [[@nl]].
 <<state and printing definitions>>=
-#define CODE 1
-#define DOCS 2
-
-#define BEGIN 1
-#define END 2
+typedef enum state {Code=1, Docs=2} State;
+typedef enum mark {Begin=1, End=2} Mark;
 
 static char *states[] = { "bad state", "code", "docs" };
 static char *marks[]={ "bad mark", "begin", "end" };
 
-static void print_state(FILE *out, int be, int state, int count) {
+static void print_state(FILE *out, Mark be, State state, int count) {
     fprintf(out, "%c%s %s %d\n", at_sign, marks[be], states[state], count);
 }
 
 static void print_pair(FILE *out, char *name, char *value) {
-    fprintf(out, "%c%s %s\n", at_sign, name, value);
+    if (value) {
+	int last=strlen(value)-1;
+        if (last>=0 && value[last]=='\n')
+            fprintf(out, "%c%s %s@nl\n", at_sign, name, value);
+        else
+            fprintf(out, "%c%s %s\n", at_sign, name, value);
+    } else
+        fprintf(out, "%c%s\n", at_sign, name);
 }
 @
 <<*>>=
@@ -40,11 +50,14 @@ static void print_pair(FILE *out, char *name, char *value) {
 <<state and printing definitions>>
 
 void markup (FILE* in, FILE *out, char *filename) {
-    int state = DOCS;           /* what we are reading */
+    State state = Docs;         /* what we are reading */
+    int quoting = 0;		/* currently quoting code? */
     int count = 0;              /* number of current chunk, from 0 */
     int missing_newline;        /* was last line missing a trailing \n? */
 
-    char *line = NULL;          /* buffer for input */
+    char *buffer = NULL;        /* buffer for input */
+    char *line;                 /* part of line up to mark (or end) */
+    char *mark;			/* potentially marked part of line */
 #define MAX_MODNAME 255
     char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
                                          [[""]] if no module is being read */ 
@@ -71,32 +84,41 @@ We implement this by just looping through the document, looking for the
 beginnings of chunks.
 We use [[state]] to keep track of what's ending.
 We add a little extra markup for file name and module names
+Starting code and starting documentation are notably different: 
+code is started by a module definition, which must appear on a line by itself.
+Documentation is started by a character sequence, 
+and arbitrary documentation text can follow on the same line.
 <<copy all lines from [[in]] to [[out]], adding markup>>=
     print_pair(out, "file", filename);
-    print_state(out, BEGIN, state, count);
+    print_state(out, Begin, state, count);
 
-    while ((line = getline(line, in)) != NULL) {
+    while ((line = buffer = getline(buffer, in)) != NULL) {
         <<remember if a newline was missing from the last line>>
-        if (starts_doc(line)) {
-            print_state(out, END, state, count);
+        if (starts_code(line)) {
+            print_state(out, End, state, count);
             count++;
-            state = DOCS;       /* always reading docs after a stop */
-            print_state(out, BEGIN, state, count);
-            fprintf(out, "%s", first_doc_line(line));
-        } else if (starts_code(line)) {
-            print_state(out, END, state, count);
-            count++;
-            state = CODE;
-            print_state(out, BEGIN, state, count);
+            state = Code;
+            print_state(out, Begin, state, count);
             getmodname(modname,MAX_MODNAME,line);
-            print_pair(out,"name",modname);
+            print_pair(out,"defn",modname);
         } else {
+            if (starts_doc(line)) {
+                print_state(out, End, state, count);
+                count++;
+                state = Docs;       /* always reading docs after a stop */
+                print_state(out, Begin, state, count);
+                line = first_doc_line(line);
+            }
             <<Check a bunch of ``mistake indicators''>>
-            fprintf(out, "%s", line);
+	    switch(state) {
+	        case Code: <<convert a code line>> break;
+                case Docs: <<convert a documentation line>> break;
+                default: impossible("bad state");
+            }    
         }
     }
-    <<add a trailing newline if necessary>>
-    print_state(out, END, state, count);
+    <<add a trailing newline if one was missing>>
+    print_state(out, End, state, count);
 @
 We make it safe to assume henceforth that every chunk ends with newline,
 even if the file didn't end with newline.
@@ -104,13 +126,60 @@ If the file didn't end with newline, we add a newline to the last line
 before printing the final [[@end]].
 <<remember if a newline was missing from the last line>>=
 missing_newline = line[strlen(line)-1] != '\n';
-<<add a trailing newline if necessary>>=
-if (missing_newline) putc('\n',out);
-
-@ If we missed the module definition line, this might suggest to us
+<<add a trailing newline if one was missing>>=
+if (missing_newline) print_pair(out, "nl",0);
+@
+To convert a code line, we have to scan for the start and end of module 
+references. 
+<<convert a code line>>=
+while ((mark = mod_start(line,1)) != NULL) { 
+    if (*line!='\0') print_pair(out, "text",unescape(line)); 
+				   /* emit string before module */
+    if ((line=mod_end(mark,1))==NULL) {
+        errormsg(Error, "Module doesn't end: %s", mark);       
+                                   /* module references can't cross lines */
+        break;
+    } else {  
+        print_pair(out, "use",mark);       /* emit the module */
+    }
+}
+if (*line!='\0') print_pair(out, "text",unescape(line)); 
+				  /* contribute the trailing string */
+@ To convert documentation lines, we have to track the quoting brackets.
+<<nasty way to convert a documentation line>>=
+<<start in mid-quote if already quoting>>
+while ((mark = quote_start(line,1)) != NULL) { 
+    quoting = 1;
+    if (*line!='\0') print_pair(out, "text",unescape(line)); 
+				   /* emit string before quoted code */
+midquote:
+    if ((line=quote_end(mark,1))==NULL) {
+        line = mark;
+        break;
+    } else {
+        quoting = 0;
+        print_pair(out, "quote",mark);     /* emit the quoted code */
+    }
+}
+if (*line!='\0') print_pair(out, quoting ? "quote" : "text",unescape(line)); 
+				/* contribute the trailing string */
+<<start in mid-quote if already quoting>>=
+if (quoting) {
+    mark = line;
+    goto midquote;
+}
+<<convert a documentation line>>=
+for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
+       line = mark) {
+    if (*line != '\0') print_pair(out, quoting ? "quote" : "text", unescape(line));
+    quoting = !quoting;
+}
+if (*line!='\0') print_pair(out, quoting ? "quote" : "text",unescape(line)); 
+@
+If we missed the module definition line, this might suggest to us
 that we've made a mistake.
 <<Check a bunch of ``mistake indicators''>>=
-    if (state != CODE && (mod_start(line,0)!=NULL)) {
+    if (state != Code && (mod_start(line,0)!=NULL)) {
         errormsg(Warning, "Warning: module start in bad state: %s", line);
     }
 @
