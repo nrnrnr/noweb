@@ -1,15 +1,48 @@
-\documentstyle[11pt]{article}
-\title{Literate programming tools need not be complex}
-\author{Norman Ramsey\\Princeton University}
+\documentstyle[11pt,noweb]{article}
+\title{Literate Programming Tools Need Not Be Complex}
+\author{Norman Ramsey\\Department of Computer Science, Princeton University\\
+35 Olden Street, Princeton, New Jersey 08544}
+%\reportno{CS-TR-351-91}
+\date{October 1991}
 \setcounter{secnumdepth}{0}
+
+\makeatletter
+\def\refno#1{\nocite{#1}\@ifundefined
+       {b@#1}{{\bf ?}\@warning
+       {Reference number `#1' on page \thepage \space undefined}}%
+{\hbox{\csname b@#1\endcsname}}}
+\makeatother
 
 \def\remark#1{\marginpar{\raggedright\hbadness=10000\footnotesize\it #1}}
 % \def\remark#1{\relax}
 
-
 \begin{document}
 
 \maketitle
+
+\begin{abstract}
+When it was introduced, literate programming meant {\tt WEB}.
+Desire to use {\tt WEB} with languages other than Pascal led to the
+implementation of many versions.
+{\tt WEB} is complex, and the difficulty of using {\tt WEB} creates
+an artificial barrier to
+experimentation with literate programming.
+ {\tt noweb} provides much of the functionality of
+{\tt WEB}, with a fraction of the complexity.
+{\tt noweb} is independent of the target programming language, and its
+formatter-dependent part is a 40-line shell script. 
+{\tt noweb} is extensible, because it uses two
+representations of programs: one easily manipulated by authors and one
+easily manipulated by tools.
+I give examples of the use of {\tt noweb} and I mention
+ applications that have been written
+using {\tt noweb} with different programming languages.
+\end{abstract}
+
+\begin{center}\small
+{\bf Key words:}
+literate~programming, readability, programming~environments
+\end{center}
 
 \section{Introduction}
 When literate programming was
@@ -17,31 +50,71 @@ introduced, it was synonymous with {\tt WEB}, a tool
 for writing literate Pascal programs~\cite{knuth:literate}.
 The idea attracted attention; several examples of literate
 programs were published, and a special forum was created to discuss literate
-programming~\cite{bentley:lp1,bentley:lp2,gries:pearls,denning:announcing}.
+programming~\cite{denning:announcing,gries:pearls,bentley:lp1,bentley:lp2}.
 {\tt WEB} was  adapted to programming languages other than
-Pascal~\cite{thimbleby:cweb,guntermann:cweb,levy:cweb,sewell:mangle,ramsey:building}.
-Nevertheless there were reasons to be dissatisfied with {\tt
-WEB}~\cite{ramsey:literate}.
-Some people reacted by giving up on {\tt WEB}, converting their literate
-programs back to standard programs with
-comments;\footnote{David P. Dobkin, private communication.}
-others built their own systems for literate programming.
-Literate programming became the province of those who could build
+Pascal~\cite{guntermann:cweb,levy:cweb,ramsey:building,sewell:mangle,thimbleby:cweb}.
+%
+With experience, many {\tt WEB} users became dissatisfied~\cite{ramsey:literate}. 
+Some found {\tt WEB} not worth the trouble, as did
+one author of the program appearing in Appendix~C
+of Reference~\refno{sewell:weaving}.
+Others built their own systems for literate
+ programming~\cite{hamilton:expanding,cvw:loom}. 
+The literate programming forum was dropped, on the grounds that
+literate programming had become the province of those who could build
 their own tools~\cite{cvw:assessment}.
 
-Today it is difficult to explore the {\em idea} of literate programming
-because the {\em tools} get in the way.
-To make it easier, I designed a minimal literate programming system
+{\tt WEB}  programmers
+ interleave source code and descriptive text in a single document.
+When using {\tt WEB}, a programmer divides the source code into
+{\em modules}.
+Each module has a documentation part and a code part, and
+modules may be written in any order.
+The programmer is encouraged to choose an order that helps explain the program.
+The code parts are like macro definitions;  they have names, and they contain
+both code and references to other modules.
+A {\tt WEB} file represents a single program;
+{\tt TANGLE}  extracts that program from the {\tt WEB} source. 
+One special module has a code part with no name, and {\tt TANGLE}
+expands the code part of that module to extract the program.
+{\tt WEAVE} converts {\tt WEB} source to
+{\TeX} input, from which {\TeX} can produce high-quality typeset
+documentation of the program.
+
+
+{\tt WEB} is a complex tool.
+In addition to enabling programmers to present pieces of a program in
+any order, it expands three kinds of macros, prettyprints code,
+evaluates some constant expressions,
+provides an integer representation for string literals, and implements
+a simple form of version control.
+The manual for the original version documents 27 ``control sequences''~\cite{knuth:web}.
+The versions for languages other than Pascal offer slightly different
+functions and different sets of control sequences.
+Significant effort is required to make {\tt WEB} usable with a new
+programming language, even when using a tool designed for that
+purpose~\cite{ramsey:building}. 
+
+{\tt WEB}'s shortcomings make it difficult to explore the {\em idea}
+of literate programming; too much effort is required to master the
+{\em tool}.
+I designed a new tool that is both
+simple and independent of the target programming language.
+{\tt noweb} is designed 
 around one idea: writing named chunks of code in any order, with
 interleaved documentation. 
-This idea is a ``least common denominator'' in all the literate
-programming systems I know of;
-programmers divide a program into chunks and choose a presentation order
-that helps explain the program.
-My system is extensible; those who think
-other features are important can add tools.
+Like {\tt WEB}, and like all literate programming tools, it can
+be used to write a program in pieces and to present those pieces in
+an order that helps explain the program.
+{\tt noweb} makes two contributions.
+It provides functionality
+comparable to that of {\tt WEB}, without the complexity, and it is extensible.
+It achieves its extensibility
+ by using two representations of literate programs:
+ one that is simple for authors to read and edit, and one that 
+is simple for programs to read and transform.
 
-\section{{\tt noweb}, a minimal literate programming system}
+\section{{\tt noweb}} % , a minimal literate programming system}
 A {\tt noweb} file contains program source code interleaved with documentation.
 When {\tt notangle} is given a {\tt noweb} file, it writes the program
  on standard output. 
@@ -70,7 +143,7 @@ in the {\tt noweb} file {\tt foo.nw}.
 \put(57.5,-23.5){\makebox(0,0)[b]{tex foo}}
 \put(75,-30){\framebox(30,10){foo.dvi}}
 \put(105,-25){\vector(1,0){35}}
-\put(122.5,-23.5){\makebox(0,0)[b]{\strut \tt dvi \rm driver}}
+\put(122.5,-23.5){\makebox(0,0)[b]{\strut \tt dvi foo}}
                         % \shortstack{\strut dvi\\\strut \rm driver}}}
 \put(140,-25){\makebox(0,0)[l]{\rm\strut \ Typeset documentation for
 {\tt foo}}}
@@ -79,7 +152,7 @@ in the {\tt noweb} file {\tt foo.nw}.
 \put(57.5,26.5){\makebox(0,0)[b]{cc -c foo.c}}
 \put(75,20){\framebox(30,10){foo.o}}
 \put(105,25){\vector(1,0){35}}
-\put(122.5,26.5){\makebox(0,0)[b]{ld foo.c {\ldots}}}
+\put(122.5,26.5){\makebox(0,0)[b]{ld foo.o {\ldots}}}
 \put(140,25){\makebox(0,0)[l]{\rm\strut \ Executable \tt a.out}}
 
 
@@ -106,25 +179,25 @@ If the first line in the file does not mark the beginning of a
 chunk, it is assumed to be the first line of a documentation chunk.
 
 Documentation chunks contain text that is ignored by {\tt notangle}
-and copied verbatim (except for quoted code) to standard output by
-{\tt noweave}.   
-{\tt noweave} can work with {\LaTeX}, or it can insert a reference to
-a {\tt TeX} macro package, supplied with {\tt noweb}, that defines
+and copied verbatim to standard output by
+{\tt noweave} (except for quoted code).   
+{\tt Noweave} can work with {\LaTeX}~\cite{lamport:latex}, or it can
+insert a reference to 
+a {\TeX} macro package, supplied with {\tt noweb}, that defines
 commands like \verb+\chapter+ and \verb+\section+.
 
 Code chunks contain program source code and references to other code
 chunks.  
 Several code chunks may have the same name; {\tt notangle}
 concatenates their definitions to produce a single chunk, just as
-{\tt WEB}'s {\tt TANGLE} does~\cite{knuth:web}.
+ {\tt TANGLE} does.
 Code chunk definitions are like macro definitions;
 {\tt notangle} extracts a program by expanding one chunk (by default
 the chunk named \verb+<<*>>+).
 The definition of that chunk contains references to other chunks,
 which are themselves expanded, and so on.
-{\tt notangle}'s output is readable; it derives
-sensible indentations and line breaks from the indentations and line
-breaks present in its input.
+{\tt notangle}'s output is readable; it preserves the indentation of expanded
+chunks with respect to the chunks in which they appear.
 
 Code may be quoted within documentation chunks by placing double
 square brackets around it ({\tt [[...]]}). 
@@ -132,90 +205,182 @@ These double square brackets are ignored by {\tt notangle,} but they
 are used by {\tt noweave} to give code special typographic
 treatment.
 
-To use the double left or right angle % or square 
-bracket in code or documentation,
-not as part of a chunk name, an author must quote the double 
-bracket by placing an at sign in front of it (e.g.~``{\tt @<<}'').
+If the double left or right angle % or square 
+bracket is to be used in code or documentation,
+not as part of a chunk name, it must be preceded by an at sign
+(e.g.~``{\tt @<<}''). 
 
-\medskip
+Figure~\ref{sample-input} shows a fragment of a {\tt noweb} program
+that computes prime numbers.
+The program is derived from the example used in
+Reference~\refno{knuth:literate}, and Figure~\ref{sample-input} should
+be compared with Figure~2b of Reference~\refno{knuth:literate}.
+Figure~\ref{noweave-output} shows the program after processing by {\tt
+noweave} and {\LaTeX}.
+Figure~\ref{notangle-output} shows the beginning of the program as
+extracted by {\tt notangle}.
 
-The preceding description of {\tt noweb} is taken from the Unix {\tt
-man} page. 
-It is sufficient to enable users to get started, even though 
-the documentation of command-line options has been omitted. 
-{\tt noweb} has little syntax: definition and use of code chunks, marking of
-documentation chunks, quoting of code, and quoting of brackets.
+\begin{figure}
+\begin{verbatim}
+@ This program has no input, because we want to keep it
+simple.  The result of the program will be to produce a
+list of the first thousand prime numbers, and this list
+will appear on the [[output]] file.
+
+Since there is no input, we declare the value [[m = 1000]]
+as a compile-time constant.  The program itself is capable
+of generating the first [[m]] prime numbers for any
+positive [[m]], as long as the computer's finite
+limitations are not exceeded.
+<<program to print the first thousand prime numbers>>=
+program print_primes(output);
+  const m = 1000;
+        <<other constants of the program>>
+  var <<variables of the program>>
+    begin <<print the first [[m]] prime numbers>>
+    end.
+\end{verbatim} 
+\caption{Sample {\tt noweb} input, from prime number program}
+\label{sample-input}
+\end{figure}
 
 
+
+\begin{figure}
+\begin{quote} 
+\begindocs{4}
+
+This program has no input, because we want to keep it simple.
+The result of the program will be to produce a list of the first
+thousand prime numbers, and this list will appear on the \code{}output\edoc{}
+file.
+
+Since there is no input, we declare the value \code{}m = 1000\edoc{} as a
+compile-time constant.
+The program itself is capable of generating the first \code{}m\edoc{} prime
+numbers for any positive \code{}m\edoc{}, as long as the computer's finite
+limitations are not exceeded.
+\enddocs
+\begincode{5}
+\moddef{program to print the first thousand prime numbers}\endmoddef
+program print_primes(output);
+  const m = 1000;
+        \LA{}other constants of the program\RA{}
+  var \LA{}variables of the program\RA{}
+    begin \LA{}print the first \code{}m\edoc{} prime numbers\RA{}
+    end.
+\endcode
+\end{quote} 
+\caption{Output produced by {\tt noweave} and {\LaTeX} from Figure~\protect\ref{sample-input}}
+\label{noweave-output}
+\end{figure}
 
 \section{Using {\tt noweb}}% experience with noweb?
 
-The cost of experimenting with \verb+noweb+ is low; there isn't much
-syntax and the manual fits on two pages.
-Most programs can be converted to \verb+noweb+ programs by making the
-first line \verb+<<*>>=+.
-Although such a program isn't very literate, it can gradually be made
-more literate, and it doesn't break the tools.
-\verb+noweb+ is completely independent of the target programming
-language, and
-its formatter-dependent part is small.
+Experimenting with \verb+noweb+ is easy.
+{\tt noweb} has little syntax: definition and use of code chunks, marking of
+documentation chunks, quoting of code, and quoting of brackets.
+The manual fits on two pages.
+%% Most programs can be converted to \verb+noweb+ programs by making the
+%% first line \verb+<<*>>=+.
+\verb+noweb+ is independent of the target programming
+language, and its formatter-dependent part is a 40-line script.
 
-The original {\tt TANGLE}, part of {\tt WEB}, produced a ``code
-brick;'' it converted newlines to white space to fill each line with
-tokens.
-Later adaptations preserved newlines but still changed indentation.
-Programmers who experimented with {\tt WEB} but didn't like it had to
-edit laboriously by hand in order to recover a readable, compilable
-program from their {\tt WEB} source.
+{\tt WEB}'s  original {\tt TANGLE} removed white space and folded
+lines to fill each line with tokens,
+making its output unreadable~\cite[Figure~3]{knuth:literate}.
+Later adaptations preserved line breaks but removed other white space.
+Those who experimented with {\tt WEB} but didn't like it had to
+edit {\tt TANGLE}'s output by hand in order to recover a readable, compilable
+program.
 \verb+noweb+ makes it easy to abandon an experiment, because 
 \verb+notangle+'s output is readable.
-By default, \verb+notangle+ preserves the indentation of expanded
-chunks with respect to the chunks in which they appear, as shown in
-Figure~\ref{indentation}. 
-\verb+notangle+, unlike {\tt WEB}, can be used with languages like
-Miranda, in which changing indentation can change the meaning of a
-program.
+Because \verb+notangle+ preserves indentation, it can be used with
+languages like Miranda~\cite{turner:miranda} and
+Haskell~\cite{hudak:report}, in which indentation is significant.
+ {\tt TANGLE} cannot.
+
+% \begin{figure}
+% \begin{center}
+% \noindent
+% \begin{minipage}[t]{2.5in}
+% \begin{quote}\tt\obeyspaces
+% <<*>>=\\
+% one <<two>> <<three>>\\
+% <<two>>=\\
+% first of two\\
+% second of two\\
+% third of two\\
+% <<three>>=\\
+% first of three\\
+% \mbox{}\ second of three\\
+% \mbox{}\ \ third of three
+% \end{quote}
+% \end{minipage}\hfil
+% \begin{minipage}[t]{2.5in}
+% \begin{quote}\tt\obeyspaces
+% one\ first\ of\ two\\
+% \mbox{}\ \ \ \ second\ of\ two\\
+% \mbox{}\ \ \ \ third\ of\ \rlap{two\ first\ of\ three}\\
+% \mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ second\ of\ three}\\
+% \mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ \ third\ of\ three}
+% \end{quote}
+% \end{minipage}
+% \end{center}
+% \leavevmode\noindent
+% \hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
+% \medskip
+% \begin{quote} 
+% Those who dislike literate programming can use {\tt notangle} once,
+% discard the original input, and work only with the output.
+% Preserving indentation makes the output readable.
+% It is also useful for programmers working in languages with no support
+% for preprocessors, or where newlines or indentation are significant.
+% \end{quote} 
+% \caption{{\tt notangle} preserving indentation}
+% \label{indentation}
+% \end{figure}
 
 \begin{figure}
-\begin{center}
-\noindent
-\begin{minipage}[t]{2.5in}
-\begin{quote}\tt\obeyspaces
-<<*>>=\\
-one <<two>> <<three>>\\
-<<two>>=\\
-first of two\\
-second of two\\
-third of two\\
-<<three>>=\\
-first of three\\
-\mbox{}\ second of three\\
-\mbox{}\ \ third of three
-\end{quote}
-\end{minipage}\hfil
-\begin{minipage}[t]{2.5in}
-\begin{quote}\tt\obeyspaces
-one\ first\ of\ two\\
-\mbox{}\ \ \ \ second\ of\ two\\
-\mbox{}\ \ \ \ third\ of\ \rlap{two\ first\ of\ three}\\
-\mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ second\ of\ three}\\
-\mbox{}\rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ \ third\ of\ three}
-\end{quote}
-\end{minipage}
-\end{center}
-\leavevmode\noindent
-\hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
-\medskip
-\begin{quote} 
-Those who dislike literate programming can use {\tt notangle} once,
-discard the original input, and work only with the output.
-Preserving indentation makes the output readable.
-It is also useful for programmers working in languages with no support
-for preprocessors, or where newlines or indentation are significant.
-\end{quote} 
-\caption{{\tt notangle} preserving indentation}
-\label{indentation}
+\begin{verbatim}
+program print_primes(output);
+  const m = 1000;
+        rr = 50;
+        cc = 4;
+        ww = 10;
+        ord_max = 30;  { p_ord_max squared must exceed p_m }
+  var p: array [1..m] of integer;
+            { the first m prime numbers, in increasing order }
+      page_number: integer;
+\end{verbatim}
+\unskip
+\hbox{\hskip2em\tt\vdots}
+\caption{Part of primes program as written by {\tt notangle}}
+\label{notangle-output}
 \end{figure}
+
+
+% \begin{figure}
+% \begin{verbatim}
+% #line 41 "primes.nw"
+% program print_primes(output);
+%   const m = 1000;
+% 
+% #line 81 "primes.nw"
+% rr = 50;
+% cc = 4;
+% ww = 10;
+% #line 141 "primes.nw"
+% ord_max = 30;  { p_ord_max squared must exceed p_m }
+% #line 43 "primes.nw"
+% 
+%   var
+% \end{verbatim}
+% \hbox{\hskip2em\vdots}
+% \caption{Part of primes program as written by {\tt notangle -L}}
+% \label{notangle-L-output}
+% \end{figure}
+
 
 On a large project, it is essential that compilers and other tools be
 able to refer to locations in the \verb+noweb+ source, even though
@@ -225,86 +390,88 @@ that inform compilers of the placement of lines
 in the \verb+noweb+ source.
 It also preserves the columns in which
 tokens appear.
-Figure~\ref{renumbering} shows an example using the line number
-pragmas recognized by the C~preprocessor.
-The empty line in the figure contains the blank that appeared on
-line~2 between ``\verb+<<two>>+'' and ``\verb+<<three>>+.''
-
-\begin{figure}
-\begin{center}
-\noindent
-\begin{minipage}[t]{2.5in}
-\begin{quote}\tt\obeyspaces
-<<*>>=\\
-one <<two>> <<three>>\\
-<<two>>=\\
-first of two\\
-second of two\\
-third of two\\
-<<three>>=\\
-first of three\\
-\mbox{}\ second of three\\
-\mbox{}\ \ third of three
-\end{quote}
-\end{minipage}\hfil
-\begin{minipage}[t]{2.5in}
-\begin{quote}\tt
-\#line 2 "test.nw"\\
-one\\
-\#line 4 "test.nw"\\
-first of two\\
-second of two\\
-third of two\\
-\#line 2 "test.nw"\\
-\mbox{\hskip 1em}\\
-\#line 8 "test.nw"\\
-first of three\\
-\mbox{}\ second of three\\
-\mbox{}\ \ third of three
-\end{quote}
-\end{minipage}
-\end{center}
-\leavevmode\noindent
-\hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
-\begin{quote} 
-Those who like literate programming can keep (and edit) the original
-source, giving {\tt notangle}'s output to their compilers.
-Preserving position information makes compiler messages refer to
-locations in the original source.
-\end{quote} 
-\caption{{\tt notangle} preserving position information}
-\label{renumbering}
-\end{figure}
+% Figure~\ref{renumbering} shows an example using the line number
+% pragmas recognized by the C~preprocessor.
+% The empty line in the figure contains the blank that appeared on
+% line~2 between ``\verb+<<two>>+'' and ``\verb+<<three>>+.''
 
 
+
+% \begin{figure}
+% \begin{center}
+% \noindent
+% \begin{minipage}[t]{2.5in}
+% \begin{quote}\tt\obeyspaces
+% <<*>>=\\
+% one <<two>> <<three>>\\
+% <<two>>=\\
+% first of two\\
+% second of two\\
+% third of two\\
+% <<three>>=\\
+% first of three\\
+% \mbox{}\ second of three\\
+% \mbox{}\ \ third of three
+% \end{quote}
+% \end{minipage}\hfil
+% \begin{minipage}[t]{2.5in}
+% \begin{quote}\tt
+% \#line 2 "test.nw"\\
+% one\\
+% \#line 4 "test.nw"\\
+% first of two\\
+% second of two\\
+% third of two\\
+% \#line 2 "test.nw"\\
+% \mbox{\hskip 1em}\\
+% \#line 8 "test.nw"\\
+% first of three\\
+% \mbox{}\ second of three\\
+% \mbox{}\ \ third of three
+% \end{quote}
+% \end{minipage}
+% \end{center}
+% \leavevmode\noindent
+% \hbox to \hsize{\hbox to 2.5in{\hss Input\hss}\hss\hbox to 2.5in{\hss Output\hss}}
+% \begin{quote} 
+% Those who like literate programming can keep (and edit) the original
+% source, giving {\tt notangle}'s output to their compilers.
+% Preserving position information makes compiler messages refer to
+% locations in the original source.
+% \end{quote} 
+% \caption{{\tt notangle} preserving position information}
+% \label{renumbering}
+% \end{figure}
+
+
+{\tt WEB} files map one to one with to both programs and documents.
 The mapping of \verb+noweb+ files to programs is many to many; the
 mapping of files to documents is many to one.
 Source files are combined by listing their names on \verb+notangle+'s
 or \verb+noweave+'s command line.
-Different programs are extracted by specifying the name
-of the root chunk using \verb+notangle+'s \verb+-R+ command-line
+Different programs may be extracted by specifying the names
+of different root chunks, using \verb+notangle+'s \verb+-R+ command-line
 option.
 
-\clearpage % fixes bad break
-The simplest example of a one-to-many mapping is that of putting
+%\clearpage % fixes bad break
+The simplest example of a one-to-many mapping of programs is that of putting
 C~header and source in a single {\tt noweb} file.
-Here rules for Make~\cite{feldman:make} that automate the
-procedure:%
+Here are example rules for {\tt make}~\cite{feldman:make}:%
 \footnote{Using \verb+cmp+ avoids touching the header file when its contents
 haven't changed.
-This trick is explained on pages 265--266 of Reference~\cite{kernighan:unix}.}
+This trick is explained on pages 265--266 of Reference~\refno{kernighan:unix}.}
 \begin{verbatim}
-.SUFFIXES: .nw .h
-.nw.c: ;        $(NOTANGLE) -L $*.nw >$*.c
-.nw.h: ;        $(NOTANGLE) -Rheader $*.nw >x$*.h
-                -cmp -s x$*.h $*.h || cp x$*.h $*.h
+foo.c: foo.nw
+        notangle -L foo.nw > foo.c
+foo.h: foo.nw
+        notangle -Rheader foo.nw > xfoo.h
+        -cmp -s xfoo.h foo.h || cp xfoo.h foo.h
 \end{verbatim}
-Similarly,
-I have used {\tt noweb} to combine several Modula-3 interfaces and
+I have used {\tt noweb}'s one-to-many mapping to combine several Modula-3 interfaces and
 modules that
 gradually reveal the definition of a partially opaque
 type~\cite[Chapter~6]{nelson:systems}. 
-An more interesting example is using {\tt noweb} to
+A more interesting example is using {\tt noweb} to
 interleave different languages in one source file. 
 I wrote an \verb+awk+
 script that read a machine description and emitted a disassembler for
@@ -321,10 +488,10 @@ notangle -R'opcode table' opcodes.nw | awk -f opcodes.awk > disassem.sml
 
 Many-to-one mapping of source to program can be used to obtain
 effects similar to those of Ada or Modula-3 generics.
-Put 
+If one puts 
 generic code in a specially named chunk in a \verb+noweb+
-file, e.g.~\verb+generic_list.nw+.
-``Instantiate'' the code by putting a reference to that chunk in a
+file, e.g.~\verb+generic_list.nw+, one can then
+``instantiate'' the code by putting a reference to that chunk in a
 different file, e.g.~\verb|uses_list.nw|.
 The instantiation takes the form:
 \begin{verbatim}
@@ -337,23 +504,24 @@ These restrictions make {\tt noweb} a poor approximation to real
 generics, but useful nevertheless.
 
 
-\section{{\tt noweb}'s architecture}
+\section{Representation of {\tt noweb} files}
 
 The \verb+noweb+ syntax is easy to read, write, and edit, but it is
-not convenient for programs.
-The \verb+noweb+ tools use a representation that is easier for
-programs to manipulate; \verb+markup+ converts a \verb+noweb+ program
+not easily manipulated by programs.
+The \verb+noweb+ tools use a representation that is easily manipulated
+by commonly used Unix tools like {\tt sed} and {\tt awk}~\cite{kernighan:unix};
+ \verb+markup+ converts a \verb+noweb+ program
 to this representation.
-\verb+notangle+ is implemented as a Unix shell script that builds a
-pipeline between \verb+markup+ and the program \verb+nt+, which does
-the work.
+\verb+notangle+ is a Unix shell script that builds a
+pipeline between \verb+markup+ and \verb+nt+, which reads
+and expands definitions of code chunks.
 \verb+noweave+ pipes the output of \verb+markup+ to a 40-line
 \verb+sed+~script that inserts appropriate {\TeX} or {\LaTeX} formatting commands.
 
 Having a format easily read by programs makes {\tt noweb} extensible;
-one can write simple tools using Unix shell scripts and
-filters~\cite{kernighan:unix}. 
-To be able to share programs with friends who don't enjoy literate
+one can manipulate literate programs using Unix shell scripts and
+filters.
+To be able to share programs with colleagues who don't enjoy literate
 programming, I modified \verb+notangle+ by adding to its pipeline a
 stage that
 places each line of documentation in a comment and moves it to
@@ -363,15 +531,16 @@ information and with only a moderate penalty in readability.
 A second simple tool finds all the roots in a {\tt noweb} file, making
 it easy to find definitions where chunk names have been misspelled.
 
-\section{Experience and future work}
+\section{Discussion}
 
 I have used \verb+noweb+ for a number of small C~programs (including
 \verb+noweb+ itself), for a code generator for 
-the Standard ML of New Jersey compiler (written in Standard ML), and
-for a multiarchitecture debugger, written in Modula-3 with some C and
+the Standard ML of New Jersey compiler (written in Standard
+ML)~\cite{appel:smlnj}, and 
+for a multi-architecture debugger, written in Modula-3 with some C and
 assembly language.
 \verb+markup+ and \verb+nt+ are \verb+noweb+ programs written in~C;
-they require about 1200~lines of source of which about 400~lines are
+they are about 1200~lines of source of which about 400~lines are
 interleaved documentation.
 The code generator required 2600 lines, of which 900 lines were
 interleaved documentation.
@@ -385,137 +554,43 @@ system in C++~\cite{staelin:high}; he wrote 27,000~lines, of which
 does everything.
 {\tt noweb}'s approach is to compose
 simple tools that manipulate files in the {\tt noweb} format. 
-In addition to {\tt notangle}, {\tt noweave}, and the other tools I
-have written,
-such tools might include:
-\begin{itemize}
-\item
-A cross-reference generator for chunks.
-\item
-An interactive browser, like that of
-Reference~\cite{brown:interactive}. 
-\end{itemize}
-Some tools need to know something about the target programming
-language, perhaps its lexical or grammatical structure.
-Such tools might include:
-\begin{itemize}
-\item
-A prettyprinter.
-\item
-A tool that, like {\tt WEB}, generates an index of identifiers.
-\item
-A macro processor, like that of Reference~\cite{kernighan:m4}.
-\item
-A ``string pool'' tool, like \verb+xstr+~\cite{unix:xstr} or that of {\tt
-WEB}. 
-\end{itemize}
+Such tools might be used to provide features found in {\tt WEB} but
+not in {\tt noweb}, including cross-referencing of chunks, automatic
+index generation, macro processing, prettyprinting code, typesetting
+comments using {\TeX}, and converting string literals to indices into a
+``string pool.''
+Of these tools only the first could be language-independent.
+An interactive browser for {\tt noweb} files would provide the
+environment described in Reference~\refno{brown:interactive} to
+programmers using any mix of languages.
 
+% 
+% {\tt WEB} source that is edited is very different from the typeset
+% version that can be read.
+% The differences can be confusing.
+% Because programs are edited more often than read, much of the benefit
+% of having typeset documentation is lost.
+% \verb+noweave+ solves part of this problem by presenting the code
+% chunks exactly as written.
+% This solution might be improved by using \verb+noweb+ with a
+% formatting tool like \verb+notex+~\cite{lipton:notex}, which produces
+% typeset documents from well-formatted ASCII text containing no
+% additional markup. 
 
-{\tt WEB} source that is edited is very different from the typeset
-version that can be read.
-The differences can be confusing.
-Because programs are edited more often than read, much of the benefit
-of having typeset documentation is lost.
-\verb+noweave+ solves part of this problem by presenting the code
-chunks exactly as written.
-This solution might be improved by using \verb+noweb+ with a
-formatting tool like \verb+notex+~\cite{lipton:notex}, which produces
-typeset documents from well-formatted ASCII text containing no
-additional markup. 
-
-{\tt noweb} simplifies literate programming by using the Unix idea of
-getting complex function by composing simple tools.
-It keeps things simple for both authors and tool writers by using two
-representations of literate programs: one that is simple for users to
-read and edit, and one that 
-is simple for programs to read and transform.
 \verb+noweb+ can be obtained by 
-sending electronic mail to \verb+nr@princeton.edu+%
-% or by anonymous {\tt ftp} from Internet host {\tt
-% princeton.edu:pub/noweb.shar.Z}
-.
-I hope its simplicity and availability will enable new
-experiments with literate programming.
+% sending electronic mail to \verb+nr@princeton.edu+%
+% or by 
+anonymous {\tt ftp} from  {\tt
+princeton.edu}, in file {\tt pub/noweb.shar.Z}.
 
 \section{Acknowledgements}
-Mark Weiser's invaluable encouragment provided the impetus for me to
+Mark Weiser's invaluable encouragement provided the impetus for me to
 write this paper, which I did while visiting the Computer
 Science Laboratory of the Xerox Palo Alto Research Center.
 The development of {\tt noweb} was supported by a Fannie and John Hertz
 Foundation Fellowship.
 
-\bibliographystyle{unsrt}
-\bibliography{web,cs,ramsey}
-
-\def\semifilbreak{\vskip 0pt plus 1fil\penalty-200\vskip 0pt plus -1fil}
-
-\semifilbreak
-\section{A more complex example}
-
-\def\caption#1{\centerline{#1}}
-
-%\begin{figure}
-\begin{quote}\tt\obeyspaces\rightskip=-1.5in
-<<*>>=\\
-switch(state)\ \{\\
-\mbox{ }\ \ \ case\ Code:\ <<convert\ a\ code\ line>>\ break;\\
-\mbox{ }\ \ \ case\ Docs:\ <<convert\ a\ documentation\ line>>\ break;\\
-\mbox{ }\ \ \ default:\ impossible("bad\ state");\\
-\}\\
-@\ Converting\ a\ line\ of\ code\ requires\ separating\ it\ into\ \\
-plain\ text\ and\ references\ to\ other\ chunks\ (``uses'').\\
-<<convert\ a\ code\ line>>=\\
-while\ (mark\ =\ use\_start(line,1))\ \{\ \\
-\mbox{ }\ \ \ /*\ extract\ and\ print\ text,\ use\ */\\
-\}\\
-/*\ print\ text\ */\\
-<<convert\ a\ documentation\ line>>=\\
-/*\ code\ omitted\ for\ brevity\ */
-\end{quote} 
-\caption{Original {\tt noweb} source}
-%\end{figure}
-
-\semifilbreak
-
-%\begin{figure}
-\begin{quote}\tt\obeyspaces
-switch(state)\ \{\\
-\mbox{ }\ \ \ case\ Code:\ while\ (mark\ =\ use\_start(line,1))\ \{\ \\
-\mbox{ }\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ /*\ extract\ and\ print\ text,\ use\
- */\\
-\mbox{ }\ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\\
-\mbox{ }\ \ \ \ \ \ \ \ \ \ \ \ \ \ /*\ print\ text\ */\ break;\\
-\mbox{ }\ \ \ case\ Docs:\ /*\ code\ omitted\ for\ brevity\ */\ break;\\
-\mbox{ }\ \ \ default:\ impossible("bad\ state");\\
-\}
-\end{quote} 
-\caption{{\tt notangle} output with indentation preserved}
-%\end{figure}
-
-\semifilbreak
-
-%\begin{figure}
-\begin{quote}\tt\obeyspaces
-\#line\ 2\ "foo.nw"\\
-switch(state)\ \{\\
-\mbox{ }\ \ \ case\ Code:\ \\
-\#line\ 10\ "foo.nw"\\
-while\ (mark\ =\ use\_start(line,1))\ \{\ \\
-\mbox{ }\ \ \ /*\ extract\ and\ print\ text,\ use\ */\\
-\}\\
-/*\ print\ text\ */\\
-\#line\ 3\ "foo.nw"\\
-\mbox{ }\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break;}\\
-\mbox{ }\ \ \ case\ Docs:\ \\
-\#line\ 15\ "foo.nw"\\
-/*\ code\ omitted\ for\ brevity\ */\\
-\#line\ 4\ "foo.nw"\\
-\mbox{ }\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \rlap{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break;}\\
-\mbox{ }\ \ \ default:\ impossible("bad\ state");\\
-\}
-\end{quote} 
-\caption{{\tt notangle} output with source position information preserved}
-%\end{figure}
-
+\bibliographystyle{abbrv}
+\bibliography{web,cs,ramsey,ml}
 
 \end{document}
