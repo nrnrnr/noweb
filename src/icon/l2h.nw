@@ -1550,7 +1550,7 @@ procedure start_table_cell(S, text)
 if /(\this).brace_depth then write(&errout, "starting table cell, ", image(this), " has null brace depth")
   # use this to start the current cell
   if this.index = 1 then emit_text(S, "<tr>")
-  attributes := \this.alignment | "align=top"
+  attributes := \this.alignment | aligneq("top")
   if this.width > 1 then attributes ||:= " colspan=" || this.width
   emit_text(S, "<td" || attributes || ">")
 
@@ -1684,16 +1684,25 @@ end
 @ 
 We figure alignments using the tricks in the {\LaTeX} book.
 <<*>>=
+procedure aligneq(a)
+  return " align=\"" || a || "\""
+end
+
+procedure valigneq(a)
+  return " valign=\"" || a || "\""
+end
+
 procedure alignments(s)
   a := []
   s ? {
     while not pos(0) do
       case move(1) of {
-	"l" | "X" | "Y" | "p" : { put(a, " align=left valign=top"); skip_bracket() }
-	"c" : put(a, " align=center")
-	"r" : put(a, " align=right")
-	"m" : { put(a, " align=left valign=center"); skip_bracket() }
-	"b" : { put(a, " align=left valign=bottom"); skip_bracket() }
+	"l" | "X" | "Y" | "p" :
+            { put(a, aligneq("left") || valigneq("top")); skip_bracket() }
+	"c" : put(a, aligneq("center"))
+	"r" : put(a, aligneq("right"))
+	"m" : { put(a, aligneq("left") || valigneq("center")); skip_bracket() }
+	"b" : { put(a, aligneq("left") || valigneq("bottom")); skip_bracket() }
 	"@" | "<" | ">" | "!" : skip_bracket()
         "|" : &null
         default : &null		# unrecognized...
@@ -2766,7 +2775,7 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.14 2002/07/15 20:52:58 nr Exp nr $" ||
+  return "$Id: l2h.nw,v 1.15 2002/07/16 17:10:20 nr Exp nr $" ||
          "$Name: v2_10b $"
 end
 @

@@ -254,7 +254,7 @@ end
 procedure newdocslabel()
   static count
   initial count := 0
-  return "NWD" || alphacode(count +:= 1)
+  return "NWD" || curfile || "-" || alphacode(count +:= 1)
 end
 <<*>>=
 procedure addlabel(tbl, arg, label)
@@ -425,7 +425,7 @@ end
 
 procedure crc_table() 
   local POLY, sum
-  POLY :=  16rf5000000
+  POLY := 16rf5000000
   t := table()
   every i := 0 to 255 do {
     sum := 0
@@ -454,7 +454,7 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: noidx.nw,v 1.13 2002/07/15 20:52:58 nr Exp nr $" ||
+  return "$Id: noidx.nw,v 1.14 2002/07/16 17:10:20 nr Exp nr $" ||
          "$Name: v2_10b $"
 end
 @

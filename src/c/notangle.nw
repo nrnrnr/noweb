@@ -15,7 +15,7 @@ details later.
 <<header>>=
 void emit_module_named (FILE *out, char *rootname, char *locformat);
 <<*>>=
-static char rcsid[] = "$Id: notangle.nw,v 2.16 2002/07/15 20:52:57 nr Exp nr $";
+static char rcsid[] = "$Id: notangle.nw,v 2.17 2002/07/16 17:10:19 nr Exp nr $";
 static char rcsname[] = "$Name: v2_10b $";
 #define MAX_MODNAME 255
 @

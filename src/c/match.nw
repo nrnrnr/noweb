@@ -7,7 +7,7 @@ extern int is_begin(char *line, char *type);
 extern int is_end(char *line, char *type);
 extern int is_index(char *line, char *type);
 <<*>>=
-static char rcsid[] = "$Id: match.nw,v 1.12 2002/07/15 20:52:57 nr Exp nr $";
+static char rcsid[] = "$Id: match.nw,v 1.13 2002/07/16 17:10:19 nr Exp nr $";
 static char rcsname[] = "$Name: v2_10b $";
 #include <string.h>
 #include "match.h"

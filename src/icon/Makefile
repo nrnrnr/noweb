@@ -1,8 +1,7 @@
 SHELL=/bin/sh
 LIB=/dev/null		# to be overridden
 BIN=/dev/null		# to be overridden
-ICONC=icont		# iconc is no longer maintained and is unlikely to work
-#ICONC=iconc -f l	# use this instead if you actually have a working iconc
+ICONC=iconc             # override to icont if no iconc on your system
 ICONT=icont		# override to iconc if all filters should be compiled
 CPIF=| cpif		# change to ">" to insure all sources always made
 
@@ -126,7 +125,7 @@ noindex: noindex.icn
 	$(ICONT) noindex.icn
 
 noidx: noidx.icn
-	$(ICONC) noidx.icn
+	$(ICONT) noidx.icn  # no longer compiles with iconc
 
 elide: elide.icn
 	$(ICONT) elide.icn
