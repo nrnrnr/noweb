@@ -151,7 +151,7 @@ clean:
 	rm -f nwsrcfilter *~ */*~
 
 clobber: clean
-	for i in c lib icon awk; do (cd $$i; make clobber); done
+	for i in c lib icon awk xdoc; do (cd $$i; make clobber); done
 
 Makefile: Makefile.nw
 	chmod +w Makefile
