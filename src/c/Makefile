@@ -73,7 +73,10 @@ allcode.tex: $(FILES)
 	noweave -n -index $(FILES) > allcode.tex
 
 doc.dvi:	doc.tex allcode.tex
-	latex doc
+	latex doc; latex doc; latex doc
+
+doc.ps: doc.dvi
+	dvips doc
 
 markup.ps: markmain.nw
 	notangle -Rmarkup.dot markmain.nw | dot -Tps > markup.ps

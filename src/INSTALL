@@ -1,5 +1,5 @@
 These installation instructions are for Unix systems.
-For Plan 9 systems, Russ Cox has kindly provided scripts in the rc
+For Plan 9 systems, Russ Cox has kindly provided scripts in the contrib
 directory, but you are on your own for installation instructions.
 If you use Microsoft Windows, you are even more on your own.
 

@@ -34,7 +34,7 @@ ELISP=/dev/null
 # change WEAVE if you want a different version of noweave to be installed
 WEAVE=noweave		
 
-# Stop editing.  No user-serviceable parts below.
+# Stop editing.	 No user-serviceable parts below.
 SHELL=/bin/sh
 CINAME=
 CIMSG=
@@ -45,10 +45,18 @@ CAT7DIR=$(MAN)/cat$(MAN7EXT)
 LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
-all:
+all: FAQ
 	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all 
 	for i in shell lib xdoc tex; do (cd $$i; make all); done
 	cd $(LIBSRC); make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all
+
+FAQ: FAQ.html
+	html2ascii FAQ.html > FAQ
+
+FAQ.html: $(HOME)/www/noweb/FAQ.html
+	rm -f FAQ.html
+	/bin/cp $(HOME)/www/noweb/FAQ.html FAQ.html
+	chmod -w FAQ.html
 
 install: install-code install-man install-tex install-elisp
 
@@ -70,7 +78,7 @@ version.
 <<generate chunks>>=
 echo '@<<shell binaries@>>='
 for i in noweb notangle '$(WEAVE)' nountangle nodefs noroots nuweb2noweb cpif htmltoc \
-         noroff
+	 noroff
 do
   echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(BIN)/'"$i"
   echo 'chmod +x $(BIN)/'"$i"

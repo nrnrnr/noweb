@@ -31,7 +31,7 @@ procedure prepass(name, arg)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: icondefs.nw,v 1.3 1999/02/16 21:12:17 nr Exp nr $" ||
-         "$Name: v2_9a $"
+  return "$Id: icondefs.nw,v 1.4 2000/06/03 02:48:22 nr Exp nr $" ||
+         "$Name: v2_9b $"
 end
 @

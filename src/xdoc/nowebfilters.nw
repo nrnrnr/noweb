@@ -28,6 +28,7 @@ options use these filters, which automatically find defined identifiers.
 The 
 .B *
 stands for the name of a programming language.
+(Icon installation only.)
 .TP
 .B disambiguate
 The 
@@ -35,6 +36,47 @@ The
 filter makes it possible to abbreviate chunk names using a trailing ellipsis
 (three periods), in the style of WEB and 
 .IR nuweb (1).
+.TP
+.BI docs2comments " options"
+The
+.B docs2comments
+filter converts documentation chunks to comments in code chunks.
+Options include 
+.BR "\-all" ,
+which converts all documentation chunks into comments;
+.B "\-one" 
+converts only one documentation chunk preceding each code chunk.
+The
+.BI "\-w" k
+option formats comments 
+.I k
+columns wide.
+.IP
+Other options control the language and style of the comment.
+Languages available include
+.BR      "\-awk" , 
+.BR      "\-c" ,
+.BR      "\-c++" ,
+.BR      "\-f77" ,
+.BR      "\-f90" ,
+.BR      "\-icn" , 
+.BR      "\-icon" ,
+.BR      "\-lisp" , 
+.BR      "\-m3" ,
+.BR      "\-ml" , 
+.BR      "\-ocamlweb" ,
+.BR      "\-pascal" ,
+.BR      "\-scm" ,
+and
+.BR      "\-tex" .
+.IP
+Norman recommends using
+.BR notangle (1)
+with
+.B docstocomments
+instead of
+.BR nountangle (1).
+(Icon installation only.)
 .TP
 .B elide \fIpatterns\fP
 The
@@ -62,6 +104,35 @@ sequences appear in bold in the output.
 .B l2h
 uses the LaTeX-generated .toc and .bbl files to help create table of contents
 and bibliography.
+(Icon installation only.)
+.TP
+.B pipedocs\fI command\fP
+The 
+.B pipedocs
+filter runs each documentation chunk through an invocation of
+.IR command ,
+which may be any Unix command.
+The Noweb library includes the command
+.BR h2a ,
+which uses 
+.IR lynx (1)
+to convert HTML to 
+ASCII.
+.TP
+.BI xchunks " files"
+The 
+.B xchunks
+filter pulls in code chunks from an external source.
+The
+.I files
+argument lists one or more noweb files, which are used only for their 
+definitions of code chunks.
+Empty chunk definitions in the main document are replaced with 
+the external definitions of the same name.
+This filter makes it possible to include the same code chunks 
+in multiple documents, or even the same code chunks multiple 
+times in the same document.
+(Icon installation only.)
 .SH PARSERS
 A parser converts a source file to the noweb pipeline format,
 interpreting the ``markup'' in that file.
@@ -98,6 +169,8 @@ heuristic, which means results on
 .I nuweb
 files may differ subtly from those produced by 
 .I nuweb.
+.PP
+Many filters are not available in installations that use Awk instead of Icon.
 .SH SEE ALSO
 .IR noweave (1),
 .IR notangle (1),
