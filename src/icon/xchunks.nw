@@ -32,6 +32,13 @@ record chunk(lines, type)
   # type is "code" or "docs" or "unknown"
 
 procedure main(args)
+  local merge, summary
+  while args[1][1] == "-" do
+    case args[1] of {
+     "-merge"   : merge := get(args)
+     "-summary" : { get(args); summary := " (summary)" }
+     default    : break
+   }
   *args > 0 | stop("xchunks needs an external database")
 
   <<let [[db]] be an open file giving the database pipeline from [[args]]>>
@@ -39,6 +46,10 @@ procedure main(args)
   dbchunks := readchunks(db)
   defns := defnstable(dbchunks)
     # defns maps name to list of code chunks defining that name
+  if \merge then
+      every merge_chunks(!defns)
+  if \summary then
+      every add_defn_string(!defns, summary)
 
   thisdoc := readchunks(&input)
   every c := !thisdoc do
@@ -101,3 +112,49 @@ db := "markup"
 every db ||:= " " || !args
 db := open(db, "rp") | stop("cannot pipe from ", image(db))
 @
+To merge adjacent definitions, we strip leading and trailing markup.
+<<*>>=
+procedure merge_chunks(chunks)
+  while *chunks > 1 do {
+    c := get(chunks)
+    strip_code_tail(c)
+    strip_code_head(chunks[1])
+    every put(c.lines, !chunks[1].lines)
+    chunks[1] := c
+  }
+  return chunks
+end
+@ 
+<<*>>=
+procedure strip_code_tail(c)
+  if c.lines[-1] ? match("@end code") then
+    pull(c.lines)
+  else
+    stop("Unexpected line")
+  return c
+end
+
+procedure strip_code_head(c)
+  local pfx
+  pfx := []
+  if match("@begin code", c.lines[1]) then
+    get(c.lines)
+  else
+    stop("bad line " || c.lines[1])
+  while not match("@defn ", c.lines[1]) do
+    push(pfx, get(c.lines))
+  get(c.lines) | stop("this can't happen")
+  while c.lines[1] ~== "@nl" do
+    push(pfx, get(c.lines))
+  get(c.lines) | stop("this can't happen")
+  every push(c.lines, !pfx)
+  return c
+end
+@ 
+<<*>>=
+procedure add_defn_string(chunks, s)
+  every c := !chunks & i := 1 to *c.lines do
+    if match("@defn ", c.lines[i]) then
+      c.lines[i] ||:= s
+  return chunks
+end
