@@ -1,0 +1,23 @@
+To build noweb:
+
+  1) Bourne shell implementations differ, with the unfortunate result
+     that there is no standard way to print one backslash on standard
+     output.  The latest strategy I have tried is to use
+     `echo -n \\' by itself for backslashes; this fails on SYSV
+     echo which doesn't recognize -n.  You may have to alter
+     bin/noweave to get correct TeX goo.
+
+  2) Choose locations for the noweb files, and set the appropriate
+     variables in the Makefile:
+       BIN        on $PATH, will hold notangle, noweave, noroots, ...
+       LIB        a place to store markup, unmarkup and nt
+       MAN        notangle man page will go in $MAN/man1
+       TEXINPUTS  a place TeX will look for nwmac.tex and nwkernel.tex
+     Make sure you have write permission to these places.
+     Set CC in the Makefile to point to an ANSI C compiler.
+
+  3) If you have Icon and want to use its superior cross-referencer,
+     try 'icont -o lib/noxref icon/noxref.icn'.  \chunklist
+     on a line by itself expands to a list of chunks (`module index').
+
+  4) Fasten your seat belt and type `make'.
