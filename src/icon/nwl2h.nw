@@ -1,0 +1,79 @@
+<<*>>=
+global show_unknowns
+
+procedure main(args)
+  local line
+  every arg := !args do
+    case arg of {
+      "-show-unknowns" : show_unknowns := 1
+      default : write(&errout, "l2h filter: unknown arg ", image(arg))
+    }
+  while line := read() do
+    apply(filter, line)
+  warn_unknown(unknown_set, "control sequences", "\\")
+  warn_unknown(unknown_envs, "environments", "{", "}")
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+<<*>>=
+global curfile, curline
+
+procedure filter(name, arg) 
+  static S, C, code
+  initial { S := converter("V"); C := converter("H") }
+  case name of {
+    "begin"    : {<<out>>; if match("code ", arg) then code := 1}
+    "end"      : {<<out>>; code := &null; S.mode := "V"}
+    "quote"    : {<<out>>; code := 1; stop_skipping(S)}
+    "endquote" : {<<out>>; code := &null}
+    "file"     : {<<out>>; curfile := arg; curline := 1}
+    "line"     : {<<out>>; curline := integer(arg)}
+    "defn"     : { write("@", name, " ", "{" || arg || "}" ? convert(C)); reset(C) }
+    "use"      : { write("@", name, " ", "{" || arg || "}" ? convert(C)); reset(C) }
+    "text"     : {if \code then <<out>> else outtext(arg ? convert(S))}
+    "nl"       : {if \code then <<out>> else outtext("\n" ? convert(S)); curline +:= 1}
+    default    : {<<out>>}
+  }
+  return
+end
+<<out>>=
+write("@", name, (" " || \arg) | "")
+<<*>>=
+procedure outtext(s)
+  s ? 
+    while not pos(0) do
+      if ="\n" then write("@nl")
+      else write("@text ", tab(upto('\n') | 0))
+  return
+end
+<<*>>=
+procedure warn_unknown(s, type, mark, rmark)
+  if *s > 0 then {
+    pushout("Unknown " || type || ": ")
+    every pushout(((\mark | "")\1) || !sort(s) || ((\rmark | "")\1) || " ")
+    pushout("\n")
+ }
+end
+<<*>>=
+procedure pushout(s)
+  static col
+  initial col := 0
+  if find("\n", s) then
+    s ? {
+      pushout(tab(upto('\n')))
+      while ="\n" do {col := 0; write(&errout)}
+      pushout(tab(0))
+    }  
+  else {
+    col +:= *s
+    if col >= 79 then {writes(&errout, "\n  "); col := *s + 2}
+    writes(&errout, s)
+  }
+  return
+end
+<<*>>=
+procedure error(args[])
+  return write!([&errout, (\curfile || ", ") | "", "line ", curline, ": "] ||| args)
+end
