@@ -1,0 +1,94 @@
+This program is similar to [[makeindex]] in that it grovels through [[.aux]] 
+files looking for index information, which it writes to a [[.nwi]] file.
+It's used when [[noweave -indexfrom]] is used on many files separately;
+it combines the separate indices into a single, correctly sorted index.
+That index file is read by [[\nowebindex*]].
+<<*>>=
+procedure main(args)
+  if *args ~= 1 then 
+    write(&errout, "Usage: nomkidx basename")
+  else {
+    in := get(args)
+    if in[-4:0] == ".tex" then in[-4:0] := ".aux"
+    else if not (in[-4:0] == ".aux") then in ||:= ".aux"
+    gobble(in, idx := [])
+    f := open(in[1:-4] || ".nwi", "w") | stop("Cannot write ", in[1:-4] || ".nwi")
+    last := ""
+    every out := stripcount(!alphasort(idx)) do
+      write(f, last ~== out) & last := out
+    close(f)
+  }
+  return
+end
+<<*>>=
+procedure gobble(name, idx)
+  static count
+  initial count := 0
+  in := open(name) | <<can't open; return>>
+  while line := read(in) do
+    line ? 
+      if ="\\@input{" & name := tab(upto('}')) & move(1) & pos(0) then
+        gobble(name, idx)
+      else if ="\\nwixadds{" then 
+        put(idx, right(count +:= 1, 6, "0") || " " || tab(0))
+  return
+end
+<<*>>=
+procedure stripcount(s)
+  s ? { tab(many(&digits)); tab(many(' ')); return "\\nwixaddsx{" || tab(0) }
+end
+<<can't open; return>>=
+{ write(&errout, "No file ", name, "."); return }
+<<*>>=
+procedure alphasort(x)
+  t := table()
+  every s := !x do t[s] := sortkey(s)
+  t := sort(t, 2)
+  l := []
+  every put(l, (!t)[1])
+  return l
+end
+<<*>>=
+procedure sortkey(s)
+  local count
+  map(s) ? {
+    count := tab(many(&digits))
+    tab(many(' '))
+    if ="c}" then return firstkey() || "\n" || count
+    else if ="i}" then return firstkey() || "\n" || count
+    else stop("not chunk or index")
+  }
+end
+<<*>>=
+procedure firstkey()
+  ="{{" | stop("bad index or chunk format")
+  s := (remove_control_sequences() ? tab(bal('}', '{', '}') | 0))
+  return alphabet(s) || "\n" || s
+end
+<<*>>=
+procedure alphabet(s)
+  static keep
+  initial keep := &lcase ++ ' \t'
+  r := ""
+  s ? {
+    while tab(upto(keep)) do 
+      if tab(many(' \t')) then
+         r ||:= " "
+      else
+         r ||:= tab(many(&lcase)) | stop("This can't happen")
+  }
+  r ? { tab(many(' ')) ; return tab(0) }	# strip leading blanks
+end
+<<*>>=
+procedure remove_control_sequences()
+  s := ""
+  while s ||:= tab(upto('\\')) do {
+    ="\\"
+    tab(many(&letters)) | move(1)	# skip
+    tab(many(' \t'))
+  }
+  return s || tab(0)
+end
+@
+\section{Index}
+\nowebindex

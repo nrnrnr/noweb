@@ -1,0 +1,28 @@
+\section{Finding definitions in Standard ML}
+<<*>>=
+procedure main(args)
+  go()
+end
+<<*>>=
+procedure postpass(name, arg)
+  static kind, definers, id1, id2, reserved
+  initial { kind := "bogus"
+            definers := ["fun", "val", "structure", "signature", "and", "function",
+                         "type", "eqtype", "datatype"]
+	    id1 := &letters ++ &digits ++ '\'_'
+            id2 := '!%&$+-/:<=>?@\\~^| # * `'
+            reserved := set()
+            every insert(reserved, !"*|:=#_" | "->" | "=>")
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if =!definers & tab(many(' ')) then
+            writedefn(1(id := tab(many(id1 | id2)), not member(reserved, id)))
+  }
+  return
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
