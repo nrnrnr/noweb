@@ -22,7 +22,7 @@
   \catcode`\~=\other
   \catcode`\_=\other
   \catcode`\^=\other
-  \obeyspaces\tt
+  \obeyspaces\Tt
 }
 {\catcode`\^^M=\active % make CR an active character
   \gdef\newlines{\catcode`\^^M=\active % make CR an active character
@@ -60,5 +60,24 @@
 
 \def\filename#1{\vfil\eject\mark{#1}}
 
-\def\chunklist{\message
-{[Warning: You need the Icon cross-referencer and noweave -x to use \string\chunklist]}}
+\def\chunklist{%
+\expandafter\errhelp\expandafter{I changed \noexpand\chunklist\space
+to \noexpand\nowebchunks.  I'll try to avoid such incompatible changes
+in the future.}%
+\errmessage{Use \string\nowebchunks\space instead of \chunklist.}}
+\def\nowebchunks{\message{<Warning: You need noweave -x to use \string\nowebchunks>}}
+\def\nowebindex{\message{<Warning: You need noweave -idx to use \string\nowebindex>}}
+
+% here is support for the new-style (capitalized) font-changing commands
+% thanks to Dave Love
+\ifx\documentstyle\undefined
+  \let\Rm=\rm \let\Tt=\tt	% plain
+\else\ifx\selectfont\undefined
+  \let\Rm=\rm \let\Tt=\tt	% LaTeX OFSS
+\else				% LaTeX NFSS
+  \def\Rm{\fontfamily\rmdefault \fontseries\default@series
+    \fontshape\default@shape \selectfont}
+  \def\Tt{\fontfamily\ttdefault \fontseries\default@series
+    \fontshape\default@shape \selectfont}
+\fi
+\fi
