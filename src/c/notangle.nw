@@ -18,7 +18,6 @@ void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "markup.h"
 #include "strsave.h"
 #include "getline.h"
 #include "modules.h"
@@ -36,7 +35,7 @@ void notangle (FILE* in, FILE *out, char *rootname, char *locformat) {
                                 /* pretty up the module texts */
 
     root = lookup(rootname);
-    <<quit if we couldn't fint the root>>
+    <<quit if we couldn't find the root>>
     (void) expand(root,0,0,MAX_EXPANSION_LEVEL,locformat,out);
     putc('\n',out);                     /* make output end with newline */
 }
@@ -45,15 +44,18 @@ We recognize the input using matching functions, which can find [[@begin]],
 [[@end]], and other useful information.
 <<matching functions>>=
 static matches(char *line, char *search) {
-        return !strncmp(line,search,strlen(search));
+    return !strncmp(line,search,strlen(search));
+}
+static is_keyword(char *line, char *keyword) {
+    static char low_at_sign = '@';
+    return *line==low_at_sign && matches(line+1,keyword) && 
+           (line[strlen(keyword)+1]==' ' || line[strlen(keyword)+1]=='\n');
 }
 static is_begin(char *line, char *type) {
-        return (*line == at_sign) && matches (line+1, "begin ")
-                && matches (line+1+6,type);
+    return is_keyword(line,"begin") && matches(line+1+6,type);
 }
 static is_end(char *line, char *type) {
-        return (*line == at_sign) && matches (line+1, "end ")
-                && matches (line+1+4,type);
+    return is_keyword(line,"end") && matches (line+1+4,type);
 }
 @
 We loop looking for the start of a code chunk.
@@ -73,37 +75,48 @@ void read_defs(FILE *in) {
     char *line = NULL;          /* buffer for input */
     Location loc;
 
-    while ((line = getline(line, in)) != NULL) {
-        if (*line == at_sign && matches(line+1,"file ")) {
+    while ((line = getline(in)) != NULL) {
+        if (is_keyword(line,"file")) {
             <<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>
-            loc.lineno = 0;
+            loc.lineno = 1;
             continue;
-        } else if (!is_begin(line,"code")) {
-            if (*line != at_sign) loc.lineno++;
+        } else if (is_keyword(line,"nl")) {
+            loc.lineno++;
             continue;
-        }
-        do { /* skip until EOF, @name, or line without initial @ */
-                line = getline(line,in);
-        } while (line != NULL && *line == at_sign && !matches(line+1,"name"));
-        <<insist on [[@name]]>>
-        loc.lineno++; /* only @name counts as a source line */
+        } else if (!is_begin(line,"code"))
+	    continue;
+        do { /* skip until EOF, @defn, or @text */
+                line = getline(in);
+        } while (line != NULL && !is_keyword(line,"defn") && !is_keyword(line,"text"));
+	insist(line,"defn","code chunk had no definition line");
         <<copy module name into [[modname]]>>
         warn_dots(modname);       /* names ending in ... aren't like web */
         modptr = insert(modname); /* find or add module in table */
 
-        line = getline(line,in);
-        while (line != NULL && *line != at_sign) {
-            loc.lineno++;
-            addline(modptr,line,loc);
-            line = getline(line,in);
-        } 
-        <<insist on [[@end code]]>>
+	line = getline(in);
+	insist(line,"nl","definition line not followed by newline");
+	loc.lineno++;
+        line = getline(in);
+        while (line != NULL && !is_end(line,"code")) {
+	    if (is_keyword(line,"nl")) {
+		addnewline(modptr);
+	        loc.lineno++;
+	    } else if (is_keyword(line,"text")) {
+		addstring(modptr,line+1+4+1,loc);
+	    } else if (is_keyword(line,"use")) {
+                warn_dots(line+1+3+5);
+		addmodule(modptr,line+1+3+1);
+            } else
+                <<complain of botched code chunk>>
+            line = getline(in);
+        }
+        <<if [[line==NULL]] die of premature end of file>>
     }
 }
 @ When copying the module name or a file name,
 we have to strip the trailing newline.
 <<copy module name into [[modname]]>>=
-strcpy(modname,line+strlen("@name "));
+strcpy(modname,line+strlen("@defn "));
 modname[strlen(modname)-1]='\0';
 <<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>=
 { char temp[MAX_MODNAME+1];
@@ -112,30 +125,6 @@ modname[strlen(modname)-1]='\0';
   strcpy(temp,line+strlen("@file "));
   temp[strlen(temp)-1]='\0';
   loc.filename = strsave(temp);
-}
-@
-Now we get into the gritty details of actually adding a line to a module.
-A line alternates strings and module references.
-[[mod_start]] and [[mod_end]] are tailored to do the job we see here.
-<<*>>=
-void addline (Module mp, char *line, Location loc) {
-    char *m;
-
-    while ((m = mod_start(line,1)) != NULL) { 
-        /* process a module reference */
-        if (*line!='\0') addstring(mp,line,loc);
-                                     /* contribute string preceding module */
-        if ((line=mod_end(m,1))==NULL) {
-            errormsg(Error, "Module doesn't end: %s", m);       
-                                     /* module references can't cross lines */
-            break;
-        } else {
-            warn_dots(m);
-            addmodule(mp,m);         /* contribute the module */
-        }
-    }
-    if (*line!='\0') addstring(mp,line,loc);
-                                     /* contribute the trailing string */
 }
 @
 In {\tt WEB}, module names ending in ``...'' may be prefixes
@@ -153,23 +142,25 @@ void warn_dots(char *modname) {
 This nuisance shows up because functions must be declared before use.
 <<Function declarations>>=
 void read_defs (FILE *in);              /* read module definitions */
-void addline (Module mp, char *line, Location loc);/* add a line to a module */
-static
-void warn_dots(char *modname);          /* warn about names ending in ... */
+static void warn_dots(char *modname);          /* warn about names ending in ... */
 @ Error checking is perenially dull.
-<<quit if we couldn't fint the root>>=
-    if (root==NULL) {
-        errormsg(Fatal, "The root module @<<%s@>> was not defined.", rootname);
-        return;
-    }
-<<insist on [[@name]]>>=
+<<quit if we couldn't find the root>>=
+if (root==NULL) {
+    errormsg(Fatal, "The root module @<<%s@>> was not defined.", rootname);
+    return;
+}
+<<*>>=
+void insist(char *line, char *keyword, char *msg) {
+  <<if [[line==NULL]] die of premature end of file>>
+  if (!is_keyword(line,keyword))
+    impossible(msg);
+}
+<<if [[line==NULL]] die of premature end of file>>=
 if (line==NULL) {
     impossible("End of file occurred in mid-module");
 }
-if (*line != at_sign) {
-    impossible("Module didn't have a name");
-}
-<<insist on [[@end code]]>>=
-if (!is_end(line,"code")) {
-    impossible("Code didn't end with @end code");
-}
+<<Function declarations>>=
+void insist(char *line, char *keyword, char *msg);
+<<complain of botched code chunk>>=
+errormsg(Error, "Code chunk is botched in `%s', line %d:\n\t`%s'", 
+	 loc.filename, loc.lineno, line);
