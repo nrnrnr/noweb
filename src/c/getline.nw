@@ -1,15 +1,14 @@
-@ The purpose of [[getline]] is to read in the next line, no matter
-how long it is.
-We just keep allocating more and more space for the line, until we've
-read a whole line or until we run out of space, whichever comes first.
-The buffer grows in size exponentially, so this costs roughly the logarithm
-of the longest line in extra overhead.
+@ [[getline]] is reads in the next line, no matter
+how long it is, expanding tabs.
+I allocate more and more space for the line, until I've
+read a whole line or until I run out of space, whichever comes first.
+The buffer grows in size exponentially, so the cost in overhead is roughly the logarithm
+of the length of the longest line.
 @
-Pass in a buffer, return a (possibly) new buffer full of stuff,
-or [[NULL]] for end of file.
-Initial buffer must be [[NULL]].
+[[getline]] reuses the same internal buffers over and over, so subsequent
+calls destroy the results of previous calls.
 <<*>>=
-#define START_SIZE 128                  /* initial buffer size */
+#define START_SIZE 128			/* initial buffer size */
 
 #include <stdio.h>
 #include <string.h>
@@ -19,54 +18,67 @@ Initial buffer must be [[NULL]].
 #include "errors.h"
 #include "getline.h"
 
+static char *buf1 = NULL, *buf2 = NULL;	/* lines without, with tabs expanded */
+static buf_size = START_SIZE;		/* size of both buffers if non-NULL */
+
 <<C functions>>
-
-<<header>>=
-char *getline (char *buffer, FILE *fp);
-  /* grab a line in the buffer, return a new buffer or NULL for eof */
-<<C functions>>=
-static buf_size = START_SIZE;
-
-char *getline (char *buffer, FILE *fp) {
-
-    if (buffer==NULL)
-        checkptr(buffer = (char *) malloc (buf_size));
-    
-    buffer=fgets(buffer, buf_size, fp);
-    if (buffer==NULL) return buffer; /* end of file */
-    while (buffer[strlen(buffer)-1] != '\n') { /* failed to get whole line */
-        buf_size *= 2;
-        checkptr(buffer = realloc(buffer, buf_size));
-        if (fgets(buffer+strlen(buffer),buf_size-strlen(buffer),fp)==NULL)
-            return buffer; /* end of file */
-    }
-    return buffer;
-}
 @
-In a weak moment I decided to combine the functions of [[getline]]
-and the Unix program expand(1).
-Then I repented, so this code has never been tested.
-<<header junk>>=
-char *getline_untabify (char *buffer, FILE *fp);
-  /* like getline but expands tabs according to TABSIZE */
-  /* NEVER TESTED!!!!! */
-<<junk>>=
-char *getline_untabify (char *buffer, FILE *fp) {
+<<header>>=
+char *getline_expand (FILE *fp);
+  /* grab a line in buffer, return new buffer or NULL for eof
+     tabs in line are expanded according to TABSIZE */
+char *getline (FILE *fp);
+  /* grab a line in the buffer, return a new buffer or NULL for eof
+     no expansion of tabs */
+@
+<<C functions>>=
+void new_buffers(void) {
+    checkptr(buf1 = (char *) realloc(buf1, buf_size));
+    checkptr(buf2 = (char *) realloc(buf2, buf_size));
+}
 
-    if ((buf=getline(buffer,fp))==NULL) return NULL;
-    while (columnwidth(buf) > buf_size - 1) buf_size *= 2;
-    checkptr(buffer = malloc(buf_size));
-    s  = buf; t = buffer; width=0;
+char *getline (FILE *fp) {
+
+    <<if [[buf1==NULL]], allocate initial buffers>>
+    
+    buf1=fgets(buf1, buf_size, fp);
+    if (buf1==NULL) return buf1; /* end of file */
+    while (buf1[strlen(buf1)-1] != '\n') { /* failed to get whole line */
+	buf_size *= 2;
+	new_buffers();
+	if (fgets(buf1+strlen(buf1),buf_size-strlen(buf1),fp)==NULL)
+	    return buf1; /* end of file */
+    }
+    return buf1;
+}
+
+<<C functions>>=
+char *getline_expand (FILE *fp) {
+    char *s, *t;
+    int width;
+
+    if (getline(fp)==NULL) return NULL;
+    <<if [[columnwidth(buf1) > buf_size - 1]], allocate new buffers>>
+    s = buf1; t = buf2; width=0;
     while (*s)
-        if (*s=='\t') {
-            do {
-                *t++ = ' '; width++;
-            } while (width % TABSIZE != 0);
-            s++;
-        } else {
-            *t++ = *s++; width++;
-        }
+	if (*s=='\t') {
+	    do {
+		*t++ = ' '; width++;
+	    } while (width % TABSIZE != 0);
+	    s++;
+	} else {
+	    *t++ = *s++; width++;
+	}
     *t='\0';
-    free(buf);
-    return buffer;
+    return buf2;
+}
+<<if [[buf1==NULL]], allocate initial buffers>>=
+if (buf1==NULL) {
+    checkptr(buf1 = (char *) malloc (buf_size));
+    checkptr(buf2 = (char *) malloc (buf_size));
+}
+<<if [[columnwidth(buf1) > buf_size - 1]], allocate new buffers>>=
+if (columnwidth(buf1) > buf_size - 1) {
+    while (columnwidth(buf1) > buf_size - 1) buf_size *= 2;
+    new_buffers();
 }
