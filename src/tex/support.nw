@@ -192,6 +192,19 @@ If I ever understood why all the rest of that crap is here, I don't now.
   \obeylines \Tt \catcode``=13 \@noligs \setupcode}
 \let\nowebsize=\normalsize
 @ %def \@begincode \nowebsize
+<<noweb.sty>>=
+\def\nwopt@smallcode{\let\nowebsize=\relax}
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B smallcode
+Set code in 
+.I LaTeX
+.B "\\\\small"
+font instead of 
+.B "\\\\normalsize"
+@ \fi
+
 
 [[\begincode]] and [[\endcode]] are used by {\tt noweave} to bracket
 code chunks.
@@ -207,7 +220,9 @@ underfull (empty!) hbox.
 <<noweb.sty>>=
 \def\begincode#1{\par\vskip3pt
     \penalty500
-    \noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
+    \noindent\hbox to \hsize\bgroup
+    \@current@textwidth=\hsize
+    \begin{minipage}{\codehsize}%
     \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces\parskip=\z@}
 \def\endcode{\end{trivlist}\vskip0.1pt\@endparenv\end{minipage}\hss\egroup\hfil}
 
@@ -268,9 +283,8 @@ In the {\tt noweb} page style, new files cause page breaks;
 otherwise they are ignored.
 <<noweb.sty>>=
 \newdimen\@original@textwidth
-\@original@textwidth=\textwidth
-
 \def\ps@noweb{%
+  \@original@textwidth=\textwidth
   \let\@mkboth\@gobbletwo
   \def\@oddfoot{}\def\@evenfoot{}%       No feet.
   \if@twoside         % If two-sided printing.
@@ -303,18 +317,17 @@ The style uses [[\nwcodecomment]] for all annotations that follow code
 chunks.
 Fiddling with it can change the appearance of the output.
 <<noweb.sty>>=
-\newdimen\nw@originaltextsize
-\nw@originaltextsize=\hsize
+\newdimen\@current@textwidth
 \def\nwcodecomment#1{\@@par
     \hspace{-\codemargin}{%
-        \hsize=\nw@originaltextsize\textwidth=\nw@originaltextsize
+        \hsize=\@current@textwidth\textwidth=\@current@textwidth
         \advance\rightskip by 0pt plus1in
         \let\\\relax\footnotesize\Rm #1\hfil\@@par}}
 \def\nwalsodefined#1{\nwcodecomment{This definition is continued on \@pagesl{#1}.}}
 \def\nwused#1{\nwcodecomment{This code is used on \@pagesl{#1}.}}
 \def\nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
 \def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt #1}.}}
-@ %def \nw@originaltextsize \nwcodecomment \nwalsodefined \nwused \nwnotused
+@ %def \@current@textwidth \nwcodecomment \nwalsodefined \nwused \nwnotused
 @ %def \nwoutput
 
 \subsection{Page ranges}
@@ -343,17 +356,17 @@ pages are combined into ranges.
 <<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>=
 \@nwhipage=\@nwlopage\advance\@nwhipage by 1 
 <<add range to range list>>=
-<<set [[\@tempaz]] to page range(s), marked with [[\\]]>>%
-\edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages{\@tempaz}}\@tempa
-<<set [[\@tempaz]] to page range(s), marked with [[\\]]>>=
+<<set [[\@tempa]] to page range(s), marked with [[\\]]>>%
+\edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages{\@tempa}}\@tempa
+<<set [[\@tempa]] to page range(s), marked with [[\\]]>>=
 \advance\@nwhipage by -1
 \ifnum\@nwhipage=\@nwlopage
-     \edef\@tempaz{\noexpand\noexpand\noexpand\\%
+     \edef\@tempa{\noexpand\noexpand\noexpand\\%
                        {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}}%
 \else
   \count255=\@nwhipage \advance\count255 by -1
   \ifnum\count255=\@nwlopage % consecutive pages
-      \edef\@tempaz{\noexpand\noexpand\noexpand\\%
+      \edef\@tempa{\noexpand\noexpand\noexpand\\%
                        {\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}%
                     \noexpand\noexpand\noexpand\\%
                        {\@subpagenum{\number\@nwhisub}{\number\@nwhipage}}}%
@@ -375,7 +388,7 @@ pages are combined into ranges.
   \fi
 \fi
 <<normal range>>=  
-\edef\@tempaz{\noexpand\noexpand\noexpand\\{\number\@nwlopage--\number\@nwhipage}}
+\edef\@tempa{\noexpand\noexpand\noexpand\\{\number\@nwlopage--\number\@nwhipage}}
 <<noweb.sty>>=
 \newcount\@nwpagetemp
 @
@@ -384,9 +397,9 @@ The sequence [[\@pagesl]] makes a range of pages from a list of labels.
 <<noweb.sty>>=
 \newcount\@nwpagecount
 \def\@nwfirstpagel#1{% label
-  \edef\@tempax{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempax}
+  \edef\@tempa{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempa}
 \def\@nwnextpagel#1{% label
-  \edef\@tempay{\noexpand\@nwnextpage\subpagepair{#1}}\@tempay}
+  \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}}\@tempa}
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0
   \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
@@ -456,7 +469,6 @@ defining the [[2on]] bit appropriately.
     {\@ifundefined{2on\@pageref{#1}}%
       {{0}{\expandafter\expandafter\expandafter\@cdr\csname r@#1\endcsname\@nil}}%
       {\@nameuse{r@#1}}}}
-\let\@tempaxxx\relax
 @
 [[\@pageref]] is like [[\pageref]], but it expands to [[\relax]] without a warning
 if the reference is undefined.
@@ -473,6 +485,16 @@ if the reference is undefined.
    \def\protect{\noexpand\noexpand\noexpand}%
    \edef\@tempa{\write\@auxout{\string
       \newsublabel{#1}{{}{\thepage}}}}%
+   \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+@ %def \sublabel
+[[\nosublabel]] creates a label with a sub-page part of~0.
+<<noweb.sty>>=
+\newcommand{\nosublabel}[1]{%
+  \@bsphack\if@filesw {\let\thepage\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \newlabel{#1}{{0}{\thepage}}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
 @ %def \sublabel
@@ -867,6 +889,7 @@ show page numbers of definitions and uses of each chunk.
 \def\begindocs#1{\filbreak}
 \def\enddocs{\par}
 \def\begincode#1{\par\nobreak
+  \@current@textwidth=\hsize
   \begingroup\setupcode\newlines\parindent=0pt\parskip=0pt
   \hsize=\codehsize\noindent\bchack}
 \def\endcode{\endgroup}
