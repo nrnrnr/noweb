@@ -202,7 +202,7 @@ Set code in
 .I LaTeX
 .B "\\\\small"
 font instead of 
-.B "\\\\normalsize"
+.B "\\\\normalsize."
 @ \fi
 
 
@@ -258,11 +258,13 @@ If a documentation chunk does not continue the current paragraph,
 [[\@maybreak]] in an attempt to keep the documentation chunk on the
 same page as the code chunk that follows it.
 <<noweb.sty>>=
-\def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1}
+\def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1 }
 \newcommand{\maybreak}{\@maybreak}
 \def\begindocs#1{\relax\ifvmode\@maybreak{1in}\fi}
 \def\enddocs{\relax}
-\def\nwdocspar{\par\@maybreak{1in}}
+\def\nwdocspar{\par\ifx\@textbottom\relax\@maybreak{1in}\else\@maybreak{5pt}\fi}
+\def\nwdocspar{\par\@maybreak{2in}}
+\def\raggedbottom{\def\@textbottom{\vskip \z@ plus2in }\let\@texttop\relax}
 @ %def \@maybreak \maybreak \begindocs \nwdocspar \enddocs
 
 {\tt noweave} brackets quoted code with [[\code]] and [[\edoc]], which handle
@@ -303,8 +305,9 @@ otherwise they are ignored.
   \def\subsubsectionmark##1{}%
   \def\paragraphmark##1{}%
   \def\subparagraphmark##1{}%
-  \def\filename##1{\vfil\eject\markboth{##1}{##1}}%
+  \def\filename##1{\markboth{##1}{##1}\let\filename=\@laterfilename}%
 }
+\def\@laterfilename#1{\vfil\eject\markboth{#1}{#1}}
 \let\filename=\@gobble
 @ %def \@original@textwidth \ps@noweb \filename
 @
@@ -566,70 +569,44 @@ We use Rainer's new expandable definitions of [[\ref]] and
 \subsection{Indexing (identifier cross-reference) support}
 
 \subsubsection{Tracking definitions and uses}
-Both definitions and uses of identifiers may be either ``bound'' or
-``free.''
-A bound definition or use appears within a code chunk and is associated
-with the sub-page number of that code chunk.
-A free definition or use appears within a documentation chunk and is associated
-with the number of the page on which it appears.
-The control sequences used are
+All index definitions and uses are associated with 
+a label defined with [[\sublabel]] or [[\nosublabel]].
+Either the label is the [[\sublabel]] of the code chunk in which the definition or use
+appears, or it is a [[\nosublabel]] appearing in the middle of a
+documentation chunk.
 <<noweb.sty>>=
-% \boundindexdefn{printable name}{identifying label}{label of chunk}
-% \freeindexdefn{printable name}{identifying label}
-% \boundindexuse{printable name}{identifying label}{label of chunk}
-% \freeindexuse{printable name}{identifying label}
+% \nwindexdefn{printable name}{identifying label}{label of chunk}
+% \nwindexuse{printable name}{identifying label}{label of chunk}
 
-\def\boundindexdefn#1#2#3{\@auxixb{\protect\nwixd}{#2}{#3}}
-\def\boundindexuse#1#2#3{\@auxixb{\protect\nwixu}{#2}{#3}}
-\def\freeindexdefn#1#2{\@auxixf{\protect\nwixd}{#2}}
-\def\freeindexuse#1#2{\@auxixf{\protect\nwixu}{#2}}
+\def\nwindexdefn#1#2#3{\@auxix{\protect\nwixd}{#2}{#3}}
+\def\nwindexuse#1#2#3{\@auxix{\protect\nwixu}{#2}{#3}}
 
-\def\@auxixb#1#2#3{\@auxix{#1}{#2}{\protect\subpagepair{#3}}}
-\def\@auxixf#1#2#3{\@auxix{#1}{#2}{{0}{\thepage}}}
-\def\@auxix#1#2#3{% {marker}{label}{{subpage}{page}}
-   \@bsphack\if@filesw {\let\thepage\relax\let\subpageref\relax
-   \let\nwixd\relax\let\nwixu\relax
+\def\@auxix#1#2#3{% {marker}{id label}{subpage label}
+   \@bsphack\if@filesw {\let\nwixd\relax\let\nwixu\relax
    \def\protect{\noexpand\noexpand\noexpand}%
-   \edef\@tempa{\write\@auxout{\string
-      \nwixadd{#1}{#2}{#3}}}%
+   \edef\@tempa{\write\@auxout{\string\nwixadd{#1}{#2}{#3}}}%
    \expandafter}\@tempa
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \boundindexdefn \boundindexuse \freeindexdefn \freeindexuse
-@ %def \@auxixb \@auxixf \@auxix
+@ %def \nwindexdefn \nwindexuse \@auxix
 <<noweb.sty>>=
-% \nwixadd{marker}{idlabel}{\subpagepair{label}}
+% \nwixadd{marker}{idlabel}{subpage label}
 \def\nwixadd#1#2#3{%
   \@ifundefined{nwixl@#2}%
     {\global\@namedef{nwixl@#2}{#1{#3}}}%
     {\expandafter\nwix@cons\csname nwixl@#2\endcsname{#1{#3}}}}
 @ %def \nwixadd
+[[\nwbs]] is used in the printable form of identifiers to represent a backslash.
 <<noweb.sty>>=
 \chardef\nwbs=`\\
 @
-\subsubsection{Supporting a mini-index at the end of each chunk}
-<<noweb.sty>>=
-% \identdefs{\\{name 1}\\{{name 2}\\...\\{name n}}
-%    Defines name 1, name 2, name n.
-% \identuses{\\{name 1\indexrefs{label 1}}\\...\\{name n\indexrefs{label n}}}
-%    Uses name 1 page page page, ..., name n page.
-% \indexpages{identifying label}
-%    expands to list of page references
-% \indexlisting{name}{label}
-%    what actually appears in an index
-
-\def\identdefs#1{\nwcodecomment{Defines \Tt\commafy{#1}.}}
-\def\identuses#1{\nwcodecomment{Uses \Tt\commafy{#1}.}}
-
-\def\indexrefs#1{{\Rm~\let\@elt=~\@nameuse{nwixdef@#1}}}
-\def\indexpages#1{{\def\@elt{, }\@nameuse{nwixall@#1}}}
-\def\indexlisting#1#2{{\parindent=-10pt \parskip=0pt 
-        \advance\leftskip by 10pt 
-        \advance\rightskip by 0pt plus1in
-        \indent
-        {\Tt #1}: \indexpages{#2}\par}}
-@ %def \identdefs \identuses \indexrefs \indexpages \indexlisting
-@
-This goo attempts to support good comma separation.
+\subsubsection{Writing lists with commas and ``and''}
+You get one of
+\begin{itemize}
+\item ``$a$''
+\item ``$a$ and $b$''
+\item ``$a$, $\ldots$, $b$, and $c$''
+\end{itemize}
+Plus [[\\]] is applied to each element of the list.
 <<noweb.sty>>=
 \newcount\@commacount
 \def\commafy#1{%
@@ -639,16 +616,16 @@ This goo attempts to support good comma separation.
      \def\\{\def\\{ and \@comma@each}\@comma@each}\else
      \def\\{\def\\{, %
                    \advance\@commacount by -1
-                   \ifnum\@commacount=1 and \fi\@comma@each}\@comma@each}\fi
+                   \ifnum\@commacount=1 and~\fi\@comma@each}\@comma@each}\fi
    #1}}
 @ %def \@commacount \commafy
 
-\subsection{New, improved index code}
+\subsubsection{New, improved index code}
 There are two kinds of lists.
 One kind is a generic list in which elements are preceded by [[\\]].
 If the elements are index elements, they are {\em[[{]]printable
 identifier[[}{]]label[[}]]} pairs.
-The other kind is a list of calls to [[\subpagepair]], in which each 
+The other kind is a list of sub-page labels, in which each 
 element is preceded by either [[\nwixd]] or [[\nwixu]].
 <<noweb.sty>>=
 \def\nwix@cons#1#2{% {list}{\marker{element}}
@@ -678,12 +655,13 @@ display information.
 \def\nwix@defcount#1{\nwix@listcount{\nwix@defs{#1}}}
 @ %def \nwix@listcount \nwix@usecount \nwix@defcount
 @
+\subsubsection{Supporting a mini-index at the end of each chunk}
 When displaying identifiers used, show the identifier and its
 definitions.
 <<noweb.sty>>=
 \def\nwix@id@defs#1{% index pair
   {{\Tt \@car#1\@nil}%
-  \def\\##1{~\@subpageofsubpair{##1}}\nwix@defs{\@cdr#1\@nil}}}
+  \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}}}
 \def\nwidentuses#1{% list of index pairs
   \nwcodecomment{Uses \let\\=\nwix@id@defs\commafy{#1}.}}
 @ %def \nwidentuses \nwix@id@defs
@@ -697,7 +675,7 @@ if none of the identifiers defined is ever used.
 \def\nwix@id@uses#1#2{% {ident}{label}
   \nwix@usecount{#2}\ifnum\nwix@counter>0
     {\advance\leftskip by \codemargin
-     \nwcodecomment{{\Tt #1}, used on \subpages{\nwix@uses{#2}}.}}%
+     \nwcodecomment{{\Tt #1}, used on \@pagesl{\nwix@uses{#2}}.}}%
   \fi}
 \def\nwidentdefs#1{% list of index pairs
   \nwix@totaluses{#1}\ifnum\nwix@counter>0
@@ -705,38 +683,63 @@ if none of the identifiers defined is ever used.
     {\def\\##1{\nwix@id@uses ##1}#1}%
   \fi}
 <<noweb.sty>>=
-\def\@subpageofsubpair#1{%
-  \edef\@tempa{\noexpand\@subpagenum #1}\@tempa}
+\def\nwopt@noidentxref{%
+  \let\nwidentdefs\@gobble
+  \let\nwidentuses\@gobble}
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B noidentxref
+Omit the identifier cross-reference after each code chunk.
+@ \fi
+
+\subsubsection{Alternate formatting for identifier cross-reference}
+<<noweb.sty>>=  
+\def\nwix@id@defs@par#1{% index pair
+  {{\Tt \@car#1\@nil}%
+  \def\\##1{~\subpageref{##1}}\nwix@defs{\@cdr#1\@nil}\par}}
+\def\nwopt@xrefcols{%
+  \makeatletter\input{multicol.sty}\makeatother
+  \def\nwidentuses##1{% list of index pairs
+    \nwcodecomment{Uses\hfil\break{\advance\hsize by -\codemargin
+       \vbox{\begin{multicols}{5}\let\\=\nwix@id@defs@par ##1\end{multicols}}}}}}
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B xrefcols
+Format identifier cross-reference in columns (requires \fBmulticol.sty\fP).
+@ \fi
+
+@
+\subsubsection{Support for chunk and identifier indices}
+The index in the back shows absolutely all the pages.
+<<noweb.sty>>=
 \def\nw@underlinedefs{% {list with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
-  \def\nwixd##1{\\\underline{\@subpageofsubpair{##1}}\let\\\nw@comma}%
-  \def\nwixu##1{\\\@subpageofsubpair{##1}\let\\\nw@comma}}
+  \def\nwixd##1{\\\underline{\subpageref{##1}}\let\\\nw@comma}%
+  \def\nwixu##1{\\\subpageref{##1}\let\\\nw@comma}}
 
 \def\nw@indexline#1#2{%
    {\indent {\Tt #1}: \nw@underlinedefs\@nameuse{nwixl@#2}\par}}
+
 \newenvironment{thenowebindex}{\parindent=-10pt \parskip=0pt 
         \advance\leftskip by 10pt 
-        \advance\rightskip by 0pt plus1in\par
+        \advance\rightskip by 0pt plus1in\par\@afterindenttrue
     \def\\##1{\nw@indexline##1}}{}
 @
-\subsection{Support for chunk and identifier indices}
+The information comes from the list [[nwisx@i]].
 <<noweb.sty>>=
-\def\nwixlogsorted#1#2{% list data
-   \@bsphack\if@filesw {\let\thepage\relax\let\subpageref\relax
-   \let\nwixd\relax\let\nwixu\relax\let\code\relax\let\edoc\relax
-   \let\\\relax\let\{\relax\let\}\relax
-   \def\protect{\noexpand\noexpand\noexpand}%
-   \edef\@tempa{\write\@auxout{\string
-      \nwixadds{#1}{#2}}}%
-   \expandafter}\@tempa
-   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+\def\nowebindex{%
+  \@ifundefined{nwixs@i}%
+     {\@warning{The \string\nowebindex\space is empty}}%
+     {\begin{thenowebindex}\@nameuse{nwixs@i}\end{thenowebindex}}}
+@ That list is created by calls to [[\nwixlogsorted{i}]].
+<<noweb.sty>>=
 \def\nwixlogsorted#1#2{% list data
    \@bsphack\if@filesw 
      \toks0={#2}\immediate\write\@auxout{\string\nwixadds{#1}{\the\toks0}}
    \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
-@ %def \boundindexdefn \boundindexuse \freeindexdefn \freeindexuse
-@ %def \@auxixb \@auxixf \@auxix
-
+@ 
 [[nwixs@c]] and [[nwixs@i]] are sorted lists of chunks and identifiers, respectively.
 <<noweb.sty>>=
 \def\nwixadds#1#2{%
@@ -746,8 +749,10 @@ if none of the identifiers defined is ever used.
 @
 <<noweb.sty>>=
 \def\nowebchunks{%
-  \thenowebchunks{\@nameuse{nwixs@c}}}
-\@namedef{r@nw@notdef}{{}{(never defined)}}
+  \@ifundefined{nwixs@c}%
+     {\@warning{The are no \string\nowebchunks}}%
+     {\thenowebchunks{\@nameuse{nwixs@c}}}}
+\@namedef{r@nw@notdef}{{0}{(never defined)}}
 
 \def\nw@chunkunderlinedefs{% {list of labels with \nwixd, \nwixu}
   \let\\=\relax\def\nw@comma{, }
@@ -761,7 +766,7 @@ if none of the identifiers defined is ever used.
 
 \def\thenowebchunks#1{\vskip3pt{%
   \parskip=0pt\parindent=-10pt \advance\leftskip by 10pt
-  \advance\rightskip by 0pt plus10pt
+  \advance\rightskip by 0pt plus10pt \@afterindenttrue
   \def\\##1{\nw@onechunk##1}#1}}
 <<noweb.sty>>=
 \newif\if@nwlongchunks
@@ -776,9 +781,6 @@ When expanding
 show page numbers of definitions and uses of each chunk.
 @ \fi
 
-<<noweb.sty>>=
-\def\nowebindex{%
-  \begin{thenowebindex}\@nameuse{nwixs@i}\end{thenowebindex}}
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
