@@ -45,8 +45,6 @@ clean:
 clobber: clean
 	/bin/rm -f *.icn
 
-clobber: clobber
-
 texdefs.icn: texdefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' texdefs.nw defns.nw $(CPIF) texdefs.icn
 icondefs.icn: icondefs.nw defns.nw
