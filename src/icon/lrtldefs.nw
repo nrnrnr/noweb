@@ -1,0 +1,60 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+\section{Finding definitions in $\lambda$-RTL}
+<<*>>=
+procedure main(args)
+  go()
+end
+<<*>>=
+procedure postpass(name, arg)
+  static kind, definers
+  initial { kind := "bogus"
+            definers := ["fun", "val", "structure", "signature",
+			 "type", "rtlop"]
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if =(""|" "|"  ") & =!definers & tab(many(' ')) then {
+            skiptyvars(); optwhite()
+	    if ="[" then
+              while define_id()
+            else
+              define_id()
+        }
+  }
+  return
+end
+
+procedure define_id()
+  static id1, id2, reserved
+  initial { id1 := &letters ++ &digits ++ '\'_'
+            id2 := '!%&$+-/:<=>?@\\~^|#*`'
+            reserved := set()
+            every insert(reserved, !"*|:=#_" | "->" | "=>")
+	  }
+  optwhite()
+  if id := tab(many(id1 | id2)) then {
+    member(reserved, id) | writedefn(id)
+    return id
+  }
+  fail
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+
+procedure skiptyvars()
+  suspend =("'"|"#") || tab(many(&letters ++ &digits ++ '\'_')) |
+          ="(" || bal(')', '(', ')') || =")"
+end       
+
+procedure optwhite()
+ suspend tab(many(' \t')) | ""
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+@
