@@ -278,8 +278,8 @@ ignore("thicklines")
 \subsubsection{Figures and Tables}
 I surround figures and tables with horizontal rules.
 <<control-sequence assignments>>=
-envblock("figure", "<hr>", "<hr>", "[")
-envblock("table", "<hr>", "<hr>", "[")
+every envblock(star("figure"), "<hr>", "<hr>", "[")
+every envblock(star("table"),  "<hr>", "<hr>", "[")
 argblock("caption", "b")  # captions in bold
 @
 \subsubsection{{\tt tabbing} environment}
@@ -341,6 +341,10 @@ ignore("numberline", "{")
 ignore("protect")
 ignore("twocolumn", "C")
 ignore("typeout", "[{")
+ignore("closedbib")
+<<control-sequence assignments>>=
+every ignore("leftmargini" | "leftmarginii" | "labelsep" | "fboxsep", "=")
+every ignore("tabcolsep", "=")
 @
 \subsection{Control sequences from various {\LaTeX} packages}
 <<control-sequence assignments>>=
@@ -355,30 +359,57 @@ cstab["kill"] := Ckill
 \subsection{Plain {\TeX} control sequences}
 <<control-sequence assignments>>=
 argblock("noalign", "<br>", "<br>")	# not clear what else to do...
+argblock("centerline", "<br>", "<br>")
+substitution("cr", "<br>")
+substitution("hrule", "<hr>")
+substitution("vrule", "|")
+substitution("hrulefill", "------")
 ignore("hbox")
 ignore("rlap")
 ignore("llap")
 ignore("vbox")
 ignore("vtop")
 ignore("message", "{")
+ignore("relax")
+ignore("null")
+ignore("offinterlineskip")
 <<control-sequence assignments>>=
 cstab["par"] := implicit_paragraph
 cstab["smallskip"] := implicit_paragraph
 cstab["medskip"] := implicit_paragraph
 cstab["bigskip"] := implicit_paragraph
+cstab["vskip"] := implicit_paragraph
+csclosure["vskip"] := "="
+@
+We can't give the grouping control sequences their real meaning, because
+that would blow our brace balance when ignoring definitions and the like.
+The proper solution would be to distinguish between grouping and braces,
+but that would require much more sophistication than we've got just now.
 <<control-sequence assignments>>=
-cstab["begingroup"] := Cbegingroup
-cstab["endgroup"] := Cendgroup
+every ignore("begingroup" | "endgroup" | "bgroup" | "egroup")
+<<control-sequence assignments>>=
+cstab["newif"]   := Cnewif
+cstab["iffalse"] := Ciffalse
+cstab["iftrue"]  := Ciftrue
+cstab["else"]    := Celse
+cstab["fi"]      := Cfi
+cstab["ifx"] := cstab["if"] := cstab["ifnum"] := Ciffalse
 @ 
 Lots of assignable things:
 <<control-sequence assignments>>=
 ignore("let", "A=")
 every ignore("hfuzz" | "parindent" | "parskip" | "baselineskip", "=")
+every ignore("hbadness" | "hsize" | "vsize" | "overfullrule" | "tabskip", "=")
+substitution("hskip", " ", "=")
+<<control-sequence assignments>>=
+ignore("unskip")
+ignore("hss")
+ignore("phantom", "{")
 every ignore("kern" | "lower" | "spacefactor", "=") # a cheat, but works
 every ignore("clubpenalty" | "widowpenalty", "=")
 @ Other stuff to be ignored:
 <<control-sequence assignments>>=
-every ignore("expandafter" | "indent" | "noindent" | "strut")
+every ignore("expandafter" | "indent" | "noindent" | "leavevmode" | "strut")
 ignore("def", 1)
 <<control-sequence assignments>>=
 substitution("TeX", "TeX")
@@ -397,10 +428,21 @@ use it to get clever about dumping chunks and all in the right places.
 <<control-sequence assignments>>=
 substitution("nowebindex", "<nowebindex>")
 substitution("nowebchunks", "<nowebchunks>")
+ignore("nowebsize")
 <<control-sequence assignments>>=
-envblock("fields", "blockquote", &null, "[")     # lame; could try to <tt> 1st col
-
+envblock("fields",  "blockquote", &null, "[")     # lame; could try to <tt> 1st col
+envblock("fields*", "blockquote", &null, "{")     # lame; could try to <tt> 1st col
 ignore("citeauthoryear", "{{{")
+argblock("authoryear", "", " ") # slips in space after author
+substitution("bibrule", "--------")
+let("bibskip", "par")
+every cstab["anoncite"|"authorcite"] := Ccite
+@
+This will always have to be patched by hand, but it may be worth it.
+<<control-sequence assignments>>=
+argblock("psfig", "<a href=\"", "\">PostScript</a>")
+ignore("pssilent")
+ignore("psnoisy")
 @
 
 
@@ -584,6 +626,7 @@ end
 procedure undelay_newtext(S)
   S.newtext := \S.delayed_newtext |
     {write(&errout, "This can't happen: null delayed_newtext"); &null[0]}
+  S.delayed_newtext := &null
 end
 <<other fields of state>>=
 , delayed_newtext
@@ -621,23 +664,30 @@ while c := get(S.open) do
 while c := get(S.closes[1]) do
   c.proc!c.args
 pop(S.closes)
-<<*>>=
+<<old>>=
 procedure Cbegingroup(S, cs, cl)
  <<take open-group actions>>
 end
-<<*>>=
+<<old>>=
 procedure Cendgroup(S, cs, cl)
  <<take close-group actions>>
 end
+<<old control-sequence assignments>>=
+cstab["begingroup"] := Cbegingroup
+cstab["endgroup"]   := Cendgroup
+cstab["bgroup"]     := Cbegingroup
+cstab["egroup"]     := Cendgroup
 @
 \subsection{Handling control sequences and environments}
 OK, to eat a control sequence, first scan it, then execute it using [[do_cs]].
 [[S.csletters]] records the current set of ``letters'' for control
 sequences (so we can interpret \verb+\makeatletter+).
 <<control sequence>>=
-do_cs(S, if pos(0) then ""
-         else if any(S.csletters) then tab(many(S.csletters))
-         else move(1))
+cs := if pos(0) then ""
+      else if any(S.csletters) then tab(many(S.csletters))
+      else move(1))
+if \S.skipping | cs == ("else"|"fi") | cstab[cs] === (Ciffalse|Ciftrue) then
+  do_cs(S, cs)
 <<other fields of state>>=
 , csletters
 <<initial values for other fields of state>>=
@@ -653,6 +703,7 @@ argument from [[csclosure]].
 global cstab, csclosure
 
 procedure do_cs(S, cs)
+  if cs == "iftrue" then &trace := -1
   tab(many(' \t')) # skip white space following CS
   if pos(0) | any('\n') then before_next_newtext(S, skipblanks, [S])
   (cstab[cs])(S, cs, csclosure[cs])
@@ -668,7 +719,7 @@ output in bold.  We save the unknown sequences for later warning messages.
 <<*>>=
 global show_unknowns
 procedure unknown_cs(S, cs, cl)
-  if S.text === ignore_text then return # a bit of a hack
+#  if S.text === ignore_text then return # a bit of a hack  -- should no longer be needed
   if \show_unknowns then S.text(S, "<b>\\" || cs || "</b>")
   if not member(unknown_set, cs) then {
     write(\unknown_file, "Warning: unknown control sequence \\", cs)
@@ -709,7 +760,7 @@ every begintab | endtab := table(unknown_env)
 every begincl  | endcl  := table()
 <<*>>=
 procedure unknown_env(S, env, cl)
-  if S.text === ignore_text then return # a bit of a hack
+###  if S.text === ignore_text then return # a bit of a hack # no longer needed
   if \show_unknowns then S.text(S, "<b>{" || env || "}</b>")
   if not member(unknown_envs, env) then {
     write(\unknown_file, "Warning: unknown environment {", env, "}")
@@ -893,12 +944,12 @@ end
 Paragraphs count only in horizontal or math mode (and they better not
 happen in math mode!).
 <<*>>=
-procedure implicit_paragraph(S)
-  if S.mode == "V" then return
-  else {
+procedure implicit_paragraph(S, cs, cl)
+  if S.mode ~== "V" then {
     S.mode := "V"
     Cparagraph(S)
   }
+  cs_ignore(S, cs, \cl)
 end
 @
 Here's a real hack.  I use it to stop skipping blanks when the noweb
@@ -1024,6 +1075,85 @@ procedure finish_bibitem(S, contents, args)
   key := csarg(S) | fail
   label := convert(converter("H"), "{" || contents || "}")
   S.text(S, "<br><a name=\"NWcite-" || key || "\">" || label || "</a> ")
+end
+@
+\subsubsection{Conditionals}
+The idea here is that an \verb+\if+$\cdots$ control sequence will conditionally 
+ignore text, and that \verb+\fi+ restores the previous state.
+To keep track of state, we have an ``if stack'' that records what
+[[S.text]] should be upon encountering \verb+\else+ and \verb+\fi+.
+<<other fields of state>>=
+, ifstack
+<<initial values for other fields of state>>=
+, []
+<<code to reset [[S]]>>=
+if *S.ifstack > 0 then S.ifstack := []  # keeps GC down
+@
+What's on the ifstack is
+<<*>>=
+record ifrec(on_else, on_fi, skipping)
+@ It's possible that one day this code will need to be updated to delay
+new-text actions (and to do God knows what if
+new-text actions have already been delayed).
+@
+Every \verb+\if+$\cdots$ is equivalent either to \verb+\iffalse+
+of \verb+\iftrue+, so we begin by defining those, as well as \verb+\else+
+and \verb+\fi+
+<<*>>=
+procedure Ciffalse(S, cs, cl)
+error("### \\", cs, " -> false (S.text === ", image(S.text) ? {="procedure "; tab(0)}, ")")
+  push(S.ifstack, ifrec(S.text, S.text))
+  S.text := ignore_text
+  S.skipping := 1
+end
+
+procedure Ciftrue(S, cs, cl)
+error("### \\", cs, " -> true (S.text === ", image(S.text) ? {="procedure "; tab(0)}, ")")
+  push(S.ifstack, ifrec(ignore_text, S.text))
+end
+
+procedure Celse(S, cs, cl)
+  S.text := S.ifstack[1].on_else
+error("### \\else -> S.text === ", image(S.text) ? {="procedure "; tab(0)})
+end
+
+procedure Cfi(S, cs, cl)
+  S.text := S.ifstack[1].on_fi
+error("### \\fi -> S.text === ", image(S.text) ? {="procedure "; tab(0)})
+  pop(S.ifstack)
+end
+@
+Now, all that's left is to handle \verb+\newif+.
+This part is all boilerplate.
+<<*>>=
+procedure Cnewif(S, cs, cl)
+  local newif, newcs
+  tab(many(' \t\n'))
+  if pos(0) then
+    after_next_newtext(S, Cnewif, [S, cs, cl])
+  else {
+    newif := csarg(S)
+    newif ?
+      if ="\\if" & newcs := tab(many(S.csletters)) & pos(0) then {
+        <<make [[newcs]] a new \verb+\if+-like thing>>
+      } else
+        error("\\newif argument botch: " || newif)
+  }
+end
+@
+And here we do the real work:
+<<make [[newcs]] a new \verb+\if+-like thing>>=
+cstab[newcs || "false"] := Csetif
+cstab[newcs || "true"]  := Csetif
+cstab["if" || newcs] := Ciffalse
+<<*>>=
+procedure Csetif(S, cs, cl)
+  local base, tag
+  if cs ? (base := tab(find("true"|"false")), tag := =("true"|"false"), pos(0)) then {
+    cstab["if" || base] := if tag == "true" then Ciftrue else Ciffalse
+  } else {
+    error("This can't happen --- setif botch (not urgent)")
+  }
 end
 @
 \subsection{Reading and converting auxiliary {\LaTeX} files}
