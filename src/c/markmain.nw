@@ -143,13 +143,14 @@ while ((mark = mod_start(line,1)) != NULL) {
     if ((line=mod_end(mark,1))==NULL) {
         errormsg(Error, "Module doesn't end: %s", mark);       
                                    /* module references can't cross lines */
-        break;
+        goto mod_does_not_end;
     } else {  
         print_pair(out, "use",mark);       /* emit the module */
     }
 }
 if (*line) print_pair(out, "text",unescape(line)); 
                                   /* contribute the trailing string */
+mod_does_not_end:
 @ To convert documentation lines, we have to track the quoting brackets.
 <<convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
@@ -169,7 +170,7 @@ If we missed the module definition line, this might suggest to us
 that we've made a mistake.
 <<Check a bunch of ``mistake indicators''>>=
     if (state != Code && (mod_start(line,0)!=NULL)) {
-        errormsg(Warning, "Warning: module start in bad state: %s", line);
+        errormsg(Warning, "Warning: chunk name in documentation (or missing = in definition):\n\t%s", line);
     }
 @
 Finally, we give the main program, which opens each file and passes it
@@ -183,12 +184,13 @@ void main(int argc, char **argv) {
 
     if (argc>1) {
         while (--argc>0)
-          if ((fp=fopen(*++argv,"r"))==NULL) {
+          if (!strcmp(*++argv, "-")) 
+	      markup(stdin,stdout,"");
+          else if ((fp=fopen(*argv,"r"))==NULL) {
               errormsg(Error, "%s: couldn't open file %s\n", myself,
                       *argv);
               continue;
-          }
-          else {
+          } else {
               markup(fp,stdout,*argv);
               fclose(fp);
           }
