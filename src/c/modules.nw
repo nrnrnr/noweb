@@ -130,7 +130,7 @@ typedef struct parent {
 } *Parent;
 
 int expand (Module mp, int indent, int partial_distance, Parent parent, 
-	    char *locformat, FILE *out);
+            char *locformat, FILE *out);
         /* expand a module, writing to file out */
 @ %def Parent
 <<local data>>=
@@ -144,6 +144,9 @@ void resetloc(void) {
   lastfilename = 0;
   lastlineno = -1;
 }
+@
+[[indent]] is the amount by which this chunk should be indented.
+[[partial_distance]] is the width of what has already been written to the current line.
 <<C functions>>=
 int expand (Module mp, int indent, int partial_distance, Parent parent,  
             char *locformat, FILE *out) {
@@ -152,21 +155,21 @@ int expand (Module mp, int indent, int partial_distance, Parent parent,
     int error=Normal;
     struct parent thismodule; /* the value only matters when we're expanding a module */
 
-    <<thismodule = {mp, parent};>>
+    <<set [[thismodule = {mp, parent}]]>>
     <<if [[mp]] is an ancestor, complain and return>>
 
     for (p=mp->head; p!=NULL; p=p->next) {
-	switch (p->ptype) {
-	    case STRING:  <<print a string>>;  break;
-	    case MODULE:  <<expand a module>>; break;
- 	    case NEWLINE: <<print a newline>>; break;
+        switch (p->ptype) {
+            case STRING:  <<print a string>>;  break;
+            case MODULE:  <<expand a module>>; break;
+            case NEWLINE: <<print a newline>>; break;
             default: impossible("bad part type");
         }
     }
     return error;
 }
 @ %def expand
-<<thismodule = {mp, parent};>>=
+<<set [[thismodule = {mp, parent}]]>>=
 thismodule.this = mp;
 thismodule.parent = parent;
 @
@@ -186,6 +189,7 @@ if (*(p->contents) != '\0') {
               indent_for(partial_distance, out);
     } else if (partial_distance == 0) {
         indent_for(indent, out);
+        partial_distance = indent;
     }
     fprintf(out,"%s",p->contents);
     partial_distance = limitcolumn(p->contents, partial_distance);
@@ -194,6 +198,8 @@ if (*(p->contents) != '\0') {
 partial_distance = 0;
 putc('\n', out);
 lastlineno++;
+@
+When we're expanding a module, the partial distance becomes the new indentation level.
 <<expand a module>>=
 newmod = lookup(p->contents);
 if (newmod==NULL) {
@@ -201,12 +207,12 @@ if (newmod==NULL) {
     error=Error;
 } else {
     int retcode;
-    retcode = expand (newmod, indent + partial_distance, partial_distance,
-    		      &thismodule, locformat, out);
+    retcode = expand (newmod, partial_distance, partial_distance,
+                      &thismodule, locformat, out);
     if (retcode > error) error = retcode;
 }
 partial_distance = limitcolumn(p->contents, partial_distance + 2) + 2; 
-				/* account for surrounding brackets */
+                                /* account for surrounding brackets */
 @
 <<if [[mp]] is an ancestor, complain and return>>=
 if (seekcycle(mp, parent)) {
@@ -288,7 +294,10 @@ from each module.
 This serves two purposes: first, our output looks nicer, and, second,
 it makes it possible to define a module that doesn't end with newline.
 
-As they are read in, all modules end with newline, by definition.
+As they are read in, all modules end with newline, by definition.%
+\footnote{Except of course if this input came from an uncorrected nuweb file, 
+in which case modules needn't end with newlines.  Eventually one hopes
+I'll fix numarkup to insert exactly the newlines that would be removed here.}
 We remove all of the trailing newlines.
 <<header>>=
 void remove_final_newline (Module mp);
@@ -299,12 +308,14 @@ void remove_final_newline (Module mp) {
     if (mp->tail==NULL) /* module has no text */
         return;
     if (mp->tail->ptype != NEWLINE)
-        impossible("Module doesn't end with newline");
+        /* do nothing --- this is possible with nuweb front end
+              formerly: impossible("Module doesn't end with newline"); */
+        ;
     else if (mp->tail == mp->head)
-	    mp->head = mp->tail = NULL;
+            mp->head = mp->tail = NULL;
     else {
-	struct modpart *p = mp->head;
-	while (p->next != mp->tail) p = p->next;
+        struct modpart *p = mp->head;
+        while (p->next != mp->tail) p = p->next;
         p->next = NULL;
     }
 }
