@@ -4,31 +4,41 @@
 # See file COPYRIGHT for more information.
 
 nawk '
-/^@file / {
-#  if (file) printf "EndOf%s\n", file
-#  file = substr($0,7);
-#  printf "diff %s - <<'"'EndOf%s'"'\n", file, file
-}
-
-END { 
-#  if (file) printf "EndOf%s\n", file
-}
-
 /^@begin docs 0$/ { next }
 /^@begin docs / { printf "@ " }
-/^@end docs / { }
-
-/^@begin code / { }
+/^@begin code / { code = 1 }
+/^@end [cd]o[dc][es] / { 
+		code = 0
+		if (dangling_text) printf "\n"
+		dangling_text = 0
+                printf "%s", deflines
+                if (defline != "") printf "%s\n", defline
+                deflines = "" ; defline = ""
+               }
 /^@defn / { printf "<<%s>>=", substr($0,7) }
-
 /^@text $/ {next}
 /^@text / { 
   gsub("<<", "@<<");
   gsub(">>", "@>>");
+  if (!(code || quoting)) {
+    gsub(/\[\[/, "@[[");
+    gsub(/\]\]/, "@]]");
+  }
   printf "%s", substr($0,7) 
+  dangling_text = 1
 }
-/^@quote$/    { printf("[[") }
-/^@endquote$/ { printf("]]") }
-/^@nl$/       { printf "\n"}
+/^@quote$/    { printf("[["); dangling_text = 1; quoting = 1 }
+/^@endquote$/ { printf("]]"); dangling_text = 1; quoting = 0 }
+/^@nl$/       { printf "\n"; dangling_text = 0}
 
-/^@use / { printf "<<%s>>", substr($0,6) }' $* | sed 's/^@ $/@/'
+/^@index defn / {
+     if (defline == "") defline = "@ %def"
+     defline = defline " " substr($0, 13)
+}
+/^@index nl$/ {
+     deflines = deflines defline "\n"
+     defline = ""
+}
+/^@use / { printf "<<%s>>", substr($0,6)
+           dangling_text = 1
+         }' $* | sed 's/^@ $/@/'
