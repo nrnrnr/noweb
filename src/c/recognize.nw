@@ -21,7 +21,7 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.5 1997/09/13 19:55:02 nr Exp nr $";
+static char rcsid[] = "$Id: recognize.nw,v 1.6 1997/09/13 19:59:15 nr Exp nr $";
 static char rcsname[] = "$Name: v2_8a $";
 <<Include files>>
 <<header>>
@@ -89,7 +89,7 @@ typedef struct name_node {
 struct move_node {
   Move_Node *next;      /* points to the next node on the move list */
   Goto_Node *state;     /* the next state for this character */
-  char c;
+  unsigned char c;
 };
 @ %def move_node
 <<Type definitions>>=
@@ -153,7 +153,7 @@ void add_ident(Recognizer r, char *id)
 {
   int depth = 2;
   char *p = id;
-  char c = *p++;
+  unsigned char c = *p++;
   Goto_Node *q = r->root[c];
   if (!q) 
     <<Create an entry for [[root[c]]]>>
@@ -224,7 +224,7 @@ void stop_adding(Recognizer r)
     while (g) {
       Move_Node *m = g->moves;
       while (m) {
-        char a = m->c;
+        unsigned char a = m->c;
         Goto_Node *s = m->state;
         Goto_Node *state = g->fail;
         while (state && !goto_lookup(a, state))
@@ -260,7 +260,7 @@ void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
 {
   Goto_Node *state = NULL;
   char *current = input;
-  char c = *current++;
+  unsigned char c = (unsigned char) *current++;
   while (c) {
     <<Goto the next state>>
     <<Perform the callback for any outputs>>
