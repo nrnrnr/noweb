@@ -50,16 +50,22 @@ global indexlabels, defanchors, uses, anchorlabel, indexanchorlabel
 <<initialization>>=
 every allchunks | allidents := set()
 every indexlabels | defanchors | uses | anchorlabel | indexanchorlabel := table()
+@
+I set [[textnonblank]] non-null if some text line in the current chunk
+contains a non-blank character.
+This trick lets me avoid planting anchors in empty documentation chunks.
 <<*>>=
 procedure pass1(name, arg)
-  static lastdefnlabel, thisusecount, lastanchorlabel
+  static lastdefnlabel, thisusecount, lastanchorlabel, nonblank, textnonblank
+  initial nonblank := ~' \t'
   case name of {
     "file"  : curfile := uniqueid(arg)
-    "begin" : lastbeginarg := arg
-    "end"   : if arg ? ="docs " & \anchordist then 
+    "begin" : { lastbeginarg := arg; textnonblank := &null }
+    "end"   : if match("docs ", arg) & \anchordist & \textnonblank then 
                 {<<insert and set [[lastanchorlabel]]>>}
               else 
                 lastanchorlabel := &null
+    "text"  : /textnonblank := upto(nonblank, arg)
     "defn"  : {
         insert(allchunks, arg)
         slipin("@xref label " || (lastdefnlabel := newdefnlabel(arg)))
@@ -137,7 +143,12 @@ procedure pass2(name, arg)
     }
     "defn" : { thischunk := arg; 
                write("@xref ref " || anchorlabel[arg])
-	       <<write markers for previous and next definitions of [[thischunk]]>>
+               <<copy [[name]] and [[arg]] to output>> 
+               <<write chunk cross-reference>>
+             }
+# must postpone index cross-reference to end of chunk because
+# the info is accumulated in [[thesdefns]] and [[theseuses]] on this pass
+    "end" :  { if match("code", arg) then {<<write index cross-reference>>}
                <<copy [[name]] and [[arg]] to output>> 
              }
     "use"  : { write("@xref ref " || (\anchorlabel[arg] | "nw@notdef")) # was "???"
@@ -157,10 +168,6 @@ procedure pass2(name, arg)
        name := "index " || name
        <<copy [[name]] and [[arg]] to output>>
     }
-    "end" : {
-        if match("code", arg) then {<<write cross-reference>>}
-        write("@", name, " ", arg)
-      }
     "text" : # grotesque hack! for chunks and index in HTML
        if /thischunk then # docs mode
          case arg of { 
@@ -178,13 +185,11 @@ The case of the [[@index defn]] is the one case where we don't emit a
 reference, because the reference has to go in earlier.  See
 page~\pageref{multi-def-bug} for an explanation.
 @
-<<write markers for previous and next definitions of [[thischunk]]>>=
+<<write chunk cross-reference>>=
 defout[thischunk] +:= 1
 write("@xref prevdef ", defanchors[thischunk][defout[thischunk] - 1]) # fail if first
 write("@xref nextdef ", defanchors[thischunk][defout[thischunk] + 1]) # faif if last
-<<write cross-reference>>=
-<<write index cross-reference>>
-if defout[thischunk] = 1 then {<<write chunk cross-reference>>}
+if defout[thischunk] = 1 then {<<write use and def summary for chunk cross-reference>>}
 <<write index cross-reference>>=
 theseuses --:= thesedefns
 if *thesedefns > 0 then {
@@ -206,7 +211,7 @@ if *theseuses > 0 then {
 }
 #  every write("@literal \\nwindexuse{", TeXliteral(ident := !l), "}",
 #                          "{", indexlabels[ident], "}{", thislabel, "}")
-<<write chunk cross-reference>>=
+<<write use and def summary for chunk cross-reference>>=
 if *defanchors[thischunk] > 1 then {
   write("@xref begindefs")
   every write("@xref defitem ", defanchors[thischunk][2 to *defanchors[thischunk]])
