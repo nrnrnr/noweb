@@ -1,0 +1,48 @@
+\documentstyle[noweb,multicol,twoside]{article}
+\makeatletter
+\newenvironment{fields}{\@fields}{\crcr\egroup\par\end{quote}}
+\def\@fields{\@ifnextchar[{\@@fields}{\@@fields[4in]}}
+\def\@@fields[#1]{\begin{quote}\catcode`\_=\other
+	\tabskip=\leftmargin
+        \halign\bgroup\tt##\hfil\tabskip=2em&
+        {\hsize=#1\vtop{\noindent\raggedright\let\\=\cr
+                        \strut##\strut\par}}\tabskip=0pt\cr}
+\makeatother
+\pagestyle{noweb}\raggedbottom\noweboptions{shift}
+
+\title{{\tt noweb} Source Code\thanks{{\tt noweb} is copyright 1989--93 by Norman Ramsey.
+Although it is freely available, it is not in the public domain.
+It is not a Bellcore product. Bellcore makes no warranty and
+accepts no liability for any of this software.}}
+\author{Norman Ramsey\thanks{Section~\ref{preston} is the 
+generous contribution of Preston Briggs}\\{\tt norman@bellcore.com}}
+\begin{document}
+\maketitle
+\section*{Preface}
+This isn't a real literate program---there's just enough documentation
+here to get the job done.
+One of my observations is that the cost of creating a high-quality, well-documented 
+literate program adds 1--3 times the amount of effort it took to create the program 
+in the first place.
+Most programs I write aren't worth that kind of effort, and {\tt noweb} is
+no exception.
+Don't expect too much.
+
+\tableofcontents
+
+\input{allcode.tex}
+
+\bibliographystyle{plain}
+\bibliography{web}
+
+\section{List of all chunks from all files}
+
+\nowebchunks
+
+\begin{multicols}{2}[\section{Index}]
+\nowebindex
+\end{multicols}
+
+\end{document}
+
+
