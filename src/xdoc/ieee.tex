@@ -1,9 +1,9 @@
 \newif\iftr
 \trfalse		% set true for princeton tech report style
 \iftr
-\documentstyle[11pt,noweb,tr]{article}
+\documentstyle[11pt,noweb,multicol,tr]{article}
 \else
-\documentstyle[11pt,noweb]{article}
+\documentstyle[11pt,noweb,multicol]{article}
 \fi
 \title{Literate-Programming Tools Need Not Be Complex}
 \author{Norman Ramsey\\Department of Computer Science, Princeton University\\
@@ -491,6 +491,9 @@ The possibilities are:
 \tt @quote&Start of quoted code in a documentation chunk\\
 \tt @endquote&End of quoted code in a documentation chunk\\
 \tt @file {\it filename}&Name of the file from which the chunks came\\
+\tt @index defn {\it ident}&The current chunk contains a definition of {\it ident}\\
+\tt @index use {\it ident}&The current chunk contains a use of {\it ident}\\
+\tt @index nl {\it ident}&A newline that is part of markup, not part of the chunk\\
 \tt @literal {\it text}&{\tt noweave} copies {\it text} to output\\
 \end{tabular}}
 \end{quote}
@@ -509,8 +512,8 @@ The representation of a documentation chunk is
 \tt @end docs $n$
 \end{tabular}
 \end{quote}
-where {\it docline} may be {\tt @text}, {\tt @nl}, {\tt @quote}, or
-{\tt @endquote}.
+where {\it docline} may be {\tt @text}, {\tt @nl}, {\tt @quote},
+{\tt @endquote}, or {\tt @index}.
 Every {\tt @nl} corresponds to a newline in the original file.
 {\tt markup} guarantees that quotes are balanced and not nested.
 
@@ -525,7 +528,8 @@ The representation of a code chunk is
 \tt @end code $n$
 \end{tabular}}
 \end{quote}
-where {\it codeline} may be {\tt @text}, {\tt @nl}, or {\tt @use}.
+where {\it codeline} may be {\tt @text}, {\tt @nl}, {\tt @use}, or
+{\tt @index}.
 
 The \verb+noweb+ tools are implemented by piping the output of
 \verb+markup+ to other programs.
@@ -729,9 +733,9 @@ Foundation Fellowship.
 \bibliographystyle{abbrv}
 \bibliography{web,cs,ramsey,ml}
 
-\iftr
+%\iftr
 \clearpage
 \input wc
-\fi
+%\fi
 
 \end{document}
