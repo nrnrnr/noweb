@@ -664,8 +664,6 @@ information.
 @
 \subsection{Sub-page references}
 
-% \@ifpackageloaded{nameref}{...}{...}
-
 This is the wonderful code that Dave Love provided to make page
 references like 7a, 7b, and so on.
 
@@ -770,16 +768,23 @@ anchors, for which we use [[\nwblindhyperanchor]].
 @
 [[\newsublabel]] is the macro that does the important work.  It is called with the
 same sort of arguments as [[\newlabel]]: the first argument is the
-label name and the second is [[{]]\LA ref value[[}{]]page number\RA[[}]].
+label name and the second is  [[{<<ref value>>}{<<page number>>}]].
 (Note that the only definition here which needs to be
 global is the one which is, and that [[\global]] is redefined by
 [[\enddocument]], which will bite you if you use it\dots)
 <<noweb.sty>>=
 <<definition of [[\newsublabel]]>>
 @
-First we extract the page number into [[\this@page]].
+Before we create a [[\newsublabel]] for the first time, we set the
+proper trailers.
 <<definition of [[\newsublabel]]>>=
-\newcommand{\newsublabel}[2]{%
+\newcommand\newsublabel{%
+  \nw@settrailers
+  \global\let\newsublabel\@newsublabel
+  \@newsublabel}
+@ First we extract the page number into [[\this@page]].
+<<definition of [[\newsublabel]]>>=
+\newcommand{\@newsublabel}[2]{%
   \edef\this@page{\@cdr#2\@nil}%
 @ %def \newsublabel
 @
@@ -805,6 +810,22 @@ If we've had at least two on the page, we define the
 \nextchunklabel{cl1}\nextchunklabel{cl2}
 Then we write a normal [[\newlabel]] with the sub-reference as the
 normal reference value in the second argument.
+Unfortunately, if we want hypertext support, the second argument of
+[[\newlabel]] gets complicated.
+It is either
+\begin{itemize}
+\item
+[[{<<ref value>>}{<<page number>>}]], when normal {\LaTeX} is
+running, or
+\item
+[[{<<ref value>>}{<<page number>>}{<<text>>}}{<<hyper category>>}{<<URL>>}]],
+when the \texttt{hyperref} package is running.
+(We actually detect this by looking for the \texttt{nameref} package,
+because that's the one that changes the use of labels.)
+\end{itemize}
+We unify these two things by producing
+[[{<<ref value>>}{<<page number>>}\nw@labeltrailers]]
+
 We may have pending labels in support of [[\nextchunklabel]], as defined in
 chunk~\subpageref{chunklabel}. 
 Because we want to define all of the ``pending sublabels'' in exactly
@@ -813,13 +834,25 @@ pending label as well.
 <<definition of [[\newsublabel]]>>=
   \pendingsublabel{#1}%
   \edef\@tempa##1{\noexpand\newlabel{##1}%
-    {{\number\sub@page}{\this@page}}}%
+    {{\number\sub@page}{\this@page}\nw@labeltrailers}}%
   \pending@sublabels
   \def\pending@sublabels{}}
-<<old definition of [[\newsublabel]]>>=
-  \edef\@tempa{\noexpand\newlabel{#1}%
-    {{\number\sub@page}{\this@page}}}%
-  \@tempa}
+@ 
+We can't use [[\@ifpackageloaded]] to see if \texttt{nameref} is
+loaded, because that is restricted to the preamble, and
+[[\newsublabel]] goes into the [[.aux]] file, which is executed after
+the whole document is processed.
+We therefore test for [[\@secondoffive]].
+This is lame, but what else can we do?
+<<noweb.sty>>=
+\newcommand\nw@settrailers{% -- won't work on first run
+  \@ifpackageloaded{nameref}%
+     {\gdef\nw@labeltrailers{{}{}{}}}%
+     {\gdef\nw@labeltrailers{}}}
+\renewcommand\nw@settrailers{% 
+  \@ifundefined{@secondoffive}%
+     {\gdef\nw@labeltrailers{}}%
+     {\gdef\nw@labeltrailers{{}{}{}}}}
 @ 
 Now we keep track of those pending guys.\nextchunklabel{chunklabel}
 The goal here is to save them up until they're all equivalent to the
