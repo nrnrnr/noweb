@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# options: -l == use LaTeX
+
+MACROS=nwmac
+latex=0
+
+if [ "$1" = -l ]; then
+  latex=1
+  shift
+fi
+
+LIB=+LIBDIR+
+if [ $latex -eq 0 ]; then echo \\input nwmac; fi
+$LIB/markup $* | expand | sed 's/^@file \(.*\)$/\\filename{\1}/
+/^@begin code/,/^@end code/s/\\/\\\\/g
+/^@begin code/,/^@end code/s/{/\\{/g
+/^@begin code/,/^@end code/s/}/\\}/g
+/^@name /s/\\\\/\\/g
+/^@name /s/\\{/{/g
+/^@name /s/\\}/}/g
+s/@<</\\LL{}/g
+s/@>>/\\GG{}/g
+s/@\[\[/\\LLS/g
+s/@\]\]/\\RRS/g
+##### [^>] is approximation to . to fix <<stuff>> more <<stuff>>
+:first
+/^@begin code/,/^@end code/s/<<\([^>]*\)\\\\\([^>]*\)>>/<<\1\\\2>>/g
+tfirst
+:second
+/^@begin code/,/^@end code/s/<<\([^>]*\)\\{\([^>]*\)>>/<<\1{\2>>/g
+tsecond
+:third
+/^@begin code/,/^@end code/s/<<\([^>]*\)\\}\([^>]*\)>>/<<\1}\2>>/g
+tthird
+:fourth
+s/\[\[\(.*\)\\\(.*\)\]\]/\[\[\1\\\\\2\]\]/g
+###tfourth
+:fifth
+s/\[\[\(.*\){\(.*\)\]\]/\[\[\1\\{\2\]\]/g
+###tfifth
+:sixth
+s/\[\[\(.*\)}\(.*\)\]\]/\[\[\1\\}\2\]\]/g
+####tsixth
+s/^@begin docs \([0-9]*\)$/\\begindocs{\1}/
+s/^@begin docs \([0-9]*\)[^0-9].*$/\\begindocs{\1}/
+s/^@end docs .*$/\\enddocs/
+s/^@begin code \([0-9]*\)$/\\begincode{\1}/
+s/^@begin code \([0-9]*\)[^0-9].*$/\\begincode{\1}/
+s/^@end code .*$/\\endcode/
+##### /^@name \*$/d  -- causes trouble with root module following other module
+s/^@name \(.*\)$/\\moddef{\1}\\endmoddef/
+/^@attribute .*$/d
+s/<</\\LA{}/g
+s/>>/\\RA{}/g
+s/\[\[/\\code{}/g
+s/\]\]/\\edoc{}/g'
+if [ $latex -eq 0 ]; then echo \\bye nwmac; fi

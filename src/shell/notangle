@@ -1,0 +1,12 @@
+#!/bin/sh
+# set -x
+LIB=+LIBDIR+
+opt= arg=
+for i do
+	case $i in
+        -ml|-m3|-awk|-c) ;; # deliberately ignore language ids
+	-*) opt="$opt '$i'" ;;
+	*)  arg="$arg '$i'" ;;
+	esac
+done
+eval "$LIB/markup $arg | expand | $LIB/nt $opt"

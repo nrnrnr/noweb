@@ -1,0 +1,46 @@
+#!/bin/sh
+# set -x
+LIB=+LIBDIR+
+opt= arg=
+comment='function comment(s) {
+    gsub("\\*/", "* /", s)
+    return sprintf("/* %-72s */",s)
+}'
+
+for i do
+	case $i in
+	-ml|-m3) comment='function comment(s) {
+    gsub("\\*\\)", "* )", s)
+    return sprintf("(* %-72s *)",s)
+}' ;;
+	-awk) comment='function comment(s) {
+
+    return sprintf("# %s",s)
+}' ;;
+	-c) comment='function comment(s) {
+    gsub("\\*/", "* /", s)
+    return sprintf("/* %-72s */",s)
+}' ;;
+	-L*) ;; # deliberately ignore requests for #line
+	-*) opt="$opt '$i'" ;;
+	*)  arg="$arg '$i'" ;;
+	esac
+done
+
+eval "$LIB/markup $arg" | expand |
+nawk 'BEGIN { line = 0; capture = 0 }
+'"$comment"'
+
+/^@end doc/ { capture = 0; holding[line++] = "" ; next }
+/^@begin doc/ { capture = 1; next }
+
+capture == 1 { holding[line++] = comment($0); next }
+
+/@name / { print
+	print comment("<"substr($0,7)">=") # may want to omit this line
+	for (i=0; i<line; i++) print holding[i]
+	line = 0
+	next
+}
+{ print }' |
+eval "$LIB/nt $opt"
