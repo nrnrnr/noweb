@@ -1,0 +1,11 @@
+<<noweb documentation date>>=
+4/17/97
+<<AUTHOR section>>=
+.SH VERSION
+The RCS version name of this software is $Name$.
+.SH AUTHOR
+Norman Ramsey, University of Virginia.
+Internet address \fBnr@cs.virginia.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.virginia.edu/~nr/noweb\fP.
+
