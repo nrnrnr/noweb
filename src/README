@@ -3,7 +3,7 @@ These are the base sources and documents for version 2.10 of
 available via anonymous ftp from the Comprehensive TeX Archive
 Network, in directory web/noweb.  CTAN includes hosts ftp.ctan.org,
 ftp.tex.ac.uk, and ftp.uni-stuttgart.de.  These sites mirror the
-master directory ftp.cs.virginia.edu:pub/nr/noweb.  The file INSTALL
+master directory ftp.eecs.harvard.edu:pub/nr/noweb.  The file INSTALL
 tells how to build noweb.  The file FAQ answers some frequently asked
 questions about building and using noweb.
 
