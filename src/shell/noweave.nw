@@ -4,7 +4,7 @@ generated shell script.
 <<copyright notice>>=
 # Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# $Id$
+# $Id: noweave.nw,v 1.4 1997/09/13 19:11:44 nr Exp $
 @
 Here's the organization of the source:
 <<noweave>>=
@@ -416,14 +416,16 @@ Expand tabs with stops every \fIk\fP columns.
 Copy tabs to the output.
 @ \fi
 <<first pass {\tt noweave} options>>=
--v) verbose=1 ;;
+-v) echo 'RCS version name $Name$' 1>&2
+    echo 'RCS id $Id$' 1>&2
+    verbose=1 ;;
 <<option printout for usage>>=
-echo "-v		Print pipeline on standard error" 1>&2
+echo "-v		Print pipeline and RCS info on standard error" 1>&2
 @ \iffalse
 <<noweave man page option table>>=
 .TP
 .B \-v
-Print the pipeline on standard error.
+Print the pipeline and RCS info on standard error.
 @ \fi
 \iffalse
 <<man page: WEAVING section>>=

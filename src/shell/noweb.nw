@@ -9,6 +9,8 @@ Here's the organization of the source:
 <<noweb>>=
 #!/bin/sh
 <<copyright notice>>
+# $Id$
+# $Name$
 LIB=|LIBDIR|
 markup=$LIB/markup mntopt=-L status=0 tex=1 output=1
 <<consume options, setting [[tex]], [[output]], [[mntopt]], and [[markup]]>>

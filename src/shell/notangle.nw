@@ -4,6 +4,8 @@
 <<notangle>>=
 #!/bin/sh
 <<copyright notice>>
+# $Id$
+# $Name$
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= markopt= filters=
 while [ $# -gt 0 ]; do
