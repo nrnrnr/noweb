@@ -1,0 +1,337 @@
+\section{Converting {\tt noweb} markup to {\TeX} markup (Icon version)}
+The copyright applies both to the {\tt noweb} source and to the
+generated shell script.
+<<copyright notice>>=
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+@
+Here's the organization of the source:
+<<*>>=
+<<copyright notice>>
+procedure main(args)
+  local delay
+  <<initialization>>
+  delay := !args == "-delay"
+  noindex := !args == "-noindex"
+  while inputline := read() do inputline ? {
+    <<scan and convert>>
+  }
+  write()
+end
+@ The markup carefully adds no newlines not already present in the input,
+so that the line numbers of the {\TeX} file will be the same as the
+numbers of the corresponding {\tt noweb} file.
+The variables are:
+\begin{description}
+\item[\tt code] Nonnull if converting a code chunk.
+\item[\tt quoting] Nonnull if quoting code in documentation.
+\item[\tt text] Number of characters written since start of
+		documentation chunk.
+\end{description}
+[[text]] is used to write [[\nwdocspar]] if a newline appears at the
+beginning of a documentation chunk without any intervening text.
+This subtle trick preserves new-paragraph semantics without requiring
+the insertion of a blank line that would throw off the line count.
+The special control sequences makes a page break at that spot especially likely,
+so that small documentation chunks will appear on the some page as the code
+chunks they precede.
+<<initialization>>=
+text := 1
+@ %def text
+
+Ordering helps improve speed, so I write things in a funny order.
+This whole code is a giant [[if ... then ... else if ...]].
+<<scan and convert>>=
+<<@text>>
+<<@nl>>
+<<code chunks>>
+<<@defn>>
+<<docs chunks>>
+<<@use>>
+<<@xref>>
+<<@index>>
+<<others>>
+if ="@" then  						# follows last else
+  warn_unknown(1(tab(upto(' ')|0), pos(0) | move(1)))
+else
+  write(&errout, "Botched line in noweb pipeline: ", tab(0))
+@
+\subsection{Basic text and chunk boundaries}
+<<code chunks>>=
+if ="@begin code " then	{ code := 1     ; writes("\\nwbegincode{", tab(0), "}")  } else
+if ="@end code "   then { code := &null ; writes("\\nwendcode{}")
+                          lastdefnlabel := &null                                 } else
+<<docs chunks>>=
+if ="@begin docs " then	{ if \delay & match(0) then <<delay for [[@begin docs]]>>  
+                          else {text := 0; writes("\\nwbegindocs{",tab(0),"}")}  } else
+if ="@end docs " then  	{ if \delay & match(0) then <<delay for [[@end docs]]>> 
+			  else writes("\\nwenddocs{}")                           } else
+<<@text>>=
+if ="@text " then 	{ text +:= *(line := tab(0))
+                          writes(if \quoting then TeXliteral(line)
+                                 else if \code then escape(line, '{}\\')
+                                 else line)                                      } else
+<<@nl>>=
+if ="@nl" & pos(0) then { if /code then {<<print [[\nwdocspar]] if no [[text]]>>}
+                          if \quoting then writes("\\nwnewline")
+                          write()                                                } else
+@
+Delaying markup is handled by special patterns for the first document chunk.
+Because several {\tt noweb} files can be marked up at once, there can be
+several document chunks numbered 0.
+The later ones are given no special treatment by the simple expedient of
+turning [[delay]] off after the first one.
+<<delay for [[@begin docs]]>>=
+&null
+<<delay for [[@end docs]]>>=
+{ writes("\\nwfilename{", filename, "}"); delay := &null }
+@
+<<print [[\nwdocspar]] if no [[text]]>>=
+if text = 0 then writes("\\nwdocspar")
+text := 1
+@
+\subsection{Chunk definitions and uses, with possible cross-reference}
+Here we start to see the cross-reference markup, driven by [[lastxreflabel]]
+and [[lastxrefref]].
+<<@defn>>=
+if ="@defn " then 	{ writes("\\sublabel{", \lastxreflabel, "}")
+			  writes("\\nwmargintag{", label2tag(\lastxreflabel), "}")
+                          writes("\\moddef{", convquotes(name := tab(0)), 
+                                 ("~" || label2tag(\lastxrefref)) | "",
+                                 "}\\", defns[name], "endmoddef")
+			  lastdefnlabel := lastxreflabel
+			  <<clear [[lastxref*]]>>
+                          defns[name] := "plus"                                } else
+<<@use>>=
+if ="@use " then 	{ writes("\\LA{}", convquotes(name := tab(0)), 
+                                 ("~" || label2tag(\lastxrefref)) | "",
+                                 "\\RA{}")                                     } else
+<<*>>=
+procedure label2tag(label)
+  return "{\\nwtagstyle{}\\subpageref{" || label || "}}"
+end
+@
+[[defns]] serves only to give the proper distinction between 
+[[\endmoddef]] and [[\plusendmoddef]].
+<<initialization>>=
+defns := table("")
+@
+\subsection{Quoting, headers, trailers, \& miscellany}
+<<others>>=
+if ="@quote"    & pos(0)      then { quoting := 1     ; writes("{\\tt{}")          } else
+if ="@endquote" & pos(0)      then { quoting := &null ; writes("}")                } else
+if ="@file "                  then { filename := tab(0); <<clear [[lastxref*]]>>
+                                     \delay | writes("\\nwfilename{", filename, "}") } else
+if ="@literal "               then { writes(tab(0))                                } else
+if ="@header latex "          then { <<write {\LaTeX} header>>		           } else
+if ="@header tex "            then { writes("\\input nwmac ")		           } else
+if ="@trailer latex" & pos(0) then { write("\\end{document}")		           } else
+if ="@trailer tex"   & pos(0) then { write("\\bye")			           } else
+<<write {\LaTeX} header>>=
+writes("\\documentstyle[noweb]{article}\\pagestyle{noweb}\\noweboptions{", tab(0),
+       "}\\begin{document}")
+@
+\subsection{Cross-reference and index support}
+
+\subsubsection{Chunk cross-reference}
+We begin with basic cross-reference [[@xref label]] and [[@xref ref]],
+then show the chunk cross-reference that comes at the end of a code chunk.
+The {\LaTeX} back end ignores [[@xref nextdef]] and [[@xref prevdef]].
+<<@xref>>=
+if ="@xref "               then { <<@xref tests>> <<bad @xref>>                   } else
+<<@xref tests>>=
+if ="label "               then { lastxreflabel := tab(0)			  } else
+if ="ref "                 then { lastxrefref   := tab(0)			  } else
+if ="begindefs"   & pos(0) then { writes("\\nwalsodefined{")		          } else
+if ="defitem "             then { writes("\\\\{", tab(0), "}")		          } else
+if ="enddefs"     & pos(0) then { writes("}")				          } else
+if ="beginuses"   & pos(0) then { writes("\\nwused{")			          } else
+if ="useitem "             then { writes("\\\\{", tab(0), "}")		          } else
+if ="enduses"     & pos(0) then { writes("}")				          } else
+if ="notused "             then { writes("\\nwnotused{", TeXliteral(tab(0)), "}") } else
+if ="nextdef "             then {                                                 } else
+if ="prevdef "             then {                                                 } else
+<<clear [[lastxref*]]>>=
+every lastxreflabel | lastxrefref := &null
+<<bad @xref>>=
+warn_unknown("xref " || tab(upto(' \t') | 0))
+@
+\subsubsection{Identifier cross-reference, i.e.\ index}
+<<@index>>=
+if ="@index "               then { <<@index tests>> <<bad @index>>                } else
+<<bad @index>>=
+warn_unknown("index " || tab(upto(' \t') | 0))
+@
+This first round of stuff just handles the basics: definitions, uses, and newlines.
+Unless it's OK to show the index (by \LA{}SI\RA), we handle nothing but 
+\hbox{[[@index nl]]}.
+<<@index tests>>=
+if ="nl" & pos(0)        then        { write(if \code then "\\eatline" else "%")  } else
+if ="defn "              then <<SI>> { <<handle index defn>>                      } else
+if ="use "               then <<SI>> { <<handle index use>>                       } else
+<<SI>>=
+/noindex &
+@
+Nothing is involved in handling definitions and uses unless there are cross-reference
+labels pending.
+An index definition or use has its own [[@xref label]] only if it's in documentation;
+if it's in code, we use the anchor label of the definition.
+(You don't have to know that to understand what happens here, but I thought you
+might like to.)
+<<handle index defn>>=
+writes("\\nosublabel{", \lastxreflabel, "}")
+writes("\\nwindexdefn{", TeXliteral(name := tab(0)), "}{", indexlabel(name), "}{",
+	\lastxrefref, "}")
+<<clear [[lastxref*]]>>
+@
+The {\LaTeX} back end ignores uses in code; they get bundled up by a previous filter
+(the cross-referencer) and handled elsewhere.
+<<handle index use>>=
+if /code then {
+  writes("\\protect\\nosublabel{", \lastxreflabel, "}")
+  writes("\\protect\\nwindexuse{", TeXliteral(name := tab(0)), "}{", 
+                indexlabel(name), "}{", \lastxrefref, "}")
+}
+<<clear [[lastxref*]]>>
+@
+Here's the local identifier cross-reference that appears at the end of a code chunk.
+We guard everything with \LA{}SI\RA, as before.
+<<@index tests>>=
+if ="begindefs" & pos(0) then <<SI>> { writes("\\nwidentdefs{")                   } else
+if ="isused "            then <<SI>> { "handled by latex"                         } else
+if ="defitem "           then <<SI>> { i := tab(0); <<write [[i]] with [[\\]]>>   } else
+if ="enddefs"   & pos(0) then <<SI>> { writes("}")                                } else
+if ="beginuses" & pos(0) then <<SI>> { writes("\\nwidentuses{"); ulist := []      } else
+if ="isdefined "         then <<SI>> { "latex finds the definitions"              } else
+if ="useitem "           then <<SI>> { i := tab(0); <<write [[i]] with [[\\]]>> 
+                                        put(ulist, i);                            } else
+if ="enduses"   & pos(0) then <<SI>> { writes("}"); <<write [[ulist]]>>           } else
+<<write [[i]] with [[\\]]>>=
+writes("\\\\{{", TeXliteral(i), "}{", indexlabel(i), "}}") 
+<<write [[ulist]]>>=
+every i := !ulist do 
+  writes("\\nwindexuse{", TeXliteral(i), "}{", indexlabel(i), "}{", \lastdefnlabel, "}")
+@ 
+\subsubsection{The list of chunks and the index}
+The treatments of the list of chunks and the index are similar.
+Both use [[\nwixlogsorted]], which writes magic goo into the {\tt .aux} file.
+The real cross-referencing is done by the underlying {\LaTeX} code.
+<<@xref tests>>=
+if ="beginchunks" & pos(0) then { 						  } else
+if ="chunkbegin "          then { label := tab(upto(' ')); =" "
+                                  writes("\\nwixlogsorted{c}{{", convquotes(tab(0)),
+                                      "}{", label, "}{")		          } else
+if ="chunkuse "            then { writes("\\nwixu{", tab(0), "}")		  } else
+if ="chunkdefn "           then { writes("\\nwixd{", tab(0), "}")		  } else
+if ="chunkend"    & pos(0) then { write("}}%")				          } else
+if ="endchunks"   & pos(0) then {     					          } else
+<<@index tests>>=
+if ="beginindex"  & pos(0) then <<SI>> { 					  } else
+if ="entrybegin "          then <<SI>> { label := tab(upto(' ')); =" "; name := tab(0)
+                                         write("\\nwixlogsorted{i}{{", TeXliteral(name),
+                                         "}{", indexlabel(name), "}}%")	          } else
+if ="entryuse "            then <<SI>> { "handled by latex"	                  } else
+if ="entrydefn "           then <<SI>> { "handled by latex"                       } else
+if ="entryend"    & pos(0) then <<SI>> {                                          } else
+if ="endindex"    & pos(0) then <<SI>> {                                          } else
+@
+\subsection{Utility procedures}
+<<*>>=
+procedure escape(line, chars, prefix)
+  /prefix := "\\"
+  line ? {
+    s := ""
+    while s ||:= tab(upto(chars)) do s ||:= prefix || move(1)
+    return s || tab(0)
+  }
+end
+<<*>>=
+global TeXspecials
+<<initialization>>=
+TeXspecials := '\\{}$&#^_ ~%'
+@
+I can't use [[\\char`\%]] and similar sequences with latex2e, because
+[[`]] is an active character that suppresses ligatures.  So I got TeX to print out the
+actual character codes for me.
+This string ([['\\{}$&#^_ ~%']]) should serve as a test.
+<<*>>=
+procedure TeXliteral(arg)
+  static nospace, code
+  initial { codes := ["\\", 92, "{", 123, "}", 125, "$", 36, "&", 38, "#", 35, "^", 94, 
+                      "_", 95, "%", 37, "~", 126]
+            code := table()
+            while (c := get(codes), n := get(codes)) do code[c] := string(n)
+            if c := !TeXspecials & c ~== " " & not member(code, c) then
+	      stop("internal error, character-code mismatch, report a bug!")
+          }
+  s := ""
+  arg ? {
+    while s ||:= tab(upto(TeXspecials)) do {
+      c := move(1)
+      if member(code, c) then
+        s ||:= "{\\char" || code[c] || "}"
+      else
+        s ||:= "\\" || c
+    }
+    return s || tab(0)
+  }
+end
+@
+A special function is used to implement {\tt noweb}'s quoting 
+convention within chunk names.
+<<*>>=
+procedure convquotes(s)
+  r := ""
+  s ? {
+    while r ||:= tab(find("[[")) do {
+      ="[[" | stop("impossible missing [[")
+      r ||:= "\\code{}" || TeXliteral(tab(find("]]")))
+      r ||:= tab(many(']')-2)
+      ="]]" | stop("impossible missing ]]")
+      r ||:= "\\edoc{}"
+    }
+    return r || tab(0)
+  }
+end
+<<*>>=
+procedure warn_unknown(tag)
+  static warned
+  initial warned := set()
+  if not member(warned, tag) then {
+    write(&errout, "Warning: unrecognized escape @", tag, tab(0))
+    insert(warned, tag)
+  }
+  return
+end
+@
+This gets special characters out of the labels used by identifiers.
+<<*>>=
+procedure indexlabel(ident)
+  static badset, trans
+  initial {
+    <<initialize [[trans]]>>
+    badset := ''
+    every badset ++:= key(trans)
+  }
+  ident ? {
+    s := ""
+    while s ||:= tab(upto(badset)) do s ||:= ":" || trans[move(1)]
+    return s || tab(0)
+  }
+end
+<<initialize [[trans]]>>=
+trans := table()
+trans[" "] := "sp"      # space
+trans["#"] := "has"     # hash
+trans["$"] := "do"      # dollar
+trans["%"] := "pe"      # percent
+trans["&"] := "am"      # ampersand
+trans[","] := "com"     # commad
+trans[":"] := "col"     # colon
+trans["\\"] := "bs"      # backslash
+trans["^"] := "hat"     # hat
+trans["_"] := "un"      # underscore
+trans["{"] := "lb"      # left brace
+trans["}"] := "rb"      # right brace
+trans["~"] := "ti"      # tilde
+@ %def indexlabel
