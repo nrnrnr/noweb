@@ -1,0 +1,87 @@
+\def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
+\let\filbreak=\semifilbreak
+\raggedbottom
+\def\begindocument{\begin{document}}
+
+\input nwkernel
+
+\def\begincode#1{\begin{trivlist}\item[]\setupcode\parindent=1.5em\indent\bchack}
+\def\endcode{\end{trivlist}}
+\def\begindocs#1{\relax}
+\let\enddocs=\relax
+\def\webcode{\begin{trivlist}\item[]\setupcode\parindent=1.5em\bchack}
+\let\endwebcode=\endcode
+
+\let\chunklist=\relax
+
+%%%%%%%%%%%%%%%% following code supports cross-referencing
+% lists of page references cause all the trouble
+
+
+\def\alsodefined#1{\hspace{-\parindent}{\footnotesize\rm 
+	This definition is continued on \pages{#1}.}}
+\def\used#1{\hspace{-\parindent}{\footnotesize\rm 
+	This code is used on \pages{#1}.}}
+\def\notused{\hspace{-\parindent}{\footnotesize\rm 
+	Root module (not used in this document).}}
+
+
+\def\empty{}
+\def\lop#1\to#2{\expandafter\lopoff#1\lopoff#1#2}
+\long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
+\def\loop#1\repeat{\def\iterate{#1\expandafter\iterate\fi}%
+	\iterate \let\iterate\relax}
+
+\def\thepageref#1{\@ifundefined{r@#1}{0\@warning
+   {Reference `#1' on page \thepage \space 
+    undefined}}{\@nameuse{r@#1}}}
+
+\newcount\lastpage
+\newcount\thispage
+\newcount\pagesout
+
+\def\dosetpage#1#2#3\@nil{\thispage=#2\relax}
+
+\def\setthispage#1\done{%
+   \@ifundefined{r@#1}{{\bf ??}\@warning
+   {Reference `#1' on page \thepage \space 
+    undefined}\thispage=0}{\edef\@tempa{\@nameuse{r@#1}}\expandafter
+    \dosetpage\@tempa\@nil}}
+
+\def\setpagenumbers#1{%
+  \def\thepages{#1}%
+  \def\pagenumbers{}%
+  \lastpage=-1
+  \loop\ifx\thepages\empty\else
+     \lop\thepages\to\lastref
+    \expandafter\setthispage\lastref\done
+    \ifnum\thispage=\lastpage \else
+      \edef\pagenumbers{\pagenumbers\noexpand\\{\the\thispage}}%
+      \lastpage=\thispage  
+    \fi
+  \repeat}
+
+\def\pages#1{%
+  \setpagenumbers{#1}%
+  \expandafter\dopages\pagenumbers\done
+}
+
+\def\dopages#1\done{%
+  \def\thepages{#1}%
+  \lop\thepages\to\lastref
+  \lastpage=\lastref
+  \ifx\thepages\empty page \else pages \fi
+  \the\lastpage
+  \pagesout=1
+  \loop\ifx\thepages\empty\else
+    \lop\thepages\to\lastref
+    \thispage=\lastref
+    \ifx\thepages\empty 
+       \ifnum\pagesout>1 , \else{} \fi
+       and 
+    \else ,
+    \fi 
+    \the\thispage
+    \advance\pagesout by 1
+    \lastpage=\thispage  
+  \repeat}
