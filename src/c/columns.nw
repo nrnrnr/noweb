@@ -16,6 +16,7 @@ extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
 @ %def tabsize 
 <<*>>=
+static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include "columns.h"
 
@@ -50,3 +51,4 @@ void indent_for (int width, FILE *fp) {
     }
 }
 @ %def indent_for
+
