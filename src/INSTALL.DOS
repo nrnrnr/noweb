@@ -1,0 +1,43 @@
+Lee Wittenburg kindly provided this account of his efforts in getting
+noweb working on a DOS machine using the MKS toolkit.
+
+	1.  All the shell scripts without an extension required a .KSH.  The
+	makefile, of course needed to be changed accordingly.  Also, the
+	normal .o to .obj and <no extension> to .exe was necessary in the
+	makefile.  No other changes were necessary, except minor ones due to
+	bugs in MKS make.
+
+	2.  Rename INSTALL to INSTALL.NIX to keep make from getting confused.
+
+	3.  I changed all references to "nawk" to "awk".
+
+	4.  There is a bug in MKS Awk that requires a couple of changes in
+	NOWEAVE.  There's a problem with backslashes in the 2nd argument to
+	gsub() that requires a couple of changes to NOWEAVE.  The lines
+
+		gsub("\\\\", "\\\\", line)
+		gsub("{", "\\{", line); gsub("}", "\\}", line)
+
+	need to be 
+
+		gsub("\\\\", "\\\\\\", line)
+		gsub("{", "\\\{", line); gsub("}", "\\\}", line)
+
+	I've reported this bug to MKS (when I first found it in version
+	3.2), but it still hasn't been fixed.  It's not a NOWEB bug, but 
+	MKS Awk NOWEB users need to know about it.  
+
+	5.  MKS Awk is POSIX compiliant with regard to regular expression
+	syntax; Unix Awk isn't; GNU Awk swings both ways (I believe); other
+	Awks I couldn't say about.  This causes a problem ONLY in NOXREF.
+	I had to change the line
+
+		gsub(/[\[\]\\{} -]/, "*", key)
+
+	to
+
+		gsub(/[[\{} -]|\]/, "*", key)
+
+	which probably won't work on a Unix Awk. There's likely to be
+        a Unix/POSIX discrepency in Awks for quite a while.
+
