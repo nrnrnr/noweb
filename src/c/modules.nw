@@ -12,10 +12,12 @@ typedef struct location {       /* identify lines of source */
     int lineno;
 } Location;
 
+typedef enum parttype {STRING=1, MODULE, NEWLINE} Parttype;
+
 struct modpart {
-    int mtype;                  /* type of fragment: STRING or MODULE */
+    Parttype ptype;             /* type of fragment: STRING, MODULE, NEWLINE */
     char *contents;
-    Location loc;               /* for STRING, where's it from ? */
+    Location loc;               /* for String, where's it from ? */
     struct modpart *next;
 };
 
@@ -28,24 +30,23 @@ typedef struct module {
 #include <stdlib.h>
 #include "modules.h"
 #include "modtrees.h"
-#include "markup.h"
 #include "errors.h"
 #include "columns.h"
+#include "strsave.h"
 
 <<Function declarations>>
 
 <<C functions>>
 @
 <<header>>=
-#define STRING 1
-#define MODULE 2
-#define addstring(MP,S,L) add_string_or_module(MP,S,STRING,&L)
-        /* add a string to a module definition */
-#define addmodule(MP,S) add_string_or_module(MP,S,MODULE,0)
-        /* add a module reference to a module definition */
-void add_string_or_module (Module mp, char *s, int type, Location *loc);
+#define addstring(MP,S,L) add_part(MP,S,STRING,&L)
+        /* add a string to a module definition (stripping final newline) */
+#define addmodule(MP,S) add_part(MP,S,MODULE,0)
+        /* add a module reference to a module definition (stripping final newline) */
+#define addnewline(MP) add_part(MP,0,NEWLINE,0)
+void add_part (Module mp, char *s, Parttype type, Location *loc);
 <<C functions>>=
-void add_string_or_module (Module mp, char *s, int type, Location *loc) {
+void add_part (Module mp, char *s, Parttype type, Location *loc) {
     struct modpart *p = newmodpart(type,s,loc);
     append (mp,p);
 }
@@ -54,8 +55,11 @@ static struct modpart *
 newmodpart(int type, char *s, Location *loc) {
     struct modpart *p = (struct modpart *) malloc (sizeof (struct modpart));
     checkptr(p);
-    p->mtype = type;
-    p->contents = unescape(s);
+    p->ptype = type;
+    if (s) {
+        p->contents = strsave(s);
+        <<strip final newline from p->contents>>
+    }
     if (loc) p->loc = *loc;
     p->next = NULL;
     return p;
@@ -67,9 +71,14 @@ void append(Module mp, struct modpart *p) {
     if (mp->head == NULL) {
         mp->head = mp->tail = p;
     } else {
-        mp ->tail->next = p;
+        mp->tail->next = p;
         mp->tail = p;
     }
+}
+<<strip final newline from p->contents>>=
+{ int k = strlen(p->contents)-1;
+  if (p->contents[k] == '\n') p->contents[k] = '\0';
+  else impossible("input line doesn't end with newline");
 }
 @
 <<Function declarations>>=
@@ -94,6 +103,9 @@ int expand (Module mp, int indent, int partial_distance, int maxlevel,
 	    char *locformat, FILE *out);
         /* expand a module, writing to file out */
 <<C functions>>=
+static char *lastfilename = 0;
+static int lastlineno = -1;
+
 int expand (Module mp, int indent, int partial_distance, int maxlevel, 
             char *locformat, FILE *out) {
     struct modpart *p;
@@ -104,12 +116,11 @@ int expand (Module mp, int indent, int partial_distance, int maxlevel,
     if (maxlevel < 0) <<Dump error information and return>>
 
     for (p=mp->head; p!=NULL; p=p->next) {
-        if (p->mtype==STRING) {
-            <<print a string>>
-        } else if (p->mtype==MODULE) {
-            <<expand a module>>
-        } else {
-            impossible("Piece type is neither STRING nor MODULE");
+	switch (p->ptype) {
+	    case STRING:  <<print a string>>;  break;
+	    case MODULE:  <<expand a module>>; break;
+ 	    case NEWLINE: <<print a newline>>; break;
+            default: impossible("bad part type");
         }
     }
     return error;
@@ -133,8 +144,12 @@ if (*(p->contents) != '\0') {
         indent_for(indent, out);
     }
     fprintf(out,"%s",p->contents);
-    <<update [[partial_distance]] after printing [[p->contents]]>>
+    partial_distance += strlen(p->contents);
 }
+<<print a newline>>=
+partial_distance = 0;
+putc('\n', out);
+lastlineno++;
 <<expand a module>>=
 /*fprintf(stderr,"Expanding @<<%s@>>...\n", p->contents);*/
 newmod = lookup(p->contents);
@@ -148,13 +163,6 @@ if (newmod==NULL) {
     if (retcode > error) error = retcode;
 }
 partial_distance += strlen(p->contents) + 4; /* length of brackets */
-<<update [[partial_distance]] after printing [[p->contents]]>>=
-{ int l = strlen(p->contents);
-  if (p->contents[l-1] == '\n')
-      partial_distance = 0;
-  else
-      partial_distance += l; /* doesn't handle tabs correctly! */
-}
 @
 <<Dump error information and return>>=
 {
@@ -190,15 +198,14 @@ void remove_final_newline (Module mp) {
         /* remove trailing newline that must be in module */
     if (mp->tail==NULL) /* module has no text */
         return;
-    if (mp->tail->mtype != STRING)
-        impossible("Module doesn't end with string");
+    if (mp->tail->ptype != NEWLINE)
+        impossible("Module doesn't end with newline");
+    else if (mp->tail == mp->head)
+	    mp->head = mp->tail = NULL;
     else {
-        char *p = mp->tail->contents;
-        int l = strlen(p);
-        if (l==0) impossible("Module ends with null string");
-        if (p[l-1] != '\n') 
-            impossible("Module doesn't end with newline");
-        p[l-1] = '\0';
+	struct modpart *p = mp->head;
+	while (p->next != mp->tail) p = p->next;
+        p->next = NULL;
     }
 }
 @
@@ -210,26 +217,25 @@ If so, then a newline is necessary before [[#line]] can be emitted.
 <<header>>=
 int printloc(FILE *fp, char *fmt, Location loc, int partial);
 <<C functions>>=
-static char* lastfilename = 0;
-static int lastlineno = -1;
-
 int printloc(FILE *fp, char *fmt, Location loc, int partial) {
     char *p;
     if (*fmt
-    && (loc.filename!=lastfilename || ++lastlineno != loc.lineno)) {
+    && (loc.filename!=lastfilename || lastlineno != loc.lineno)) {
         if (partial) putc('\n',fp);
-        for (p=fmt;*p;p++) {
-            if (*p == '%') {
-                if (*++p == '%') putc('%',fp);
-                else if (*p == 'F') fprintf(fp,"%s",loc.filename);
-                else if (*p == 'L') fprintf(fp,"%d",loc.lineno);
-                else <<complain about bad format character>>
-            } else putc(*p,fp);
-        }
+        <<write out the line number pragma>>
         lastfilename = loc.filename;
         lastlineno = loc.lineno;
         return 1;
     } else return 0;
+}
+<<write out the line number pragma>>=
+for (p=fmt;*p;p++) {
+    if (*p == '%') {
+        if (*++p == '%') putc('%',fp);
+        else if (*p == 'F') fprintf(fp,"%s",loc.filename);
+        else if (*p == 'L') fprintf(fp,"%d",loc.lineno);
+        else <<complain about bad format character>>
+    } else putc(*p,fp);
 }
 <<complain about bad format character>>=
 { static int complained = 0;
@@ -239,4 +245,7 @@ int printloc(FILE *fp, char *fmt, Location loc, int partial) {
   }
 }
 <<RCS log>>=
-$Log$
+$Log: modules.nw,v $
+# Revision 1.1  1991/08/23  23:39:22  ramsey
+# Initial revision
+#
