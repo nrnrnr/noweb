@@ -14,9 +14,9 @@ Output may contain [[
         @nl
         @file <filename>
         @line nnn
-	@index [defn|use] <indexed string>
-	@index nl	
-	@literal <literal text for weave or other tool>
+        @index [defn|use] <indexed string>
+        @index nl       
+        @literal <literal text for weave or other tool>
 ]]
 Here's the code that writes the output.
 We have one function to print the state, which takes care of
@@ -79,8 +79,8 @@ void markup (FILE* in, FILE *out, char *filename) {
     int quoting = 0;            /* currently quoting code? */
     int count = 0;              /* number of current chunk, from 0 */
     int missing_newline;        /* was last line missing a trailing \n? */
-    int lineno = 0;		/* number of lines read */
-    int last_open_quote;	/* line number of last unmatched open quote */
+    int lineno = 0;             /* number of lines read */
+    int last_open_quote;        /* line number of last unmatched open quote */
 
     char *line;                 /* part of line up to mark (or end) */
     char *mark;                 /* potentially marked part of line */
@@ -131,8 +131,8 @@ while ((line = getline_expand(in)) != NULL) {
         print_pair(out,"nl",0);     /* could be implicit but this is better */
     } else if (is_def(line)) {
         <<emit index definitions and index newline>>
-	if (state == Code)
-	    state = CodeIndex;
+        if (state == Code)
+            state = CodeIndex;
     } else {
         if (starts_doc(line) || state == CodeIndex) {
             <<complain and correct unmatched open quote, if any>>
@@ -140,10 +140,9 @@ while ((line = getline_expand(in)) != NULL) {
             count++;
             state = Docs;       /* always reading docs after a stop */
             print_state(out, Begin, state, count);
-	    if (starts_doc(line))
+            if (starts_doc(line))
                 line = first_doc_line(line);
         }
-        <<Check a bunch of ``mistake indicators''>>
         switch(state) {
             case Code: <<convert a code line>> break;
             case Docs: <<convert a documentation line>> break;
@@ -151,6 +150,7 @@ while ((line = getline_expand(in)) != NULL) {
         }    
     }
 }
+<<complain and correct unmatched open quote, if any>>
 <<add a trailing newline if one was missing>>
 print_state(out, End, state, count);
 @
@@ -184,11 +184,20 @@ Note that [[if (quoting = !quoting)]] is a simultaneous toggle and test.
 <<convert a documentation line>>=
 for (; (mark = (quoting ? quote_end : quote_start)(line,1)) != NULL; 
        line = mark) {
+    if (!quoting) {<<complain if [[line]] has [[mod_start]]>>}
     if (*line) print_pair(out, "text", unescape(line));
     print_pair(out, quoting ? "endquote" : "quote", 0);
     if (quoting = !quoting) last_open_quote = lineno;
 }
+if (!quoting) {<<complain if [[line]] has [[mod_start]]>>}
 if (*line) print_pair(out, "text", unescape(line)); 
+@
+If we see a ``module start'' in documentation, this might suggest to us
+that we've made a mistake---perhaps we left the trailing [[=]] off of a definition.
+<<complain if [[line]] has [[mod_start]]>>=
+if (mod_start(line,0) != NULL)
+    errorat(filename, lineno, Warning, 
+            "Warning: chunk name in documentation (or missing = in definition)");
 @
 <<emit index definitions and index newline>>=
 line = remove_def_marker(line);
@@ -209,13 +218,6 @@ if (quoting) {
     errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
     quoting = 0;
 }
-@
-If we missed the module definition line, this might suggest to us
-that we've made a mistake.
-<<Check a bunch of ``mistake indicators''>>=
-if (state != Code && (mod_start(line,0)!=NULL))
-    errorat(filename, lineno, Warning, 
-            "Warning: chunk name in documentation (or missing = in definition)");
 @
 Finally, we give the main program, which opens each file and passes it
 to [[markup]].
@@ -248,7 +250,7 @@ main(int argc, char **argv) {
     else
         markup(stdin,stdout,"");
     exit(errorlevel);
-    return errorlevel; 		/* slay warning */
+    return errorlevel;          /* slay warning */
 }
 @
 <<handle [[-t]]>>=
