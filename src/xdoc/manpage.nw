@@ -4,12 +4,12 @@
 notangle, noweave, nountangle \- noweb, a literate-programming tool
 .SH SYNOPSIS
 .B notangle
-[\fB-R\fProotname] [\fB-filter\fP command]
+[\fB-R\fProotname ...] [\fB-filter\fP command]
 [\fB-L\fP[format]] [file] ...
 .br
 \fBnountangle\fP 
 [\fB-ml\fP|\fB-m3\fP|\fB-c\fP|\fB-c++\fP|\fB-awk\fP|\fB-tex\fP|\fB-f77\fP|\fB-f90\fP]
-[\fB-R\fProotname] [\fB-filter\fP command] [\fB-w\fPwidth] [file] ...
+[\fB-R\fProotname ...] [\fB-filter\fP command] [\fB-w\fPwidth] [file] ...
 .br
 \fBnoweave\fP [options] [file] ...
 .SH DESCRIPTION
@@ -155,7 +155,14 @@ or the other.
 The options are:
 .TP
 .B -R\fIname\fR
-Expand the \fB@<<\fIname\fB@>>\fR code chunk instead of \fB@<<\fP*\fB@>>\fP.
+Expand the \fB@<<\fIname\fB@>>\fR code chunk.
+The 
+.B -R
+option can be repeated, 
+in which case each chunk is written to the output.
+If no
+.B -R
+option is given, expand the chunk named  \fB@<<\fP*\fB@>>\fP.
 .TP
 .B -L\fIformat\fR
 Emit line number indications at chunk boundaries.
