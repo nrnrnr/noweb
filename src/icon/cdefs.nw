@@ -6,7 +6,7 @@ end
 <<*>>=
 global typespecs, storespecs, typequals, specifiers, structlike
 procedure postpass(name, arg)
-  local tok
+  local tok, stat
   static kind
   initial {
     kind := "bogus"
@@ -29,19 +29,21 @@ procedure postpass(name, arg)
           <<eat declarators>>
         } else {
 	  specifier_count := 0
+          stat := &null		# haven't seen static yet
           while (
-            (c_ident_token() == "extern", return) |
-            (member(specifiers, c_ident_token())) | # swallow a specifier
-            (member(structlike, c_ident_token()),   # struct with optional tag
+            (c_ident_token() == "extern", return)         |
+            (member(specifiers, tok := c_ident_token(), 
+                          stat := look_for_static(stat, tok))) | # swallow a specifier
+            (member(structlike, c_ident_token()),          # struct with optional tag
              c_ident_token() | &null) |
-            (any(&ucase, c_ident_token()))          # assume a typedef'd type, skip
+            (any(&ucase, c_ident_token()))           # assume a typedef'd type, skip
           ) do
             specifier_count +:= 1
-          if f := scan_function(tok) then
+          if f := scan_function() then
             if c_token() == (";"|",") then fail else {
 #	      write(&errout, "function ", image(f), " followed by ", 
 #                    image(c_token()) | "<EOL>")
-              wd(f)
+              wd(f, stat)
               return
             }
           if specifier_count > 0 then {<<eat declarators>>}
@@ -52,11 +54,11 @@ procedure postpass(name, arg)
 end
 <<eat declarators>>=
 while x := declarator() do {
-  wd(x)
+  wd(x, stat)
   if c_token() == "," then &null else return
 }
 <<*>>=
-procedure wd(x)
+procedure wd(x, stat)
   static reserved
   initial reserved := set([
         "asm", "auto", "break", "case", "char", "const", "continue",
@@ -65,10 +67,11 @@ procedure wd(x)
         "signed", "sizeof", "static", "struct", "switch", "typedef", "union",
         "unsigned", "void", "volatile", "while"])
   if member(reserved, x) then return
-  return writedefn(x)
+  return writedefn(x, stat)
 end
 
 procedure prepass(name, arg)
+  return
 end
 
 procedure c_ident_token()
@@ -111,3 +114,13 @@ procedure declarator()
     (tab(bal('])','[(',')]')), c_token())
   return d
 end
+<<*>>=
+procedure look_for_static(stat, tok)
+  return (tok == "static") | stat
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id$" ||
+         "$Name$"
+end
+@
