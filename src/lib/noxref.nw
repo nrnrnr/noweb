@@ -1,0 +1,215 @@
+\section{Cross-referencing tool}
+This filter adds labels and cross-references to chunk definitions and uses,
+and it converts the line [[\nowebchunks]] into an alphabetical list of chunks.
+
+Following the lead of J. G. Krom, I make it possible to generate the
+file [[noxref]] for the Unix environment, and the files [[noxref.bat]]
+and [[noxref.awk]] for the MS-DOS environment.
+
+<<*>>=
+#!/bin/sh
+nawk '<<cross-reference awk program>>'
+<<noxref.awk>>=
+<<cross-reference awk program>>
+<<noxref.bat>>=
+@echo off
+REM The NOWEB environment variable must be set to the directory
+REM where NOXREF.AWK is.  It must end in '/' or '\' as required
+REM by the AWK interpreter in use.
+awk -f %NOWEB%noxref.awk
+@
+The function [[modid]] turns a chunk name into a unique key acceptable
+for use as a {\LaTeX} label.
+The first step maps the name into a 6-character key; the second step
+appends an integer (from [[keycounts]]) used to distinguish different
+chunk names that map to the same key.
+[[idtable]] is used to cache the results so the computation is
+performed just once per chunk name.
+<<function definitions>>=
+function modid(name, key) {
+  if (idtable[name] == "") {
+    key = name
+    gsub(/[\[\]\\{} `#%&~_^-]/, "*", key)	# ditch special chars
+    if (length(key) > 6) key = substr(key,1,3) substr(key, length(key)-2, 3)
+    keycounts[key] = keycounts[key] + 1
+    if (keycounts[key] > 1)
+      idtable[name] = key "-" keycounts[key]
+    else
+      idtable[name] = key
+  }
+  return idtable[name]
+}
+<<initialization>>=
+idtable[0] = 0 ; keycounts[0] = 0
+@
+The complete program runs in two passes.
+The first pass saves all the input and builds up list of definitions
+and uses.
+The second pass writes out all the lines with suitable
+cross-referencing markup.
+The first pass saves information in the following tables, which are
+indexed by chunk name. 
+\begin{itemize}
+\item[\tt defns]  Lists labels of all defining instances.
+\item[\tt firstdef] Label of the first defining instance.
+\item[\tt dcounts] Counts the number of defining instances.
+\item[\tt uses] Lists labels of all uses.
+\item[\tt dcounts] Counts the number of uses.
+\end{itemize}
+<<initialization>>=
+defns[0] = 0 ; firstdef[0] = 0 ; dcounts[0] = 0 ; uses[0] = 0 ; ucounts[0] = 0
+@ The first pass logs both definitions ([[which == "DEFN"]]) and uses
+([[which == "USE"]]) by calling [[logname]].
+<<function definitions>>=
+function logname(which, tbl, counts, name, id, label) {
+  counts[name] = counts[name] + 1
+  id = which ":" curfile ":" modid(name) "-" counts[name]
+  tbl[name] = tbl[name] id " "
+  if (which == "DEFN" && counts[name] == 1) label = "sublabel"
+  else                                      label = "label"
+  lines[nextline++] = "@literal \\" label "{" id "}"
+  if (which == "DEFN" && firstdef[name] == "") firstdef[name] = id
+}
+@
+The structure of the full program, showing both passes, is:
+<<cross-reference awk program>>=
+<<function definitions>>
+BEGIN { <<initialization>> }
+{ lines[nextline++] = $0 }
+/^@defn / { logname("DEFN", defns, dcounts, substr($0, 7)) }
+/^@use /  { logname("USE", uses, ucounts, substr($0, 6)) }
+/^@file / { curfile = modid(substr($0, 7) substr($0, 10, 3)) }
+END { <<write out the program with cross-reference info>> }
+@
+The second pass just copies lines to its output, except for
+definitions, uses and the [[\nowebchunks]] control sequence.
+It also puts a bunch of cross-reference information at the end of each
+code chunk.
+<<write out the program with cross-reference info>>=
+for (i=0; i < nextline; i++) {
+  name = substr(lines[i], 2)
+  if (index(name, " ")) {
+    name = substr(name, 1, index(name, " ")-1)
+    arg = substr(lines[i], length(name)+3)
+  } else {
+    arg = ""
+  }
+  if (name == "defn") {
+    thischunk = arg
+    <<emit definition>>
+  } else if (name == "use") {
+    <<emit use>>
+  } else if (name == "begin") {
+    chunktype = substr(arg, 1, 4)
+    print lines[i]
+  } else if (name == "quote") {
+    quote = 1
+    print lines[i]
+  } else if (name == "endquote") {
+    quote = 0
+    print lines[i]
+  } else if (name == "end") {
+    if (chunktype == "code") {
+      <<emit cross-reference info for [[thischunk]]>>
+    }
+    print lines[i]
+  } else if (name == "text" && arg == "\\nowebchunks" && chunktype == "docs" && quote == 0) {
+    <<emit sorted list of chunks>>
+  } else {
+    print lines[i]
+  }
+  delete lines[i]
+}
+@ 
+\maybreak{1in}
+<<emit definition>>=
+printf "@defn %s~{\\footnotesize\\Rm\\subpageref{%s}}\n", arg, firstdef[arg]
+<<emit use>>=
+if (firstdef[arg] != "") 
+  printf "@use %s~{\\footnotesize\\Rm\\subpageref{%s}}\n", arg, firstdef[arg]
+else
+  printf "@use %s~{\\footnotesize\\Rm (never defined)}\n", arg
+@
+Cross reference information is emitted only at the first definition of each
+chunk, as tracked by [[firstdefnout]].
+<<initialization>>=
+firstdefnout[0] = 0
+<<emit cross-reference info for [[thischunk]]>>=
+if (firstdefnout[thischunk] == 0) {
+  firstdefnout[thischunk] = 1
+  n = split(defns[thischunk], a)
+  if (n > 1) {
+    printf "@literal \\nwalsodefined{"
+    for (j = 2; j <= n; j++) 
+      printf "\\\\{%s}", a[j]
+    printf "}\n"
+  }
+  if (uses[thischunk] != "") {
+    printf "@literal \\nwused{"
+    n = split(uses[thischunk], a)
+    for (j = 1; j <= n; j++) 
+      printf "\\\\{%s}", a[j]
+    printf "}\n"
+  } else 
+      printf "@literal \\nwnotused{%s}\n", escapeTeXspecials(thischunk)
+}
+@ \subsection{Sorting}
+Each chunk name is mapped to a sorting key.
+Ideally such a key would contain only lower-case letters and spaces,
+and it would discount \TeX{} control sequences, and more.
+Such computations are so excruciating in awk that I content myself 
+with eliminating nonletters.
+<<function definitions>>=
+function sortkey(name, s) {
+  s = name
+  gsub(/[^a-zA-Z ]/, "", s)
+  return s
+}
+@ I maintain a two parallel lists, one containing sort keys and the other 
+containing chunk names.
+<<function definitions>>=
+function insertchunk(name, i, tmp) {
+  sortcount = sortcount + 1
+  sortnames[sortcount] = name
+  sortkeys[sortcount] = sortkey(name)
+  i = sortcount
+  while (i > 1 && (sortkeys[i] <  sortkeys[i-1] ||
+                   sortkeys[i] == sortkeys[i-1] && sortnames[i] < sortnames[i-1])) {
+    tmp = sortkeys [i]; sortkeys [i] = sortkeys [i-1]; sortkeys [i-1] = tmp
+    tmp = sortnames[i]; sortnames[i] = sortnames[i-1]; sortnames[i-1] = tmp
+    i = i - 1
+  }
+}
+@
+That's enough machinery to do the job.
+<<emit sorted list of chunks>>=
+if (sortcount == 0) {
+  <<insert all chunk names into [[sortnames]]>>
+}
+for (j = 1; j <= sortcount; j++) {
+  if (firstdef[sortnames[j]] != "") 
+    print "@use " sortnames[j] "~{\\footnotesize\\Rm\\subpageref{" firstdef[sortnames[j]] "}}"
+  else
+    print "@use " sortnames[j] "~{\\footnotesize\\Rm (never defined)}"
+  if (j < sortcount)
+    print "@literal \\\\"
+}
+<<insert all chunk names into [[sortnames]]>>=
+delete defns[0]
+for (c in defns) insertchunk(c)
+delete uses[0]
+for (c in uses) if (!(c in defns)) insertchunk(c)
+@
+<<function definitions>>=
+function escapeTeXspecials(name, l, r) {
+  r = name
+  l = ""
+  while (match(r, /[{}$%&#^_~\\]/) > 0) {
+    l = l substr(r, 1, RSTART-1) "\\" substr(r, RSTART, 1)
+    r = substr(r, RSTART+1)
+  }
+  return l r
+}
+@
+\subsection{List of chunk names}
+\nowebchunks
