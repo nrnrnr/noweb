@@ -1,5 +1,6 @@
 \documentstyle[noweb,twoside]{article}
 \pagestyle{noweb}\raggedbottom
+\noweboptions{longchunks}
 \title{{\TeX} support for {\tt noweb}}
 \author{Norman Ramsey}
 \begin{document}
@@ -10,12 +11,10 @@ This document describes the {\TeX} code that supports {\tt noweave}
 and {\tt noweb}.  Those interested in customizing their output should
 focus on Section~\ref{section:sty}.
 \section{Basic {\TeX} support for {\tt noweb}}
-<<kernel>>=
-\def\LL{@<<}
-\def\GG{@>>}
-\def\LLS{[[}
-\def\RRS{]]}
-@ %def \LL \GG \LLS \RRS
+This basic code is used for both {\TeX} and {\LaTeX}.
+The first step is to define [[\codehsize]], which is the width in
+which code is set, and [[\codemargin]], which is the amount by which
+it is indented.
 <<kernel>>=
 % make \hsize in code sufficient for 88 columns
 \setbox0=\hbox{\tt m}
@@ -24,6 +23,13 @@ focus on Section~\ref{section:sty}.
 \newdimen\codemargin
 \codemargin=0pt
 @ %def \codehsize \codemargin
+
+Most code is set in an environment in which [[\setupcode]] has been
+executed.
+In this environment, only [[\]], [[{]], and [[}]] have their usual
+categories; every other character represents itself.
+Appropriate [[\chardef]]s ensure that the special characters can be
+escaped with a backslash.
 <<kernel>>=
 \chardef\other=12
 \def\setupcode{%
@@ -39,6 +45,12 @@ focus on Section~\ref{section:sty}.
   \catcode`\^=\other
   \obeyspaces\Tt
 }
+@ %def \setupcode 
+[[\eatline]] is used to consume newlines that should be ignored,
+for example, the newlines at the end of [[@ %def ]]{\em identifiers} lines.
+I can't remember what [[\startline]] or [[\newlines]] are for; I don't
+think {\tt noweave} ever emits them.
+<<kernel>>=
 {\catcode`\^^M=\active % make CR an active character
   \gdef\newlines{\catcode`\^^M=\active % make CR an active character
          \def^^M{\par\startline}}%
@@ -46,7 +58,10 @@ focus on Section~\ref{section:sty}.
 }
 %%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
 \def\startline{\noindent\hskip\parindent\ignorespaces}
-@ %def \setupcode \startline
+@ %def \startline \eatline
+
+Within a code environment, it may be necessary to restore the 
+category codes in order to set a module (chunk) name.
 <<kernel>>=
 {\obeyspaces\global\let =\ } % from texbook, p 381
 \def\setupmodname{%
@@ -59,15 +74,25 @@ focus on Section~\ref{section:sty}.
   \catcode`\^=7
   \catcode`\ =10
   \catcode`\^^M=5
-  \rm}
+  \Rm}
 @ %def \setupmodname
 @ \sublabel{ref:fred}
+
+{\tt noweave} brackets uses of chunk names with [[\LA]] and [[\RA]], which
+handle the angle brackets, font, and environment.
 <<kernel>>=
-\def\LA{\begingroup\setupmodname\it$\langle${}}
+\def\LA{\begingroup\setupmodname\It$\langle${}}
 \def\RA{\/$\rangle$\endgroup}
 \def\code{\leavevmode\begingroup\setupcode\newlines}
 \def\edoc{\endgroup}
 @ %def \LA \RA \code \edoc
+
+[[\equivbox]] and [[\plusequivbox]] are used to set the
+``\unhcopy\equivbox''
+and ``\unhcopy\plusequivbox'' that open a chunk definition or its
+continuation.
+{\tt noweave} brackets definitions of chunk names with [[\moddef]] and
+either [[\endmoddef]] or [[\plusendmoddef]].
 <<kernel>>=
 \newbox\equivbox
 \setbox\equivbox=\hbox{$\equiv$}
@@ -78,9 +103,6 @@ focus on Section~\ref{section:sty}.
 \def\endmoddef{\RA\unhcopy\equivbox}
 \def\plusendmoddef{\RA\unhcopy\plusequivbox}
 @ %def \equivbox \plusequivbox \moddef \endmoddef \plusendmoddef
-<<kernel>>=
-\def\filename#1{\vfil\eject\mark{#1}}
-@ %def \filename
 <<kernel>>=
 \def\chunklist{%
 \errhelp{I changed \chunklist to \nowebchunks.  
@@ -93,11 +115,13 @@ I'll try to avoid such incompatible changes in the future.}%
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
 \ifx\documentstyle\undefined
-  \let\Rm=\rm \let\Tt=\tt       % plain
+  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % plain
 \else\ifx\selectfont\undefined
-  \let\Rm=\rm \let\Tt=\tt       % LaTeX OFSS
-\else                           % LaTeX NFSS
+  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
+\else                                       % LaTeX NFSS
   \def\Rm{\fontfamily\rmdefault \fontseries\default@series
+    \fontshape\default@shape \selectfont}
+  \def\It{\fontfamily\itdefault \fontseries\default@series
     \fontshape\default@shape \selectfont}
   \def\Tt{\fontfamily\ttdefault \fontseries\default@series
     \fontshape\default@shape \selectfont}
@@ -106,8 +130,19 @@ I'll try to avoid such incompatible changes in the future.}%
 @
 \clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}
+\label{section:sty}
+{\LaTeX} support begins with the kernel shown above.
 <<noweb.sty>>=
 <<kernel>>
+@
+\subsection{Support for noweb options}
+<<noweb.sty>>=
+\def\noweboptions#1{%
+  \def\@nwoptionlist{#1}%
+  \@for\@nwoption:=\@nwoptionlist\do{%
+    \@ifundefined{nwopt@\@nwoption}{%
+        \@latexerr{There is no such noweb option as '\@nwoption'}\@eha}{%
+        \csname nwopt@\@nwoption\endcsname}}}
 @
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
@@ -116,10 +151,11 @@ code is indented by [[\codemargin]].
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
 @
-[[\nowebshift]] is used to shift the whole page left to make room for
+[[\noweboptions{shift}]] is used to shift the whole page left to make room for
 the wide code lines.
+It may be emitted by {\tt noweave -shift}, or it might be given by a user.
 <<noweb.sty>>=
-\def\nowebshift{%
+\def\nwopt@shift{%
   \dimen0=-0.8in
   \if@twoside                 % Values for two-sided printing:
      \advance\evensidemargin by \dimen0
@@ -128,10 +164,24 @@ the wide code lines.
      \advance\oddsidemargin by \dimen0
   \fi
 }
-@ %def \nowebshift
-@
+\def\nwopt@noshift{}
+@ %def shift noshift
+
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B shift
+Shift the output text to the left so that long code lines won't extend
+off the right-hand side of the page, as in
+.B noweave \-shift.
+@ \fi
 
 \subsection{Environments for setting code}
+[[\@begincode]] is probably cribbed from some early version of
+{\LaTeX}'s [[verbatim]] environment.
+[[\nowebsize]] governs the size at which code is set; users who want
+to minimize code can [[\let\nowebsize=\small]].
+If I ever understood why all the rest of that crap is here, I don't now.
 <<noweb.sty>>=
 \def\@begincode{\parindent\z@\parfillskip\@flushglue\parskip\z@
   \item[]\vskip\parskip
@@ -140,13 +190,19 @@ the wide code lines.
   \advance\leftskip\codemargin
   \@tempswafalse \def\par{\if@tempswa\hbox{}\fi\@tempswatrue\@@par}%
   \obeylines \Tt \catcode``=13 \@noligs \setupcode}
-@ %def \@begincode
-@
-[[\noindent]] puts into horizontal mode so that lines can follow without
+\let\nowebsize=\normalsize
+@ %def \@begincode \nowebsize
+
+[[\begincode]] and [[\endcode]] are used by {\tt noweave} to bracket
+code chunks.
+The [[webcode]] environment is intended for users who want to paste
+{\tt noweave} output into papers.
+
+[[\noindent]] puts {\LaTeX} into horizontal mode so that lines can follow without
 indentation if there is no following [[\par]].  The [[\hfil]] afterwards is
 some glue so that it there are lines following immediately, it will
 be possible to break there.  If I forced a break with [[\break]], that
-would be wrong because a following [[\pa]]r would leave us with an
+would be wrong because a following [[\par]] would leave us with an
 underfull (empty!) hbox.
 <<noweb.sty>>=
 \def\begincode#1{\par\vskip3pt
@@ -154,25 +210,62 @@ underfull (empty!) hbox.
     \noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
     \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces\parskip=\z@}
 \def\endcode{\end{trivlist}\vskip0.1pt\@endparenv\end{minipage}\hss\egroup\hfil}
-\def\webcode{\par\vskip3pt\noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
-             \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}
-\def\endwebcode{\strut\end{trivlist}\vskip0.1pt\end{minipage}\hss\egroup\hfil}
 
-\def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
-\def\edoc{\endgroup}
+\newenvironment{webcode}{%
+      \par\vskip3pt\noindent\hbox to \hsize\bgroup\begin{minipage}{\codehsize}%
+             \begin{trivlist}\@begincode \frenchspacing\@vobeyspaces}{%
+      \strut\end{trivlist}\vskip0.1pt\end{minipage}\hss\egroup\hfil}
+@ %def \begincode \endcode webcode 
 
-\let\nowebsize=\normalsize
-@ %def \begincode \endcode \webcode \endwebcode \code \edoc
-@
+Within a code environment, margin tags might be used to mark sub-page
+numbers in the margins:
+<<noweb.sty>>=
+\def\nwopt@nomargintag{\let\nwmargintag=\@gobble}
+\def\nwopt@margintag{%
+  \def\nwmargintag##1{\leavevmode\llap{##1\kern0.3in\kern\codemargin}}}
+\nwopt@margintag
+@ %def \nwmargintag margintag nomargintag 
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B margintag
+Put the sub-page number (tag) of each code-chunk definition in the
+left margin. (Default)
+.TP
+.B nomargintag
+Don't use margin tags.
+@ \fi
+
+{\tt noweave} uses [[\begindocs{nnn}]] and [[\enddocs]] to bracket
+documentation chunks.
+If a documentation chunk does not continue the current paragraph, 
+{\tt noweave} inserts [[\nwdocspar]], which in turn uses
+[[\@maybreak]] in an attempt to keep the documentation chunk on the
+same page as the code chunk that follows it.
 <<noweb.sty>>=
 \def\@maybreak#1{\vskip0pt plus #1\penalty-500\vskip0pt plus -#1}
 \newcommand{\maybreak}{\@maybreak}
 \def\begindocs#1{\relax\ifvmode\@maybreak{1in}\fi}
-\def\nwdocspar{\par\@maybreak{1in}}
 \def\enddocs{\relax}
+\def\nwdocspar{\par\@maybreak{1in}}
 @ %def \@maybreak \maybreak \begindocs \nwdocspar \enddocs
+
+{\tt noweave} brackets quoted code with [[\code]] and [[\edoc]], which handle
+font and environment for code.
+Because quoted code often appears in arguments, {\tt noweave} now
+(with version 2.5)
+escapes all {\TeX} specials within it, so the category-code changes
+aren't strictly necessary.
+<<noweb.sty>>=
+\def\code{\leavevmode\begingroup\setupcode\@vobeyspaces\obeylines}
+\def\edoc{\endgroup} 
+@ %def \code \edoc
 @
 \subsection{The {\tt noweb} page style}
+Headers contain file name, date, and page number.
+{\tt noweave} emits [[\filename{]]{\em name}[[}]] for each new file.
+In the {\tt noweb} page style, new files cause page breaks;
+otherwise they are ignored.
 <<noweb.sty>>=
 \newdimen\@original@textwidth
 \@original@textwidth=\textwidth
@@ -198,83 +291,100 @@ underfull (empty!) hbox.
   \def\subparagraphmark##1{}%
   \def\filename##1{\vfil\eject\markboth{##1}{##1}}%
 }
-\def\filename#1{\relax}
+\let\filename=\@gobble
 @ %def \@original@textwidth \ps@noweb \filename
 @
 \subsection{Chunk cross-reference}
-[[\alsodefined]], [[\used]], and [[\notused]] are emitted by the {\tt
+[[\nwalsodefined]], [[\nwused]], and [[\nwnotused]] are emitted by the {\tt
 noweb} cross-referencers. (What arguments?)
-If unused chunks are output chunks, a filter can slip in [[\let\notused\nwoutput]].
+If unused chunks are output chunks, a filter can slip in
+[[\let\nwnotused\nwoutput]].
+The style uses [[\nwcodecomment]] for all annotations that follow code
+chunks.
+Fiddling with it can change the appearance of the output.
 <<noweb.sty>>=
 \newdimen\nw@originaltextsize
 \nw@originaltextsize=\hsize
-\def\codecomment#1{\@@par
+\def\nwcodecomment#1{\@@par
     \hspace{-\codemargin}{%
         \hsize=\nw@originaltextsize\textwidth=\nw@originaltextsize
         \advance\rightskip by 0pt plus1in
         \let\\\relax\footnotesize\Rm #1\hfil\@@par}}
-\def\alsodefined#1{\codecomment{This definition is continued on \pages{#1}.}}
-\def\used#1{\codecomment{This code is used on \pages{#1}.}}
-\def\notused#1{\codecomment{Root chunk (not used in this document).}}
-\def\nwoutput#1{\codecomment{This code is written to file {\Tt #1}.}}
-@ %def \nw@originaltextsize \codecomment \alsodefined \used \notused
+\def\nwalsodefined#1{\nwcodecomment{This definition is continued on \@pagesl{#1}.}}
+\def\nwused#1{\nwcodecomment{This code is used on \@pagesl{#1}.}}
+\def\nwnotused#1{\nwcodecomment{Root chunk (not used in this document).}}
+\def\nwoutput#1{\nwcodecomment{This code is written to file {\Tt #1}.}}
+@ %def \nw@originaltextsize \nwcodecomment \nwalsodefined \nwused \nwnotused
 @ %def \nwoutput
-@
-Here's some list-of-pages code that's supposed to eliminate
-duplicates, insert commas, and insert ``and'' at the right place.
-A lot of the list stuff is cribbed from the {\TeX}book.
 <<noweb.sty>>=
-\def\empty{}
-\def\lop#1\to#2{\expandafter\lopoff#1\lopoff#1#2}
-\long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
-\def\loop#1\repeat{\def\iterate{#1\expandafter\iterate\fi}%
-        \iterate \let\iterate\relax}
-@ %def \empty \lop \lopoff \loop
-<<noweb.sty>>=
-\def\thepageref#1{\@ifundefined{r@#1}{0\@warning
-   {Reference `#1' on page \thepage \space 
-    undefined}}{\@nameuse{r@#1}}}
-@ %def \thepageref
-<<noweb.sty>>=
-\newcount\lastpage
-\newcount\thispage
-\newcount\pagesout
-
-\def\dosetpage#1#2#3\@nil{\thispage=#2\relax}
-
-\def\setthispage#1\done{%
-   \@ifundefined{r@#1}{{\bf ??}\@warning
-   {Reference `#1' on page \thepage \space 
-    undefined}\thispage=0}{\edef\@tempa{\@nameuse{r@#1}}\expandafter
-    \dosetpage\@tempa\@nil}}
-
-\def\setpagenumbers#1{%
-  \def\thepages{#1}%
-  \def\pagenumbers{}%
-  \lastpage=-1
-  \loop\ifx\thepages\empty\else
-     \lop\thepages\to\lastref
-    \expandafter\setthispage\lastref\done
-    \ifnum\thispage=\lastpage \else
-      \edef\pagenumbers{\pagenumbers\noexpand\\{\the\thispage}}%
-      \lastpage=\thispage  
+\newcount\@nwlopage\newcount\@nwhipage  % range lo..hi-1
+\newcount\@nwlosub		% subpage of lo
+\def\@nwfirstpage#1#2{% subpage page
+  \@nwlopage=#2 \@nwlosub=#1
+  \advance\@nwpagecount by 1
+%%% \message{(* first page is \@subpagenum{#1}{#2} *)}%
+  <<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>}
+\def\@nwfirstpagel#1{% label
+  \edef\@tempax{\noexpand\@nwfirstpage\subpagepair{#1}}\@tempax}
+\def\@nwnextpage#1#2{% subpage page
+%%% \message{(* next page is  \@subpagenum{#1}{#2} *)}%
+  \ifnum\@nwhipage=#2 
+    \advance\@nwhipage by 1 \advance\@nwpagecount by 1 \@nwlosub=0 \else
+  \ifnum#2<\@nwlopage <<new range starting with [[#2]]>>\else
+  \ifnum#2>\@nwhipage <<new range starting with [[#2]]>>\else
+    \@nwlosub=0
+  \fi\fi\fi
+  }
+\def\@nwnextpagel#1{% label
+  \edef\@tempay{\noexpand\@nwnextpage\subpagepair{#1}}\@tempay}
+<<new range starting with [[#2]]>>=
+<<add range to range list>>%
+\@nwfirstpage{#1}{#2}
+<<$[[\@nwhipage]] := [[\@nwlopage]]+1$>>=
+\@nwhipage=\@nwlopage\advance\@nwhipage by 1 
+<<add range to range list>>=
+<<set [[\@tempaz]] to page range>>
+%%% \message{(* adding page range \@tempaz *)}%
+\edef\@tempa{\noexpand\nwix@cons\noexpand\nw@pages
+                {\noexpand\\{\@tempaz}}}\@tempa
+<<set [[\@tempaz]] to page range>>=
+\advance\@nwhipage by -1
+\ifnum\@nwhipage=\@nwlopage
+     \edef\@tempaz{\@subpagenum{\number\@nwlosub}{\number\@nwlopage}}%
+\else
+  \ifnum\@nwlopage<110 <<normal range>>\else
+    \count255=\@nwlopage \divide\count255 by 100 \multiply\count255 by 100
+    \ifnum\count255=\@nwlopage <<normal range>>\else
+      \count255=\@nwlopage \divide\count255 by 100
+      \@nwpagetemp=\@nwhipage \divide\@nwpagetemp by 100
+      \ifnum\count255=\@nwpagetemp %  lo--least 2 digits of hi
+        \multiply\@nwpagetemp by 100
+        \advance \@nwhipage by -\@nwpagetemp
+        <<normal range>>%
+      \else <<normal range>>%
+      \fi
     \fi
-  \repeat}
-@ %def \lastpage \thispage \pagesout \dosetpage \setthispage
-@ %def \setpagenumbers
+  \fi
+\fi
+<<normal range>>=  
+\edef\@tempaz{\number\@nwlopage--\number\@nwhipage}
 <<noweb.sty>>=
-\def\pages#1{%
-  \setpagenumbers{#1}%
-  \expandafter\dopages\pagenumbers\done
-}
-
-\def\dopages#1\done{%
-  \nwix@listcount{#1}\ifnum\nwix@counter=1 page \else pages \fi
-  \commafy{#1}}
-@ %def \pages \dopages
+\newcount\@nwpagetemp
+@
 <<noweb.sty>>=
-\def\subpages#1{{\let\\\subpageref\dopages#1\done}}
-@ %def \subpages
+\newcount\@nwpagecount
+\def\@pagesl#1{%  list of labels
+  \gdef\nw@pages{}\@nwpagecount=0
+  \def\\##1{\@nwfirstpagel{##1}\let\\=\@nwnextpagel}#1%
+  <<add range to range list>>\let\\=\relax
+  \ifnum\@nwpagecount=1 page \else pages \fi\commafy{\nw@pages}}
+\def\subpages#1{% list of {{subpage}{page}}
+  \gdef\nw@pages{}\@nwpagecount=0
+  \def\\##1{\edef\@tempa{\noexpand\@nwfirstpage##1}\@tempa
+            \def\\####1{\edef\@tempa{\noexpand\@nwnextpage####1}\@tempa}}#1%
+  <<add range to range list>>\let\\=\relax
+  \ifnum\@nwpagecount=1 page \else pages \fi\commafy{\nw@pages}}
+@ %def \@nwlopage \@nwhipage
 @
 \subsection{Sub-page references}
 This is the wonderful code that Dave Love provided to make page
@@ -317,13 +427,22 @@ control sequence [[2on]]\LA{}{page referenced}\RA{} is defined and sets the
 defining the [[2on]] bit appropriately.
 <<noweb.sty>>=
 \newcommand{\subpageref}[1]{%
-  \pageref{#1}%
   \@ifundefined{r@#1}%
-    {}%
+    {\pageref{#1}}%
     {\@ifundefined{2on\@pageref{#1}}%
-      {}%
-      {\ref{#1}}}}
+      {\pageref{#1}}%
+      {\expandafter\expandafter\expandafter\@subpagenum\csname r@#1\endcsname}}}
+\def\@subpagenum#1#2{#2\ifnum#1=0 \else\@alph{#1}\fi}
 @ %def \subpageref
+[[\subpagepair]] produces a [[{subpage}{page}]] pair.
+<<noweb.sty>>=
+\newcommand{\subpagepair}[1]{%  % produces {subpage}{page}
+  \@ifundefined{r@#1}%
+    {{0}{0}<<warn of undefined reference to [[#1]]>>}%
+    {\@ifundefined{2on\@pageref{#1}}%
+      {{0}{\expandafter\expandafter\expandafter\@cdr\csname r@#1\endcsname\@nil}}%
+      {\@nameuse{r@#1}}}}
+\let\@tempaxxx\relax
 @
 [[\@pageref]] is like [[\pageref]], but it expands to [[\relax]] without a warning
 if the reference is undefined.
@@ -382,7 +501,7 @@ Then we write a normal [[\newlabel]] with the sub-reference as the
 normal reference value in the second argument.
 <<definition of [[\newsublabel]]>>=
   \edef\@tempa{\noexpand\newlabel{#1}%
-    {{\@alph{\number\sub@page}}{\this@page}}}%
+    {{\number\sub@page}{\this@page}}}%
   \@tempa}
 @
 We need to define these counters.  [[\last@page]] could be a
@@ -396,16 +515,16 @@ We use Rainer's new expandable definitions of [[\ref]] and
 [[\pageref]] to minimise the risk of nasty surprises.
 <<noweb.sty>>=
 % RmS 92/08/14: made \ref and \pageref robust
-\def\ref#1{\@ifundefined{r@#1}{{\bf ??}\@warning
-   {Reference `#1' on page \thepage \space
-    undefined}}{\expandafter\expandafter\expandafter
-                \@car\csname r@#1\endcsname
-                \@nil\null}}
-\def\pageref#1{\@ifundefined{r@#1}{{\bf ??}\@warning
-   {Reference `#1' on page \thepage \space
-    undefined}}{\expandafter\expandafter\expandafter
-                \@cdr\csname r@#1\endcsname
-                \@nil\null}}
+\def\ref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
+    {\expandafter\expandafter\expandafter
+     \@car\csname r@#1\endcsname\@nil\null}}
+\def\pageref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
+     {\expandafter\expandafter\expandafter
+      \@cdr\csname r@#1\endcsname\@nil\null}}
+\def\@refpair#1{\@ifundefined{r@#1}{{0}{0}<<warn of undefined reference to [[#1]]>>}%
+    {\@nameuse{r@#1}}}
+<<warn of undefined reference to [[#1]]>>=
+\@warning{Reference `#1' on page \thepage \space undefined}
 @ %def \ref \pageref
 @
 \subsection{Indexing (identifier cross-reference) support}
@@ -429,9 +548,9 @@ The control sequences used are
 \def\freeindexdefn#1#2{\@auxixf{\protect\nwixd}{#2}}
 \def\freeindexuse#1#2{\@auxixf{\protect\nwixu}{#2}}
 
-\def\@auxixb#1#2#3{\@auxix{#1}{#2}{\protect\subpageref{#3}}}
-\def\@auxixf#1#2#3{\@auxix{#1}{#2}{\thepage}}
-\def\@auxix#1#2#3{% marker label page
+\def\@auxixb#1#2#3{\@auxix{#1}{#2}{\protect\subpagepair{#3}}}
+\def\@auxixf#1#2#3{\@auxix{#1}{#2}{{0}{\thepage}}}
+\def\@auxix#1#2#3{% {marker}{label}{{subpage}{page}}
    \@bsphack\if@filesw {\let\thepage\relax\let\subpageref\relax
    \let\nwixd\relax\let\nwixu\relax
    \def\protect{\noexpand\noexpand\noexpand}%
@@ -442,7 +561,7 @@ The control sequences used are
 @ %def \boundindexdefn \boundindexuse \freeindexdefn \freeindexuse
 @ %def \@auxixb \@auxixf \@auxix
 <<noweb.sty>>=
-% \nwixadd{marker}{idlabel}{page}
+% \nwixadd{marker}{idlabel}{\subpagepair{label}}
 \def\nwixadd#1#2#3{%
   \@ifundefined{nwixl@#2}%
     {\global\@namedef{nwixl@#2}{#1{#3}}}%
@@ -462,8 +581,8 @@ The control sequences used are
 % \indexlisting{name}{label}
 %    what actually appears in an index
 
-\def\identdefs#1{\codecomment{Defines \Tt\commafy{#1}.}}
-\def\identuses#1{\codecomment{Uses \Tt\commafy{#1}.}}
+\def\identdefs#1{\nwcodecomment{Defines \Tt\commafy{#1}.}}
+\def\identuses#1{\nwcodecomment{Uses \Tt\commafy{#1}.}}
 
 \def\indexrefs#1{{\Rm~\let\@elt=~\@nameuse{nwixdef@#1}}}
 \def\indexpages#1{{\def\@elt{, }\@nameuse{nwixall@#1}}}
@@ -493,12 +612,12 @@ There are two kinds of lists.
 One kind is a generic list in which elements are preceded by [[\\]].
 If the elements are index elements, they are {\em[[{]]printable
 identifier[[}{]]label[[}]]} pairs.
-The other kind is a list of identifier references, in which each 
+The other kind is a list of calls to [[\subpagepair]], in which each 
 element is preceded by either [[\nwixd]] or [[\nwixu]].
 <<noweb.sty>>=
 \def\nwix@cons#1#2{% {list}{\marker{element}}
-  {\let\\\relax\let\nwixd\relax\let\nwixu\relax
-   \xdef#1{#1#2}}}
+  {\toks0=\expandafter{#1}\def\@tempa{#2}\toks2=\expandafter{\@tempa}%
+   \xdef#1{\the\toks0 \the\toks2 }}}
 @ %def \nwix@cons
 The reference list for an identifier labelled {\em id}
 is always called [[\nwixl@]]{\em id}.
@@ -527,9 +646,10 @@ When displaying identifiers used, show the identifier and its
 definitions.
 <<noweb.sty>>=
 \def\nwix@id@defs#1{% index pair
-  {{\Tt \@car#1\@nil}\let\\=~\nwix@defs{\@cdr#1\@nil}}}
+  {{\Tt \@car#1\@nil}%
+  \def\\##1{~\@subpageofsubpair{##1}}\nwix@defs{\@cdr#1\@nil}}}
 \def\nwidentuses#1{% list of index pairs
-  \codecomment{Uses \let\\=\nwix@id@defs\commafy{#1}.}}
+  \nwcodecomment{Uses \let\\=\nwix@id@defs\commafy{#1}.}}
 @ %def \nwidentuses \nwix@id@defs
 The definitions section is a bit more complex, because it is omitted
 if none of the identifiers defined is ever used.
@@ -541,24 +661,88 @@ if none of the identifiers defined is ever used.
 \def\nwix@id@uses#1#2{% {ident}{label}
   \nwix@usecount{#2}\ifnum\nwix@counter>0
     {\advance\leftskip by \codemargin
-     \codecomment{{\Tt #1}, used on \ifnum\nwix@counter=1 page \else pages \fi
-                                \let\\=\relax\commafy{\nwix@uses{#2}}.}}%
+     \nwcodecomment{{\Tt #1}, used on \subpages{\nwix@uses{#2}}.}}%
   \fi}
 \def\nwidentdefs#1{% list of index pairs
   \nwix@totaluses{#1}\ifnum\nwix@counter>0
-    \codecomment{Defines:}%
+    \nwcodecomment{Defines:}%
     {\def\\##1{\nwix@id@uses ##1}#1}%
   \fi}
 <<noweb.sty>>=
+\def\@subpageofsubpair#1{%
+  \edef\@tempa{\noexpand\@subpagenum #1}\@tempa}
+\def\nw@underlinedefs{% {list with \nwixd, \nwixu}
+  \let\\=\relax\def\nw@comma{, }
+  \def\nwixd##1{\\\underline{\@subpageofsubpair{##1}}\let\\\nw@comma}%
+  \def\nwixu##1{\\\@subpageofsubpair{##1}\let\\\nw@comma}}
+
 \def\nw@indexline#1#2{%
-   {\indent {\Tt #1}: \let\\=\relax\def\nw@comma{, }
-            \def\nwixd##1{\\\underline{##1}\let\\\nw@comma}%
-            \def\nwixu##1{\\##1\let\\\nw@comma}%
-            \@nameuse{nwixl@#2}\par}}
+   {\indent {\Tt #1}: \nw@underlinedefs\@nameuse{nwixl@#2}\par}}
 \newenvironment{thenowebindex}{\parindent=-10pt \parskip=0pt 
         \advance\leftskip by 10pt 
         \advance\rightskip by 0pt plus1in\par
     \def\\##1{\nw@indexline##1}}{}
+@
+\subsection{Support for chunk and identifier indices}
+<<noweb.sty>>=
+\def\nwixlogsorted#1#2{% list data
+   \@bsphack\if@filesw {\let\thepage\relax\let\subpageref\relax
+   \let\nwixd\relax\let\nwixu\relax\let\code\relax\let\edoc\relax
+   \let\\\relax\let\{\relax\let\}\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \nwixadds{#1}{#2}}}%
+   \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+\def\nwixlogsorted#1#2{% list data
+   \@bsphack\if@filesw 
+     \toks0={#2}\immediate\write\@auxout{\string\nwixadds{#1}{\the\toks0}}
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+@ %def \boundindexdefn \boundindexuse \freeindexdefn \freeindexuse
+@ %def \@auxixb \@auxixf \@auxix
+
+[[nwixs@c]] and [[nwixs@i]] are sorted lists of chunks and identifiers, respectively.
+<<noweb.sty>>=
+\def\nwixadds#1#2{%
+  \@ifundefined{nwixs@#1}%
+    {\global\@namedef{nwixs@#1}{\\{#2}}}%
+    {\expandafter\nwix@cons\csname nwixs@#1\endcsname{\\{#2}}}}
+@
+<<noweb.sty>>=
+\def\nowebchunks{%
+  \thenowebchunks{\@nameuse{nwixs@c}}}
+\@namedef{r@nw@notdef}{{}{(never defined)}}
+
+\def\nw@chunkunderlinedefs{% {list of labels with \nwixd, \nwixu}
+  \let\\=\relax\def\nw@comma{, }
+  \def\nwixd##1{\\\underline{\subpageref{##1}}\let\\\nw@comma}%
+  \def\nwixu##1{\\\subpageref{##1}\let\\\nw@comma}}
+
+\def\nw@onechunk#1#2#3{% {name}{label of first definition}{list with \nwixd, \nwixu}
+  \@ifundefined{r@#2}{}{%
+    \indent\LA #1~{\footnotesize\Rm\subpageref{#2}}\RA 
+    \if@nwlongchunks{~\nw@chunkunderlinedefs#3}\fi\par}}
+
+\def\thenowebchunks#1{\vskip3pt{%
+  \parskip=0pt\parindent=-10pt \advance\leftskip by 10pt
+  \advance\rightskip by 0pt plus10pt
+  \def\\##1{\nw@onechunk##1}#1}}
+<<noweb.sty>>=
+\newif\if@nwlongchunks
+\@nwlongchunksfalse
+\let\nwopt@longchunks\@nwlongchunkstrue
+@ \iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B longchunks
+When expanding 
+.B "\\\\nowebchunks,"
+show page numbers of definitions and uses of each chunk.
+@ \fi
+
+<<noweb.sty>>=
+\def\nowebindex{%
+  \begin{thenowebindex}\@nameuse{nwixs@i}\end{thenowebindex}}
 @
 \clearpage
 \section{The {\tt nwmac} macros for use with plain {\TeX}}
@@ -664,6 +848,8 @@ if none of the identifiers defined is ever used.
 
 <<kernel>>
 
+\def\filename#1{\vfil\eject\mark{#1}}
+
 \def\begindocs#1{\filbreak}
 \def\enddocs{\par}
 \def\begincode#1{\par\nobreak
@@ -674,7 +860,7 @@ if none of the identifiers defined is ever used.
   \gdef\bchack#1^^M{\relax#1}%
 }
 @ %def \section \chapter \section \subsection \subsubsection \paragraph
-@ %def \begindocs \enddocs \begincode \endcode
+@ %def \begindocs \enddocs \begincode \endcode \filename
 <<nwmac.tex>>=
 \edef\contentsfile{\jobname.toc } % file that gets table of contents info
 \def\readcontents{\expandafter\input \contentsfile}
@@ -722,9 +908,10 @@ if none of the identifiers defined is ever used.
 \let\begindocument=\relax
 @ %def \listlevel \itemwidth \itemize \enditemize
 @
+\section{Chunks} \nowebchunks
 \twocolumn
 \section{Index}
-\nowebindex
+   \nowebindex
 @
 \end{document}
 
