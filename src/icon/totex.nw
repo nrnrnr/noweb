@@ -166,9 +166,9 @@ This first round of stuff just handles the basics: definitions, uses, and newlin
 Unless it's OK to show the index (by \LA{}SI\RA), we handle nothing but 
 \hbox{[[@index nl]]}.
 <<@index tests>>=
-if ="nl" & pos(0)        then        { write(if \code then "\\eatline" else "%")  } else
-if ="defn "              then <<SI>> { <<handle index defn>>                      } else
-if ="use "               then <<SI>> { <<handle index use>>                       } else
+if ="nl" & pos(0)          then        { write(if \code then "\\eatline" else "%")}else
+if =("defn "|"localdefn ") then <<SI>> { <<handle index defn>>                   } else
+if ="use "                 then <<SI>> { <<handle index use>>                    } else
 <<SI>>=
 /noindex &
 @
