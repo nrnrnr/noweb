@@ -3,17 +3,23 @@ This copyright applies both to the {\tt noweb} source and to the
 generated code.
 Thanks to Bill Trost for getting me started with an early version.
 <<copyright notice>>=
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# Copyright 1994 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
+@
+The [[-raw]] option brackets HTML with [[\begin{rawhtml}]] and 
+[[\end{rawhtml}]]; the purpose is to embed HTML in a {\LaTeX} 
+document before converting the document with {\tt latex2html}.
+[[braw]] and [[eraw]] hold those delimiters (or else empty strings).
 <<*>>=
 <<copyright notice>>
 # Don't try to understand this file!  Look at icon/tohtml.nw in the noweb source!
 
 procedure main(args)
-  local delay, raw, where
+  local delay, raw, where, localindex
   <<initialization>>
   every braw | eraw := ""
   delay := !args == "-delay"
+  localindex := !args == "-localindex"	# produce local identifier xref?
   raw := !args == "-raw"
   if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
   while inputline := read() do inputline ? {
@@ -33,48 +39,32 @@ end
 <<others>>
   nil	# matches last else
 @ 
-Like {\tt totex}, {\tt tohtml} is careful not to add newlines not
-present in the input, to keep the output's line numbers consistent
-with {\tt noweb}'s.  This isn't as important, really, since {\tt HTML}
-ignores newlines anyhow, and neither of my {\tt HTML} viewers ({\tt
-w3.el} and {\tt xmosaic}) generate error messages of any use.
-
-The variables used here (different from {\tt totex}'s) are
-\begin{description}
-\item[\tt code] Nonzero if converting a code chunk.
-\item[\tt lastiscode] Nonzero if last chunk was a code chunk, zero
-otherwise.
-\item[\tt quoting] Nonzero if quoting code in documentation.
-\item[\tt chunk] The array of chunks in the program.
-\item[\tt this] The chunk currently under construction.
-\item[\tt chunkno] The number of the current chunk.
-\item[\tt firstfile] The name of the first source file (used in title).
-\end{description}
-The goal of {\tt line} is to permit the creation of links for indexed
-words in the text.
-
-Finally, the part you've all been waiting for, the awk script.  Note
-that [[@begin]] and [[@end]] only invoke "next" at the very bottom,
-after the per-type stuff has been dealt with.
+[[ecode]] is the marker used at the end of the current code chunk.
+If there is no cross-reference stuff at the end, we just use [[</pre>]];
+otherwise we terminate whatever environment is used for the cross-reference stuff.
 <<code chunks>>=
 if ="@begin code " then	{ code := 1   ; writes(braw, "<pre>"); ecode := "</pre>" } else
-if ="@end code "   then { code := nil ; lastiscode := 1 
+if ="@end code "   then { code := nil ; previscode := 1 
                           <<dump pending cross-reference info>>
                           writes(ecode, eraw)                                    } else
-@
+@ %def previscode
+
 We want to try to avoid emitting paragraph elements when the
-neighboring chunk is a code chunk.
+preceding chunk is a code chunk, as tracked by [[previscode]].
+Also, if we do slip in a paragraph, we may use the {\LaTeX} style.
 <<docs chunks>>=
-if ="@begin docs " then	{ if \lastiscode then writes(if /raw then "<p>" else "\\par")
-                          lastiscode := &null
+if ="@begin docs " then	{ if \previscode then writes(if /raw then "<p>" else "\\par")
+                          previscode := &null
                           text := 0                                              } else
 @
 Sometimes it happens that a document-chunk anchor is put in a document chunk that
-contains no text.  In that case, we put a phony anchor at the end of the chunk so 
+contains no text.  In that case, we put in a phony anchor at the end of the chunk so 
 we won't lose the cross-reference.
 <<docs chunks>>=
-if ="@end docs " then  	{ write(braw, "<a name=", image(\lastxreflabel), ">*</a>", eraw)
+if ="@end docs " then  	{ write(braw, linklabel(\lastxreflabel, "*"), eraw)
                           lastxreflabel := &null                                 } else
+@
+Normally, if there's a pending anchor, we put it on the first available text line.
 <<@text>>=
 if ="@text " then 	{ text +:= *(line := tab(0))
 			  if \quoting | \code then
@@ -82,35 +72,44 @@ if ="@text " then 	{ text +:= *(line := tab(0))
 		          else
                             writes((<<docs anchor>>) | line)                } else
 <<index anchor>>=
-2(line ? {tab(many(' \t')); not pos(0)},
-  "<a href=" || image("#" || \lastindexref) || ">" || line || "</a>",
+2(line ? {tab(many(' \t')); not pos(0)}, 
+  linkto(\lastindexref, line),
   lastindexref := &null)
 <<docs anchor>>=
 2(line ? {tab(many(' \t')); not pos(0)},
-  braw || "<a name=" || image(\lastxreflabel) || ">" || 
-          (line ? (tab(many(' \t')) | "") || (if any('\\{}') then "*" else move(1)) ||
-                  "</a>" || eraw || tab(0)),
+  line ? braw || linklabel(\lastxreflabel, 
+                           (tab(many(' \t')) | "") || 
+                            (if any('\\{}') then "*" else move(1))) ||
+         eraw || tab(0),
   lastxreflabel := &null)
 <<@nl>>=
-if ="@nl" & pos(0) then { write()                                              } else
+if ="@nl" & pos(0) then { write()                                                } else
 <<@defn>>=
 if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, 
                                      "dfn", name := tab(0), defns[name] || "=")
-                          defns[name] := "+"                                   } else
+                          defns[name] := "+"                                     } else
 <<initialization>>=
 defns := table("")
 <<@use>>=
-if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0))  } else 
+if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0))    } else 
 @
+Writing a chunk involves creating an anchor for it.
+<<*>>=
+procedure writechunk(label, ref, tag, name, suffix)
+  /suffix := ""
+  writes(linklabelto(label, ref, 
+    "<" || tag || ">&lt;" || convquotes(name) || "&gt;" || suffix || "</" || tag || ">"))
+  return
+end
+@
+<<others>>= 
+if ="@quote"    & pos(0) then 	{ quoting := 1   ; writes(braw, "<code>")        } else
+if ="@endquote" & pos(0) then 	{ quoting := nil ; writes("</code>", eraw)       } else
 <<others>>=
-if ="@quote"    & pos(0) then 	{ quoting := 1   ; writes(braw, "<code>")      } else
-if ="@endquote" & pos(0) then 	{ quoting := nil ; writes("</code>", eraw)     } else
-<<others>>=
-if ="@file " then 	{ filename := tab(0)
-			  every lastxreflabel | lastxrefref := &null           } else
-if ="@literal "               then { writes(tab(0))                            } else
-if ="@header html "           then { <<write HTML header>>		       } else
-if ="@trailer html" & pos(0)  then { <<write HTML trailer>>		       } else
+if ="@file "                  then { filename := tab(0); <<clear [[lastxref*]]>> } else
+if ="@literal "               then { writes(tab(0))                              } else
+if ="@header html "           then { <<write HTML header>>		         } else
+if ="@trailer html" & pos(0)  then { <<write HTML trailer>>		         } else
 @
 <<write HTML header>>=
 writes("<html><head><title>", tab(0), "</title></head><body>")
@@ -135,23 +134,24 @@ if ="@xref " then {
                     <<code-to-blockquote>>
                     writes("This code is used ")
                     comma := ""; where := "here"; count := 1 }
-"useitem"	: { writes(comma, "<a href=", image("#" || arg), ">", where, 
-                                  if count > 1 then count else "", "</a>")
+"useitem"	: { writes(comma, linkto(arg, where || (1 < count | "")))
                     comma := ","; where := "U"; count +:= 1 }
 "enduses"	: writes(".<p>")
 "notused"	: { <<code-to-blockquote>>
                     writes("This code is written to a file (or else not used).<p>") }
+<<clear [[lastxref*]]>>=
+every lastxreflabel | lastxrefref := &null
 <<dump pending cross-reference info>>=
 if \pendingprev | \pendingnext then {<<code-to-blockquote>>}
 if \pendingprev then
   if \pendingnext then
-    write("<a href=",  image("#" || pendingprev),">Previous definition</a>; ",
-           "<a href=", image("#" || pendingnext),">definition continued</a>.")
+    write(linkto(pendingprev, "Previous"), " and ",
+          linkto(pendingnext, "next"), " definitions.<p>")
   else
-    write("<a href=",  image("#" || pendingprev),">Previous definition</a>.")
+    write(linkto(pendingprev, "Previous"), " definition.<p>")
 else
   if \pendingnext then
-    write("<a href=", image("#" || pendingnext),">Definition continued</a>.")
+    write(linkto(pendingnext, "Next"), " definition.<p>")
 every pendingprev | pendingnext := &null
 @
 The hack here is to put the supplementary information in a blockquote area
@@ -172,22 +172,18 @@ The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 "chunkbegin"  : { writes("<li>"); comma := ": "; count := 0
                   arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
                   writechunk(&null, ref, "i", name) }
-"chunkuse"    : { writes(comma, "<a href=", image("#" || arg), ">U", count +:= 1, "</a>")
-                  comma := "," }
-"chunkdefn"   : { writes(comma, "<a href=", image("#" || arg), ">D", count +:= 1, "</a>")
-                  comma := "," }
-"chunkend"    : &null
+"chunkuse"    : { writes(comma, linkto(arg, "U" || (count +:= 1)));  comma := ", " }
+"chunkdefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
+"chunkend"    : write()
 "endchunks"   : write("</ul>", eraw)
 <<cases for @index>>=
 "beginindex"  : { write(braw, "<h2>Index</h2><ul>") }
 "entrybegin"  : { writes("<li>"); comma := ": "; count := 0
                   arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
-                  writes("<a href=", image("#" || ref), ">", name, "</a>") }
-"entryuse"    : { writes(comma, "<a href=", image("#" || arg), ">U", count +:= 1, "</a>")
-                  comma := "," }
-"entrydefn"   : { writes(comma, "<a href=", image("#" || arg), ">D", count +:= 1, "</a>")
-                  comma := "," }
-"entryend"    : &null
+                  writes(linklabelto("NWI-" || escapeSpecials(name), ref, name)) }
+"entryuse"    : { writes(comma, linkto(arg, "U" || (count +:= 1)));  comma := ", " }
+"entrydefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
+"entryend"    : write()
 "endindex"   : write("</ul>", eraw)
 @
 <<@index>>=
@@ -199,33 +195,43 @@ if ="@index " then {
     default : arg ? warn_unknown("index " || fun)
   }
 } else
+@
+The local identifier cross-reference doesn't show each use; it just shows
+the identifiers that are defined, with links to the full index.
 <<cases for @index>>=
-"use" 	    : { lastindexref := lastxrefref; lastxrefref := &null }
-"defn"      : &null
+"use" 	    : { lastindexref := lastxrefref; <<clear [[lastxref*]]>> }
+"defn"      : { <<clear [[lastxref*]]>> }
 "nl"        : &null # do nothing -- destroys line numbering
-"begindefs" : { <<code-to-blockquote>>; writes("<p>Defines:<ul>"); ulist := [] }
-"isused"    : put(ulist, arg)
-"defitem"   : { writes("\n<li>", arg, ", with uses ")
-                comma := ""
-                every i := 1 to *ulist do {
-                  writes(comma, "<a href=", image("#" || ulist[i]), ">U", i, "</a>")
-		  comma := ", "
-                }
-                ulist := []
+"begindefs" : if \localindex then
+              { <<code-to-blockquote>>; writes("Defines"); comma := " " }
+"isused"    : &null
+"defitem"   : if \localindex then { 
+                writes(comma, linkto("NWI-" || escapeSpecials(arg), escapeSpecials(arg)))
+                comma := ", "
               }
-"enddefs"   : write("\n</ul>")
+"enddefs"   : if \localindex then write("; click for index entry.<p>")
 "beginuses" | "isdefined" | "useitem" | "enduses" : &null  # use local links
 @
-Writing a chunk involves creating an anchor for it.
+\subsection{Support functions}
+Here's all our anchor support goo.
 <<*>>=
-procedure writechunk(label, ref, tag, name, suffix)
-  if \label | \ref then writes("<a")
-  writes(" name=", image(\label))
-  writes(" href=", image("#" || \ref))
-  if \label | \ref then writes(">")
-  writes("<", tag, ">&lt;", convquotes(name), "&gt;", suffix, "</", tag, ">")
-  if \label | \ref then writes("</a>")
-  return
+procedure linklabelto(label, ref, contents)
+  local s
+  s   := if \label | \ref then "<a"   else ""
+  s ||:= " name=" || image(\label)
+  s ||:= " href=" || image("#" || \ref)
+  s ||:= if \label | \ref then ">"    else ""
+  s ||:= contents
+  s ||:= if \label | \ref then "</a>" else ""
+  return s
+end
+
+procedure linkto(ref, contents)
+  return linklabelto(&null, ref, contents)
+end
+
+procedure linklabel(label, contents)
+  return linklabelto(label, &null, contents)
 end
 @
 Lucky for us, {\tt HTML} has few special characters.  Unlucky for us,
@@ -239,10 +245,12 @@ procedure escapeSpecials (l)
            escapes["<"] := "&lt;"
            escapes[">"] := "&gt;"
            escapes["\""] := "&quot;"
+	   specials := ''
+           every specials ++:= key(escapes)
           }
   s := ""
   l ? { 
-    while s ||:= tab(upto('<>&')) do
+    while s ||:= tab(upto(specials)) do
       s ||:= escapes[move(1)]
     return s || tab(0)
   }
