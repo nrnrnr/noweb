@@ -70,7 +70,7 @@ void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...);
 void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {     
     va_list args;                       /* see K&R, page 174 */
     va_start(args,s);
-    fprintf(stderr, "\"%s\", line %d: ", filename, lineno);
+    fprintf(stderr, "%s:%d: ", filename, lineno);
     <<set [[errorlevel]] and print [[s]] with [[args]]>>
     va_end(args);
     if (level >= Fatal)
