@@ -10,58 +10,40 @@ Here's the organization of the source:
 #!/bin/sh
 <<copyright notice>>
 LIB=|LIBDIR|
-markup=/tmp/nw$$.mrk errors=/tmp/nw$$.err roots=/tmp/nw$$.rts 
-opt= verbose=1
-trap '/bin/rm -f $markup $errors $roots; exit 1' 1 2 15	# clean up files
-<<consume options and place them in [[opt]]>>
+markup=$LIB/markup mntopt=-L status=0 tex=1 output=1
+<<consume options, setting [[tex]], [[output]], [[mntopt]], and [[markup]]>>
 if [ $# -eq 0 ]; then <<complain of no args and exit>>; fi
 
 for source do
-  /bin/rm -f $errors $markup $roots || (echo "$0: Can't write temp files" 1>&2; exit 2)
-  <<put marked-up source in [[$markup]]>>
-  <<tangle all roots of [[$markup]]>>
-  <<write {\TeX} output>>
+  if [ -n "$output" ]; then 
+    PATH="$PATH:$LIB" $markup -t $source | $LIB/mnt -t8 "$mntopt" -all || status=1
+  fi
+  if [ -n "$tex" ]; then
+    <<write {\TeX} output>> || status=1
+  fi
 done
-/bin/rm -f $markup $errors $roots
-exit 0
+exit $status
 @
-For markup, I use the [[nuweb]] conventions of ignoring leading and trailing spaces
-and making each sequence of spaces and tabs act like a single space.
-I also avoid doing anything fancy with tabs, in case people are horsing with
-makefiles.
-<<put marked-up source in [[$markup]]>>=
-$LIB/markup -t $source | 
-sed -e '/^<<@use |@defn>>/s/[ 	][ 	]*/ /g' \
-    -e '/^<<@use |@defn>>/s/ $//' > $markup        || exit 1
-<<@use |@defn>>=
-@[ud][se][ef][ n]
-@
-Roots can't be permitted to contain any shell metacharacters.
-<<write roots to [[$roots]], putting complaints in [[$errors]]>>=
-nawk '<<awk program to print roots w/o metachars>>' errout=$errors $markup > $roots
-<<awk program to print roots w/o metachars>>=
-/^@defn / { chunk=substr($0,7) ; defined[chunk]=1 }
-/^@use /  { chunk=substr($0,6) ; used[chunk]=1 }
-END {
-  for (chunk in defined) {
-    if (defined[chunk]==1 && used[chunk]==0) 
-      if (chunk ~ /[\[\](){} !$&<>*?;|^\\"`'"'"']/)
-        printf "Root chunk @<<%s@>> contains spaces or metacharacters", chunk > errout
-      else
-        print chunk
-  }
-}
-@  With this version, nuweb on noweb took 20 seconds.
-<<old, inefficient tangle each root>>=
-rootnames="`cat $roots`"
-for root in $rootnames; do
-  if [ -n "$verbose" ]; then echo "$root" 1>&1; fi
-  $LIB/nt -R"$root" -t8 $opt < $markup | cpif "$root" || exit 1
-done
-<<tangle all roots of [[$markup]]>>=
-$LIB/mnt -t8 $opt -all < $markup || exit 1
+{\tt noweb} could be modified to follow two Knuth-like and {\tt nuweb}-like conventions:
+\begin{itemize}
+\item
+Treat multiple white space within chunk names as single blanks, and
+ignore leading and trailing whitespace.
+\item
+Permit chunk names to be abbreviated by writing an initial subsequence
+of the name followed by ``[[...]]''.
+\end{itemize}
+The modification is simple; just add these two programs to the
+pipeline.
+([[disambiguate]] is an Icon program found in the [[icon]] directory
+of the [[noweb]] distribution.)
+<<compress multiple blanks in uses and defns>>=
+sed -e '/^@[ud][se][ef][ n]/s/[ 	][ 	]*/ /g' \
+    -e '/^@[ud][se][ef][ n]/s/ $//'
+<<disambiguate uses and defns ending in three dots>>=
+$LIB/disambiguate
 @ 
-When writing {\TeX} output, I call [[$LIB/markup]] a second time to expand tabs.
+When writing {\TeX} output, I call [[$markup]] a second time to expand tabs.
 %% timings on nuweb
 % markup 0.4u 0.1s
 % noxref 3.9u 1.0s
@@ -69,17 +51,22 @@ When writing {\TeX} output, I call [[$LIB/markup]] a second time to expand tabs.
 <<write {\TeX} output>>=
 texname=`echo $source | sed '/\./s/\.[^.]*$//'`
 texname="$texname.tex"
-if [ -n "$verbose" ]; then echo "$texname" 1>&1; fi
-$LIB/markup $source | $LIB/noxref | $LIB/totex -delay | cpif $texname
-<<consume options and place them in [[opt]]>>=
+PATH="$PATH:$LIB" $markup $source | $LIB/finduses -noquote | $LIB/noidx -delay | 
+nawk '{print}
+/^@defn [^ ]*$/ { print "@literal \\let\\nwnotused=\\nwoutput{}" }' |
+$LIB/totex -delay | cpif $texname
+<<consume options, setting [[tex]], [[output]], [[mntopt]], and [[markup]]>>=
 while [ $# -gt 0 ]; do
   case $1 in
-    -q)  verbose= ; shift ;;
-    -L*) opt="$1" ; shift ;;
+    -to|-ot) tex= output= ; shift ;;
+    -t)  tex=             ; shift ;;
+    -o)  output=          ; shift ;;
+    -L*) mntopt="$1"      ; shift ;;
+    -markup) markup="$2"  ; shift; shift ;;
     -*)  echo "Unrecognized option $1" 1>&2; exit 1 ;;
     *) break ;;
   esac
 done
 <<complain of no args and exit>>=
-echo "Usage: $0 [-L[fmt]] file [...]" 1>&2; exit 1
+echo "Usage: $0 [-L[fmt] -t -o] file [...]" 1>&2; exit 1
 @
