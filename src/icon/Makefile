@@ -5,16 +5,16 @@ ICONC=iconc		# override to icont if no iconc on your system
 ICONT=icont		# override to iconc if all filter should be compiled
 CPIF=| cpif		# change to ">" to insure all sources always made
 
-LIBEXECS=totex disambiguate noidx tohtml elide l2h \
+LIBEXECS=totex disambiguate noidx tohtml elide l2h docs2comments \
        autodefs.tex autodefs.icon autodefs.yacc autodefs.sml autodefs.pascal \
-	autodefs.promela autodefs.lrtl
+	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix xchunks
 LIBSPECIAL=autodefs.cee
 BINEXECS=noindex sl2h htmltoc
 EXECS=$(LIBEXECS) $(BINEXECS) $(LIBSPECIAL)
 SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
         yaccdefs.icn noindex.icn smldefs.icn tohtml.icn cdefs.icn elide.icn \
-	l2h.icn sl2h.icn pascaldefs.icn promeladefs.icn lrtldefs.icn \
-	htmltoc.icn 
+	l2h.icn sl2h.icn pascaldefs.icn promeladefs.icn lrtldefs.icn asdldefs.icn \
+	mmixdefs.icn htmltoc.icn xchunks.icn
 
 .SUFFIXES: .nw .icn .html .tex .dvi
 .nw.icn:
@@ -61,6 +61,10 @@ promeladefs.icn: promeladefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' promeladefs.nw defns.nw $(CPIF) promeladefs.icn
 lrtldefs.icn: lrtldefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' lrtldefs.nw defns.nw $(CPIF) lrtldefs.icn
+asdldefs.icn: asdldefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' asdldefs.nw defns.nw $(CPIF) asdldefs.icn
+mmixdefs.icn: mmixdefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' mmixdefs.nw defns.nw $(CPIF) mmixdefs.icn
 
 autodefs.tex: texdefs.icn
 	$(ICONT) -o autodefs.tex texdefs.icn
@@ -86,6 +90,12 @@ autodefs.promela: promeladefs.icn
 autodefs.lrtl: lrtldefs.icn
 	$(ICONT) -o autodefs.lrtl lrtldefs.icn
 
+autodefs.asdl: asdldefs.icn
+	$(ICONT) -o autodefs.asdl asdldefs.icn
+
+autodefs.mmix: mmixdefs.icn
+	$(ICONT) -o autodefs.mmix mmixdefs.icn
+
 totex: totex.icn
 	$(ICONC) totex.icn
 
@@ -94,6 +104,12 @@ totexnr: totexnr.icn
 
 tohtml: tohtml.icn
 	$(ICONC) tohtml.icn
+
+docs2comments: docs2comments.icn
+	$(ICONC) docs2comments.icn
+
+xchunks: xchunks.icn
+	$(ICONT) xchunks.icn
 
 l2h.icn: l2h.nw
 	notangle -L'#line %-1L "%F"%N' -R'l2h.icn' l2h.nw $(CPIF) l2h.icn

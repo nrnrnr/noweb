@@ -1,0 +1,103 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+
+\section{Getting chunks from an external ``dictionary''}
+
+Mike Smith wants to do an unweblike thing: keep his code and
+documentation in separate source files.
+I~think he wants to do this so he can enable the \emph{same} code
+chunks to appear in \emph{multiple} documents, with guaranteed
+consistency, but I~suppose the reasons don't matter.
+In any case, he wants syntax for referring to a code chunk from an
+external database, and for displaying the definition(s) of that chunk
+exactly where he specifies.
+
+I~suggested solving the problem with a Noweb filter.
+He can refer to chunks using the approved source syntax:
+\texttt{[{}[<{}<}\emph{chunk name}\texttt{>{}>]{}]}.
+To pull in the definitions from the external database, I suggested he
+provide an empty definition.
+Since such a definition can be written in one line (two lines if the
+definition is followed by a documentation chunk), he can pull in many
+definitions concisely.
+
+This program is the noweb filter that does the job.
+Named ``\texttt{xchunks},'' short for ``external chunks,'' it pulls in
+definitions from an external database.
+The external database is itself simply a list of Noweb files.
+It's a bit more liberal than defined above; a chunk is considered
+empty if its definition contains at most whitespace.
+<<*>>=
+record chunk(lines, type)
+  # lines is all the lines of the chunk
+  # type is "code" or "docs" or "unknown"
+
+procedure main(args)
+  *args > 0 | stop("xchunks needs an external database")
+
+  <<let [[db]] be an open file giving the database pipeline from [[args]]>>
+
+  dbchunks := readchunks(db)
+  defns := defnstable(dbchunks)
+    # defns maps name to list of code chunks defining that name
+
+  thisdoc := readchunks(&input)
+  every c := !thisdoc do
+    if c.type ~== "code" | notEmpty(c) | /defns[chunkName(c)] then
+      every write(!c.lines)
+    else
+      every write(!(!defns[chunkName(c)]).lines)
+end
+@ 
+Reading chunks is fairly straightforward; we look for begin and end.
+The loop logic is a little less pleasant than I would like.
+<<*>>=
+procedure readchunks(infile)
+  local chunks, c
+  chunks := []
+  while line := read(infile) do
+    line ?
+      if ="@begin " then {
+        c := chunk([line], tab(upto(' ')|0))
+        line := read(infile) | stop("unmatched ", c.lines[1])
+        while line ? not ="@end " do {
+          put(c.lines, line)
+          line := read(infile) | stop("unmatched ", c.lines[1])
+        }
+        put(c.lines, line)
+        put(chunks, c)
+      } else
+        put(chunks, chunk([line], "unknown"))
+  return chunks
+end
+@ 
+Building the definitions table is easy.
+<<*>>=
+procedure defnstable(chunks)
+  t := table()
+  every c := !chunks & c.type == "code" do {
+    /t[chunkName(c)] := []
+    put(t[chunkName(c)], c)
+  }
+  return t
+end
+@ 
+The basic functions [[chunkName]] and [[notEmpty]] require search.
+You could imagine caching these, but since they're called twice and at
+most once per chunk, respectively, I doubt it's worth it.
+<<*>>=
+procedure chunkName(c)
+  return (!c.lines ? (="@defn " & tab(0))) | stop("no @defn in code chunk")
+end
+
+procedure notEmpty(c)
+  static nonwhite
+  initial nonwhite := ~' \t'
+  return !c.lines ? ="@use " | (="@text ", upto(nonwhite))
+end
+@ 
+Finally, here's how we get the database.
+<<let [[db]] be an open file giving the database pipeline from [[args]]>>=
+db := "markup"
+every db ||:= " " || !args
+db := open(db, "rp") | stop("cannot pipe from ", image(db))
+@

@@ -34,7 +34,7 @@ end
 }
 <<*>>=
 procedure rcsinfo_too () 
-  return "$Id: defns.nw,v 1.2 1997/09/13 20:12:20 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: defns.nw,v 1.3 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
 end
 @

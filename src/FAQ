@@ -194,6 +194,18 @@ A. The short answer is it can't be done.  (Some would say that it
       notangle foo.nw bar.nw quux.nw > big.out
 
 
+Q. I have a problem with typesetting Mathematica's double-bracketed
+   subscripting command using [[...]] in my documentation chunks. noweb
+   considers [[a[[#]]&]] to mean the symbols a[[# in typewriter and then
+   latex gets stuck on the offending & character. How can I get around
+   this problem?
+
+A. Split the quoted code into two pieces, which you write consecutively:
+     
+       [[a[[#]]]][[&]]
+
+
+
 Q. Why is the noweb command so slow?
 
 

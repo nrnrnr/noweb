@@ -21,8 +21,8 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.8 1999/02/16 21:12:14 nr Exp nr $";
-static char rcsname[] = "$Name: v2_9a $";
+static char rcsid[] = "$Id: recognize.nw,v 1.9 1999/06/18 00:07:08 nr Exp nr $";
+static char rcsname[] = "$Name:  $";
 <<Include files>>
 <<header>>
 <<Type definitions>>
@@ -317,13 +317,18 @@ int reject_match(Recognizer r, char *id, char *input, char *current)
   current = current - len - 1;
   if (input <= current)
     prev = *current;
-  if (strchr(r->alphas, first) && strchr(r->alphas, prev)) return 1;
-  if (strchr(r->alphas, last ) && strchr(r->alphas, next)) return 1;
-  if (strchr(r->syms,   first) && strchr(r->syms,   prev)) return 1;
-  if (strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
+  if (prev && strchr(r->alphas, first) && strchr(r->alphas, prev)) return 1;
+  if (next && strchr(r->alphas, last ) && strchr(r->alphas, next)) return 1;
+  if (prev && strchr(r->syms,   first) && strchr(r->syms,   prev)) return 1;
+  if (next && strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
   return 0;
 }
 @ %def reject_match
+Note we never reject a zero [[prev]] or [[next]], since some
+implementations of [[strchr]] always return true when searching for a
+zero character. 
+@
+
 We need a prototype for [[reject_match]], since it's referenced
 before its definition.
 

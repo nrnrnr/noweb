@@ -90,7 +90,7 @@ think {\tt noweave} ever emits them.
 }
 %%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
 \def\startline{\noindent\hskip\parindent\ignorespaces}
-\def\nwnewline{\ifvmode\else\hfil\break\fi}
+\def\nwnewline{\ifvmode\else\hfil\break\leavevmode\hbox{}\fi}
 @ %def \startline \eatline \nwnewline
 
 Within a code environment, it may be necessary to restore the 
@@ -780,8 +780,9 @@ For hyperreferencing, all labels must be hypertext
 anchors, for which we use [[\nwblindhyperanchor]].
 <<noweb.sty>>=
 \newcommand{\sublabel}[1]{%
+  \@bsphack
   \nwblindhyperanchor{#1}%
-  \@bsphack\if@filesw {\let\thepage\relax
+  \if@filesw {\let\thepage\relax
    \def\protect{\noexpand\noexpand\noexpand}%
    \edef\@tempa{\write\@auxout{\string
       \newsublabel{#1}{{}{\thepage}}}}%
@@ -948,6 +949,75 @@ which can be alphabetic, numeric, or omitted.\stylehook
 \def\nwopt@alphasubpage{\let\nwthepagenum=\@alphasubpagenum}
 \nwopt@alphasubpage
 @ %def \nwthepagenum nosubpage numsubpage alphasubpage
+In rare cases, there may be more than 26 chunks on a page.
+In such a case, we need a sub-page numbering scheme that can go beyond
+``a to z.''
+The scheme I have chosen is ``a to z, then aa to zz, then aaa to zzz,
+etc.''
+The conversion requires a bit of thought because it is \emph{not} an
+ordinary conversion of integer to string as we usually think of such
+things.
+The problem is that the meaning of the letters depends on the
+position; the letter~a acts like a zero in some positions or a one in
+others.
+
+The solution I have implemented uses a variable [[bound]] which is
+always equal to $26^k$ for some~$k$.
+If we write the recurrence $B_k = B_{k-1} + 26^k$, with $B_0 = 0$, we
+then use a string of~$k$ letters to represent numbers between
+$B_{k-1}$~and~$B_k$.
+Within that string, a's are 0's, and so on up to z's which are 25's,
+and we use standard integer-conversion methods to encode $n-B_{k-1}$.
+
+The following Icon implementation may be more perspicuous than the
+{\TeX} code actually used.
+Here the variable [[bound]] is $26^k$, with $k=1$ initially, and
+[[n]]~is $n-B_{k-1}.
+The first loop finds the right~$k$, and the second does the usual
+string conversion.
+<<Icon code for subpage numbering>>=
+procedure alphastring(n)
+  bound := 26
+
+  while n >= bound do {
+    # invariant: bound = 26^(k+1) & n is initial n - B_k
+    n -:= bound
+    bound *:= 26
+  }
+  
+  while bound > 1 do {
+    bound /:= 26
+    d := integer(n / bound)
+    n -:= d * bound
+    writes(&lcase[d+1])
+  }
+end
+@ 
+Here's {\TeX} code to achieve the same end.
+The entire macro body is enclosed in braces, so that it can be used
+with [[\loop]] without picking up the wrong [[\repeat]].
+<<noweb.sty>>=
+\newcount\@nwalph@n
+\let\@nwalph@d\@tempcnta
+\let\@nwalph@bound\@tempcntb
+\def\@nwlongalph#1{{%
+  \@nwalph@n=#1\advance\@nwalph@n by-1
+  \@nwalph@bound=26
+  \loop\ifnum\@nwalph@n<\@nwalph@bound\else
+     \advance\@nwalph@n by -\@nwalph@bound
+     \multiply\@nwalph@bound by 26
+  \repeat
+  \loop\ifnum\@nwalph@bound>1
+    \divide\@nwalph@bound by 26
+    \@nwalph@d=\@nwalph@n\divide\@nwalph@d by \@nwalph@bound
+    % d := d * bound ; n -:= d; d := d / bound --- saves a temporary
+    \multiply\@nwalph@d by \@nwalph@bound
+    \advance\@nwalph@n by -\@nwalph@d
+    \divide\@nwalph@d by \@nwalph@bound
+    \advance\@nwalph@d by 1 \@alph{\@nwalph@d}%
+  \repeat
+}}
+@ 
 \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
@@ -970,7 +1040,9 @@ Since the numbers are all distinct, no sub-page number is ever used.
 \newcount\nw@chunkcount
 \nw@chunkcount=\@ne
 \newcommand{\weblabel}[1]{%
-  \@bsphack\if@filesw {\let\thepage\relax
+  \@bsphack
+  \nwblindhyperanchor{#1}%
+  \if@filesw {\let\thepage\relax
    \def\protect{\noexpand\noexpand\noexpand}%
    \edef\@tempa{\write\@auxout{\string
       \newsublabel{#1}{{}{\number\nw@chunkcount}}}}%

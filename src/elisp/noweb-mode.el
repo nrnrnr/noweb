@@ -18,8 +18,8 @@
 ;; 
 ;; See bottom of this file for information on language-dependent highlighting
 ;;
-;; $Id: noweb-mode.el,v 1.3 1997/09/13 21:08:56 nr Exp nr $
-;; $Name: v2_8a $
+;; $Id: noweb-mode.el,v 1.4 1999/02/16 21:12:21 nr Exp nr $
+;; $Name: v2_9a $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; THIS IS UNRELEASED CODE: IT IS MISSING FUNCTIONALITY AND IT NEEDS CLEANUP ;;
@@ -76,10 +76,10 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.3 1997/09/13 21:08:56 nr Exp nr $")
+  "$Id: noweb-mode.el,v 1.4 1999/02/16 21:12:21 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
-  "$Name: v2_8a $")
+  "$Name: v2_9a $")
 
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.

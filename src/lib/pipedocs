@@ -1,0 +1,23 @@
+#!/bin/sh
+#
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+
+nawk '
+BEGIN {
+  rcsid = "$I$"
+  rcsname = "$Name $"
+  cmd = "sed '"'"'/^@begin docs /s/[0-9][0-9]*/0/'"'"' | |LIBDIR|/unmarkup | '"$*"' | |LIBDIR|/markup | grep -v '"'"'^@file $'"'"'"
+}
+/^@begin docs / { piping = 1 }
+{ if (piping)
+    print | cmd
+  else
+    print
+}
+/^@end docs / { 
+    piping = 0
+    close(cmd)
+}'
+
+

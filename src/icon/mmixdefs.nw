@@ -1,0 +1,32 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+\section{Finding definitions in MMIX}
+<<*>>=
+procedure main(args)
+  go()
+end
+<<*>>=
+global idchars
+procedure postpass(name, arg)
+  static kind, lets
+  initial { idchars := &letters ++ &digits ++ '_:' 
+            lets := &letters ++ '_'
+            kind := "bogus"
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+               if (any(lets), t := tab(many(idchars)), any('\t ')) then
+	         writedefn(t)
+  }
+  return
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+<<*>>=
+procedure rcsinfo () 
+  return "$Id: mmixdefs.nw,v 1.2 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
+end
+@

@@ -5,11 +5,11 @@
 
 nawk '
 BEGIN {
-  rcsid = "$Id: unmarkup,v 1.4 1997/09/13 21:00:38 nr Exp nr $"
-  rcsname = "$Name: v2_8a $"
+  rcsid = "$Id: unmarkup,v 1.5 1999/02/16 21:11:54 nr Exp nr $"
+  rcsname = "$Name: v2_9a $"
+  firstdoc = 1
 }
-/^@begin docs 0$/ { next }
-/^@begin docs / { printf "@ " }
+/^@begin docs / { if (!firstdoc) printf "@ "; firstdoc = 0 }
 /^@begin code / { code = 1 }
 /^@end [cd]o[dc][es] / { 
 		code = 0

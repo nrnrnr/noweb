@@ -236,6 +236,16 @@ if \uses[thischunk] then {
 <<copy [[name]] and [[arg]] to output>>=
 write("@", name, (" " || \arg) | "")
 <<*>>=
+procedure lualistimage(l)
+  p := "{ "
+  s := ""
+  every i := 1 to *l do {
+    s ||:= p || "[" || i || "] = " || image(l[i])
+    p := ", "
+  }
+  return s || " }"
+end
+<<*>>=
 procedure newdefnlabel(arg)
   /defanchors[arg] := []
   return "NW" || curfile || "-" || uniqueid(arg) || "-" || alphacode(1+*defanchors[arg])
@@ -295,13 +305,17 @@ procedure uniqueid(name)
           }
 
   if not member(idtable, name) then {
-    key := make_key(map(name, badchars, badstars))
+    # key := make_key(map(name, badchars, badstars)) # deprecated
+    key := alphacode(crc(name))
     keycounts[key] +:= 1
     idtable[name] := key 
     if keycounts[key] > 1 then idtable[name] ||:= "." || alphacode(keycounts[key])
   }
   return idtable[name]
 end
+@ 
+The original key routine used the FORTH heuristic on the basename:
+first three letters plus the length.  This produced too many collisions.
 <<*>>=
 procedure make_key(key, len)
     static noslash
@@ -361,7 +375,12 @@ procedure alphasort(x)
   every put(l, (!t)[1])
   return l
 end
-<<*>>=
+@ 
+I tried to ignore special characters when sorting.
+This turned out to be too clever by half.
+Sample: it would sort [[BALANCER_DEBUGGING]] before 
+[[BALANCE_TRANSFORMATION]], because the underscore didn't count.
+<<old, evil code>>=
 procedure sortkey(s)
   static keep
   initial keep := &lcase ++ ' '
@@ -370,7 +389,12 @@ procedure sortkey(s)
   s ? while tab(upto(keep)) do r ||:= move(1)
   return r || "\n" || s         # relies on \n sorting lower than other chars
 end
-@ %def sortkey
+@ My solution is to move to a much simpler scheme in which the only
+thing we do is change case.
+<<*>>=
+procedure sortkey(s)
+  return map(s) || "\n" || s         # relies on \n sorting lower than other chars
+end
 <<*>>=
 procedure alphacode(n)
   static codes
@@ -384,6 +408,45 @@ procedure alphacode(n)
 end
 @ 
 <<*>>=
+# /* 32-bit Cyclic Redundancy Code  implemented by A. Appel 1986  */
+#  
+#    this works only if POLY is a prime polynomial in the field
+#    of integers modulo 2, of order 32.  Since the representation of this
+#    won't fit in a 32-bit word, the high-order bit is implicit.
+#    IT MUST ALSO BE THE CASE that the coefficients of orders 31 down to 25
+#    are zero.  Fortunately, we have a candidate, from
+#         E. J. Watson, "Primitive Polynomials (Mod 2)", Math. Comp 16 (1962).
+#    It is:  x^32 + x^7 + x^5 + x^3 + x^2 + x^1 + x^0
+# 
+#    Now we reverse the bits to get:
+#         111101010000000000000000000000001  in binary  (but drop the last 1)
+#            f   5   0   0   0   0   0   0  in hex
+# */
+
+procedure crc_table() 
+  local POLY, sum
+  POLY :=  16rf5000000
+  t := table()
+  every i := 0 to 255 do {
+    sum := 0
+    every j := 7 to 0 by -1 do
+      if iand(i, ishift(1, j)) ~= 0 then
+        sum := ixor(sum, ishift(POLY, -j))
+    t[i] := sum
+  }
+  return t
+end
+
+procedure crc(s)
+  local sum
+  static table
+  initial table := crc_table()
+  sum := 0
+  s ? while sum := ixor(ishift(sum, -8), table[iand(ixor(sum, ord(move(1))), 255)])
+  return sum
+end
+@ 
+<<*>>=
 procedure fatal(L[])
   write!(["@fatal noidx "] ||| L)
   write!([&errout, "noweb error in noidx: "] ||| L)
@@ -391,8 +454,8 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: noidx.nw,v 1.6 1998/08/17 00:16:54 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: noidx.nw,v 1.7 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
 end
 @
 \section{List of chunks}

@@ -1,0 +1,31 @@
+#
+# nwmtime -- emit defn of modification time of first file
+#
+
+eval 'exec perl -S $0 ${1+"$@"}'
+  if $running_under_some_shell;
+
+$first = 1;
+while(<>) {
+  print;
+  if ($first && /\@file\s*(\S+)/) {
+    $mtime_file = $1;
+    $first = 0;
+  } 
+}
+
+if (!$first) {
+  my $filename = $mtime_file;
+  my $mtime;
+
+  #        localtime if you really want local time...
+  $mtime = gmtime((stat $filename)[9]);
+  print <<EOF;
+\@begin code 000
+\@defn modification time of first \@file
+\@nl
+\@text $mtime 
+\@nl
+\@end code 000
+EOF
+}

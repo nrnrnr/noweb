@@ -2,8 +2,8 @@
 \section{Scanning for uses of identifiers}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: finduses.nw,v 1.6 1997/09/13 19:59:15 nr Exp nr $";
-static char rcsname[] = "$Name: v2_8a $";
+static char rcsid[] = "$Id: finduses.nw,v 1.7 1999/02/16 21:12:14 nr Exp nr $";
+static char rcsname[] = "$Name: v2_9a $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+opts="-nolist"
+
+case $1 in
+  -[0-9]*) opts="$opts -width=`expr 0 - $1`" ; shift ;;
+esac
+
+html=/tmp/$$.html; 
+trap 'rm -f $html; exit 1' 1 2 15	# clean up files
+
+awk '
+/^ *$/ { if (NR == 1) { print ; next } }
+{ print > "'"$html"'" }'
+if [ -r $html ]; then lynx -dump $opts $html | sed '1d'; fi
+rm -f $html

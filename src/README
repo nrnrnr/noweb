@@ -1,4 +1,4 @@
-These are the base sources and documents for version 2.9a of
+These are the base sources and documents for version 2.9b of
 ``noweb'', a simple, extensible literate-programming tool.  noweb is
 available via anonymous ftp from the Comprehensive TeX Archive
 Network, in directory web/noweb.  CTAN includes hosts ftp.ctan.org,
@@ -16,6 +16,7 @@ This part of the distribution contains the following directories:
   src		C source code for nt, markup, and finduses
   icon		pipeline stages and back ends in Icon
   lib		other pipeline stages and back ends, not available in Icon
+  rc            replacements for shell scripts; useful on Plan 9
   shell		the shell scripts that make up the actual commands
   tex		supporting tex code for /usr/local/lib/tex/macros
   xdoc		man pages, hacker's guide (named to be unpacked last)

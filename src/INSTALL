@@ -1,5 +1,8 @@
-As of version 2.7, I offer a slightly better way to choose between the
-awk and Icon filters.
+These installation instructions are for Unix systems.
+For Plan 9 systems, Russ Cox has kindly provided scripts in the rc
+directory, but you are on your own for installation instructions.
+If you use Microsoft Windows, you are even more on your own.
+
 
 To build noweb:
 
@@ -7,12 +10,13 @@ To build noweb:
      library by setting these variables in the Makefile:
        CC         the name of an ANSI C compiler
        LIBSRC	  'awk' or 'icon', depending on which library
-     If you have Icon, it is recommended that you use the Icon version
-     of the noweb library; this code speeds up noweave by a factor of 3.
-     The Icon versions have fewer bugs and provide more filters (e.g.,
-     convert LaTeX to HTML in documentation chunks).  If you have the
-     Icon translator but not the Icon compiler set ICONC=icont in the
-     Makefile.  (Icon is freely available from the University of Arizona.)
+     If you have Icon, use the Icon version of the noweb library; this
+     code speeds up noweave by a factor of 3.  The Icon versions have
+     fewer bugs and provide more filters (e.g., convert LaTeX to HTML
+     in documentation chunks).  Not all of the examples will work with
+     the awk library.  If you have the Icon translator but not the
+     Icon compiler set ICONC=icont in the Makefile.  (Icon is freely
+     available from the University of Arizona.)
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:

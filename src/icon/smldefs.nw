@@ -2,8 +2,8 @@
 \section{Finding definitions in Standard ML}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: smldefs.nw,v 1.3 1998/08/17 00:17:16 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: smldefs.nw,v 1.4 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
 end
 procedure main(args)
   go()
@@ -15,7 +15,7 @@ procedure postpass(name, arg)
             definers := ["fun", "val", "structure", "signature", "and", "functor",
 			 "type", "eqtype", "datatype", "withtype", "exception"]
 	    id1 := &letters ++ &digits ++ '\'_'
-            id2 := '!%&$+-/:<=>?@\\~^| # * `'
+            id2 := '!%&$+-/:<=>?@\\~^|#*`'
             reserved := set()
             every insert(reserved, !"*|:=#_" | "->" | "=>")
           }

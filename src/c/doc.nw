@@ -1,4 +1,4 @@
-% $Id: doc.nw,v 1.5 1997/09/13 19:59:15 nr Exp nr $
+% $Id: doc.nw,v 1.6 1999/02/16 21:12:14 nr Exp nr $
 
 \documentstyle[noweb,multicol,twoside]{article}
 \makeatletter

@@ -603,6 +603,7 @@ end
 <<control-sequence assignments>>=
 macro("nwanchorto",   2, "<a href=\"#$1\">#2</a>")
 macro("nwanchorname", 2, "<a name=\"#$1\">#2</a>")
+ignore("nwaddbox", "{")
 verbatim("latexonly", do_nothing)
 verbatim("rawhtml", emit_text)
 @
@@ -2441,7 +2442,10 @@ end
 @ 
 <<*>>=
 procedure Cincludegraphics(S, cs, cl)
-  apply_args(S, do_includegraphics, [S], 1)
+  local saved_ignore
+  saved_ignore := S.ignoring
+  S.ignoring := 1
+  do_ignore(S, "[", saved_ignore, apply_args, [S, do_includegraphics, [S], 1])
 end
 
 procedure do_includegraphics(S, arg) 
@@ -2761,8 +2765,8 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.7 1998/08/17 00:15:16 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: l2h.nw,v 1.8 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
 end
 @
 \section{Chunks}

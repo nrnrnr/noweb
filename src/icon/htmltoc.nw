@@ -258,7 +258,7 @@ procedure openfile(f)
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: htmltoc.nw,v 1.4 1999/02/16 21:12:17 nr Exp nr $" ||
-         "$Name: v2_9a $"
+  return "$Id: htmltoc.nw,v 1.5 2000/01/06 06:12:48 nr Exp nr $" ||
+         "$Name:  $"
 end
 @

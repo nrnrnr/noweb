@@ -32,8 +32,8 @@ procedure main(args)
   if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
   if !args == "-no-gen-comment" then &null
   else 
-    write("<!-- this file was generated automatically by noweave;",
-          " better not edit it-->")
+    write(braw, "<!-- this file was generated automatically by noweave;",
+          " better not edit it-->", eraw)
   while inputline := read() do inputline ? {
     <<scan and convert>>
   }
@@ -529,7 +529,7 @@ end
 \end{document}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: tohtml.nw,v 1.6 1998/08/17 00:17:47 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: tohtml.nw,v 1.7 1999/02/16 21:12:17 nr Exp nr $" ||
+         "$Name: v2_9a $"
 end
 @
