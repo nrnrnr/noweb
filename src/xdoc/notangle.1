@@ -1,4 +1,4 @@
-.TH NOWEB 1 "local \- 2/26/93"
+.TH NOWEB 1 "local 2/26/93"
 .SH NAME
 notangle, noweave, nountangle, noroots \- noweb, a literate programming tool
 .SH SYNOPSIS
@@ -103,6 +103,10 @@ These double square brackets are ignored by
 but they may be used by 
 .I noweave
 to give the code special typographic treatment.
+If quoted code ends with three or more square brackets,
+.I noweave
+choose the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
+parsed correctly.
 .PP
 If the double left or right angle bracket is to be used 
 in code or documentation,
@@ -167,6 +171,7 @@ When
 .B noweave -x
 is used, the control sequence
 .B "\\\\chunklist"
+on a line by itself
 expands to a section containing a sorted list of all code chunks.
 .PP
 Output from \fInoweave\fP that lacks header and trailer can
@@ -229,7 +234,7 @@ GNU
 is reported to work.
 .PP
 A bug in the LaTeX output routine sometimes results in skewed headers or footers.
-noweb.sty contains code that fixes headers for some versions of latex.tex.
+noweb.sty contains code that fixes only headers for only some versions of latex.tex.
 .PP
 At some sites,
 \fB\\chunklist\fR may produce a harmless warning message instead of a sorted list of
