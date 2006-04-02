@@ -6,8 +6,8 @@ This main program is used to make the monolithic {\tt noweb}
 script efficient.
 Tips of the hat to Ross Williams and Preston Briggs.
 <<*>>=
-static char rcsid[] = "$Id: mnt.nw,v 1.15 2002/07/17 22:47:34 nr Exp nr $";
-static char rcsname[] = "$Name: v2_10c $";
+static char rcsid[] = "$Id: mnt.nw,v 1.16 2006/04/02 15:24:24 nr Exp nr $";
+static char rcsname[] = "$Name: v2_11 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

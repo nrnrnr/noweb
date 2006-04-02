@@ -50,6 +50,6 @@ end
 
 
 procedure rcsinfo () 
-  return "$Id: pascaldefs.nw,v 1.10 2002/07/17 22:47:35 nr Exp nr $" ||
-         "$Name: v2_10c $"
+  return "$Id: pascaldefs.nw,v 1.11 2006/04/02 15:24:24 nr Exp nr $" ||
+         "$Name: v2_11 $"
 end

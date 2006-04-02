@@ -18,8 +18,8 @@
 ;; 
 ;; See bottom of this file for information on language-dependent highlighting
 ;;
-;; $Id: noweb-mode.el,v 1.12 2002/07/17 22:47:37 nr Exp nr $
-;; $Name: v2_10c $
+;; $Id: noweb-mode.el,v 1.13 2006/04/02 15:25:03 nr Exp nr $
+;; $Name: v2_11 $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; THIS IS UNRELEASED CODE: IT IS MISSING FUNCTIONALITY AND IT NEEDS CLEANUP ;;
@@ -76,10 +76,10 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.12 2002/07/17 22:47:37 nr Exp nr $")
+  "$Id: noweb-mode.el,v 1.13 2006/04/02 15:25:03 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
-  "$Name: v2_10c $")
+  "$Name: v2_11 $")
 
 (defvar noweb-mode-prefix "\M-n"
   "*Prefix key to use for noweb mode commands.
@@ -213,7 +213,7 @@ Misc:
   (add-hook 'isearch-mode-hook 'noweb-note-isearch-mode)
   (add-hook 'isearch-mode-end-hook 'noweb-note-isearch-mode-end)
   (run-hooks 'noweb-mode-hook)
-  (message "nobweb mode: use `M-x noweb-describe-mode' for further information"))
+  (message "noweb mode: use `M-x noweb-describe-mode' for further information"))
 
 (defun noweb-setup-keymap ()
   "Setup the noweb-mode keymap.  This function is rerun every time the

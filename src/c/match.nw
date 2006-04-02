@@ -7,8 +7,8 @@ extern int is_begin(char *line, char *type);
 extern int is_end(char *line, char *type);
 extern int is_index(char *line, char *type);
 <<*>>=
-static char rcsid[] = "$Id: match.nw,v 1.14 2002/07/17 22:47:34 nr Exp nr $";
-static char rcsname[] = "$Name: v2_10c $";
+static char rcsid[] = "$Id: match.nw,v 1.15 2006/04/02 15:24:24 nr Exp nr $";
+static char rcsname[] = "$Name: v2_11 $";
 #include <string.h>
 #include "match.h"
 static int matches(char *line, char *search) {
