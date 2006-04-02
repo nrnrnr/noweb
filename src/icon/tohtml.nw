@@ -528,7 +528,7 @@ end
 \end{document}
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: tohtml.nw,v 1.14 2002/07/16 17:10:20 nr Exp nr $" ||
-         "$Name: v2_10b $"
+  return "$Id: tohtml.nw,v 1.15 2002/07/17 22:47:35 nr Exp nr $" ||
+         "$Name: v2_10c $"
 end
 @

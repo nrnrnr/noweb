@@ -48,6 +48,14 @@ Noweb Frequently Asked Questions
      graphics facilities require wiconx.exe and its kin. The nticonx*
      binaries should run fine on Win95 also.
 
+   Q. I'm having trouble getting noweb to work on Windows XP.
+
+     A. Some users are very satisfied with a distribution from
+     http://www.literateprogramming.org. This distribution requires
+     Cygwin (in particular, Cygwin's bash shell) to get the pipes and so
+     on working. The installation instructions are at
+     http://www.literateprogramming.com/noweb/nowebinstall.html.
+
   Indentation of code, especially FORTRAN
 
    Q. Has anyone devised a clean way of handling FORTRAN 77 using a
@@ -70,6 +78,15 @@ C   A comment in a chunk!
      notangle -L'%N' pgm.nw > pgm.f
 
      should do the job.
+
+   Q. I noticed the -L option to notangle turns off the usual
+   indentation. Is there an easy way to get both -L and indentation?
+
+     A. No. It was my design decision that -L should preserve the column
+     numbers in the original source code. This behavior is extremely
+     useful in cases where a compiler reports an error in the source by
+     line and column number. Of course, this decision precludes changing
+     the indentation of the input.
 
   Formatting the printed documentation
 
@@ -243,7 +260,7 @@ noweave -n -index -backend scopehack *.nw
 
    Q. I compiled and installed, and everything looks OK, but when I ran
    the examples, two things do not work.
-     * Noweave can not find definitions for 'C'. :
+     * Noweave can not find definitions for 'C':
 noweave -index -autodefs c compress.nw > compress.tex
 noweave: don't know how to find definitions for 'c'
      * Noweave can't find l2h for the -filter.
@@ -405,6 +422,19 @@ noweb -t foo
 
      A. Lua is small and simple. I wanted not to be vulnerable to future
      changes in language definitions or implementations, which meant I
-     would have to clone and maintain the implementation for ever. When
-     I was making this decision in 1997, Lua 2.5 was small enough that I
+     would have to clone and maintain the implementation forever. When I
+     was making this decision in 1997, Lua 2.5 was small enough that I
      could feel comfortable doing this.
+
+   Q. Are there noweb comments? It would be very useful to comment parts
+   of a noweb file that wouldn't be parsed as either TeX or code.
+
+     A. I recommend that you put comments in specially named chunks and
+     use the elide filter that comes with the distribution. For example,
+     if the name of each comment chunk begins with comment:, you could
+     run
+
+noweave -filter elide comment:* ...
+
+     (Because chunks that are not used are ignored, there would be no
+     need to elide when tangling.)

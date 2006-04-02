@@ -143,6 +143,10 @@ any sequence of nonwhite characters may be an identifier.
 .I noweb
 uses a simple heuristic to avoid recognizing identifiers 
 that are substrings of other identifiers.
+.I "This feature is deprecated."
+.I "Instead, I recommend that you use the"
+.B btdefn
+.I "filter described on the nowebfilters(7) man page."
 <<notangle.1>>=
 .SH TANGLING
 .I notangle
@@ -425,10 +429,10 @@ can be used as an example.
 noweb \- a simple literate-programming tool
 .SH SYNOPSIS
 .B noweb
-[\fB\-t\fP] 
-[\fB\-o\fP] 
-[\fB-\L\fP\fIformat\fP] 
-[\fB-\markup\fP \fIparser\fP]
+[\fB-t\fP] 
+[\fB-o\fP] 
+[\fB-L\fP\fIformat\fP] 
+[\fB-markup\fP \fIparser\fP]
 [file] ...
 .SH DESCRIPTION
 .I Noweb

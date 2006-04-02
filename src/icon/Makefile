@@ -1,7 +1,7 @@
 SHELL=/bin/sh
 LIB=/dev/null		# to be overridden
 BIN=/dev/null		# to be overridden
-ICONC=iconc             # override to icont if no iconc on your system
+ICONC=iconc -p -L/usr/X11R6/lib     # override to icont if no iconc on your system
 ICONT=icont		# override to iconc if all filters should be compiled
 CPIF=| cpif		# change to ">" to insure all sources always made
 
@@ -106,7 +106,7 @@ tohtml: tohtml.icn
 	$(ICONC) tohtml.icn
 
 docs2comments: docs2comments.icn
-	$(ICONC) docs2comments.icn
+	$(ICONT) docs2comments.icn  # no longer compiles with iconc
 
 xchunks: xchunks.icn
 	$(ICONT) xchunks.icn
@@ -114,12 +114,12 @@ xchunks: xchunks.icn
 l2h.icn: l2h.nw
 	notangle -L'#line %-1L "%F"%N' -R'l2h.icn' l2h.nw $(CPIF) l2h.icn
 l2h: l2h.icn
-	$(ICONC) -o l2h l2h.icn 
+	$(ICONT) -o l2h l2h.icn   # no longer compiles with iconc
 
 sl2h.icn: l2h.nw
 	notangle -L'#line %-1L "%F"%N' -R'sl2h.icn' l2h.nw $(CPIF) sl2h.icn
 sl2h: sl2h.icn
-	$(ICONC) -o sl2h sl2h.icn 
+	$(ICONT) -o sl2h sl2h.icn   # no longer compiles with iconc
 
 noindex: noindex.icn
 	$(ICONT) noindex.icn
@@ -132,6 +132,9 @@ elide: elide.icn
 
 pipedocs: pipedocs.icn
 	$(ICONT) pipedocs.icn
+
+pdcached: pdcached.icn
+	$(ICONT) pdcached.icn
 
 disambiguate: disambiguate.icn
 	$(ICONT) disambiguate.icn

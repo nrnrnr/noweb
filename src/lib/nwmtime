@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # nwmtime -- emit defn of modification time of first file
 #

@@ -75,8 +75,8 @@ escaped with a backslash.
   \catcode`\"=\other	% fixes problem with german.sty
   \obeyspaces\Tt
 }
-\let\nwlbrace=\{
-\let\nwrbrace=\}
+%\let\nwlbrace=\{
+%\let\nwrbrace=\}
 @ 
 [[\nwendquote]] is called after quoted code.
 It resets the spacefactor
@@ -112,6 +112,8 @@ This hack doesn't properly restore [["]] for use in {\tt german.sty}.
   \catcode`\^=7
   \catcode`\ =10
   \catcode`\^^M=5
+  \let\nwlbrace\lbrace
+  \let\nwrbrace\rbrace
   \let\{\nwlbrace
   \let\}\nwrbrace
   % bad news --- don't know what catcode to give "
@@ -801,6 +803,7 @@ For hyperreferencing, all labels must be hypertext
 anchors, for which we use [[\nwblindhyperanchor]].
 <<noweb.sty>>=
 \newcommand{\sublabel}[1]{%
+  \leavevmode % needed to make \@bsphack work
   \@bsphack
   \nwblindhyperanchor{#1}%
   \if@filesw {\let\thepage\relax
@@ -1551,7 +1554,7 @@ language is one of those Noweb supports.
 Mr.~Filgueiras provided support for English,
 Portuguese, German, and French. 
 He notes that the French is
-faulty; the translations may be poort, and there are
+faulty; the translations may be poor, and there are
 bugs in the implementation that he could not solve.
 
 \label{subsection:langdeps}
@@ -1630,8 +1633,8 @@ This contains the text in Portuguese.
 \subsubsection{Support for French}
 
 This is a tentative translation to French.
-Although NR has made some corrections, it should probably be
-reviewed by a native speaker.
+NR has made some corrections, and it has been reviewed by Fr\'ed\'eric
+Lin\'e, but some errors may remain.
 
 There are problems with using accents: on the [[\@nwlangdepnvd]] macro
 (which apparently is not used in the context of [[\nwcodecomment]]),
@@ -1640,13 +1643,13 @@ and in some other macros (\LaTeX{} complains about missing
 using \TeX\ldots
 <<language support>>=
 \def\nwopt@frenchb{%
-  \def\@nwlangdepdef{Cette d\'efinition suit}%
+  \def\@nwlangdepdef{Suite de la d\'efinition}%
   % This definition is continued
   \def\@nwlangdepcud{Ce code est employ\'e}%
   % This code is used
   \def\@nwlangdeprtc{Morceau racine (pas employ\'e dans ce document)}%
   % Root chunk (not used in this document)
-  \def\@nwlangdepcwf{Ce code est \'ecrit aux fichier}%
+  \def\@nwlangdepcwf{Ce code est \'ecrit dans le fichier}%
   % This code is written to file
   \def\@nwlangdepchk{le morceau}%
   % chunk
@@ -1656,13 +1659,13 @@ using \TeX\ldots
   % in
   \def\@nwlangdepand{et}%
   % and
-  \def\@nwlangdepuss{Il emploie}%
+  \def\@nwlangdepuss{Utilise}%
   % Uses
-  \def\@nwlangdepusd{employ\'{e}}%
+  \def\@nwlangdepusd{utilis\'{e}}%
   % used
   \def\@nwlangdepnvu{jamais employ\'{e}}%
   % never used
-  \def\@nwlangdepdfs{Il d\'{e}fine}%
+  \def\@nwlangdepdfs{D\'{e}finit}%
   % Defines
   % Cannot use the accent here: \def\@nwlangdepnvd{jamais d\'{e}fini}%
   \def\@nwlangdepnvd{jamais defini}%
@@ -1673,8 +1676,38 @@ using \TeX\ldots
 \subsubsection{Support for German}
 
 This is a translation to German by Sabine Broda (DCC-FCUP \& LIACC,
-Universidade do Porto).
+Universidade do Porto) with revisions by Christian Lindig.
 <<language support>>=
+\def\nwopt@german{%
+  \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
+  % This definition is continued
+  \def\@nwlangdepcud{Dieser Code wird benutzt}%
+  % This code is used
+  \def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}%
+  % Root chunk (not used in this document)
+  %\def\@nwlangdepcwf{Dieser Code schreibt man zum File}%
+  \def\@nwlangdepcwf{Dieser Code geht in Datei}%
+  % This code is written to file
+  \def\@nwlangdepchk{dem Teil}%
+  % chunk
+  %\def\@nwlangdepchks{Teils}%   
+  \def\@nwlangdepchks{den Teilen}%   
+  % chunks
+  \def\@nwlangdepin{in}%
+  % in
+  \def\@nwlangdepand{und}%
+  % and
+  \def\@nwlangdepuss{Benutzt}%
+  % Uses
+  \def\@nwlangdepusd{benutzt}%
+  % used
+  \def\@nwlangdepnvu{nicht benutzt}%
+  % never used
+  \def\@nwlangdepdfs{Definiert}%
+  % Defines
+  \def\@nwlangdepnvd{nicht definiert}%
+  % never defined
+}
 \def\nwopt@german{%
   \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
   % This definition is continued
@@ -1704,6 +1737,33 @@ Universidade do Porto).
   % never defined
 }
 \let\nwopt@ngerman\nwopt@german
+@ Explanations:
+\begin{quote} 
+``Diese Code geht in Datei (x)'' isn't perfect either; the best
+translation would be ``Dieser Code wird in Datei (x) geschrieben'' but
+this would require to put the file name into the middle of the sentence.
+\begin{verbatim} 
+    \def\@nwlangdepcwf{Dieser Code geht in Datei}%
+\end{verbatim}
+The [[\@nwlangdepchks]] macro is problematic because it has to work
+together with [[\@nwlangdepin]]. It would be best to emit:
+\begin{verbatim} 
+    benutzt in den Teilen 1b und 2.
+    benutzt im Teil 1.
+\end{verbatim}
+This would require to switch between ``in'' and ``im''. Since ``im'' is a
+compund of ``in dem'', I suggest to use an article for the singular, too,
+and to emit:
+\begin{verbatim} 
+    benutzt in den Teilen 1b und 2.
+    benutzt in dem Teil 1.
+\end{verbatim}
+Hence:
+\begin{verbatim} 
+    \def\@nwlangdepchks{den Teilen}
+    \def\@nwlangdepchk{dem Teil}
+\end{verbatim}
+\end{quote}
 @
 @ \iffalse
 <<man page: [[\noweboptions]]>>=

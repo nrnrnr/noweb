@@ -1,11 +1,11 @@
-These are the base sources and documents for version 2.10b of
+These are the base sources and documents for version 2.11 of
 ``noweb'', a simple, extensible literate-programming tool.  noweb is
-available via anonymous ftp from the Comprehensive TeX Archive
-Network, in directory web/noweb.  CTAN includes hosts ftp.ctan.org,
-ftp.tex.ac.uk, and ftp.uni-stuttgart.de.  These sites mirror the
-master directory ftp.eecs.harvard.edu:pub/nr/noweb.  The file INSTALL
-tells how to build noweb.  The file FAQ answers some frequently asked
-questions about building and using noweb.
+available by anonymous ftp from ftp.eecs.harvard.edu:pub/nr/noweb and
+by HTTP from http://www.eecs.harvard.edu/nr/noweb/dist.  It is
+mirrored by the Comprehensive TeX Archive Network, in directory
+web/noweb.  The file INSTALL tells how to build noweb.  The file FAQ
+answers some frequently asked questions about building and using
+noweb.
 
 
 STRUCTURE OF THE BASE SOURCES

@@ -86,14 +86,14 @@ onepage.dvi: onepage.tex
 	while grep -s 'Rerun to get cross-references right' onepage.log; do latex '\scrollmode \input '"onepage"; done
 
 onepage.ps: onepage.dvi
-	dvips -o onepage.ps onepage
+	dvips -P cmz -o onepage.ps onepage
 
 guide.dvi: guide.tex
 	latex '\scrollmode \input '"guide"
 	while grep -s 'Rerun to get cross-references right' guide.log; do latex '\scrollmode \input '"guide"; done
 
 guide.ps: guide.dvi
-	dvips -D 300 -o guide.ps guide
+	dvips -P cmz -o guide.ps guide
 
 guide.uu: guide.ps
 	gzip < guide.ps > guide.ps.gz

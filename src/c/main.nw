@@ -4,8 +4,8 @@
 \section{Tangling}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: main.nw,v 2.17 2002/07/16 17:10:19 nr Exp nr $";
-static char rcsname[] = "$Name: v2_10b $";
+static char rcsid[] = "$Id: main.nw,v 2.18 2002/07/17 22:47:34 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10c $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

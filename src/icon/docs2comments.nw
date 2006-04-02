@@ -129,6 +129,7 @@ while line := read() do
         preceding_defn := holding
         holding := []
     } else {
+        if match("@xref ") & (\holding)[-1] == "" then pull(holding)
         put(\holding, line)
     }
 drain(put(chunks, docs([])))
@@ -136,9 +137,19 @@ drain(put(chunks, docs([])))
 <<*>>=
 procedure emit_as_comments(c)
   type(c) == "docs" | runerr(1, "Unexpected code chunk")
-  every write("@text ", comment(!\c.lines), "\n@nl")
+  every write("@text ", comment(trailing_nonblank(\c.lines)), "\n@nl")
   return
 end
+
+procedure trailing_nonblank(l)
+  local suspended
+  every s := !l do
+    if \suspended | *s > 0 then {
+      suspended := 1
+      suspend s
+    }
+end
+        
 
 procedure drain(chunks)
   static n
@@ -151,6 +162,7 @@ procedure drain(chunks)
       emit_as_comments(chunks[i])
     write("@text ", comment("<" || c.defn || ">="), "\n@nl")
     write("@text ", \lastline, "\n@nl")
+    copyxreflines(\c.lines)
     bad := &null
     (bad := get(\c.lines)) == "@nl" | 
       { write(&errout, "expected newline after definition; got ", image(bad));
@@ -168,4 +180,12 @@ procedure drain(chunks)
     write("@end code ", n)
   }
   return chunks
+end
+
+procedure copyxreflines(l)
+  while match("@xref ", l[1]) do { 
+    #write(&errout, "COPYING ", image(l[1]))
+    get(l) #write(get(l))
+  }
+  return
 end

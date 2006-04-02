@@ -21,8 +21,8 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
-static char rcsid[] = "$Id: markup.nw,v 2.16 2002/07/16 17:10:19 nr Exp nr $";
-static char rcsname[] = "$Name: v2_10b $";
+static char rcsid[] = "$Id: markup.nw,v 2.17 2002/07/17 22:47:34 nr Exp nr $";
+static char rcsname[] = "$Name: v2_10c $";
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -147,7 +147,11 @@ char *mod_end(char *s, int mark) {
 }
 @ 
 Once we know how to [[mod_start]] and [[mod_end]], recognizing the
-beginning of a code chunk is easy.
+beginning of a code chunk is easy.  The only tricky bit is that if we
+see an unclosed, unescaped [[<<]] in a code chunk, this should be acceptable.
+Because in a documentation chunk, an unclosed, unescaped [[<<]] will
+already be caught with a ``module name doesn't end'' message, the
+right thing to do here is silently to let an unclosed [[<<]] pass.
 <<header>>=
 int starts_code (char *line, char *filename, int lineno);  
                                         /* does this line start module defn? */
@@ -158,8 +162,7 @@ int starts_code (char *line, char *filename, int lineno) {
     char *tail;
     if (mod_start(line,0) != line+2) return 0;
     tail = mod_end(line+2,0);
-    if (tail == NULL) <<error exit from [[starts_code]]>>
-    if (*tail++ != '=') return 0;
+    if (tail == NULL || *tail++ != '=') return 0;
     while (isspace(*tail)) tail++;
     return (*tail == '\0');
 }
@@ -174,11 +177,6 @@ void getmodname(char *dest, int size, char *source) {
     strncpy(dest,q,size-1);
     dest[size-1] = '\0';
     free(p);
-}
-<<error exit from [[starts_code]]>>=
-{
-    errorat(filename, lineno, Error, "Module name doesn't end", line);
-    return 0;
 }
 <<Error exit from getmodname>>= 
 {

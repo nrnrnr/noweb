@@ -245,10 +245,21 @@ procedure lualistimage(l)
   }
   return s || " }"
 end
+@ 
+The following code is a change first effective in version~2.10d.
+It ensures that labels are the same whether files are marked up one at
+a time or in a group.
+This change helps ``book page definition marks'' for the 152 text,
+which is processed one chapter at a time for weaving but several
+chapters in a group for tangling.
 <<*>>=
 procedure newdefnlabel(arg)
+  static defcounts
+  initial defcounts := table(0)
   /defanchors[arg] := []
-  return "NW" || curfile || "-" || uniqueid(arg) || "-" || alphacode(1+*defanchors[arg])
+  k := curfile || "-" || uniqueid(arg)
+  defcounts[k] +:= 1
+  return "NW" || k || "-" || alphacode(defcounts[k])
 end
 <<*>>=
 procedure newdocslabel()
@@ -454,8 +465,8 @@ procedure fatal(L[])
 end
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: noidx.nw,v 1.14 2002/07/16 17:10:20 nr Exp nr $" ||
-         "$Name: v2_10b $"
+  return "$Id: noidx.nw,v 1.15 2002/07/17 22:47:35 nr Exp nr $" ||
+         "$Name: v2_10c $"
 end
 @
 \section{List of chunks}

@@ -1503,6 +1503,18 @@ procedure Csetif(S, cs, cl)
   }
 end
 @ 
+\subsection{Upper case}
+
+This is a very simple implementation of [[\uppercase]]: it requires to
+have all of its argument immediately.
+<<*>>=
+procedure Cuppercase(S, cs, cl)
+  l := map(csarg(S), &lcase, &ucase) | fail
+  emit_text(S, l)
+end
+<<control-sequence assignments>>=
+cstab["uppercase"] := Cuppercase
+@ 
 \subsection{HTML support for array and tabular environments}
 We handle tables by using [[S.text]] to implement a little state machine.
 There are only two states: waiting to start a new cell, and the
@@ -2775,8 +2787,8 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.15 2002/07/16 17:10:20 nr Exp nr $" ||
-         "$Name: v2_10b $"
+  return "$Id: l2h.nw,v 1.16 2002/07/17 22:47:35 nr Exp nr $" ||
+         "$Name: v2_10c $"
 end
 @
 \section{Chunks}
