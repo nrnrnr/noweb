@@ -31,6 +31,7 @@ To build noweb:
      Therefore you should:
        - make sure you have write permission to these directories.
        - refrain from making them point into the noweb source distribution.
+       - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH.
      If you don't use emacs, just leave ELISP set to /dev/null.
 
      If your system provides tempnam(3), noweb's indexing will be more

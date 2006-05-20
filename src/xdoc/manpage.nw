@@ -111,10 +111,11 @@ part of the name of a code chunk.
 .PP
 <<paragraph on escaping angle brackets>>
 <<paragraph on escaping angle brackets>>=
-If double left and right angle brackets are not paired, they are
-treated as literal \fB@<<\fP and \fB@>>\fP.  Users can force any
-such brackets, even paired brackets, to be treated as literal by
-using a preceding at sign (e.g. \fB@@<<\fP).
+In code, noweb treats unpaired
+double left or right angle brackets as literal \fB@<<\fP and \fB@>>\fP.  
+To force any
+such brackets, even paired brackets or brackets in documentation, 
+to be treated as literal, use a preceding at sign (e.g. \fB@@<<\fP).
 <<old paragraph on escaping angle brackets>>=
 If the double left or right angle bracket is to be used 
 in code or documentation,

@@ -110,9 +110,17 @@ end
 <<*>>=
 global cache, hitcount, misscount
 
+procedure strip_chunk_number(s)
+  s ?
+      if =("@" || ("begin" | "end") || " " || ("docs" | "code") || " ") then
+          return tab(1)
+      else
+          return s
+end
+
 procedure find_in_cache(lines)
   c := cache
-  every l := !lines do
+  every l := strip_chunk_number(!lines) do
     c := \c[l] | return &null
   return c[&null]
 end
@@ -120,7 +128,7 @@ end
 procedure save_in_cache(lines, cached)
   c := cache
   i := 1
-  while l := lines[i] do {
+  while l := strip_chunk_number(lines[i]) do {
     /c[l] := table()
     c := c[l]
     i := i + 1

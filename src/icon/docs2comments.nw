@@ -33,8 +33,9 @@ procedure main(args)
 		  }
       "-pascal" : { format := wrap("{ ", " }"); subst := tr("{}", "--") }
       "-f77" :  format := wrap("C ")
-      "-f90" :    format := wrap("! ")
-      "-tex" :    format := wrap("%% ")
+      "-f90" :  format := wrap("! ")
+      "-tex" :  format := wrap("%% ")
+      "-lua" :  format := wrap("-- ")
 
       "-all" :  allchunks := 1
       "-one" :  allchunks := &null
