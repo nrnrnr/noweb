@@ -36,6 +36,11 @@ install: $(EXECS)
 	cp $(BINEXECS) $(BIN)
 	cp $(LIBSPECIAL) $(LIB)/autodefs.c
 
+uninstall:
+	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
+	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
+	rm -f $(LIB)/autodefs.c
+
 clean:
 	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~  *.toc *.html *.u1 *.u2 
 	/bin/rm -f *.[ch] *.ps *.gz

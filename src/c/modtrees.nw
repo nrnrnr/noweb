@@ -11,8 +11,8 @@ Module lookup (char *modname);  /* return ptr to module or NULL */
 void apply_each_module(void (*fun)(Module));
      /* apply [[fun]] to each module in the tree */
 <<*>>= 
-static char rcsid[] = "$Id: modtrees.nw,v 2.20 2006/05/20 14:36:37 nr Exp nr $";
-static char rcsname[] = "$Name: v2_11a $";
+static char rcsid[] = "$Id: modtrees.nw,v 2.21 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsname[] = "$Name: v2_11b $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

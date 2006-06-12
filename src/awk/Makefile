@@ -19,6 +19,10 @@ install: all
 	cp $(LIBEXECS) $(LIB)
 	cp $(BINEXECS) $(BIN)
 
+uninstall:
+	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
+	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
+
 source: $(EXECS)
 
 totex: totex.nw
