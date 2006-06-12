@@ -59,11 +59,17 @@ FAQ.html: $(HOME)/www/noweb/FAQ.html
 	chmod -w FAQ.html
 
 install: install-code install-man install-tex install-elisp
+uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
+	-rmdir $(BIN) $(LIB) 2>/dev/null
 
 install-shell:
 	-mkdir $(BIN) $(LIB) 2>/dev/null
 	<<shell binaries>>
 	cp shell/tmac.w $(LIB)
+
+uninstall-shell:
+	<<uninstall shell binaries>>
+	rm $(LIB)/tmac.w
 
 install-code: install-shell
 	-mkdir $(BIN) $(LIB) 2>/dev/null
@@ -71,27 +77,39 @@ install-code: install-shell
 	cp c/nt c/markup c/mnt c/finduses $(LIB)
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install
 	cd lib; make LIB=$(LIB) install
+
+uninstall-code: uninstall-shell
+	rm $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses 
+	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
+	cd lib; make LIB=$(LIB) uninstall
 @ I do the [[<<shell binaries>>]] before [[$(LIBSRC)]] so that the
 Icon version of [[htmltoc]], if present, will overwrite the Perl
 version.
 @
 <<generate chunks>>=
-echo '@<<shell binaries@>>='
 for i in noweb notangle '$(WEAVE)' nountangle nodefs noroots nuweb2noweb cpif htmltoc \
 	 noroff
 do
+  echo '@<<shell binaries@>>='
   echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(BIN)/'"$i"
   echo 'chmod +x $(BIN)/'"$i"
+  echo '@<<uninstall shell binaries@>>='
+  echo 'rm -f $(BIN)/'"$i"
 done
 for i in toroff
 do
+  echo '@<<shell binaries@>>='
   echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(LIB)/'"$i"
   echo 'chmod +x $(LIB)/'"$i"
+  echo '@<<uninstall shell binaries@>>='
+  echo 'rm -f $(LIB)/'"$i"
 done
 <<*>>=
 install-man:
 	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
 	<<ordinary pages>>
+uninstall-man:
+	<<uninstall ordinary pages>>
 @ 
 Slackware no longer uses preformatted compressed pages, just
 compressed pages.
@@ -109,20 +127,28 @@ NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h 
 NORMAL7PAGES="nowebstyle nowebfilters"
 LINKPAGES="noweave nountangle"
 
-echo '@<<ordinary pages@>>='
 
 for i in $NORMALPAGES; do
+  echo '@<<ordinary pages@>>='
   echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
 	"xdoc/$i.1" '> $(MANDIR)/'"$i"'.$(MANEXT)'
+  echo '@<<uninstall ordinary pages@>>='
+  echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT)'
 done
 for i in $NORMAL7PAGES; do
+  echo '@<<ordinary pages@>>='
   echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
 	"xdoc/$i.7" '> $(MAN7DIR)/'"$i"'.$(MAN7EXT)'
+  echo '@<<uninstall ordinary pages@>>='
+  echo 'rm -f $(MAN7DIR)/'"$i"'.$(MAN7EXT)'
 done
 
 for i in $LINKPAGES; do
+  echo '@<<ordinary pages@>>='
   echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT)'
   echo '(cd $(MANDIR); ln notangle.$(MANEXT)' "$i"'.$(MANEXT))'
+  echo '@<<uninstall ordinary pages@>>='
+  echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT)'
 done
 
 echo '@<<compressed pages@>>='
@@ -162,10 +188,16 @@ install-tex:
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
 	-texhash || echo "Program texhash not found or failed"
 
+uninstall-tex:
+	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty
+
 install-elisp:
 	-mkdir $(ELISP) 2>/dev/null
 	cp elisp/noweb-mode.el $(ELISP)
 
+uninstall-elisp:
+	rm -f $(ELISP)/noweb-mode.el
+@ 
 <<*>>=
 checkin:
 	for i in lib tex xdoc; do (cd $$i; make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done

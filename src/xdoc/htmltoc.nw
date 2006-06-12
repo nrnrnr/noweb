@@ -22,6 +22,10 @@ filter.
 The table of contents includes only headers at levels 2, 3, 4, and 5.
 This can be changed by using a command-line
 option, e.g., \fB\-123456789\P to include all possible headers.
+.SH BUGS
+.I htmltoc
+can't cope with a header that is split across multiple lines,
+even though this is legal HTML.
 .SH SEE ALSO
 .IR nowebfilters (7),
 .IR sl2h (1)

@@ -47,8 +47,8 @@ Module newmodule (char *modname) {
     return p;
 }
 <<*>>=
-static char rcsid[] = "$Id: modules.nw,v 2.21 2006/04/02 16:45:17 nr Exp nr $";
-static char rcsname[] = "$Name: v2_11 $";
+static char rcsid[] = "$Id: modules.nw,v 2.22 2006/05/20 14:36:37 nr Exp nr $";
+static char rcsname[] = "$Name: v2_11a $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

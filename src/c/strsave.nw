@@ -3,8 +3,8 @@
 <<header>>=
 char *strsave (char *s);        /* returns a pointer to a fresh copy of s */
 <<*>>=
-static char rcsid[] = "$Id: strsave.nw,v 2.16 2006/04/02 16:45:17 nr Exp nr $";
-static char rcsname[] = "$Name: v2_11 $";
+static char rcsid[] = "$Id: strsave.nw,v 2.17 2006/05/20 14:36:37 nr Exp nr $";
+static char rcsname[] = "$Name: v2_11a $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

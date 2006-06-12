@@ -23,7 +23,7 @@ and/or
 preprocessors.
 .PP
 If no options are supplied, it defaults to using the
-.B \-mgm
+.B \-mm
 macros, with PostScript output.
 .SH BUGS
 The shell script is probably still not as robust as it needs to be.
