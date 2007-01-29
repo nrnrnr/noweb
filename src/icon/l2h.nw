@@ -668,7 +668,7 @@ procedure convert(S, optstring)
     <<initialization>>
     <<control-sequence assignments>>
     <<assign to dynamic-add table>>
-    specials := '\\{}<>"%$&~\n\0\1' 
+    specials := '\\{}<>-"%$&~\n\0\1' 
   }
 
   if \optstring then return optstring ? convert(S)
@@ -717,11 +717,20 @@ while not pos(0) do
         "<"  : emit_text(S, "&lt;")
         ">"  : emit_text(S, "&gt;")
         "\"" : emit_text(S, "&quot;")
+        "-"  : {<<deal with dash ligatures>>}
       }
     if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
     emit_text(S, tab(upto(specials++S.activechars) | 0))
   }
 return 1(. S.the_text, S.the_text := "")  # what's been converted
+<<deal with dash ligatures>>=
+if S.mode == "V" then S.mode := "H"
+if S.mode == "H" then
+    if ="--" then emit_text(S, "&mdash;")
+    else if ="-" then emit_text(S, "&ndash;")
+    else emit_text(S, "-")
+else
+    emit_text(S, "-")
 @
 The definition of a converter's state is distributed.
 We've already seen the use of [[mode]].
@@ -2787,7 +2796,7 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.20 2006/06/12 21:03:54 nr Exp nr $" ||
+  return "$Id: l2h.nw,v 1.21 2006/06/12 22:05:34 nr Exp nr $" ||
          "$Name: v2_11b $"
 end
 @
