@@ -14,7 +14,7 @@ of the length of the longest line.
 [[getline]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-static char rcsid[] = "$Id: getline.nw,v 2.21 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: getline.nw,v 2.22 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
 #define START_SIZE 128                  /* initial buffer size */
 
@@ -26,7 +26,7 @@ static char rcsname[] = "$Name: v2_11b $";
 #include "getline.h"
 
 static char *buf1 = NULL, *buf2 = NULL; /* lines without, with tabs expanded */
-static buf_size = START_SIZE;           /* size of both buffers if non-NULL */
+static int buf_size = START_SIZE;       /* size of both buffers if non-NULL */
 
 <<C functions>>
 @ 
@@ -56,6 +56,8 @@ char *getline (FILE *fp) {
         if (fgets(buf1+strlen(buf1),buf_size-strlen(buf1),fp)==NULL)
             return buf1; /* end of file */
     }
+    (void)rcsid; /* avoid a warning */
+    (void)rcsname; /* avoid a warning */
     return buf1;
 }
 <<C functions>>=

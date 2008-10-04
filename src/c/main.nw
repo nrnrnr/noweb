@@ -4,7 +4,7 @@
 \section{Tangling}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: main.nw,v 2.22 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: main.nw,v 2.23 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,7 @@ to set global state, and counting any roots it sees.
 It then makes a second pass to emit all the roots, or if there are no
 roots on the command line, it emits the module (chunk) named [[<<*>>]].
 <<*>>=
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
     int i;
     char *locformat = "";
     char *Clocformat = "#line %L \"%F\"%N";
@@ -46,6 +46,8 @@ main(int argc, char **argv) {
 	  emit_module_named(stdout, argv[i]+2, locformat);
 
     nowebexit(NULL);
+    (void)rcsid; /* avoid a warning */
+    (void)rcsname; /* avoid a warning */
     return errorlevel;  /* slay warning */
 }
 @

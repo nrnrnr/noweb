@@ -1,13 +1,13 @@
 <<noweb documentation date>>=
-3/28/2001
+10/40/2008
 <<AUTHOR section>>=
 .SH VERSION
 This man page is from 
 .I noweb
 version $Name: v2_11b $.
 .SH AUTHOR
-Norman Ramsey, Harvard University.
-Internet address \fBnr@eecs.harvard.edu\fP.
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
 .br
-Noweb home page at \fBhttp://www.eecs.harvard.edu/~nr/noweb\fP.
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
 

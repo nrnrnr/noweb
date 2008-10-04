@@ -114,12 +114,15 @@ The
 filter makes an empty definition (\fB@<<@>>=\fP) an abbreviation for
 a continuation of the previous definition.
 .TP 
-\fBl2h\fP [\fB\-show\-unknowns\fP]
+\fBl2h\fP [\fB\-show\-unknowns\fP] [\fB\-html\-quotes\fP]
 The 
 .B l2h
 filter converts LaTeX to HTML in documentation chunks.
 If the \fB\-show\-unknowns\fP options is given, unrecognized LaTeX control
 sequences appear in bold in the output.
+If the \fB\-html\-quotes\fP option is given, 
+.B l2h
+converts LaTeX double-quote ligatures into HTML 4 double-quote entities.
 .B l2h
 uses the LaTeX-generated .toc and .bbl files to help create table of contents
 and bibliography.

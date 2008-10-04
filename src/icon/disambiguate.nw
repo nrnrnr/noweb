@@ -74,7 +74,7 @@ end
 
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: disambiguate.nw,v 1.15 2006/06/12 21:03:54 nr Exp nr $" ||
+  return "$Id: disambiguate.nw,v 1.16 2006/06/12 22:05:34 nr Exp nr $" ||
          "$Name: v2_11b $"
 end
 @

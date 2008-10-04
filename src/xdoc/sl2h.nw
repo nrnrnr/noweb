@@ -3,7 +3,7 @@
 .SH NAME
 sl2h \- simple latex to HTML converter
 .SH SYNOPSIS
-\fBsl2h\fP [\fB\-show\-unknowns\fP] [file ...]
+\fBsl2h\fP [\fB\-show\-unknowns\fP] [\fB\-html\-quotes\fP] [file ...]
 .SH DESCRIPTION
 .I sl2h
 is a simple converter from
@@ -14,6 +14,9 @@ If the \fB\-show\-unknowns\fP options is given, unrecognized
 .I LaTeX 
 control
 sequences appear in bold in the output.
+If the \fB\-html\-quotes\fP option is given, 
+.B sl2h
+converts LaTeX double-quote ligatures into HTML 4 double-quote entities.
 .I sl2h
 uses the LaTeX-generated .toc and .bbl files to help create table of contents
 and bibliography.

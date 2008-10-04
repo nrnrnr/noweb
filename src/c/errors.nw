@@ -14,7 +14,7 @@ has been.
 Some day we should hide it and give the world a function call that
 queries it.
 <<*>>=
-static char rcsid[] = "$Id: errors.nw,v 2.23 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: errors.nw,v 2.24 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +46,8 @@ void nowebexit(char *msg) {
     printf("@fatal %s %s\n", progname != NULL ? progname : "a-noweb-filter",
 	   msg != NULL ? msg : "an unspecified error occurred");
   exit(errorlevel);
+  (void)rcsid; /* avoid a warning */
+  (void)rcsname; /* avoid a warning */
 }
 @
 The rest is just varying flavors of error messages.

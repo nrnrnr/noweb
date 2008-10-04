@@ -6,8 +6,10 @@ This main program is used to make the monolithic {\tt noweb}
 script efficient.
 Tips of the hat to Ross Williams and Preston Briggs.
 <<*>>=
-static char rcsid[] = "$Id: mnt.nw,v 1.19 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: mnt.nw,v 1.20 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
+static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
+  { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -25,7 +27,7 @@ static char rcsname[] = "$Name: v2_11b $";
 #define Clocformat "#line %L \"%F\"%N"
 static char *locformat = Clocformat;
 
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
     int i;
 
     tabsize = 0;  /* default for nt is not to use tabs */
@@ -70,17 +72,19 @@ conforming but that contain metacharacters cause complaints.
 <<*>>=
 void emit_if_unused_and_conforming(Module mp) {
     char *index;
-    if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL)
+    if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL) {
         if (index = strpbrk(mp->name, "[](){}!$&<>*?;|^`'\\\""),
-            index == NULL || index[0] == '*' && index[1] == 0)
+            index == NULL || (index[0] == '*' && index[1] == 0)) {
 	    if (index == mp->name)
 	        errormsg(Error, "@<<*@>> is not a good chunk name for noweb; "
 	                        "use notangle instead");
 	    else
 	        emitfile(mp->name);
-        else 
+        } else {
             errormsg(Error, "@<<%s@>> cannot be an output chunk; "
                             "it contains a metacharacter", mp->name);
+        }
+    }
 }
 <<local prototypes>>=
 static void emitfile(char *modname);

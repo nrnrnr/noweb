@@ -3,7 +3,7 @@
 <<header>>=
 char *strsave (char *s);        /* returns a pointer to a fresh copy of s */
 <<*>>=
-static char rcsid[] = "$Id: strsave.nw,v 2.18 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: strsave.nw,v 2.19 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
 #include <stdio.h>
 #include <string.h>
@@ -15,5 +15,7 @@ char *strsave (char *s) {
     char *t = malloc (strlen(s)+1);
     checkptr(t);
     strcpy(t,s);
+    (void)rcsid; /* avoid a warning */
+    (void)rcsname; /* avoid a warning */
     return t;
 }

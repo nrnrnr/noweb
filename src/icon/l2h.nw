@@ -658,7 +658,9 @@ closures like there's no tomorrow.
 Here's the basic engine, which works by string scanning.
 The initial boilerplate sets up the second argument (if any) as
 [[&subject]].
-We have the odd specials [["\0"]] and [["\1"]], which are
+The characters [[-]], [[']], and~[[`]] are special because they start
+{\TeX} ligature.
+We also have the odd specials [["\0"]] and [["\1"]], which are
 used to delimit quoted code in noweb.
 Woe betide the hapless user who has real nulls or 1s in his {\LaTeX} file.
 <<*>>=
@@ -668,7 +670,7 @@ procedure convert(S, optstring)
     <<initialization>>
     <<control-sequence assignments>>
     <<assign to dynamic-add table>>
-    specials := '\\{}<>-"%$&~\n\0\1' 
+    specials := '\\{}<>-\'`"%$&~\n\0\1' 
   }
 
   if \optstring then return optstring ? convert(S)
@@ -718,6 +720,8 @@ while not pos(0) do
         ">"  : emit_text(S, "&gt;")
         "\"" : emit_text(S, "&quot;")
         "-"  : {<<deal with dash ligatures>>}
+        "`"  : {<<deal with open quotes>>}
+        "'"  : {<<deal with close quotes>>}
       }
     if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
     emit_text(S, tab(upto(specials++S.activechars) | 0))
@@ -731,6 +735,20 @@ if S.mode == "H" then
     else emit_text(S, "-")
 else
     emit_text(S, "-")
+@ 
+<<*>>=
+global html_quotes # render quotes as HTML 4 entities
+<<deal with open quotes>>=
+if S.mode == "V" then S.mode := "H"
+if \html_quotes & S.mode == "H" then
+    if ="`" then emit_text(S, "&ldquo;")
+    else emit_text(S, "&lsquo;")
+else
+    emit_text(S, "`")
+<<deal with close quotes>>=
+if S.mode == "V" then S.mode := "H"
+if \html_quotes & S.mode == "H" & ="'" then emit_text(S, "&rdquo;")
+else                                        emit_text(S, "'")
 @
 The definition of a converter's state is distributed.
 We've already seen the use of [[mode]].
@@ -1323,6 +1341,7 @@ procedure Citem(S, cs, cl)
   } else {
     skipblanks(S)
     emit_text(S, cl[1].ifnone)
+    \liststack[1] := \liststack[1] + 1
   }
 end
 <<*>>=
@@ -1333,6 +1352,15 @@ procedure convert_bracketed(S, contents, cl)
   optwhite()
 end
 <<*>>=
+global liststack, suspendstack
+<<initialization>>=
+liststack := []
+# write(&errout, "Initialized liststack")
+suspendstack := []
+<<control-sequence assignments>>=
+cstab["suspend"] := Csuspend
+cstab["resume"] := Cresume
+<<*>>=
 procedure listenv(env, html)
   begintab[env] := Clist
   begincl[env] := html
@@ -1340,16 +1368,42 @@ procedure listenv(env, html)
   endcl[env] := html
 end
   
-procedure Clist(S, cs, cl)
-  emit_text(S, tag(cl))
+procedure push_item_closure(cs)
   push(csclosure["item"], 
     if cs == "description" then item_cl("<dt>", "<dd>", "<dt><dd>")
     else                        item_cl("<li>", "--", "<li>"))
 end
 
+procedure Clist(S, cs, cl)
+  push(liststack, 1)
+  push_item_closure(cs)
+  emit_text(S, tag(cl))
+end
+
+procedure Cresume(S, cs, cl)
+  local n, env
+  (="{", env := tab(upto('}')), ="}") | error("botched \\resume{...}")
+  n := pop(suspendstack) | error("\\resume not balanced by corresponding \\suspend")
+  push(liststack, n)
+  push_item_closure(env)
+  if env == "enumerate" then
+    emit_text(S, tag(begincl[env] || " start=\"" || n || "\""))
+  else
+    emit_text(S, tag(begincl[env]))
+end
+
 procedure Clist_end(S, cs, cl)
   emit_text(S, endtag(cl))
   pop(csclosure["item"])
+  pop(liststack)
+end
+
+procedure Csuspend(S, cs, cl)
+  local env
+  (="{", env := tab(upto('}')), ="}") | error("botched \\suspend{...}")
+  emit_text(S, endtag(endcl[env]))
+  pop(csclosure["item"])
+  push(suspendstack, pop(liststack))
 end
 @
 \subsubsection{Labels and references}
@@ -2483,6 +2537,8 @@ procedure do_includegraphics(S, arg)
   if arg ? (base := tab(find(ext := ".ps" | ".eps" | ".epsi")), =ext, pos(0)) then
     emit_text(S, "<a href=" || image(arg) || "><b>[</b>PostScript figure " ||
 	          arg || "<b>]</b></a>")
+  else if arg ? (base := tab(find(ext := ".png" | ".gif" | ".jpg")), =ext, pos(0)) then
+    emit_text(S, "<img src=" || image(arg) || ">")
   else
     emit_text(S, "<b>[</b>Ill-understood graphics<b>]</b>")
 end
@@ -2668,6 +2724,7 @@ procedure main(args)
   every arg := !args do
     case arg of {
       "-show-unknowns" : show_unknowns := 1
+      "-html-quotes"   : html_quotes := 1
       default : fatal("unknown arg ", image(arg))
     }
   while line := read() do
@@ -2773,6 +2830,7 @@ procedure main(args)
     if arg[1] == "-" then
       case arg of {
         "-show-unknowns" : show_unknowns := 1
+        "-html-quotes"   : html_quotes := 1
         "-" : { curfile := arg; convert_file(&input) }
         default : write(&errout, "Warning: unrecognized option ", arg)
       }
@@ -2796,8 +2854,8 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.21 2006/06/12 22:05:34 nr Exp nr $" ||
-         "$Name: v2_11b $"
+  return "$Id: l2h.nw,v 1.22 2007/01/29 18:47:05 nr Exp nr $" ||
+         "$Name:  $"
 end
 @
 \section{Chunks}

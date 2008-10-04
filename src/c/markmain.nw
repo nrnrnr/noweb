@@ -63,7 +63,7 @@ static void print_pair(FILE *out, char *name, char *value) {
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
 <<*>>=
-static char rcsid[] = "$Id: markmain.nw,v 2.26 2006/06/12 21:03:53 nr Exp nr $";
+static char rcsid[] = "$Id: markmain.nw,v 2.27 2006/06/12 22:05:33 nr Exp nr $";
 static char rcsname[] = "$Name: v2_11b $";
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,12 +81,11 @@ void markup (FILE* in, FILE *out, char *filename) {
     State state = Docs;         /* what we are reading */
     int quoting = 0;            /* currently quoting code? */
     int count = 0;              /* number of current chunk, from 0 */
-    int missing_newline;        /* was last line missing a trailing \n? */
+    int missing_newline = 0;    /* was last line missing a trailing \n? */
     int lineno = 0;             /* number of lines read */
-    int last_open_quote;        /* line number of last unmatched open quote */
+    int last_open_quote = -1;   /* line number of last unmatched open quote */
 
     char *line;                 /* part of line up to mark (or end) */
-    char *mark;                 /* potentially marked part of line */
 #define MAX_MODNAME 255
     char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
                                          [[""]] if no module is being read */ 
@@ -548,7 +547,7 @@ Finally, we give the main program, which opens each file and passes it
 to [[markup]].
 Like many main programs, it's based on K \& R [[cat]].
 <<*>>=
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
     FILE *fp;
     int i;
 
@@ -575,6 +574,8 @@ main(int argc, char **argv) {
     else
         markup(stdin,stdout,"");
     nowebexit(NULL);
+    (void)rcsid; /* avoid a warning */
+    (void)rcsname; /* avoid a warning */
     return errorlevel;          /* slay warning */
 }
 @

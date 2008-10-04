@@ -2,7 +2,7 @@
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
-CC=gcc -ansi -pedantic
+CC=gcc -ansi -pedantic -O -Wall -Werror
 CFLAGS=
 
 # after installation, make doc.dvi for literate version

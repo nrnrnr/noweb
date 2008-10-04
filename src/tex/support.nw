@@ -1,5 +1,7 @@
 % -*- mode: Noweb; noweb-code-mode: tex-mode -*-
 \documentclass[twoside]{article}
+\usepackage[hypertex]{hyperref}
+\usepackage{url}
 \usepackage{noweb}
 \pagestyle{noweb}
 \noweboptions{longchunks,smallcode}
@@ -75,8 +77,6 @@ escaped with a backslash.
   \catcode`\"=\other	% fixes problem with german.sty
   \obeyspaces\Tt
 }
-%\let\nwlbrace=\{
-%\let\nwrbrace=\}
 @ 
 [[\nwendquote]] is called after quoted code.
 It resets the spacefactor
@@ -112,10 +112,8 @@ This hack doesn't properly restore [["]] for use in {\tt german.sty}.
   \catcode`\^=7
   \catcode`\ =10
   \catcode`\^^M=5
-  \let\nwlbrace\lbrace
-  \let\nwrbrace\rbrace
-  \let\{\nwlbrace
-  \let\}\nwrbrace
+  \let\{\lbrace
+  \let\}\rbrace
   % bad news --- don't know what catcode to give "
   \Rm}
 @ \sublabel{ref:fred}
@@ -1528,11 +1526,7 @@ standard definitions just select the proper characters from that font.
  People setting code in
 fonts other than typewriter are responsible for redefining those
 macros to work in their environment.
-<<noweb.sty>>=
-\def\nwbackslash{\char92}
-\def\nwlbrace{\char123}
-\def\nwrbrace{\char125}
-<<nwmac.tex>>=
+<<kernel>>=
 \def\nwbackslash{\char92}
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
@@ -1676,7 +1670,8 @@ using \TeX\ldots
 \subsubsection{Support for German}
 
 This is a translation to German by Sabine Broda (DCC-FCUP \& LIACC,
-Universidade do Porto) with revisions by Christian Lindig.
+Universidade do Porto) with revisions by Christian Lindig and further
+revisions by Pascal Schmitt.
 <<language support>>=
 \def\nwopt@german{%
   \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
@@ -1685,13 +1680,11 @@ Universidade do Porto) with revisions by Christian Lindig.
   % This code is used
   \def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}%
   % Root chunk (not used in this document)
-  %\def\@nwlangdepcwf{Dieser Code schreibt man zum File}%
-  \def\@nwlangdepcwf{Dieser Code geht in Datei}%
+  \def\@nwlangdepcwf{Geh\"ort in die Datei}%
   % This code is written to file
-  \def\@nwlangdepchk{dem Teil}%
+  \def\@nwlangdepchk{Abschnitt}%
   % chunk
-  %\def\@nwlangdepchks{Teils}%   
-  \def\@nwlangdepchks{den Teilen}%   
+  \def\@nwlangdepchks{den Abschnitten}%
   % chunks
   \def\@nwlangdepin{in}%
   % in
@@ -1708,6 +1701,10 @@ Universidade do Porto) with revisions by Christian Lindig.
   \def\@nwlangdepnvd{nicht definiert}%
   % never defined
 }
+@ 
+Here is a revised version, because the version above did not satisy
+(explanations below).
+<<language support>>=
 \def\nwopt@german{%
   \def\@nwlangdepdef{Diese Definition wird fortgesetzt}%
   % This definition is continued
@@ -1715,8 +1712,8 @@ Universidade do Porto) with revisions by Christian Lindig.
   % This code is used
   \def\@nwlangdeprtc{Hauptteil (nicht in diesem Dokument benutzt)}%
   % Root chunk (not used in this document)
-  \def\@nwlangdepcwf{Dieser Code schreibt man zum File}%
-  % This code is written to file
+  \def\@nwlangdepcwf{Dieser Code erzeugt die Datei}
+  % This code generates the file
   \def\@nwlangdepchk{Teil}%
   % chunk
   \def\@nwlangdepchks{Teils}%
@@ -1738,6 +1735,31 @@ Universidade do Porto) with revisions by Christian Lindig.
 }
 \let\nwopt@ngerman\nwopt@german
 @ Explanations:
+\begin{quote}
+Changed the [[\@nwlangdepcwf]] yet again.
+Johannes Wiedersich \url{<johannes@physik.blm.tu-muenchen.de>} writes:
+\begin{quote}
+The German latex files contain
+\begin{quote} 
+Dieser Code schreibt man zum File
+\end{quote}
+this is not correct (or understandable) German and not a correct
+translation of the English ``This code is written to file.''
+A better translation would be
+\begin{quote} 
+Dieser Code geht in Datei
+\end{quote}
+I would suggest to use either
+\begin{itemize} 
+\item Dieser Code schreibt den File 
+\item Dieser Code erzeugt die Datei 
+\end{itemize}
+The first is closer to a literal translation of the English text; the
+second option is closer to the \emph{meaning} of the English text and to 
+what
+actually happens. (This code generates the file)
+\end{quote}
+The old explanation was:
 \begin{quote} 
 ``Diese Code geht in Datei (x)'' isn't perfect either; the best
 translation would be ``Dieser Code wird in Datei (x) geschrieben'' but
@@ -1763,6 +1785,7 @@ Hence:
     \def\@nwlangdepchks{den Teilen}
     \def\@nwlangdepchk{dem Teil}
 \end{verbatim}
+\end{quote}
 \end{quote}
 @
 @ \iffalse

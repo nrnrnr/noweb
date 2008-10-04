@@ -1,65 +1,63 @@
-
 Noweb Frequently Asked Questions
 
-     * Problems Building Noweb
-     * Indentation of code, especially FORTRAN
-     * Formatting the printed documentation
-     * Microsoft Madness
-     * Other Questions
+  * Problems Building Noweb
+  * Indentation of code, especially FORTRAN
+  * Formatting the printed documentation
+  * Microsoft Madness
+  * Noweb and Emacs
+  * Other Questions
 
-  Problems Building Noweb
+Problems Building Noweb
 
-   Q. The build fails because it can't find notangle. What am I doing
-   wrong?
+Q. The build fails because it can't find notangle. What am I doing wrong?
 
-     A. Your source files have the wrong timestamps. The noweb files are
-     carefully distributed so that the C code is more recent than the
-     literate source code. Retrieving that noweb distribution as a
-     compressed tar file preserves these stamps. The CTAN sites will
-     create a compressed tar file on the fly for any directory. Your
-     best bet is to get the tar file, unpack it, and try again, because
-     your abortive attempt will probably have stomped on a C file that
-     you need.
+    A. Your source files have the wrong timestamps. The noweb files are
+    carefully distributed so that the C code is more recent than the literate
+    source code. Retrieving that noweb distribution as a compressed tar file
+    preserves these stamps. The CTAN sites will create a compressed tar file on
+    the fly for any directory. Your best bet is to get the tar file, unpack it,
+    and try again, because your abortive attempt will probably have stomped on
+    a C file that you need.
 
-     I have reports that the former CTAN site ftp.shsu.edu fouled the
-     timestamps. Don't use the site! If you get bad timestamps, you can
-     try `make touch' as soon as you unpack the distribution, which
-     should touch all of the derived files. This trick won't work on
-     NeXT systems, which have a strange idea of 'touch'.
+    I have reports that the former CTAN site ftp.shsu.edu fouled the
+    timestamps. Don't use the site! If you get bad timestamps, you can try
+    `make touch' as soon as you unpack the distribution, which should touch all
+    of the derived files. This trick won't work on NeXT systems, which have a
+    strange idea of 'touch'.
 
-   Q. The system builds OK, but when I try to run noweave, I get an error
-   in /usr/public/pkg/noweb/lib/totex (or some similar place) complaining
-   about being out of environment space or something equally unpleasant.
+Q. The system builds OK, but when I try to run noweave, I get an error in /usr/
+public/pkg/noweb/lib/totex (or some similar place) complaining about being out
+of environment space or something equally unpleasant.
 
-     A. The awk versions of the noweb scripts pass the awk programs as
-     arguments on the command line. Some shells or systems are too
-     broken to handle a real awk program on the command line. This
-     problem is one of many reasons that the awk versions are officially
-     deprecated. The Icon versions will make you happy, but if you
-     prefer, you can edit the offending scripts so that the awk programs
-     reside in separate files and the scripts call awk -f.
+    A. The awk versions of the noweb scripts pass the awk programs as arguments
+    on the command line. Some shells or systems are too broken to handle a real
+    awk program on the command line. This problem is one of many reasons that
+    the awk versions are officially deprecated. The Icon versions will make you
+    happy, but if you prefer, you can edit the offending scripts so that the
+    awk programs reside in separate files and the scripts call awk -f.
 
-   Q. I'm unable to run noweb on Windows NT 4.0. The problem is that the
-   Icon programs use a DOS extender which doesn't work in an NT console.
+Q. I'm unable to run noweb on Windows NT 4.0. The problem is that the Icon
+programs use a DOS extender which doesn't work in an NT console.
 
-     A. Clint Jeffery, the Icon Master for Windows, says to use the NT
-     console binaries (nticont.exe and nticonx.exe) rather than
-     wiconx.exe with its faux console. Only applications that use the
-     graphics facilities require wiconx.exe and its kin. The nticonx*
-     binaries should run fine on Win95 also.
+    A. Clint Jeffery, the Icon Master for Windows, says to use the NT console
+    binaries (nticont.exe and nticonx.exe) rather than wiconx.exe with its faux
+    console. Only applications that use the graphics facilities require
+    wiconx.exe and its kin. The nticonx* binaries should run fine on Win95
+    also.
 
-   Q. I'm having trouble getting noweb to work on Windows XP.
+Q. I'm having trouble getting noweb to work on Windows XP.
 
-     A. Some users are very satisfied with a distribution from
-     http://www.literateprogramming.org. This distribution requires
-     Cygwin (in particular, Cygwin's bash shell) to get the pipes and so
-     on working. The installation instructions are at
-     http://www.literateprogramming.com/noweb/nowebinstall.html.
+    A. Some users are very satisfied with a distribution from http://
+    www.literateprogramming.org. This distribution requires Cygwin (in
+    particular, Cygwin's bash shell) to get the pipes and so on working. The
+    installation instructions are at http://www.literateprogramming.com/noweb/
+    nowebinstall.html.
 
-  Indentation of code, especially FORTRAN
+Indentation of code, especially FORTRAN
 
-   Q. Has anyone devised a clean way of handling FORTRAN 77 using a
-   litprog tool such as noweb? If I have the following:
+Q. Has anyone devised a clean way of handling FORTRAN 77 using a litprog tool
+such as noweb? If I have the following:
+
 <<Block>>=
       <<Nicely Indented Chunk Title>>
 @
@@ -69,61 +67,60 @@ C   A comment in a chunk!
      + Y
 @
 
-   I'll get the "C" in column 7, and the continuation character "+" in
-   column 12, neither of which is desirable.
+I'll get the "C" in column 7, and the continuation character "+" in column 12,
+neither of which is desirable.
 
-     A. As noted on the man page, notangle's -L option suppresses the
-     usual behavior with respect to indentation. Thus, a command like
+    A. As noted on the man page, notangle's -L option suppresses the usual
+    behavior with respect to indentation. Thus, a command like
 
-     notangle -L'%N' pgm.nw > pgm.f
+        notangle -L'%N' pgm.nw > pgm.f
 
-     should do the job.
+    should do the job.
 
-   Q. I noticed the -L option to notangle turns off the usual
-   indentation. Is there an easy way to get both -L and indentation?
+Q. I noticed the -L option to notangle turns off the usual indentation. Is
+there an easy way to get both -L and indentation?
 
-     A. No. It was my design decision that -L should preserve the column
-     numbers in the original source code. This behavior is extremely
-     useful in cases where a compiler reports an error in the source by
-     line and column number. Of course, this decision precludes changing
-     the indentation of the input.
+    A. No. It was my design decision that -L should preserve the column numbers
+    in the original source code. This behavior is extremely useful in cases
+    where a compiler reports an error in the source by line and column number.
+    Of course, this decision precludes changing the indentation of the input.
 
-  Formatting the printed documentation
+Formatting the printed documentation
 
-   Q. There's too much white space at the bottom of the pages, especially
-   if a code chunk is followed by a section. How do I fix it?
+Q. There's too much white space at the bottom of the pages, especially if a
+code chunk is followed by a section. How do I fix it?
 
-     A. Noweb is set up never to break chunks across pages. You can get
-     better results by relaxing this constraint, e.g., by
-\def\nwendcode{\endtrivlist \endgroup \vfil\penalty10\vfilneg}
-\let\nwdocspar=\smallbreak
+    A. Noweb is set up never to break chunks across pages. You can get better
+    results by relaxing this constraint, e.g., by
 
-     or the even less liberal
-\def\nwendcode{\endtrivlist \endgroup}
-\let\nwdocspar=\par
+    \def\nwendcode{\endtrivlist \endgroup \vfil\penalty10\vfilneg}
+    \let\nwdocspar=\smallbreak
 
-   Q. In a noweb source file, what is the difference between a line
-   beginning with "@" followed by a space and some text versus a line
-   with nothing but "@"?
+    or the even less liberal
 
-     A. A line with nothing but @ begins the `documentation chunk' with
-     a blank line. TeX thinks blank lines are new paragraphs and good
-     places to put page breaks. By default, TeX thinks that if a new
-     documentation chunk starts with a new paragraph, this is an
-     especially good place for a page break.
+    \def\nwendcode{\endtrivlist \endgroup}
+    \let\nwdocspar=\par
 
-   Q. I know how to switch between code and documentation via <<*>>= and
-   @, but sometimes, after a <<*>>= section, automatically a new page is
-   started, even if I do not want this but prefer to go on with
-   commenting directly after the inserted programm code. How can I avoid
-   this?
+Q. In a noweb source file, what is the difference between a line beginning with
+"@" followed by a space and some text versus a line with nothing but "@"?
 
-     A. The @ sign you use to switch back to documentation should not
-     appear on a line by itself, but should be followed by a blank space
-     and some text. You should then put a bare @ sign on a line by
-     itself at the next place that is suitable for a page break.
+    A. A line with nothing but @ begins the `documentation chunk' with a blank
+    line. TeX thinks blank lines are new paragraphs and good places to put page
+    breaks. By default, TeX thinks that if a new documentation chunk starts
+    with a new paragraph, this is an especially good place for a page break.
 
-   Q. I don't quite understand noweb's default page breaking.
+Q. I know how to switch between code and documentation via <<*>>= and @, but
+sometimes, after a <<*>>= section, automatically a new page is started, even if
+I do not want this but prefer to go on with commenting directly after the
+inserted programm code. How can I avoid this?
+
+    A. The @ sign you use to switch back to documentation should not appear on
+    a line by itself, but should be followed by a blank space and some text.
+    You should then put a bare @ sign on a line by itself at the next place
+    that is suitable for a page break.
+
+Q. I don't quite understand noweb's default page breaking.
+
 Here is some text
 that leads up to a chunk
 <<chunk>>=
@@ -136,305 +133,356 @@ the following line (which I  haven't been doing) ?
 @
 New paragraph here.
 
-     A. Sad but true. Perhaps a future version of noweb will provide
-     better facilities for controlling page breaking.
+    A. Sad but true. Perhaps a future version of noweb will provide better
+    facilities for controlling page breaking.
 
-   Q. I ran into a problem when trying to use several files in a single
-   noweb project. In my project, I have a LaTeX master file (say,
-   doc.tex) that \include's three others: say, a.tex, b.tex, and
-   copyright.tex. These later files are generated from a.nw, b.nw, and
-   copyright.nw, respectively, using the command "noweave -n -index" I
-   really want to keep these noweb files separated. In the code chunks
-   appearing in both a.nw and b.nw a copyright notice chunk (defined in
-   copyright.nw) is included.
+Q. I ran into a problem when trying to use several files in a single noweb
+project. In my project, I have a LaTeX master file (say, doc.tex) that \
+include's three others: say, a.tex, b.tex, and copyright.tex. These later files
+are generated from a.nw, b.nw, and copyright.nw, respectively, using the
+command "noweave -n -index" I really want to keep these noweb files separated.
+In the code chunks appearing in both a.nw and b.nw a copyright notice chunk
+(defined in copyright.nw) is included.
 
-   Tangling works fine, provided that copyright.nw appears in the
-   notangle command. Problems arise with noweave. Copyright chunks appear
-   as "(never defined)" in a.tex and b.tex, what is obvious, because I
-   cannot use copyright.nw for weaving a.nw or b.nw (otherwise the
-   copyright notice chunk would appear several times in my printed
-   document).
+Tangling works fine, provided that copyright.nw appears in the notangle
+command. Problems arise with noweave. Copyright chunks appear as "(never
+defined)" in a.tex and b.tex, what is obvious, because I cannot use
+copyright.nw for weaving a.nw or b.nw (otherwise the copyright notice chunk
+would appear several times in my printed document).
 
-   Does someone know how to solve this problem?
+Does someone know how to solve this problem?
 
-     A. This is a form of question that arises repeatedly, which is to
-     say, ``what is the scope of chunk names?'' In Noweb, chunk names
-     are in the same scope if the files in which the chunks appear are
-     used on the same command line. Thus, the normal rule is one Noweb
-     file per command line, and therefore each file is its own scope.
+    A. This is a form of question that arises repeatedly, which is to say,
+    ``what is the scope of chunk names?'' In Noweb, chunk names are in the same
+    scope if the files in which the chunks appear are used on the same command
+    line. Thus, the normal rule is one Noweb file per command line, and
+    therefore each file is its own scope.
 
-     You want to have chunks in the same scope for purposes of tangling,
-     but not to weave files together. If you want files a.nw and b.nw in
-     separate scopes, the situation is hopeless, because ``being in the
-     same scope'' has to be a transitive property, and if a.nw and b.nw
-     are both in the same scope as copyright.nw, they must be in the
-     same scope as each other.
+    You want to have chunks in the same scope for purposes of tangling, but not
+    to weave files together. If you want files a.nw and b.nw in separate
+    scopes, the situation is hopeless, because ``being in the same scope'' has
+    to be a transitive property, and if a.nw and b.nw are both in the same
+    scope as copyright.nw, they must be in the same scope as each other.
 
-     However, if you want all files to be in the same scope, there is a
-     solution, although it is a bit ugly. The solution is to weave all
-     the files together, then use a special back end to split them into
-     separate .tex files. This back end, called scopehack, could be used
-     as follows:
+    However, if you want all files to be in the same scope, there is a
+    solution, although it is a bit ugly. The solution is to weave all the files
+    together, then use a special back end to split them into separate .tex
+    files. This back end, called scopehack, could be used as follows:
 
-noweave -n -index -backend scopehack *.nw
+        noweave -n -index -backend scopehack *.nw
 
-     and this results in multiple *.tex files as required.
+    and this results in multiple *.tex files as required.
 
-   Q. I have problems using LaTeX \ifthenelse with noweb--- code chunks
-   inside an \ifthenelse are not typeset correctly and a %def directive
-   causes (La)TeX groups to be unbalanced.
+Q. I have problems using LaTeX \ifthenelse with noweb--- code chunks inside an
+\ifthenelse are not typeset correctly and a %def directive causes (La)TeX
+groups to be unbalanced.
 
-     A. Noweb code chunks are ``moving arguments'' (like \verb) and
-     can't be arguments to macros. I suggest you combine \ifthenelse
-     with the noweb 'elide' filter to remove the offending code chunks.
+    A. Noweb code chunks are ``moving arguments'' (like \verb) and can't be
+    arguments to macros. I suggest you combine \ifthenelse with the noweb
+    'elide' filter to remove the offending code chunks.
 
-   Q. I embed the build instructions for a noweb-based project in a code
-   chunk called build-script that I don't wish to have show up in the
-   printed documentation. So, I surround the section with LaTeX \iffalse
-   ... \fi. If I do this at the same time as using noweb's index, the \fi
-   shows up in the generated TeX file at the end of the index
-   information, resulting in an empty index.
+Q. I embed the build instructions for a noweb-based project in a code chunk
+called build-script that I don't wish to have show up in the printed
+documentation. So, I surround the section with LaTeX \iffalse ... \fi. If I do
+this at the same time as using noweb's index, the \fi shows up in the generated
+TeX file at the end of the index information, resulting in an empty index.
 
-     A. Make sure that the \fi appears before the last documentation
-     chunk, by creating an empty documentation chunk (with @) if
-     necessary. Then use noweave -delay to insert the index information.
+    A. Make sure that the \fi appears before the last documentation chunk, by
+    creating an empty documentation chunk (with @) if necessary. Then use
+    noweave -delay to insert the index information.
 
-     Incidentally, it is recommended that, in addition to using \iffalse
-     ... \fi, you remove unwanted code chunks by using the elide filter
-     provided with noweb. Latex can get confused if chunk
-     cross-reference anchors are hidden away inside \iffalse ... \fi.
+    Incidentally, it is recommended that, in addition to using \iffalse ... \
+    fi, you remove unwanted code chunks by using the elide filter provided with
+    noweb. Latex can get confused if chunk cross-reference anchors are hidden
+    away inside \iffalse ... \fi.
 
-  Microsoft Madness
+Q. When I write C code and use the decrement operator --, it appears in the
+resulting document as a single -. This unpleasantness seems to be a side effect
+of \usepackage[T1]{fontenc}.
 
-   Q. Using the precompiled MS-DOS and Windows binaries for noweb, many
-   of the programs throw their output to the screen and not to whatever
-   receiving program/file they ought to go to. A typical example: I go to
-   /noweb/examples and type
+    A. Indeed. We don't understand this behavior, but as an ill-understood
+    workaround, you can add
+
+    \catcode`\-=\active
+
+    to \def\setupcode, and things may work better.
+
+Microsoft Madness
+
+Q. Using the precompiled MS-DOS and Windows binaries for noweb, many of the
+programs throw their output to the screen and not to whatever receiving program
+/file they ought to go to. A typical example: I go to /noweb/examples and type
+
         notangle wc.nw > wc.c
 
-   I see the tangled program scroll by on the screen, but it isn't piped
-   to the file wc.c as requested. Any solutions?
+I see the tangled program scroll by on the screen, but it isn't piped to the
+file wc.c as requested. Any solutions?
 
-     A. This is a known COMMAND.COM problem. Try:
-        command /c notangle wc.nw > wc.c
+    A. This is a known COMMAND.COM problem. Try:
 
-     or get a COMMAND.COM replacement such as 4DOS. Better yet, help
-     with the noweb 3 port.
+            command /c notangle wc.nw > wc.c
 
-   Q. For Windows 95/NT systems: Why do I get the error message "This
-   program cannot be run in DOS mode." when I run some of the programs
-   (including noweave.bat)?
+    or get a COMMAND.COM replacement such as 4DOS. Better yet, help with the
+    noweb 3 port.
 
-     A. [Thanks to Chris Harris.] The problem is that some of the files
-     used in the noweb system (including totex.exe and tohtml.exe used
-     by noweave.bat) are written using an old version of icon that uses
-     a DOS extender which is incompatible with 95/NT. The solution is to
-     rebuild all of these files that were built using icon source:
-    1. Go get the console ICON executables for use on 95/NT. They are the
-       files nticont.exe, nticonx.exe, noop.bat. Put them in your
-       noweb/bin directory.
-         1. The other two were available on the noweb ftp site, from the
-            FAQ, but noop.bat wasn't... it's availbe via FTP with the
-            icon distribution, but it's pretty easy to build yourself,
-            it's contents are the single line:
-@rem this file prevents further batch processing after launching nticonx
-         2. So to build noop.bat, just type at the prompt "copy con
-            noop.bat" and then paste in the above line (starting with the
-            @) hit enter and ^Z and you're good to go. Note: This file
-            could really be empty, the above line is a dos batch file
-            comment, but you may want to put this in there just so you
-            remember in 2 years why you haven't deleted this file! :)
-    2. Get the noweb source distribution and extract just the icon files
-       (i.e. those located in the icon/ directory with a .icn extention)
-    3. Build a batch file for each one using "nticont .icn"
-    4. Copy all of the .bat files built in step #2 into your noweb/bin/
-       directory
-    5. For each new .bat file you have in the bin directory, delete the
-       corresponding .exe file
+Q. For Windows 95/NT systems: Why do I get the error message "This program
+cannot be run in DOS mode." when I run some of the programs (including
+noweave.bat)?
 
-     Additionally, do NOT rename nticont to icont or nticonx to iconx.
-     The batch files created with nticont REQUIRE nticonx to exist. So
-     if you rename it, it'll get very confused.
+    A. [Thanks to Chris Harris.] The problem is that some of the files used in
+    the noweb system (including totex.exe and tohtml.exe used by noweave.bat)
+    are written using an old version of icon that uses a DOS extender which is
+    incompatible with 95/NT. The solution is to rebuild all of these files that
+    were built using icon source:
+     1. Go get the console ICON executables for use on 95/NT. They are the
+        files nticont.exe, nticonx.exe, noop.bat. Put them in your noweb/bin
+        directory.
+         1. The other two were available on the noweb ftp site, from the FAQ,
+            but noop.bat wasn't... it's availbe via FTP with the icon
+            distribution, but it's pretty easy to build yourself, it's contents
+            are the single line:
 
-  Other Questions
+            @rem this file prevents further batch processing after launching nticonx
 
-   Q. I compiled and installed, and everything looks OK, but when I ran
-   the examples, two things do not work.
-     * Noweave can not find definitions for 'C':
-noweave -index -autodefs c compress.nw > compress.tex
-noweave: don't know how to find definitions for 'c'
-     * Noweave can't find l2h for the -filter.
+         2. So to build noop.bat, just type at the prompt "copy con noop.bat"
+            and then paste in the above line (starting with the @) hit enter
+            and ^Z and you're good to go. Note: This file could really be
+            empty, the above line is a dos batch file comment, but you may want
+            to put this in there just so you remember in 2 years why you
+            haven't deleted this file! :)
+     2. Get the noweb source distribution and extract just the icon files (i.e.
+        those located in the icon/ directory with a .icn extention)
+     3. Build a batch file for each one using "nticont .icn"
+     4. Copy all of the .bat files built in step #2 into your noweb/bin/
+        directory
+     5. For each new .bat file you have in the bin directory, delete the
+        corresponding .exe file
+    Additionally, do NOT rename nticont to icont or nticonx to iconx. The batch
+    files created with nticont REQUIRE nticonx to exist. So if you rename it,
+    it'll get very confused.
 
-     A. The awk library doesn't include all the filters that the Icon
-     library includes. To get these extra features, you'll have to get
-     Icon from the University of Arizona and re-install noweb using the
-     Icon library.
+Noweb and Emacs
 
-   Q. I've been playing with LP, using noweb. I put related header,
-   source and test files into a single .nw file. But that means that if I
-   make a change in the source component, the header file is
-   re-extracted, with the result that many files which haven't actually
-   changed are recompiled. Any suggestions on simplifying the process?
+Q. Emacs noweb-mode is driving me crazy. For example, I want 4-space tabs
+instead of the usual 8. I put this line in my file:
 
-     A.
-notangle -Rheader foo.nw | cpif foo.h
-
-     To understand why this works, see the cpif man page.
-
-   Q. What are these weird Makefile targets like install-preformat-man?
-   Why is Makefile built from a .nw file? Why is the Makefile so ugly?
-
-     A. Pay no attention to the man behind the curtain. That's all
-     trickery I use to build a Slackware-style package for Linux.
-
-   Q. We often get an error from TeX asking us to have a wizard enlarge
-   it, due to a line buffer overflow (the buffer is at 3000 bytes now).
-   This is truly annoying, since our wizard refuses to enlarge TeX,
-   insisting there is a problem in our LaTeX macros or the Icon programs
-   that generate them. Unfortunately, that all comes straight from
-   noweave.
-
-     A. Starting with web2c version 7, you can increase the size up to
-     30000 in texmf.cnf. teTeX changed to a 30,000-byte line buffer
-     starting in November, 1997, so if you encounter this problem you
-     should upgrade your TeX. teTeX and web2c are both available from
-     the TeX User's Group.
-
-     Noweave emits very long lines on purpose, to preserve the desirable
-     property that the source and TeX files have identical line numbers.
-     This property guarantees that the line numbers in error messages
-     from TeX refer to the lines of the source file, so that, for
-     example, if TeX complains of an unknown control sequence on line
-     632, you can just refer to line 632 of your noweb file.
-
-     Most very long lines are caused by long code chunks containing lots
-     of identifier definitions, so if you cannot get a new TeX, you can
-     fix the problem by adding more <<...>>= lines, which breaks up the
-     big chunk into smaller chunks. For example, instead of using a
-     single chunk definition to define a large header file, use several:
-     <<alinfo.h>>=
-     #define ...
-     #define ...
-       ...
-     <<alinfo.h>>=
-     #define ...
-     #define ...
-       ...
-
-   Q. I am trying to process multiple *.nw files independently of each
-   other with noweb, only merging the *.tex files for the final
-   documentation (using noindex and nodefs to produce cross references).
-   It seems that noweb uses the same labels (for TeX references) in
-   different files. (The file names and the identifiers defined in these
-   files are quite similar).
-
-     A. Noweb uses the heuristic made famous by FORTH: names are reduced
-     to the first three characters plus the length. Changing your file
-     names should be sufficient. If you don't like that, you could use
-     -filter with a sed script that adds a unique prefix to all the
-     relevant labels (see the Hacker's Guide for info about where labels
-     appear).
-
-   Q. I have a problem with noweave's -delay option. It does not seem to
-   prevent the program from inserting its information before the first
-   chunk and after the last one.
-
-     A. Put your first @ sign after the \begin{document} instead of at
-     the beginning of the file, and your last @ sign just before the
-     \end{document}.
-
-   Q. How do I get an output file (root chunk) with an underscore in its
-   name? LaTeX complains about the underscore.
-
-     A. All chunk names are set in ordinary TeX mode. This means that
-     underscore is a subscript character. Rather than use special hacks,
-     I just avoid underscores in file names, since I prefer to use
-     hyphens anyway. However, you can write a simple sed script to
-     filter the underscores for use by noweave:
-      noweave -filter "sed '/^@use /s/_/\\_/g;/^@defn /s/_/\\_/g'"
-
-     and the filter will change _ to \_ before TeX sees it.
-
-   Q. Having used nuweb2noweb on a nuweb file which uses @i to include
-   other files I find that the resulting noweb file is enormous because
-   the included files are written directly into the noweb file. How do I
-   emulate nuweb's @i with noweb?
-
-     A. The short answer is it can't be done. (Some would say that it
-     doesn't need to be done, because notangle and noweave can accept
-     multiple files on the command line.) The long answer is that you
-     can usually use LaTeX's \include or \input commands and keep the
-     noweb files separate. If you actually need to tangle all those
-     files together (as opposed to just weaving them), you can usually
-     mention all the names on the command line:
-      notangle foo.nw bar.nw quux.nw > big.out
-
-   Q. I have a problem with typesetting Mathematica's double-bracketed
-   subscripting command using [[...]] in my documentation chunks. noweb
-   considers [[a[[#]]&]] to mean the symbols a[[# in typewriter and then
-   latex gets stuck on the offending & character. How can I get around
-   this problem?
-
-     A. Split the quoted code into two pieces, which you write
-     consecutively, thus:
-
-     [[a[[#]]]][[&]]
-
-   Q. Why is the noweb command so slow?
-
-     A. It's expensive to create a TeX file, so
-noweb foo
-
-     is probably at least 5 times slower than
-noweb -t foo
-
-     and in an edit/compile/debug cycle you may not need the docs and
-     can use the faster form.
-
-   Q. What is the origin of the ``no'' prefix in noweb ?
-
-     A. I wrote noweb at a time when language-dependent webs were
-     proliferating, e.g., adaweb, cweb, mweb, etc. So the "no" in noweb
-     is a triple pun:
-     * A language-independent web, not limited to one programming
-       language, hence web for no particular language or `noweb'.
-     * A contraction of `Norman's web'
-     * The third part of the pun is not suitable for publication.
-
-   Q. Emacs noweb-mode is driving me crazy. For example, I want 4-space
-   tabs instead of the usual 8. I put this line in my file:
 % -*- mode: Noweb; noweb-code-mode: c-mode; tab-width: 4 -*-
 
-   Or equivalently I do M-x set-variable tab-width 4. Everything is fine
-   until the cursor moves from one chunk to another---then whammo! Tabs
-   are 8 spaces again. What can I do??
+Or equivalently I do M-x set-variable tab-width 4. Everything is fine until the
+cursor moves from one chunk to another---then whammo! Tabs are 8 spaces again.
+What can I do??
 
-     A. If you have GNU emacs 20.4, or perhaps some other version, an
-     undocumented internal function of files.el will do what you want.
-     Try adding this to your ~/.emacs file:
-    (add-hook 'noweb-select-mode-hook
-              '(lambda () (hack-local-variables-prop-line)))
+    A. If you have GNU emacs 20.4, or perhaps some other version, an
+    undocumented internal function of files.el will do what you want. Try
+    adding this to your ~/.emacs file:
 
-     Thanks to Glenn Holloway for this discovery.
+        (add-hook 'noweb-select-mode-hook
+                  '(lambda () (hack-local-variables-prop-line)))
 
-   Q. Norman, what made you choose Lua as the implementation language for
-   Noweb 3, rather than, say, Python?
+    Thanks to Glenn Holloway for this discovery.
 
-     A. Lua is small and simple. I wanted not to be vulnerable to future
-     changes in language definitions or implementations, which meant I
-     would have to clone and maintain the implementation forever. When I
-     was making this decision in 1997, Lua 2.5 was small enough that I
-     could feel comfortable doing this.
+Q. Emacs noweb-mode is driving me crazy. I want to use Tab or Ctl-J to handle
+indentation, but when I'm in the middle of a code chunk, the indentation is
+wrong, and the cursor jumps to a strange place. How can I make emacs behave?
 
-   Q. Are there noweb comments? It would be very useful to comment parts
-   of a noweb file that wouldn't be parsed as either TeX or code.
+    A. These symptoms indicate that perhaps emacs has lost track of the
+    boundaries between noweb chunks, perhaps material in documentation chunks
+    is confusing the auto-indenter, or perhaps both. As of Emacs 21 in 2008,
+    you can now easily afford to fix these problems using scary Emacs macros:
 
-     A. I recommend that you put comments in specially named chunks and
-     use the elide filter that comes with the distribution. For example,
-     if the name of each comment chunk begins with comment:, you could
-     run
+      (defun my-newline-and-indent ()
+        "Newline and indent that works better with noweb mode"
+        (interactive "*")
+        (if (and (boundp 'noweb-mode) noweb-mode)
+            (save-restriction
+              (noweb-update-chunk-vector)
+              (noweb-narrow-to-chunk)
+              (newline-and-indent))
+            (newline-and-indent)))
 
-noweave -filter elide comment:* ...
+      (defun my-tab-key ()
+        "Tab that always tabs in Fundamental mode" (interactive)
+        (if (string= "Fundamental" mode-name)
+            (insert "\t")
+          (if (and (boundp 'noweb-mode) noweb-mode)
+              (save-restriction
+                (noweb-update-chunk-vector)
+                (noweb-narrow-to-chunk)
+                (indent-for-tab-command))
+            (indent-for-tab-command))))
 
-     (Because chunks that are not used are ignored, there would be no
-     need to elide when tangling.)
+      (defun use-my-indent-keys ()
+        "Locally bind tab and ^J to keys that indent better" (interactive)
+        (local-set-key "\t" 'my-tab-key)
+        (local-set-key "\C-j" 'my-newline-and-indent))
+
+      (add-hook 'noweb-select-code-mode-hook 'use-my-indent-keys)
+
+    Add these to your .emacs file and perhaps the problem will go away. Isn't
+    Moore's law grand?
+
+Other Questions
+
+Q. I compiled and installed, and everything looks OK, but when I ran the
+examples, two things do not work.
+
+  * Noweave can not find definitions for 'C':
+
+    noweave -index -autodefs c compress.nw > compress.tex
+    noweave: don't know how to find definitions for 'c'
+
+  * Noweave can't find l2h for the -filter.
+
+    A. The awk library doesn't include all the filters that the Icon library
+    includes. To get these extra features, you'll have to get Icon from the
+    University of Arizona and re-install noweb using the Icon library.
+
+Q. I've been playing with LP, using noweb. I put related header, source and
+test files into a single .nw file. But that means that if I make a change in
+the source component, the header file is re-extracted, with the result that
+many files which haven't actually changed are recompiled. Any suggestions on
+simplifying the process?
+
+    A.
+
+    notangle -Rheader foo.nw | cpif foo.h
+
+    To understand why this works, see the cpif man page.
+
+Q. What are these weird Makefile targets like install-preformat-man? Why is
+Makefile built from a .nw file? Why is the Makefile so ugly?
+
+    A. Pay no attention to the man behind the curtain. That's all trickery I
+    use to build a Slackware-style package for Linux.
+
+Q. We often get an error from TeX asking us to have a wizard enlarge it, due to
+a line buffer overflow (the buffer is at 3000 bytes now). This is truly
+annoying, since our wizard refuses to enlarge TeX, insisting there is a problem
+in our LaTeX macros or the Icon programs that generate them. Unfortunately,
+that all comes straight from noweave.
+
+    A. Starting with web2c version 7, you can increase the size up to 30000 in
+    texmf.cnf. teTeX changed to a 30,000-byte line buffer starting in November,
+    1997, so if you encounter this problem you should upgrade your TeX. teTeX
+    and web2c are both available from the TeX User's Group.
+
+    Noweave emits very long lines on purpose, to preserve the desirable
+    property that the source and TeX files have identical line numbers. This
+    property guarantees that the line numbers in error messages from TeX refer
+    to the lines of the source file, so that, for example, if TeX complains of
+    an unknown control sequence on line 632, you can just refer to line 632 of
+    your noweb file.
+
+    Most very long lines are caused by long code chunks containing lots of
+    identifier definitions, so if you cannot get a new TeX, you can fix the
+    problem by adding more <<...>>= lines, which breaks up the big chunk into
+    smaller chunks. For example, instead of using a single chunk definition to
+    define a large header file, use several:
+
+         <<alinfo.h>>=
+         #define ...
+         #define ...
+           ...
+         <<alinfo.h>>=
+         #define ...
+         #define ...
+           ...
+
+Q. I am trying to process multiple *.nw files independently of each other with
+noweb, only merging the *.tex files for the final documentation (using noindex
+and nodefs to produce cross references). It seems that noweb uses the same
+labels (for TeX references) in different files. (The file names and the
+identifiers defined in these files are quite similar).
+
+    A. Noweb uses the heuristic made famous by FORTH: names are reduced to the
+    first three characters plus the length. Changing your file names should be
+    sufficient. If you don't like that, you could use -filter with a sed script
+    that adds a unique prefix to all the relevant labels (see the Hacker's
+    Guide for info about where labels appear).
+
+Q. I have a problem with noweave's -delay option. It does not seem to prevent
+the program from inserting its information before the first chunk and after the
+last one.
+
+    A. Put your first @ sign after the \begin{document} instead of at the
+    beginning of the file, and your last @ sign just before the \end{document}.
+
+Q. How do I get an output file (root chunk) with an underscore in its name?
+LaTeX complains about the underscore.
+
+    A. All chunk names are set in ordinary TeX mode. This means that underscore
+    is a subscript character. Rather than use special hacks, I just avoid
+    underscores in file names, since I prefer to use hyphens anyway. However,
+    you can write a simple sed script to filter the underscores for use by
+    noweave:
+
+          noweave -filter 'sed "/^@use /s/_/\\\\_/g;/^@defn /s/_/\\\\_/g"'
+
+    and the filter will change _ to \_ before TeX sees it.
+
+Q. Having used nuweb2noweb on a nuweb file which uses @i to include other files
+I find that the resulting noweb file is enormous because the included files are
+written directly into the noweb file. How do I emulate nuweb's @i with noweb?
+
+    A. The short answer is it can't be done. (Some would say that it doesn't
+    need to be done, because notangle and noweave can accept multiple files on
+    the command line.) The long answer is that you can usually use LaTeX's \
+    include or \input commands and keep the noweb files separate. If you
+    actually need to tangle all those files together (as opposed to just
+    weaving them), you can usually mention all the names on the command line:
+
+          notangle foo.nw bar.nw quux.nw > big.out
+
+Q. I have a problem with typesetting Mathematica's double-bracketed
+subscripting command using [[...]] in my documentation chunks. noweb considers
+[[a[[#]]&]] to mean the symbols a[[# in typewriter and then latex gets stuck on
+the offending & character. How can I get around this problem?
+
+    A. Split the quoted code into two pieces, which you write consecutively,
+    thus:
+
+        [[a[[#]]]][[&]]
+
+Q. Why is the noweb command so slow?
+
+    A. It's expensive to create a TeX file, so
+
+    noweb foo
+
+    is probably at least 5 times slower than
+
+    noweb -t foo
+
+    and in an edit/compile/debug cycle you may not need the docs and can use
+    the faster form.
+
+Q. What is the origin of the ``no'' prefix in noweb ?
+
+    A. I wrote noweb at a time when language-dependent webs were proliferating,
+    e.g., adaweb, cweb, mweb, etc. So the "no" in noweb is a triple pun:
+      + A language-independent web, not limited to one programming language,
+        hence web for no particular language or `noweb'.
+      + A contraction of `Norman's web'
+      + The third part of the pun is not suitable for publication.
+
+Q. Norman, what made you choose Lua as the implementation language for Noweb 3,
+rather than, say, Python?
+
+    A. Lua is small and simple. I wanted not to be vulnerable to future changes
+    in language definitions or implementations, which meant I would have to
+    clone and maintain the implementation forever. When I was making this
+    decision in 1997, Lua 2.5 was small enough that I could feel comfortable
+    doing this.
+
+Q. Are there noweb comments? It would be very useful to comment parts of a
+noweb file that wouldn't be parsed as either TeX or code.
+
+    A. I recommend that you put comments in specially named chunks and use the
+    elide filter that comes with the distribution. For example, if the name of
+    each comment chunk begins with comment:, you could run
+
+        noweave -filter elide comment:* ...
+
+    (Because chunks that are not used are ignored, there would be no need to
+    elide when tangling.)
+

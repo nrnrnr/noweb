@@ -26,6 +26,8 @@ definitions from an external database.
 The external database is itself simply a list of Noweb files.
 It's a bit more liberal than defined above; a chunk is considered
 empty if its definition contains at most whitespace.
+
+A late-breaking bug: we need to resynchronize line numbers.
 <<*>>=
 record chunk(lines, type)
   # lines is all the lines of the chunk
@@ -55,8 +57,11 @@ procedure main(args)
   every c := !thisdoc do
     if c.type ~== "code" | notEmpty(c) | /defns[chunkName(c)] then
       every write(!c.lines)
-    else
+    else {
+      write("@crc_prefix on")
       every write(!(!defns[chunkName(c)]).lines)
+      write("@crc_prefix off")
+    }
 end
 @ 
 Reading chunks is fairly straightforward; we look for begin and end.
@@ -64,20 +69,41 @@ The loop logic is a little less pleasant than I would like.
 <<*>>=
 procedure readchunks(infile)
   local chunks, c
+  local file, lnum, lines, startline
   chunks := []
+  lnum := 1
   while line := read(infile) do
     line ?
-      if ="@begin " then {
-        c := chunk([line], tab(upto(' ')|0))
-        line := read(infile) | stop("unmatched ", c.lines[1])
+      if ="@file " then {
+        file := tab(0)
+        lnum := 1
+      } else if ="@line " then {
+        lnum := integer(tab(0))
+      } else if ="@begin " then {
+        lines := []
+        put(lines, "@file " || \file)
+        put(lines, "@line " || lnum)
+        put(lines, line)
+        startline := line
+        c := chunk(lines, tab(upto(' ')|0))
+        line := read(infile) | stop("unmatched ", startline)
         while line ? not ="@end " do {
           put(c.lines, line)
-          line := read(infile) | stop("unmatched ", c.lines[1])
+          line := read(infile) | stop("unmatched ", startline)
+          line ?
+            if ="@file " then { file := tab(0); lnum := 1 }
+            else if ="@line " then { lnum := integer(tab(0)) }
+            else if =("@nl"|"@index nl") & pos(0) then { lnum := lnum + 1 }
         }
         put(c.lines, line)
         put(chunks, c)
-      } else
+      } else {
         put(chunks, chunk([line], "unknown"))
+        line ?
+          if ="@file " then { file := tab(0); lnum := 1 }
+          else if ="@line " then { lnum := integer(tab(0)) }
+          else if =("@nl"|"@index nl") & pos(0) then { lnum := lnum + 1 }
+      }
   return chunks
 end
 @ 
