@@ -4,7 +4,7 @@ generated shell script.
 <<copyright notice>>=
 # Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# $Id: noweave.nw,v 1.5 1997/09/13 20:29:56 nr Exp nr $
+# $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $
 @
 Here's the organization of the source:
 <<noweave>>=
@@ -26,7 +26,7 @@ LIB=|LIBDIR|
 markup=$LIB/markup backend=$LIB/totex
 wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
 noquote="-noquote" docanchor= noindex="-noindex"
-filtera= filterb= filterc= filterd= filtere=
+filtera= filterb= filterc= filterd= filtere= filterf= filterg=
 # following supported by change in totex back end
 noquote=
 @
@@ -107,7 +107,7 @@ echo "-tex		Emit plain TeX with headers and trailers." 1>&2
 echo "-html		Emit HTML with headers and trailers." 1>&2
 echo "-latex+html	Assume LaTeX in documentation, but use HTML in code." 1>&2
 # echo "-ascii            Emit ASCII." 1>&2
-echo "-troff            Emit troff (unsupported)." 1>&2
+echo "-troff            Emit troff (actually GNU groff)." 1>&2
 echo " -n		Don't use any header or trailer." 1>&2
 echo "-markup frontend  Parse input with frontend (e.g., numarkup)." 1>&2
 @ \iffalse
@@ -149,14 +149,14 @@ instead.
 .TP
 .B \-troff
 Emit 
-.I troff(1)
+.IR troff (1)
 markup (with no wrapper).
 The result should be processed with 
-.I noroff(1).
+.IR noroff (1).
 Bug reports for 
 .B \-troff
-to Phil Bewig
-.B <pbewig@netcom.com>.
+to Aharon Robbins
+.B <arnold@gnu.org>.
 <<bogus noweave man page option table>>=
 .TP
 .B \-ascii
@@ -226,12 +226,12 @@ the control sequence
 expands to a sorted list of all code chunks.
 .TP
 .B \-index
-Build cross-reference information (or hypertext links) for identifiers defined by
-.br
-.B "@ %def" 
-.I identifiers
-.br
-Definitions are those found in input files.
+Build cross-reference information (or hypertext links) for defined identifiers.
+Definitions are those found in the input files by
+.B \-autodefs
+.I language
+or by
+.BR \-filter btdefn.
 Requires
 .I LaTeX
 or
@@ -387,7 +387,9 @@ act a little bit like the
 The option is typically used to enable a user to put a specialized
 .I LaTeX
 .B "\\\\documentclass"
-command and other preamble material in the first documentation chunk.
+command and other preamble material in the first documentation chunk (i.e., 
+.I before
+the first @ sign).
 This option also forces trailing cross-referencing information to be emitted
 just before the final chunk, instead of at the end of the document;
 the final chunk is expected to contain
@@ -418,8 +420,8 @@ Expand tabs with stops every \fIk\fP columns.
 Copy tabs to the output.
 @ \fi
 <<first pass {\tt noweave} options>>=
--v) echo 'RCS version name $Name: v2_8a $' 1>&2
-    echo 'RCS id $Id: noweave.nw,v 1.5 1997/09/13 20:29:56 nr Exp nr $' 1>&2
+-v) echo 'RCS version name $Name:  $' 1>&2
+    echo 'RCS id $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $' 1>&2
     verbose=1 ;;
 <<option printout for usage>>=
 echo "-v		Print pipeline and RCS info on standard error" 1>&2
@@ -485,6 +487,10 @@ elif [ -z "$filterd" ]; then
   filterd="$newfilter"
 elif [ -z "$filtere" ]; then
   filtere="$newfilter"
+elif [ -z "$filterf" ]; then
+  filterf="$newfilter"
+elif [ -z "$filterg" ]; then
+  filterg="$newfilter"
 else
   echo "$0: ran out of filters" 1>&2
   exit 1
@@ -524,9 +530,16 @@ elif [ -z "$filterd" ]; then
 elif [ -z "$filtere" ]; then
   $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
                            eval $filterd
-else
+elif [ -z "$filterf" ]; then
   $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
                            eval $filterd | eval $filtere
+elif [ -z "$filterg" ]; then
+  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
+                           eval $filterd | eval $filtere | eval $filterf
+else
+  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
+                           eval $filterd | eval $filtere | eval $filterf |
+                           eval $filterg
 fi
 if [ -n "$trailer" ]; then echo $trailer; fi
 )
@@ -546,4 +559,6 @@ if [ -n "$verbose" ]; then
   if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
   if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
   if   [ -n "$filtere" ]; then echo $filtere '|' 1>&2; fi
+  if   [ -n "$filterf" ]; then echo $filterf '|' 1>&2; fi
+  if   [ -n "$filterg" ]; then echo $filterg '|' 1>&2; fi
 fi

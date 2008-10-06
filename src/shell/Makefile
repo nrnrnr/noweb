@@ -5,7 +5,7 @@ LIB=/usr/public/pkg/noweb/lib
 
 EXEC=noweave noweb notangle noroff toroff
 SRCS=$(EXEC) tmac.w
-RCSFILES=noweave.nw notangle.nw noweb.nw noroots nocount
+RCSFILES=noweave.nw notangle.nw noweb.nw noroff.nw noroots nocount Makefile
 CINAME=
 CIMSG=
 
