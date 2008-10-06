@@ -2,8 +2,8 @@
 \section{Scanning for uses of identifiers}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: finduses.nw,v 1.20 2006/06/12 22:05:33 nr Exp nr $";
-static char rcsname[] = "$Name: v2_11b $";
+static char rcsid[] = "$Id: finduses.nw,v 1.21 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsname[] = "$Name: v2_12 $";
 static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
   { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
 #include <stdio.h>

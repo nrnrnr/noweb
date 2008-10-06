@@ -1,4 +1,4 @@
-% $Id: doc.nw,v 1.19 2006/06/12 22:05:33 nr Exp nr $
+% $Id: doc.nw,v 1.20 2008/10/04 20:53:51 nr Exp nr $
 
 \documentclass[twoside]{article}
 \usepackage{noweb,multicol}

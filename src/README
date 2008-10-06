@@ -1,7 +1,7 @@
 These are the base sources and documents for version 2.12 of
 ``noweb'', a simple, extensible literate-programming tool.  noweb is
 available by anonymous ftp from ftp.eecs.harvard.edu:pub/nr/noweb and
-by HTTP from http://www.eecs.harvard.edu/nr/noweb/dist.  It is
+by HTTP from http://www.cs.tufts.edu/~nr/noweb/dist.  It is
 mirrored by the Comprehensive TeX Archive Network, in directory
 web/noweb.  The file INSTALL tells how to build noweb.  The file FAQ
 answers some frequently asked questions about building and using

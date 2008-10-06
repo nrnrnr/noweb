@@ -2854,8 +2854,8 @@ end
 @
 <<*>>=
 procedure rcsinfo () 
-  return "$Id: l2h.nw,v 1.22 2007/01/29 18:47:05 nr Exp nr $" ||
-         "$Name:  $"
+  return "$Id: l2h.nw,v 1.23 2008/10/04 20:53:51 nr Exp nr $" ||
+         "$Name: v2_12 $"
 end
 @
 \section{Chunks}

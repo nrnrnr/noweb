@@ -63,8 +63,8 @@ static void print_pair(FILE *out, char *name, char *value) {
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
 <<*>>=
-static char rcsid[] = "$Id: markmain.nw,v 2.27 2006/06/12 22:05:33 nr Exp nr $";
-static char rcsname[] = "$Name: v2_11b $";
+static char rcsid[] = "$Id: markmain.nw,v 2.28 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
