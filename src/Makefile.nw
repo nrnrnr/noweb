@@ -3,7 +3,7 @@ This nonsense is the result.  (Too bad mk isn't everywhere.)
 <<script>>=
 (cat Makefile.nw; echo ""; notangle -t8 -R'generate chunks' Makefile.nw | sh) | notangle -t8 -
 <<*>>=
-# Copyright 1995-2001 by Norman Ramsey.  All rights reserved.
+# Copyright 1995-2008 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
