@@ -1,0 +1,254 @@
+** Recipe for building and installing noweb 2.7a in a PC386 running Dos
+** Recipe version 0.3 (30-May-95), report problems to avs@daimi.aau.dk
+
+This recipe assumes its support files are at './noweb/contrib/avs'. If they are
+not (as is the case with the noweb 2.7a distribution) then just unpack
+noweb27a.tar.gz (official distribution) and avs386_noweb27a.tar.gz (my
+contribution) from the same base dir
+
+I'm only doing a minimum patch of the noweb source files and installation
+scripts to get a successful install (binaries plus support files plus man
+pages). I do not patch things that I am not likely to need like support for
+'make clean' or changing the '.nw' files in the sources dir. Also I didn't try
+to install the contributed software from the contrib dir. After noweb is
+successfully installed just remove the distribution files from your system (it
+is better to archive it somewhere, there are some docs, examples and contribs
+that might be useful later)
+
+Bugs/problems with noweb 2.7a: see the file 'report1.bug'
+
+This recipe supports Awk but that option is not thoroughly tested. Why should I
+use Awk if the Noweb distribution explicitly says that the Awk versions of the
+tools are untested and so probably have bugs? Compiling Icon for Ms-Dos is not
+easy but one can ftp the binaries (only 512 KB)
+
+** History:
+
+0.3 recipe for noweb 2.7 (30-May-95)
+0.2 recipe for noweb 2.7 (26-Mar-95), internal use only
+0.1 recipe for noweb 2.6c (12-Dec-94), internal use only
+
+**** Software ****
+
+Requires:
+- MKS Toolkit 4.2 for Dos (older versions of MKS might not work)
+- the DJGPP port of GNU gcc, GNU make, and GNU gzip
+- version 9.0 of Icon for MsDos 386/486,
+- LaTeX (LaTeX 2.09 or LaTeX2e)
+
+LaTeX: I use emTeX 386, the installation is everything except straightforward,
+if you don't already have LaTeX in your PC the best way to get it up and
+running is by using John Refling's jrtex12a.txt ("How I installed emtex,
+latex2e, mf, dvips, on a 386 with postscript or hplaser"). I supply an
+annotated copy of that document with some corrections and some additions 
+made by me in the file 'jrtex12a.avs'
+
+Because MKS does not have nroff, a nroff processed man page for Icon is
+provided here.  (I also provide mks42bug.0d which has a list of all the MKS 4.2
+bugs that I am aware of, some of them required a fix in this recipe)
+
+See the file 'ftpsites.txt' for download info for the additional software
+
+**** Install ****
+
+NOTE: my MKS installation allows me to switch easily between using the MKS
+Korn-shell (sh.exe) and the Ms-Dos command interpreter (command.com), i.e. I
+boot with command.com and then I run login to get the Korn shell and by logging
+out I am back in command.com. You need the ability to switch between using
+command.com and sh.exe because some software has problems with the MKS pathname
+separator '/'. This is why the steps normally specify if they are to be run
+under command.com or sh.exe. If nothing is said it would work under
+either. Also command.com uses much less memory than sh.exe, for instance I am
+unable to compile the C code when running under sh.exe (this has to do with the
+640KB MsDos limit, I have lots of extended memory and a good memory manager)
+
+Change to some temporary directory (if '.' is that dir then all files will be
+under './noweb') and extract the distribution (the extension .tar.gz was
+changed to .tgz to comply with Ms-Dos filenames, 386avs27.tgz is
+avs386_noweb27.tar.gz):
+
+cd ...
+gzip -dc noweb27.tgz | tar xvf -
+gzip -dc 386avs27.tgz | tar xvf -
+    (my files are not part of noweb 2.7)
+cd ./noweb/contrib/avs
+
+All my files are at ./noweb/contrib/avs, see the file 'filelist.txt'
+
+If you feel lucky edit the site specific line of the file 'myenv.ksh'
+(i.e. specify the paths where things are, and where things will go) and run
+it. Then run the generated file 'automate.bat'. If things work as they ought
+to, you can stop reading.
+
+**** Troubleshooting ****
+
+Print this file and go through it step by step (I'm explaining what 'myenv.ksh',
+'automate.bat' and the scripts called by these are doing)
+
+a) change to ./noweb/src directory and edit 'awkname'
+   (this script uses '/tmp', if your tmp dir is not in the same drive as noweb,
+    replace in line 8
+         new=/tmp/$$.new; old=/tmp/$$.old
+    with e.g.
+         new=c:/tmp/$$.new; old=c:/tmp/$$.old
+    (Notice that although one is using Icon instead of Awk line 26 of
+     noweb.ksh, line 7 of noroots.ksh and line 32 of nountang.ksh use Awk
+     anyway, so it's easier to update the awk name everywhere)
+
+b) run the shell script 'awkname' under the Korn shell with 'awk' as argument 
+   (because the Korn shell awk is named awk). Notice that because the awkname 
+   script does not have a .ksh extension one has to explicitly supply a '.' as 
+   the extension name, otherwise the shell won't find it, e.g.
+      cd ./noweb/src; ./awkname. awk
+
+c) rename src/makefile src/icon/makefile src/install src/xdoc/makefile
+   src/awkname to *.old. And then run the awk scripts to patch the makefiles
+   (each action in each script has a comment explaining what it is doing and
+   why). The file 'install' had to be renamed to avoid confusing MKS make when
+   it tries to run 'make install'.
+ awk -f contrib/avs/make_ico.awk src/icon/makefile.old > src/icon/makefile
+ awk -f contrib/avs/make_src.awk src/makefile.old > src/makefile
+ awk -f contrib/avs/make_xdo.awk src/xdoc/makefile.old > src/xdoc/makefile
+
+d) copy the scripts to the /noweb/src dir (you need to run them from there)
+   cp -p contrib/avs/nw_c.bat src
+   cp -p contrib/avs/nwinst.ksh src
+   cp -p contrib/avs/nwicon.bat src
+
+e) run nwicon.bat under command.com, run it 1st without args to get an usage
+   screen, and then provide the correct args (careful with the number and use
+   of slashes and backslashes). This compiles the icon code
+      (Concerning the location of your icon binaries: if it is d:/bin/icont.exe
+      and d:/bin/ixhdr.exe then use d:\\\\bin\\\\icont, '.exe' extension not
+      necessary. Sorry about the \\\\, but believe me that's the only way I 
+      managed for it to work, see below for an explanation. Give also the
+      location of your DJGPP make, and the locations where later on you want to
+      install the noweb LIB and the noweb BIN)
+
+f) run nw_c.bat under command.com without args to get the usage screen, then
+   use the 'set' command and then rerun nw_c.bat. This compiles the C code
+   (if I try to run under the shell instead of command.com and the makefile
+   tries to compile a C program I get out of memory errors, i.e. this is the
+   place where you need more free Ram, 600000 bytes free is enough)
+      (the full pathname of DJGPP Make is given twice, the one with Unix style
+      slashes goes in the environment var and the one with MsDos style
+      backslashes is given as arg. Notice that an environment variable called
+      DJGPPMAKE is set, make sure that you have enough space for it, otherwise
+      increase the value used in the /E:### option of the SHELL command in 
+      your config.sys)
+      (nw_c.bat also patches src/c/finduses.c because of a problem with DJGPP
+       tmpfile() in libc.a, the screen will show what is being changed. This
+       might not be necessary under a newer version of DJGPP (I did not yet
+       install the last DJGPP maintenance patches) but it is better to do it
+       anyway because tempnam() uses the environment var TMPDIR, while
+       tmpfile() doesn't)
+
+g) run nwinst.ksh under the Korn shell (sh.exe), there is an usage screen. You
+   can also run it from command.com using 'sh -c "./nwinst.ksh ..."'. This 
+   installs the icon based version of noweb (some files will need to be patched
+   afterwards, see below).
+      (because an Unix style shell and MKS make are needed)
+      (make sure that MKS make is the 1st make in your path, see Technical
+      Notes below)
+      (if you prefer to use Awk instead of Icon update the scripts yourself.
+      Notice that although Awk is slower than Icon, MKS has a 32 bits version
+      of Awk which might be good enough, and MKS has also an Awk compiler
+      (awkc, see 'man awkc'), thus by removing from the shell scripts the
+      awk code, puting it into a file, compiling it, and updating the shell
+      scripts to use that executable you might get good performance, I didn't
+      try to use Awk thus I don't know)
+      (in noweb27.tar.gz in the file "install.dos" there are some references
+      to an MKS awk bug in handling backslashes in gsub(), I was unable to find
+      the code that it refered to in the noweb distribution (did it only apply
+      to an older version of noweb?), but anyhow you should check it out if you
+      are going to use awk)
+
+h) fix cpif.ksh and noweb.ksh by running mksfixes.ksh (from noweb/contrib/avs),
+  there is an usage screen. This edits the noweb.ksh in the BIN location
+  specified to nwinst.ksh and removes twice (in lines 20 and 25) the
+	   PATH="$PATH:$LIB"
+   which is not necessary and causes the error 'cannot execute go32' at run-time
+   (go32 is the Dos extender used by DJGPP). It also edits cpif.ksh (also in the 
+   BIN location) and:
+   - removes the PATH statement in line 8 (because 'PATH=/bin:/usr/bin' is
+     probably wrong for your system)
+   - adds a full pathname (with a drive letter) to "new=/tmp/$$" in line 20
+     (e.g. "new=d:/tmp/$$"), because otherwise the script will fail when run
+     from a drive which has no tmp dir
+   - because of a bug in MKS 4.2 changes line 28 from
+         -eq0|-ne1|*2) cp $new $i
+     to
+         -eq0|-ne1|*2|*3) cp $new $i
+     Maybe you would like to check out if that bug applies to your system,
+     in MKS 4.2 the program cmp ("cmp.exe") gives an exit code of 3 if one of
+     the files to be compared cannot be opened or doesn't exist, this is in
+     contrast with the MKS man page which says that an error code of 2 is
+     given (to fix this bug is very important otherwise e.g. the command noweb
+     will never create the TeX file)
+
+i) copy './noweb/contrib/avs/icon.1' to '.../yourman/cat1' and 'mks42bug.0d' to
+  '.../yourman/cat0' and add '.../yourman' to your MANPATH.
+
+j) test the installation by running noweb/examples/...
+  (you must run noweb under the Korn shell. I have enough free RAM to run
+  everything including the Dos extenders of Icon, DJGPP Emacs, emTeX, etc.
+  Probably this happens because 'mem' run from the Korn Shell reports
+  590272 free bytes (of the 640 KB), and I have enough free EMS. I use
+  QEMM 7.5 as the memory manager)
+
+**** Technical Notes: ****
+
+- DJGPP Make can be in your path but it can't be 1st otherwise install.ksh does
+not work
+- noweb/install renamed to noweb/install.old to avoid confusing MKS Make when
+  trying to execute 'make install'
+- it is assumed that MKS Make is the 1st Make in your path
+- nw_c.bat does not run coff2exe, thus you CANNOT test the binaries BEFORE
+  you install them, i.e. you don't get the .exe files. This avoids the need to
+  change the src/c/makefile
+  When you run install.ksh, coff2exe will be run for all binaries (i.e. a stub
+  will be added to them which will call the Dos extender go32.exe)
+- if you have problems with the 127 chars PATH limit do:
+  Command.com 6.0 can take a PATH longer than 127 chars by setting it in the
+  config.sys (but it is not possible to change it afterwards from e.g.
+  autoexec.bat or the command line), also some programs might crash with this
+  extra long path and one can only see the 1st 122 chars (although all are used
+  in a search)
+  The Ndos shareware command interpreter can have a PATH 256 chars long.
+
+- main changes made to the Unix noweb/src/makefile to create the Dos Makefile:
+  (see also make_src.awk)
+a) in some places of the makefile quotes had to be removed (e.g. instead of
+   "CFLAGS=$(CFLAGS)" one has to use CFLAGS=$(CFLAGS), this is caused by the
+   use of 'command.com' as the shell while building noweb). Of course if using 
+   more than one CFLAGS (i.e. embedded blanks) this won't work (the easiest and 
+   dirty fix is to add them directly to the makefile in that case)
+b) MKS strip cannot be used on the DJGPP .exe, otherwise go32 would fail
+c) it is an hybrid makefile, 'make all' only works with DJGPP Make and
+   'command.com', while 'make install' only works with MKS Make and the MKS
+   Korn Shell
+d) 'SHELL=/bin/sh' had to be disabled (e.g. if MKS $ROOTDIR is not '/')
+e) links (used in the man pages) not supported under MsDos, copy was used
+f) there is also an external 'cd.exe' in the MKS Toolkit (don't ask me what
+   it can be used for, it is just a source of problems). This gives problems
+   that the MKS make will use it instead of the internal Korn-shell cd command
+   unless the line to be executed is such that it requires the Korn-shell to 
+   interpret it. This is why:
+	cd c; coff2exe nt markup mnt finduses
+   won't work, but
+	cd "c"; coff2exe nt markup mnt finduses
+   works fine
+
+- main changes made to the noweb/src/icon/makefile (see also make_ico.awk):
+a) cannot run under the Korn shell otherwise icont.exe becomes confused about
+   the current directory
+b) when executing icont.exe if argv[0] has slashes (instead of backslashes)
+   icont.exe runs OK but at the end it is unable to run ixhdr.exe thus it fails
+c) I got several spurious CPU locks when calling make from make while executing
+   icont.exe, that's why only one make is used
+d) icont must be replaced with the full path (with backslashes) to itself,
+e) the option '-I' to the 'icont.exe' is not documented in the Icon man page
+   (see section 3 of document IPD248a from the Icon project), it produces a
+   non-executable icode file (.icx) which can be run by iconx.exe
+
+**** The End ****

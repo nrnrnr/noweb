@@ -1,0 +1,163 @@
+\section{Converting trees to dags}
+The problem with the trees generated in the previous section is that
+there's a different edge, and therefore a different child, for each
+possible interval of the field tested, even if those children both
+execute exactly the same ``original'' arm of the case statement.
+The code in this section converts the trees to dags, and as part of
+the process it combines edges pointing to the same node.
+This can reduce the size of the tree by huge factors.
+
+To make the transformation work, I have to represent a {\em set of
+intervals} on each edge, not just a single interval.  Because no two intervals
+overlap, I can use a wonderful dirty trick, detailed below.
+I also {\em may} convert a node's name string to a [[namearray]] mapping
+field values to strings.  The goal is for children of the same
+parent to share a single name array; that way the edges can be merged and
+the name operator can be implemented with an array reference.
+If I don't convert a node's name, the only penalty is that the tree
+might be bigger.
+(Code generation will be different for the two cases.)
+@
+Now, the dirty representation trick: 
+I can represent a set of numbers $S$ (a union of intervals) as two
+sets, $lo$ and $hi$, such that
+\begin{itemize}
+% l2h substitution cap <b>intersect</b>#
+% l2h substitution cup <b>union</b>#
+% l2h substitution emptyset <b>empty#set</b>
+\item[] $lo \cap hi = \emptyset$
+\item[] if ${\tt sort}(lo \cup hi) = a, b, c, d, \ldots$, then
+      $S = [a,b-1] \cup [c,d-1] \cup \ldots$.
+\end{itemize}
+The procedure [[addinterval]] adds a new interval to such a set $S$,
+relying on the fact that no two intervals overlap.
+<<*>>=
+procedure addinterval(loset, hiset, lonum, hinum)
+    if member(loset, hinum) then delete(loset, hinum) else insert(hiset, hinum)
+    if member(hiset, lonum) then delete(hiset, lonum) else insert(loset, lonum)
+    return
+end
+@
+To convert trees to dags I need to be able to compare two nodes
+for structural identity, and the easiest way is to compute a canonical
+representation as a string:\par\noindent [[
+   node : [fname:patimage(list of edges)]
+        | <NOMATCH>
+        | (image(node.name):image(node.cs.arms[1].original))
+   edge : patimage(list of sort(loset ++ hiset)):node
+]]
+<<*>>=
+procedure nodetostring(n, depth)
+    static cache 
+    initial cache := table()
+    /depth := 0
+    if /cache[n] then
+        if *n.children > 0 then {
+            result := "[" || n.field.name || ":"
+	    every result ||:= edgetostring(!n.children, depth+2)
+            cache[n] := result || "]"
+        } else if *n.cs.arms = 0 then
+            cache[n] := "<NOMATCH>"
+        else 
+            cache[n] := "(" || image(n.name) || ":" || image(n.cs.arms[1].original) ||")"
+    return \cache[n]
+end
+
+procedure edgetostring(e,depth)
+    return left("\n", depth) || 
+          "{" || patimage(sort(e.lo ++ e.hi)) || ":" || nodetostring(e.node,depth) || "}"
+end
+@
+Conversion to dag is the usual bottom-up hashing; here I compute the
+string and then use the string to index into a table.
+The real work of merging edges is done by [[combinechildren]].
+If edge merging results in a single each, the node is replaced by
+its child, provided the edge really covers all possible values
+of the field.
+<<*>>=
+procedure tree2dag(n, nodetable, depth)
+    /nodetable := table()
+    /depth := 0
+    if *n.children > 0 then
+        combinechildren(n, nodetable, depth+2)	# converts edges to set form
+    if *n.children = 1 then {
+        e := n.children[1]
+        if covers(n.children[1], n.field.hi - n.field.lo) then
+            n := n.children[1].node     # all roads to child: hoist it
+        else
+            warning("node with one child doesn't match all cases")    
+    }
+    s := nodetostring(n, depth)
+    /nodetable[s] := n
+    return nodetable[s]
+end
+@
+Here's where I check coverage.
+Only success or failure of [[covers]] is meaningful, not
+the value returned.
+<<*>>=
+procedure covers(e, width)
+    l := sort(e.lo ++ e.hi)
+    return *l = 2 & l[1] = 0 & l[2] = 2^width
+end
+@
+The complicated stuff here is identifying a name array.
+At each node, either all edges go in an exiting name array 
+or a new name array is used.
+If not, I create a new one.
+<<*>>=
+record namearray(field, tbl, hi, codename)
+	# field used as index, table[integer] of name, bound on table, name of this array
+global natable
+<<*>>=
+procedure arraycandidates(n)
+    initial MAXRANGE := 32
+    suspend e := !n.children & type(e.node.name) == "string" & 
+            e.hi - e.lo <= MAXRANGE & e
+end
+
+procedure combinechildren(n, nodetable, depth)
+    initial natable := table()
+
+    if arraycandidates(n).node.name ~== arraycandidates(n).node.name then {
+        <<change names of children from strings to namearrays when possible>>
+    }
+
+    lotable := table()
+    hitable := table()
+    every e := !n.children & child := tree2dag(e.node, nodetable, depth) do {
+        /lotable[child] := set()
+        /hitable[child] := set()
+        addinterval(lotable[child], hitable[child], e.lo, e.hi)
+    }
+    n.children := []
+    every child := key(lotable) do
+        put(n.children, edge(child, lotable[child], hitable[child]))
+    return
+end
+<<change names of children from strings to namearrays when possible>>=
+mightuse := set()           # name arrays we might use must have right field
+every na := !\natable[n.field] do
+    insert(mightuse, na)
+every e := arraycandidates(n) & na := !mightuse do
+    if \na.tbl[e.lo to e.hi - 1] ~== e.node.name then  # slot used with wrong name
+        delete(mightuse, na)
+if *mightuse > 0 then
+    willuse := ?mightuse
+else {
+    /natable[n.field] := set()
+    insert(natable[n.field], willuse := namearray(n.field, table(), 0))
+}
+every e := arraycandidates(n) &
+      e.lo - willuse.hi <= MAXRANGE do {
+          every willuse.tbl[e.lo to e.hi - 1] := e.node.name;
+          e.node.name := willuse
+          willuse.hi <:= e.hi
+      }
+<<*>>=
+procedure namesused(n, result)
+    /result := set()
+    if type(n.name) == "namearray" then insert(result, n.name)
+    every namesused((!n.children).node, result)
+    return result
+end

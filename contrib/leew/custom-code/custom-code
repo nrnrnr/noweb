@@ -1,0 +1,12 @@
+#!/bin/awk -f
+BEGIN		{   needcontrol = 0;	}
+/^@begin code /	{   needcontrol = 1 	}
+/^@quote$/	{   needcontrol = 1	}
+/^@text /	{   if (needcontrol) {
+			print "@literal \\bgroup\\nwcustomcode{}"
+		    }
+		    needcontrol = 0
+		}
+/^@end code /	{   print "@literal \\egroup{}"	}
+/^@endquote$/	{   print "@literal \\egroup{}"	}
+		{   print	}

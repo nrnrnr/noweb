@@ -1,0 +1,38 @@
+This is the README file for the collection of files related to d2tex.
+These files are:
+
+- algoritmos.sty: 
+defines the 'code' environment and several other
+related environments (code*, algorithm, ...); the implementation is
+not documented and can be difficult to understand, but I have
+documented the main features of the environments.
+- d2tex:
+an noweb filter (written in awk) that prettyprints; for instance, 
+ /* this is a comment */ is replaced by \COMMENT{this is a comment}
+ <=                      is replaced by \le
+ PROCEDURE initialize    is replaced by \PROCEDURE |initialize|
+
+this script does not parse the input; it only uses pattern-matching,
+but produces reasonable output if some thumb rules are followed.
+d2tex has a list of keywords built in.
+
+- keywords.tex:
+
+contains TeX macro definitions for producing keywords in boldface, 
+special simbols (as the boxes between guarded commands), etc.; most of
+the macros include indentation macros \tab and \untab; \tab is sets a
+tab and moves the margin tab to the right, while \untab removes a tab
+stop and moves to the left the margin tab. Since the 'code'
+environment is based upon the tabbing environment, it is useful for
+the keyword macros (such as \WHILE) to include these tab/untab
+macros. \tab and \untab can be used inside the 'code' environment when
+needed, for instance, to override the default indentation or to
+correct minor mistakes.
+
+- hospital.nw:
+a weird example of the type of code that d2tex is 'able' to
+prettyprint; the documentation is not written in english (several
+paragraphs and comments in the code are written in catalan) and the
+code is not complete.
+
+

@@ -1,0 +1,130 @@
+#!/usr/common/bin/perl
+do "TeXthings";
+do "getopts.pl" || die "$!";
+do Getopts('n:idf:hqst');
+
+if($opt_h)
+ {
+  print STDERR <<ENDOFHELP;
+
+Usage: mx2tex [options]
+
+mx2tex takes a file created by mm2mx and converts it into TeX.
+
+Options: d         debugging information
+         f <name>  use this file for the job (from <name>.mx to <name>.tex/texnique)
+         h         this help text
+         i         create the indexes
+         n <name>  use this as the name for the output files
+                    default: woven
+         q         operate quietly (no output)
+         s         only have full list of defines for first chunk
+ENDOFHELP
+ exit;
+ }
+
+unless($opt_q)
+ {
+   print STDERR "mx2tex version 3, 1994 by Rob Partington\n";
+   if($opt_d) { push(@options,"debugging"); }
+   if($opt_f) { push(@options,"file:$opt_f"); }
+   if($opt_i) { push(@options,"indexes"); }
+   if($opt_n) { push(@options,"name:$opt_n"); }
+   if($opt_s) { push(@options,"first define"); }
+   if($opt_t) { push(@options,"force write"); }
+   print STDERR "Options:",sort(join(' + ',@options)),"\n";
+   undef @options;
+ }
+
+$macrofile="nwindex"; if($opt_d) { $macrofile="nwidxmac"; }
+
+$filename=$opt_f; if($opt_n) { $filename=$opt_n; }
+
+open(TEX,">$filename.texnique") || die "$!";
+
+if($opt_f) { push(@ARGV,"$filename.markup"); }
+ 
+unless(-e "$filename.tex" && !$opt_t)
+ {
+  open(TEXCNTL,">$filename.tex") || die "$!";
+  print TEXCNTL <<EOTEX;
+\\input $macrofile
+\\def\\defined{}\\init\\output={\\plainoutput\\global\\subpageref=97}
+{\\def\\shipout{\\message{[p\\the\\pageno]}\\setbox0}
+\\input \\jobname.texnique \\vfill\\supereject}
+\\init{\\gdef\\passtwo{}\\input \\jobname.texnique }
+\\end
+EOTEX
+  close(TEXCNTL);
+ }
+ 
+
+$code=0; $text=1; $ignore=0;
+whileloop:
+while(<>)
+{
+  if(/^begin code (.*)$/)    { $delayed="\\nwbegincode{$1}"; $code=1; $text=5; }
+  elsif(/^end code/)         { print TEX "\\nwendcode{}\\filbreak$defing"; $code=0; }
+  elsif(/^begin docs (.*)$/) { print TEX "\\nwbegindocs{$1}"; $text=0; $textmode=0; }
+  elsif(/^end docs/)         { print TEX "\\nwenddocs{}"; }
+  elsif(/^text (.*)$/)
+  { $text+=length $1;
+    if($code==1)       { print TEX &escapebslash($1); }
+    elsif($quoting==1) { print TEX &TeXliteral($1); }
+    else               { print TEX $1; }
+    $textmode=1 if $text>0;
+  }
+  elsif(/^nl$/)
+  { if($code==0)
+    { if($text==0)
+        { if($textmode==1) { print TEX "\\nwdocspar\\noindent\n"; }
+          else             { print TEX "\n"; }
+          $textmode=1; $text=1;
+        }
+      else { print TEX "\n"; }
+    }
+    elsif($quoting) { print TEX "\\nwnewline"; }
+    else { if($text>0) { print TEX "\n"; } }
+  }
+  elsif(/^defn ([a-z]+)\|(.*)\|(.*)\| (.*)$/)
+  { $xref=$1; $name=$2;
+    $defing="\\makeref{$1}";
+    $deflist=$2; $uselist=$3;
+    if($opt_s && @defns{$name} eq 'plus')
+     {
+       if(($firstr=index($deflist,'}\\'))!=-1)
+        { $deflist=substr($deflist,0,$firstr) . '}}'; }
+       if(($firstr=index($uselist,'}\\'))!=-1)
+        { $uselist=substr($uselist,0,$firstr) . '}}'; }
+     }
+     
+    print TEX "$delayed\\def\\list$deflist\\def\\ulist$uselist",
+                  "\\moddef{\\xp{\\$1}}{",&convquotes($4),"}",
+                  "\\inmodname\\",@defns{$name},"endmoddef";
+    $ignore=1;
+    @defns{$name}='plus';
+  }
+  elsif(/^use ([a-z]+)\|(.*)\| (.*)$/)
+   {
+    $deflist=$2;
+    if($opt_s)
+     { $deflist=~s/^({\\\\\{.*\}).*\}$/\1\}/;}
+    print TEX "\\LA{}",&convquotes($3),"\\def\\list",$deflist,"\\inmodname\\RA{}";
+   }
+  elsif(/^quote$/)           { $quoting=1; print TEX "{\\tt "; }
+  elsif(/^endquote$/)        { $quoting=0; print TEX "}"; $textmode=0; }
+  elsif(/^file (.*)$/)       { print TEX "\\filename{$1}"; }
+  elsif(/^literal (.*)$/)    { print TEX "$1"; }
+  elsif(/^entry (.*)$/ && $opt_i) { print INDEX "$1\n"; }
+  elsif(/^index (.*)$/ && $opt_i)
+  { print STDERR "creating index `$filename.$1'\n" unless $opt_q;
+    open(INDEX,">$filename.$1");
+    print INDEX "\\begingroup\\parindent=0pt\\obeylines%\n";
+  }
+  elsif(/^end index$/ && $opt_i)
+    {
+      print INDEX "\\endgroup\n";
+      close(INDEX);
+    }
+}
+print TEX "\\passfin\n";

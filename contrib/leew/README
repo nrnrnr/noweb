@@ -1,0 +1,9 @@
+Lee Wittenberg has kindly provided his port of noweb to DOS, which
+includes executable binaries.  It once appeared in the DOS
+subdirectory of the standard noweb distribution, but it got superseded
+by somebody else's port later on.
+
+nocond is a slick noweb filter that supports conditional code in a
+nicer way than ugly old #ifdef's.
+
+nobrace looks for unbalanced braces in code chunks.

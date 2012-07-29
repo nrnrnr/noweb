@@ -1,0 +1,41 @@
+#! /bin/sh
+#
+# ttroots
+#
+# -Allows underscores in root chunks that are written to disk.
+# -All root chunks are printed out in the LaTeX document as 
+#  upright verbatim names.
+
+gawk '
+              { line[NR] = $0 ; }
+# a root chunk name can not contain spaces
+$1 == "@use"  && NF == 2 { used[$2] = 1 ; next ; }
+$1 == "@defn" && NF == 2 { defined[$2] = 1 ; }
+
+END { 
+  # determine root chunks
+  for (i in defined) 
+    if (!(i in used))
+      root_chunks[i] = 1 ;
+
+  # root chunk substitutions
+  # Root chunk names can be used in 3 contexts:
+  #   @defn name
+  #   @xref notused name
+  #   @xref chunkbegin label name
+  for (i=1; i<=NR; i++) {
+    if (line[i] ~ /^(@xref notused|@xref chunkbegin|@defn)/) {
+      nr = split(line[i], array, " ") ;
+      stat = array[1] ;
+      name = array[nr] ;
+      if ((stat == "@xref" || (stat == "@defn" && nr == 2)) && (name in root_ch
+unks)) {
+        replace = " \\textup{\\texttt{"name"}}" ;
+        gsub("_", "\\_", replace) ;
+        gsub(" "name, replace, line[i]) ;
+      } ;
+    } ;
+    print line[i] ;
+  }
+}
+'

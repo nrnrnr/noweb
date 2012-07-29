@@ -1,0 +1,444 @@
+% Norman Ramsey (nr@notecnirp) --- CS 320
+
+\def\sizedboxit#1#2{\vtop{\vbox{\hrule\hbox{\vrule\kern #2%
+    \vtop{\vbox{\kern #2\hbox{#1}}\kern #2}\kern #2\vrule}}\hrule}}
+\def\boxit#1{\sizedboxit{#1}{1pt}}
+\def\token#1{\boxit{\strut\tt #1}}
+
+\setcounter{secnumdepth}{0}
+
+% l2h ignore boxit
+% l2h argblock token tt
+@
+In this assignment I print intermediate code.
+<<grammatical C functions>>=
+void print6 (Exp e) {
+    extern int yylineno;
+    printf("line %d:\n",yylineno);
+    if (e.type==error_type)
+	printf("# ERROR\n");
+    else
+        printTree(e.tree,stdout);
+}
+<<grammatical C declarations>>=
+void print6(Exp e);
+@
+\section{The {\tt yacc} value stack}
+Here are all the objects I use as synthesized attributes:
+<<grammatical declarations>>=
+%union {
+    char *string;
+    Type type;
+    Product product;
+    Symbol symbol;
+    Exp exp;
+    Explist explist;
+    int bit;
+}
+@
+\section{3. Vocabulary and representation}
+\subsection{Representation of terminal symbols}
+{\tt yacc} and {\tt lex} use integers to represent terminal
+symbols (tokens).
+Single-character tokens are represented by their ASCII codes.
+Longer tokens are declared using {\tt yacc}'s [[%token]] declaration;
+{\tt yacc} chooses an integer representation of each such token.
+These representations are made available to the lexer via [[y.tab.h]].
+I use the standard trick from Kernighan and Pike ([[x.tab.h]] instead of 
+[[y.tab.h]]) to avoid remaking the lexer unecessarily.
+<<lexical include files>>=
+#include "x.tab.h"
+@
+\subsection{1. Identifiers}
+Since {\tt lex} is notoriously slow at using patterns to recognize
+ reserved words, I look up every identifier in a table of reserved words.
+[[idcategory(id)]] returns the category of the reserved word [[id]]
+when [[id]] is in fact a reserved word.
+When [[id]] is not a reserved word, [[idcategory(id)]] returns [[IDENT]].
+<<lexical definitions>>=
+letter	[A-Za-z]
+digit	[0-9]
+@
+The offensive [[<INITIAL>]] below has to do with handling comments (q.v.).
+Both identifiers and reserved words
+are saved in the string table and put on the {\tt yacc} value stack.
+<<lexical rules>>=
+<INITIAL>{letter}({letter}|{digit})*	{ yylval.string = strsave(yytext);
+					  return idcategory(yytext); }
+<<lexical C declarations>>=
+extern char *strsave(char *s);
+<<grammatical declarations>>=
+%token IDENT
+%type <string> IDENT
+<<grammatical rules>>=
+ident	: IDENT
+    	;
+<<grammatical declarations>>=
+%type <string> ident
+<<grammatical C declarations>>=
+extern char yytext[];
+@ 
+\subsection{2. Numbers}
+I have to use two different [[ScaleFactor]] definitions
+so I can tell the difference between long and short reals.
+Notice that the scale factor is {\em not} optional for the long real.
+<<lexical rules>>=
+<INITIAL>{digit}+|{digit}({hexDigit}*)[Hh]	{ yylval.string = strsave(yytext); 
+						  return INTEGER; }
+<INITIAL>{digit}+"."{digit}*{EScaleFactor}?	{ yylval.string = strsave(yytext); 
+						  return REAL; }
+<INITIAL>{digit}+"."{digit}*{DScaleFactor}	{ yylval.string = strsave(yytext); 
+						  return LONGREAL; }
+<<grammatical declarations>>=
+%token <string> INTEGER REAL LONGREAL
+@
+I permit lower case where Wirth insists on upper case.
+This will be convenient later on.
+Besides, Hanson does it.
+
+I need parentheses around things like [[EScaleFactor]] because I'n not
+really defining a regular expression---I'm using a macro facility.
+<<lexical definitions>>=
+hexDigit	[0-9A-Fa-f]
+EScaleFactor	([eE][+\-]?{digit}+)
+DScaleFactor	([dD][+\-]?{digit}+)
+@
+\subsection{3,4. Strings and character constants}
+Single character strings [["x"]] become character constants,
+not strings, thanks to the {\tt lex} disambiguation rules.
+<<lexical rules>>=
+<INITIAL>"\'"{nonquote}"\'"	    { yylval.string=strsave(yytext); return CHARCONST; }
+<INITIAL>{digit}{hexDigit}*[Xx]	    { yylval.string=strsave(yytext); return CHARCONST; }
+<INITIAL>"\""{nondoublequote}*"\""  { yylval.string=strsave(yytext); return STRING; }
+<<grammatical declarations>>=
+%token <string> CHARCONST STRING
+@
+The character set for string literals is awkward,
+because I want to include backslash escapes.
+I use the ANSI standard backslash escapes from section A2.5.2 of
+the second edition of Kernighan and Ritchie.
+Because the lexical analyzer is probably not the right place to
+handle illegal backslash escapes, I allow any reasonable
+character to follow the backslash.
+I define [[nonoctalx]] to be those characters
+that can't start an octal or hexadecimal constant (when following
+a backslash).
+Then I can recognize octal and hexdecimal character constants like [["\012"]].
+I {\em don't} insist that at least one [[hexDigit]] follow [[\x]],
+because again that should be handled downstream of the lexical analyzer.
+<<lexical definitions>>=
+plainnonquote	     [ \t\]\"!#$%&()*+,\-./0-9:;<=>?@A-Z[^_`a-z{|}~]
+plainnondoublequote  [ \t\]\'!#$%&()*+,\-./0-9:;<=>?@A-Z[^_`a-z{|}~]
+escapedchar	     (\\({nonoctalx}|{octal}{octal}?{octal}?|x{hexDigit}*))
+nonoctalx	     [ \]\'\"!#$%&()*+,\-./89:;<=>?@A-Z[\\^_`a-wyz{|}~]
+nonquote	     ({plainnonquote}|{escapedchar})
+nondoublequote	     ({plainnondoublequote}|{escapedchar})
+octal		     [0-7]
+@
+I also need to handle strings that don't terminate.
+When I see one, I gobble up the whole line on which it sits---that should
+make it easier for the parser to recover.
+(The alternative is trying to tokenize the characters following the open
+quote.)
+<<lexical rules>>=
+<INITIAL>("\""{nondoublequote}*|"\'"{nonquote}*) <<complain; return bad string>>
+@
+I print the first few characters of a nonterminated string,
+followed by an ellipsis.
+I return the string anyway because that way there's a chance that the parser
+can just ignore the error.
+<<complain; return bad string>>=
+{   yyerror("Unterminated string %.8s%s",yytext,yyleng>8?"...":"");
+    yylval.string=strsave("");
+    return STRING;
+}
+@
+I include prototypes for the string functions, to keep {\tt lcc -A}
+from complaining about missing prototypes.
+<<common include files>>=
+#include <string.h>
+@
+\subsection{5. Operators and delimiters}
+Here are [[%token]] declarations for all the multicharacter tokens,
+including the reserved words.
+I use [[yyBEGIN]] because [[BEGIN]] means something special to {\tt lex}.
+<<grammatical declarations>>=
+%token ARROW INC DEC LSHIFT RSHIFT LEQ GEQ EQ NEQ AND OR 
+		/* -> ++ -- @<< @>> <= >= == != && || */
+@
+I make sure the lexer always returns strings for identifiers
+and reserved words.
+@
+Recognizing the operators and delimiters is straightforward:
+<<lexical rules>>=
+<INITIAL>"->"                           return ARROW;
+<INITIAL>"++"                           return INC;
+<INITIAL>"--"                           return DEC;
+<INITIAL>"<<"                           return LSHIFT;
+<INITIAL>">>"                           return RSHIFT;
+<INITIAL>"<="                           return LEQ;
+<INITIAL>">="                           return GEQ;
+<INITIAL>"=="                           return EQ;
+<INITIAL>"!="                           return NEQ;
+<INITIAL>"&&"                           return AND;
+<INITIAL>"||"                           return OR;
+<INITIAL>[\]+!\-*/~&.,;|()[{}^=#<>:]	return *yytext;
+@
+\paragraph{Reserved word search}
+Recall that, instead of having the {\tt lex}-generated automaton
+recognize reserved words, I wanted to look up each identifier to see
+if it is a reserved word.
+I put the reserved words into an array and use binary search to find their
+categories.
+A word that isn't in the list has category [[IDENT]].
+
+The list itself is excruciating to read.
+I use a trick I got from Dave Hanson---I put the list in a header
+file as calls to the [[kw]] (keyword) macro.
+Then I include the header with appropriate macros wherever I need it.
+<<list of reserved words>>=
+kw(INT, "int")
+@
+A binary search table of reserved words:
+<<reserved word data structures>>=
+static 
+struct reserved {char *s; int category;} 
+reservedwords[] = {
+#define kw(VAL,STRING) {STRING,VAL},
+<<list of reserved words>>
+#undef kw
+};
+static int numreservedwords = (sizeof(reservedwords)/sizeof(struct reserved));
+@
+[[idcategory]] is just binary search.
+<<lexical C functions>>=
+<<reserved word data structures>>
+static int idcategory (char *id) {
+    int low=0, high=numreservedwords-1, mid;
+    int compare;
+    while (low <= high) {
+	/* Invariant: if id is in the initial range low...high,
+		      it is in the current range low...high */
+	mid = (low+high)/2;		/* note low <= mid <= high */
+	compare = strcmp(id,reservedwords[mid].s);
+	if (compare>0) low = mid + 1;
+	else if (compare<0) high = mid - 1;
+	else return reservedwords[mid].category;
+    }
+    return IDENT;		/* id is not a reserved word */
+}
+<<lexical C declarations>>=
+static int idcategory(char *);
+@
+\subsection{Comments}
+I use the standard trick of defining a special state just for comments.
+A begin comment sends the lexer into state [[<COMMENT>]], and an
+end comment returns it to state [[<INITIAL>]].
+All tokens that aren't comments are recognized only in state [[<INITIAL>]],
+which explains the offensive [[<INITIAL>]] prepended to every rule.
+
+<<lexical definitions>>=
+%S COMMENT
+<<lexical rules>>=
+<INITIAL>"/*"	BEGIN COMMENT;
+<COMMENT>"*/"	BEGIN INITIAL;
+<COMMENT>"\n"	;
+<COMMENT>.	;
+@
+\subsection{Whitespace and bad characters}
+<<lexical rules>>=
+<INITIAL>[ \t\n]+		; /* ignore whitespace */
+<INITIAL>.			<<complain about a bad character>>
+@ 
+The error message we print is different for printable and nonprintable
+characters.
+<<complain about a bad character>>=
+{   if (*yytext >= ' ' && *yytext < 0177)
+         yyerror("bad character `%c'", *yytext);
+    else yyerror("bad character `\\%03o'", *yytext);
+}
+@
+\section{8. Expressions}
+\subsection{8.1 Operands (designators and constants)}
+There are no qualified identifiers, so this simplifies the parsing
+of designators.
+It is a bit awkward to distinguish variables and parameters from
+constant identifiers.
+There is also an awkwardness with rvalues---boolean expressions
+have to be converted from ``test'' to values using [[BOOL]].
+Following a suggestion of Hanson's, I use
+three nonterminals: [[exp]] is an expression (possibly a test);
+[[rvalue]] is an rvalue (never a test), and
+[[lvalue]] is an lvalue.
+I introduce [[complex_lvalue]] because I need to distinguish identifiers from
+all other lvalues (otherwise I get a reduce-reduce conflict when converting
+lvalues to expressions).
+@
+<<grammatical declarations>>=
+%type <exp> arraydes lvalue complex_lvalue rvalue exp
+@
+Here are productions for all the C literals.
+I use [[make_constval(type,string)]] to convert a string to a value of
+the type desired.
+
+I issue warnings for long reals, since they aren't supported in Oberon/320.
+<<grammatical rules>>=
+exp	: INTEGER  	{ $$ = make_constval(integer_type,$1); }
+      	| REAL	 	{ $$ = make_constval(real_type,$1); }
+      	| LONGREAL 	{ warning("Long reals not supported (replaced with zero)");
+		   	  $$ = make_constval(real_type,strsave("0.0")); }
+     	| CHARCONST	{ $$ = make_constval(char_type,$1); }
+	| STRING	{ $$ = make_constval(build_array(0,stringchar_type),$1); }
+	;
+@
+\subsection{8.2 Operators}
+I use {\tt yacc} precedence declarations.
+
+These declarations define precedence.
+My task is much simplified because unary and binary [[-]] have
+exactly the same precedence.
+<<grammatical declarations>>=
+%left OR
+%left AND
+%left '|'
+%left '^'
+%left '&'
+%left EQ NEQ
+%left '<' '>' LEQ GEQ
+%left LSHIFT RSHIFT
+%left '+' '-' 
+%left '*' '/' '%'
+%right '!' '~' INC DEC 				/* unary operators */
+%left ARROW '.'
+@
+[[binop]] checks types and generates intermediate code.
+Consult the chapter on typechecking for the description of the
+correct operation of [[binop]] and the meanings of
+various permissions [[p_xxx]].
+<<grammatical rules>>=
+complex_lvalue	: lvalue '.' ident		{ $$ = find_field($1,$3); }
+		| exp ARROW ident 		{ $$ = find_field(deref($1),$3) }
+		| '*' rvalue			{ $$ = deref($1); }
+		| arraydes ']'			{ $$ = $1; }
+		;
+
+arraydes	: rvalue '[' exp 		{ $$ = subscript($1,$3); }
+		;
+
+lvalue 		: complex_lvalue		{ $$ = $1; }
+		| ident				{ $$ = lookup_lvalue($1); }
+		;
+
+exp		: complex_lvalue		{ $$.type=$1.type; 
+						  $$.tree=tMEM($1.type->size,$1.tree); }
+		| ident				{ $$ = lookup_exp($1); }
+		;
+
+rvalue		: exp				{ $$ = boolval($1); }
+		;
+<<grammatical rules>>=
+exp		: exp EQ exp 	{ $$ = binop(OSeq, $1,$3,boolean_type,p_equality); }
+		| exp NEQ exp  	{ $$ = binop(OSneq,$1,$3,boolean_type,p_equality); }
+		| exp '<' exp  	{ $$ = binop(OSlt, $1,$3,boolean_type,p_relational); }
+		| exp LEQ exp  	{ $$ = binop(OSleq,$1,$3,boolean_type,p_relational); }
+		| exp '>' exp  	{ $$ = binop(OSgt, $1,$3,boolean_type,p_relational); }
+		| exp GEQ exp  	{ $$ = binop(OSgeq,$1,$3,boolean_type,p_relational); }
+		;
+exp		: exp '+' exp 	{ $$ = binop(OSplus, $1,$3,0,p_numeric); }
+		| exp '-' exp 	{ $$ = binop(OSminus,$1,$3,0,p_numeric); }
+		| exp OR exp  	{ $$ = binop(OSor,   $1,$3,0,p_boolean); }
+		;
+exp		: exp '*' exp 	{ $$ = binop(OSmul,  $1,$3,0,p_numeric); }
+		| exp AND exp	{ $$ = binop(OSand,$1,$3,0,p_boolean); }
+		;
+exp		: '(' exp ')'	{ $$ = $2; }
+		;
+@ 
+\subsection{Function calls}
+Calls to functions (procedures having a return type)
+may occur {\em only} as factors in the production given below.
+The
+bottom of p.~678 of the Oberon report makes it clear that the~[[()]] are
+required even if the function has no parameters.
+<<not yet grammatical rules>>=
+exp		: ident ActualParameters 	{ $$ = fcall($1,$2); }
+		;
+
+ActualParameters: '(' ExpList ')'		{ $$ = $2; }
+		| '(' ')'			{ $$ = 0; }
+		;
+
+ExpList		: rvalue ',' ExpList		{ $$ = explist($1,$3); }
+		| rvalue			{ $$ = explist($1,0); }
+		;
+<<not yet grammatical declarations>>=
+%type <explist> ActualParameters ExpList
+@
+\section{11. Compilation units}
+<<grammatical rules>>=
+module	: exp					{ compile($1); }
+<<grammatical declarations>>=
+%start module
+@
+\section{Error recovery}
+Here are some simple error productions that might help the parser continue.
+The first four gobble up mangled declarations.
+The last two are stabs in the dark; I hope they give the parser a chance
+to recover from errors in statements and expressions.
+<<grammatical rules>>=
+exp		: error			{ $$.type = error_type; }
+@
+\section{Putting it all together}
+Here are the necessary {\tt\#include} files:
+<<common include files>>=
+#include <assert.h>
+#include <stdio.h>
+#include "types.h"
+#include "predef.h"
+#include "tree.h"
+#include "typecheck.h"
+#include "codegen.h"
+#include "symbol.h"
+#include "declarations.h"
+#include "constants.h"
+#include "errors.h"
+@
+There are no include files used exclusively by the parser.
+This is because the lexer sees {\tt y.tab.h}, and so has to know everything
+the parser knows.
+<<grammatical include files>>=
+
+@
+This is boilerplate for every {\tt lex} specification ever written:
+<<lexer>>=
+%{
+<<common include files>>
+<<lexical include files>>
+<<lexical C declarations>>
+%}
+<<lexical definitions>>
+%%
+<<lexical rules>>
+%%
+<<lexical C functions>>
+@
+And this is boilerplate for every {\tt yacc} specification ever written:
+<<parser>>=
+%{
+<<common include files>>
+<<grammatical include files>>
+<<grammatical C declarations>>
+extern int yylex(void);
+%}
+<<grammatical declarations>>
+%%
+<<grammatical rules>>
+%%
+#define lint  /* keep lcc from barking about no reference to yaccpar_sccsid */
+<<grammatical C functions>>
+@
+\section{Indices}
+\subsection{Chunks}
+\nowebchunks
+\subsection{Identifiers}
+\nowebindex

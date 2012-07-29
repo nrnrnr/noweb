@@ -1,0 +1,52 @@
+sub convquotes
+{
+    local($line)=@_;
+    local($pre,$mid,$end,$obrace,$cbrace);
+    
+    $obrace=index($line,'[[',0);
+    while($obrace!=-1)
+    {
+	$pre=substr($line,0,$obrace);
+        $cbrace=index($line,']]',$obrace);
+	while(substr($line,$cbrace+2,1) eq ']')
+	{   $cbrace++;
+	}
+	$mid=substr($line,$obrace+2,$cbrace-$obrace-2);
+	$end=substr($line,$cbrace+2);
+	$line=$pre . "\\code{}" . &TeXliteral($mid) . "\\edoc{}" . $end;
+	$obrace=index($line,'[[',0);
+    }
+    return $line;
+}
+
+sub escapebslash
+{
+    local($line)=@_;
+
+    $line=~s/([\\\{\}])/\n\1/g;
+    $line=~s/\n/\\/g;
+    return $line;
+}
+
+sub TeXliteral
+{
+    local($_)=@_;
+
+    s/\\/<\\char92>/g;
+    s/\}/<\\char125}/g;
+    s/\{/{\\char123}/g;
+    s/<\\char/{\\char/g;
+    s/\{\\char92>/{\\char92}/g;
+    s/\$/{\\char36}/g;
+    s/&/{\\char38}/g;
+    s/#/{\\char35}/g;
+    s/\^/{\\char94}/g;
+    s/_/{\\char95}/g;
+    s/%/{\\char37}/g;
+    s/~/{\\char126}/g;
+    s/ /\\ /g;
+    return $_;
+}
+
+1;
+

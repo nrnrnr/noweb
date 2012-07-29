@@ -1,0 +1,32 @@
+guesslang <list of root chunks>
+		Attempts to set the @language of given root chunks.
+		Note: Currently only inspects '#!' lines, not filename.
+inheritlang
+		Propagates @language to non-root chunks.
+enscript-html <enscript flags>
+		Uses enscript(1) to pretty-print chunks in HTML according to @language.
+		Most useful enscript flags include --color and --style=...
+
+		Note: Should ultimately work with all languages
+		supported by enscript, but needs extra info about how
+		to mangle @use clauses.  If it complains "Don't know
+		how to mangle @use" for your language, you can edit
+		mangle_use() and demangle_use() to turn the @use
+		clause into a meaningfull language clause, and then
+		convert back in @use form.
+
+		Note: Supports all highlighting styles of enscript
+		1.6.4, but the regexp in demangle_use() may need to be
+		adapted in the future.
+
+Typical use lokks like:
+	noweave -html \
+          -filter "guesslang ${NOWEBOUTSRC} | inheritlang | enscript-html" \ 
+          -x <your.nw>
+
+Be sure to specify -x or possibly other filters *after* the -filter,
+since the pretty-printer does not preserve the position of remaining
+directives (esp. @xref) within code chunks.
+
+Sample output is viewable at
+http://ydirson.free.fr/en/software/noweb/dh-kpatches.html

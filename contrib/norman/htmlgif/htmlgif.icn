@@ -1,0 +1,54 @@
+# htmlgif -- convert eps references to gifs
+
+procedure newer(target, prereq)
+  return system("newer " || target || " " || prereq) == 0
+end
+
+procedure main(args)
+  if *args > 0 then every cvt(open(!args))
+  else cvt(&input)
+  return
+end
+
+procedure cvt(file)
+  while line := read(file) do 
+    line ? 
+     if (pre := tab(find("<a ")), optwhite(), ="<a href=", optwhite(),
+         ps := tab(upto(' \t>')), optwhite(), =">",
+         tab(lookfor(s := "PostScript figure " || (ps|strip_quotes(ps)))), 
+	 =s, any(' ]<>"'), tab(find("</a>")), post := tab(0)) then 
+     {
+       ps := strip_quotes(ps)
+       gif := suffex(ps) || ".gif"
+       write(pre, "<img inline src=", quote(gif),
+             " alt=", quote("[GIF derived from PostScript figure " || ps || "]"), ">",
+             post)
+       if not newer(gif, ps) then 
+         system("pstopbm " || ps || " | ppmtogif | giftool -rgb white > " || gif)
+     } else {
+       write(line)
+     }
+  return
+end
+       
+procedure lookfor(s)
+  suspend find(s)
+end
+
+procedure strip_quotes(s)
+  return if s[1] == s[-1] == "\"" then s[2:-1] else s
+end
+
+procedure suffex(s)
+  static nodot
+  initial nodot := ~ '.'
+  s ? return if (b := tab(upto('.')), =".", tab(many(nodot)), pos(0)) then b else s
+end
+
+procedure quote(s)
+  return "\"" || s || "\""
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end

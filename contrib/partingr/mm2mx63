@@ -1,0 +1,160 @@
+#!/usr/common/bin/perl
+do "getopts.pl" || die "$!";
+do Getopts('imnd:l:');
+
+do "TeXthings";
+
+$sectionref='aaa'; $i=0;
+if($opt_l)
+ { open(LOGFILE,">$opt_l") || die "$!"; }
+  
+while(<>)
+{
+#  s/\n$//;
+  s/^@//;
+# expand wildcard references here, then process as normal
+  if(/^(use|defn) (.*)\.{3}$/)
+    { print LOGFILE "Wildcard `$2...', expands to  " if $opt_l;
+      @matches=grep(/^$2.*/i,split(/¤/,$known));
+      if($#matches>0)
+        { 
+          print LOGFILE "[",join('][',@matches),"] " if $opt_l;
+          print STDERR "Ambiguous module name `$mod...', line $i\n";
+          print STDERR "Matches: [",join('][',@matches),"]\n";
+          print STDERR "Using `",@matches[0],"'\n";
+          #die "\nAmbiguous module name `$mod...', line $i"; 
+        }
+      elsif($#matches==-1)
+        { 
+          die "\nNo match for name `$mod...', line $i";
+        }
+      $mn=@matches[0];
+      if($mn=~/\[\[/) { $mn=&convquotes($mn); }
+      print LOGFILE $mn,"\n" if $opt_l;
+      $_="$1 $mn";
+    }
+
+# process a <<defn>>=
+  if(/^defn (.*)$/)
+    { print LOGFILE "Defining chunk `$1' with macro $sectionref\n" if $opt_l;
+      $md=$1; $mn=$1; if($opt_n) { $md=~tr/A-Z/a-z/; }
+      $mt=$md;
+      $mt=~s/([*+.?{}()])/\\\1/g;
+      if($known!~/¤$mt/) { $known=$known . "¤$md"; }
+      @names{$md}=1; $currentmod=$md;
+      @defines{$md}=@defines{$md} . "\\\\{\\xp\\$sectionref}";
+      #if($mn=~/\[\[/) { $mn=&convquotes($mn); }
+      @lines[$i]="defn $sectionref $mn\n"; $oldref=$sectionref;
+      $sectionref++;
+      push(@uses,$i);
+      $indxing=0;
+    }
+# process a <<use>>
+  elsif(/^use (.*)$/)
+    { print LOGFILE "Using chunk `$1' in chunk $oldref\n" if $opt_l;
+      $md=$1; $mn=$1; if($opt_n) { $md=~tr/A-Z/a-z/; }
+      $mt=$md;
+      $mt=~s/([*+.?{}()])/\\\1/g;
+      if($known!~/¤$mt/) { $known=$known . "¤$md"; }
+      @reference{$md}=@reference{$md} . "\\\\{\\xp\\$oldref}";
+      #if($mn=~/\[\[/) { $mn=&convquotes($mn); }
+      @lines[$i]="use $oldref $mn\n";
+      push(@uses,$i); 
+      $indxing=0;
+    }
+# process identifier information
+  elsif(/^index (nl|defn |use )(.*)/)
+    {  
+      if($2 eq '|') { $indxing=1; }
+      else
+      { if($2)
+        { print LOGFILE "Identifier `$2' indexed as " if $opt_l;
+          if($1 eq "defn " && !$indxing)
+           { print LOGFILE "defined [$oldref]\n" if $opt_l;
+             $style="";
+           }
+          else
+           { print LOGFILE "used [$oldref]\n" if $opt_l;
+             $style="\\it";
+           }
+          @variables{$2}=@variables{$2} . ",\\thinspace{$style\\xp\\$oldref}";
+        }
+      }
+      $i--; # don't put this line in the file here
+    }
+# stick the line in the array
+  else
+   { @lines[$i]=$_; }
+  $i++;
+}
+
+if($opt_l)
+ {
+   print LOGFILE "\n\nList of modules currently defined\n";
+   print LOGFILE join("\n",sort keys(defines));
+   print LOGFILE "\n\nList of modules currently referenced\n";
+   print LOGFILE join("\n",sort keys(reference));
+   print LOGFILE "\n\n";
+ }
+ 
+foreach(keys(reference))
+ { @longlist{$_}=@reference{$_}; }
+
+foreach(keys(defines))
+ { @longlist{$_}=@longlist{$_} . ('%' . @defines{$_}); }
+
+foreach(@uses)
+ { 
+   $ref=@lines[$_];
+   $ref=~/^(use|defn) (...) (.*)/;
+   $mn=$3; $dr=$2; $ac=$1;
+   $defns=@defines{$mn};
+   print LOGFILE "Module $mn " if $opt_l;
+   if($ac eq 'defn')
+    { $uses=@reference{$mn}; $uses="{$uses}|";
+      print LOGFILE "defined at line $_, $uses\n" if $opt_l;
+    }
+   else
+    { $uses=''; 
+      print LOGFILE "referenced at line $_\n" if $opt_l;
+    }
+   print LOGFILE "Line $_ modified to `$ac $dr {$defns} $uses$mn'\n" if $opt_l;
+   $mn=&convquotes($mn);
+   @lines[$_]="$ac $dr|{$defns}|$uses $mn\n";
+ }
+        
+print STDOUT "header tex \n",@lines;
+
+# now @longlist{MOD} contains a list of all the references to <MOD>
+# sort them to make them look pretty
+
+if($opt_m)
+  {
+    print LOGFILE "Making module index...\n" if $opt_l;
+    print "index mods\n";
+    foreach(sort keys(longlist))
+      {
+        $defns=@defines{$_};
+        $defns=~s/^,\\\\thinspace//;
+        print LOGFILE "Module <$_ $defns> ",@reference{$_},"\n" if $opt_l;
+       # first we print the module name and defining numbers
+        print "entry {\\LA ",&convquotes($_),"\\ \\xwp{$defns}\\RA}\\quad";
+       # now we print the bit after that : assume foot=cmr8
+        print "{\\foot\\xtc{",@reference{$_},"}}\n";
+      }
+    print "end index\n";
+  }
+
+if($opt_i)
+  {
+    print "index ids\n";
+    foreach(sort keys(variables))
+     {
+        $vars=@variables{$_};
+        $vars=~s/^,\\thinspace//;
+        print "entry {\\code ",&TeXliteral($_),"\\edoc} :\\quad",$vars,"\n";
+      }
+    print "end index\n";
+  }
+  
+print STDOUT "trailer tex\n";

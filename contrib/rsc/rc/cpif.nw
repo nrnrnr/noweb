@@ -1,0 +1,47 @@
+<<cpif>>=
+#!/bin/rc
+#
+# Based on shell script by Norman Ramsey
+# Translated from sh to rc by Russ Cox
+#
+# see /sys/src/cmd/noweb/COPYRIGHT
+#
+# cpif [ -eq -ne ] file...
+# copy standard input to each of the named files
+# if new * old is true or old doesn't exist;
+# * defaults to -ne
+
+rfork en
+
+# set -x
+op=-ne
+if(~ $1 -eq -ne){
+	op=$1
+	shift
+}
+if(~ $1 -* || ~ $#* 0) {
+	echo 'Usage: '$0' [-eq -ne] file...' >[1=2]
+	exit usage
+}
+
+new=/tmp/noweb.$pid
+
+# trap 'rm -f $new; exit 1' 1 2 15	# clean up files
+
+cat >$new
+for(i) {
+	cmp -s $new $i
+	
+	switch($op^$status) {
+	# differed but we wanted same
+	case -eq*differ
+		;
+	# didn't differ but we wanted different
+	case -ne
+		;
+	# got what we wanted or perhaps an error
+	case *
+		cp $new $i
+	}
+}
+rm -f $new

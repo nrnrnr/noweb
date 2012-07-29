@@ -1,0 +1,49 @@
+All these examples have been set up to work with latex, although I
+often prefer plain TeX because latex's page breaking is so bad and so
+hard to control.  breakmodel.nw is the only one that requires
+cross-referencing (noweave -x). I have included the nonstandard
+`multicol' style file, although it is readily available as part of the
+Mainz distribution.
+
+Except for breakmodel.nw, each example file is a fragment of a larger
+program.  noweb itself is not a good example of literate programming.
+It is harder than most people realize to write a truly literate
+program, and noweb wasn't worth the effort.
+
+If you have installed noweb with LIBSRC=awk instead of LIBSRC=icon,
+you need to use Makefile.awk instead of Makefile.
+
+The files are:
+
+  Makefile		Shows some sample default rules for use
+			in a Makefile.  Try `make tree.tex tree.dvi'.
+  Makefile.awk		Like Makefile but doesn't require Icon.
+                        None of the HTML examples will be readable
+			without Icon.
+  breakmodel.nw		A formal model of breakpoints using the
+			Promela modeling language.
+  dag.nw		Fragment of an Icon program that compiles
+			patterns into decision-tree pattern-matching
+			code.  tree.nw builds the decision trees;
+			dag.nw turns them into dags.
+  graphs.nw		Several graphs written in jgraph (write
+			plank@cs.utk.edu for information about jgraph).
+  mipscoder.nw		Part of the original MIPS code generator from
+			Standard ML of New Jersey.  Writting in Standard ML.
+  primes.nw		noweb version of DEK's original prime-number program.
+  scanner.nw		Part of a student compiler project.  Includes
+			C code and lex and yacc specifications, all in
+			a single file. 
+  sharpline		A noweb filter that makes noweb `see' #line directives
+                        in a noweb file.
+  test.nw		A simple test file.
+  tree.nw		Fragment of an Icon program that compiles
+			patterns into decision-tree pattern-matching
+			code.  tree.nw builds the decision trees;
+			dag.nw turns them into dags.
+  wc.nw			A re-implementation in noweb of the CWEB
+			example from DEK's book.  This example is
+			intended to be as exact a copy as possible; no
+			attempt was made to improve the code.
+  whitespace		A noweb filter that makes whitespace insignificant
+			within chunk names.

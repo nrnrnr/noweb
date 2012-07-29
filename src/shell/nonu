@@ -1,0 +1,41 @@
+#!/bin/sh
+LIB=/usr/public/pkg/noweb/lib
+# attempt to convert nuweb to noweb using sam
+
+tmp=/tmp/nonu$$
+trap '/bin/rm -f $tmp; exit 1' 1 2 15	# clean up files
+cp $1 $tmp || exit 1
+
+notat='([^@]|\n)'
+white='[ 	\n]'
+sam -d $tmp << EOF
+,x/\@\@/c/{{{the magic at sign}}}/
+,x/<</c/{{{double left brackets}}}/
+,x/>>/c/{{{double right brackets}}}/
+,x/@m/c/\\nowebchunks/
+,x/@u/c/\\nowebindex/
+,x/\@[oO][^@]*$/x/ -[dit][a-zA-Z]*/v/..../d
+,x/\@[dDoO|}]/i/\n/
+,x/\n\n\@[dDoO|}]/s/\n\n/\n/
+,x/\@[dDoO]${notat}*\@{/s/\n/ /g
+,x/\@[dDoO]${notat}*\@{/{
+s/\@[dDoO] */<</
+s/\@{/>>=\n/
+}
+,s/\@</<</g
+,s/\@>/>>/g
+,x/<<[^>]*(>[^>][^>]*)*>>/s/[ 	][ 	]*/ /g
+,x/<< | >>/s/ //
+,x/\@\|$notat*\@}/x/\n/a/@ %def /
+,x/\@ %def \@}/c/@ /
+,x/\@\|/c/@ %def /
+,s/\@}/@ /g
+,x/\n\@ %def.*\n\@ *\n/x/\n\@ *\n/c/\n/
+,x/^\@ %def.*$/s/[ 	]+/ /g
+,x/{{{the magic at sign}}}/c/@/
+,x/{{{double left brackets}}}/c/@<</
+,x/{{{double right brackets}}}/c/@>>/
+w
+EOF
+$LIB/markup $tmp | $LIB/disambiguate | $LIB/unmarkup
+rm $tmp

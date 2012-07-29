@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# version of echo that does -n
+
+if [ "x$1" = "x-n" ]; then
+  shift
+  cat << echoEOF | tr -d '\012'
+$*
+echoEOF
+
+else
+  cat << echoEOF
+$*
+echoEOF
+
+fi
+
+exit 0
+
+
+if [ -x /bin/echo ]; then
+  exec /bin/echo "$@"
+elif [ -x /usr/bin/echo ]; then
+  exec /usr/bin/echo "$@"
+else
+  echo "$@"
+fi

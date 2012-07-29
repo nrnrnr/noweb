@@ -1,0 +1,36 @@
+\begin{thebibliography}{1}
+
+\bibitem{awk-book}
+Alfred~V. Aho, Brain~W. Kernighan, and Peter~J. Weinberger.
+\newblock {\em The {AWK} Programming Language}.
+\newblock Addison Wesley, Reading, MA, USA, 1988.
+
+\bibitem{gawk-manual}
+Diane~Barlow Close, Arnold~D. Robbins, Paul~H. Rubin, and Richard Stallman.
+\newblock {\em The {GAWK} Manual}.
+\newblock Free Software Foundation, 675 Massachusetts Avenue, Cambridge, MA
+  02139, USA, version 0.11 beta edition, October 1989.
+
+\bibitem{nutshell-unix}
+Daniel Gilly.
+\newblock {\em UNIX in a Nutsell}.
+\newblock O'Reilly \& Associates, Sebastopol, CA, USA, {System V} edition,
+  1992.
+
+\bibitem{ramsey94}
+Norman Ramsey.
+\newblock Literate programming simplified.
+\newblock {\em IEEE Software}, pages 97--105, September 1994.
+
+\bibitem{perl-llama}
+Randal~L. Schwartz.
+\newblock {\em Learning perl}.
+\newblock O'Reilly \& Associates, Sebastopol, CA, USA, 1993.
+
+
+\bibitem{perl-camel}
+Larry Wall and Randal~L. Schwartz.
+\newblock {\em Programming perl}.
+\newblock O'Reilly \& Associates, Sebastopol, CA, USA, 1991.
+
+\end{thebibliography}

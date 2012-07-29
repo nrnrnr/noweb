@@ -1,0 +1,386 @@
+CHANGES FOR VERSION 2.12 - unreleased
+l2h and sl2h now deal with \suspend and \resume from package mdwlist
+l2h and sl2h now deal with \verbatiminput package verbatim
+note to FAQ about \usepackage[T1]{fontenc}
+root Makefile now has a default target that complains bitterly (Allan Adler)
+get xchunks to track source locations
+fix bogon in Hacker's Guide: @index nl takes no argument
+totex didn't handle @line
+improved German text from Pascal Schmitt
+l2h and sl2h now make -- &ndash; and --- &mdash;
+brace fix for 2.11 broke [[}]]; now fixed
+improved German text from Johannes Wiedersich (closes Debian #418892)
+\usepackage{vmargin} not \usepackage{vpage} (Hubert Chan; closes Debian #420614)
+added an optional argument to Emacs noweb-mode to support desktop-read (NR)
+added an option to l2h/sl2h to convert LaTeX double-quote ligatures to HTML 4 entities
+NR has a new address
+changes to noweb-mode.el to make font-lock work better (Christian-Lynbeck)
+C code now compiles with gcc -Wall -Werror, though tricks with rcsid make me blush
+awkname script needed to update roff scripts and lib/pipedocs (Chloe Lopez)
+Partial support for Icelandic (Johann Oskarsson <johann@myrkraverk.com>)
+added Lee Wittenberg's custom-code filter to contrib/leew
+the noweb-mode command now sets noweb-chunk-vector when run
+fix nountangle script to support multiple filters (Anon Sricharoenchai)
+noscript shell-script trick by Greyson Fischer (added to contrib)
+'getline' renamed (now part of POSIX standard) (Brad Larsen)
+
+
+CHANGES FOR VERSION 2.11b - released 12 Jun 2006
+Make noroff use -mm by default (Debian 218050)
+Fixed flagrant errors in noweave -x -troff (but bad formatting remains)
+
+CHANGES FOR VERSION 2.11a - released 20 May 2006
+Clarify instructions for $PATH and $MANPATH (B Pierce)
+Create examples/Makefile.awk (B Pierce)
+Clarify documentation: unescaped << and >> not OK in docs chunk (R Hemmecke)
+Add -lua option to docs2comments filter
+
+CHANGES FOR VERSION 2.11 - released 6 April 2006
+Braces did not render correctly in [[<<$\{a_i\}$>>]] (Albert Reiner)
+From Kevin Quick, Windows hints and a new NOTANGLE.BAT
+Generate postscript with -P cmz for better PDF (Francky Leyn)
+Clarify for noweave -delay that the first doco chunk is before the first @
+extended xchunks with -summary argument
+Line in a code chunk opening with unclosed, unescaped << is OK (Ralf Hemmecke)
+
+UNDO ME!  Make docs2comments filter tolerate embedded @xref stuff..
+Added Windows XP help to FAQ (David Lemmon)
+Noidx now calculates labels for a code chunk using the number of preceding
+  definitions from the same @file, not the overall number
+Change wording for \noweboptions{german} (Christian Lindig)
+Need to insert \leavevmode in \sublabel so that new \@bsphack will work right
+From Yann Dirson, new filters in contrib/ydirson.
+From Fr'ed'eric Lin'e, some improvements in French translation (apologies to Moli`ere)
+
+CHANGES FOR VERSION 2.10c - released 17 Jul 2002
+
+Bug in noidx.nw caused tag NWD1 etc to be used in multiple files.
+Cleaned up alignment tags in tables emitted by l2h.nw (Federico Di Gregorio)
+Fixed some bugs in the HTML markup for the hacker's guide
+Goes back to iconc, except for noidx.nw, which can't be compiled because
+  of the 32-bit polynomial arithmetic
+
+CHANGES FOR VERSION 2.10b - released 15 Jul 2002
+
+Bug in xchunks.nw, around line 100 -- db never initialized (Stephen Edwards)
+In local identifier cross-reference, enable breaks between pages 
+   of multiply defined identifiers (option breakdefs)
+Create a secret \noweboptions{breakcode} for those who want their
+   code chunks broken across page boundaries
+German is `Benutzt' not `Benutztt' (Johannes Huesing)
+No longer suggests iconc; compiling with icont is now the default.
+
+CHANGES FOR VERSION 2.10a - released 30 Mar 2001
+
+Fixed problem in src/Makefile -- FAQ should be built by `source' not `all'
+
+CHANGES FOR VERSION 2.10 - released 16 Jun 2000, but not officially
+
+Added -matlab to nountangle (Uwe Brauer)
+Added \nwblindhyperanchor to \weblabel (Andrew Swann)
+Changed one more 'char c' to 'unsigned char c' in recognize.nw (Gilles ANDRE)
+Change noweb.sty to support more than 26 code chunks on a page (F. Leyn)
+l2h skips optional arguments with \includegraphics
+fixed bugs in htmltoc having to do with nested anchors on one line
+Added capacity for two more filters to noweave script
+Fixed bug in autodefs.sml (including spaces in symbol chars)
+Added autodefs.mmix
+Added autodefs.asdl
+Scripts for Plan 9 rc (Russ Cox)
+Tinkered with noidx sortkey
+Added \mbox{} to \nwnewline, so that spaces won't be eaten (John Cummings)
+Added xchunks filter, per request of Mike Smith & Glenn Holloway
+Replaced FORTH uniqueid heuristic with 32-bit CRC
+Added pipedocs filter to pipe documentation chunks through commands
+Added h2a (convert html to ascii) for use with pipedoces
+Added docs2comments filter, with pipedocs and h2a, to replace nountangle
+Added nwmtime filter; helps derive Zephyr web pages
+Moved the official FAQ to html
+Added multiple-language support to noweb.sty (Miguel Filgueiras)
+notangle -L initial newline is a bug and will never be fixed (Harald Soleng)
+Added \noweboptions{noxref}, intended for temporary use inside documents.
+
+CHANGES FOR VERSION 2.9a - released 16 Feb 1999
+
+Fixed bug in htmltoc that left multiple toc anchors
+
+
+CHANGES FOR VERSION 2.9
+
+Good support for hypertext using the `hyperref' package
+noweave now finds uses in quoted code, the better to exploit hypertext
+added support for emacs font-lock highlighting as comments to noweb-mode (Adnan Yaqub)
+Document common -L options on notangle man page (Brett Presnell)
+Fixed incompatibility with verbatim package (Rafael Laboissiere)
+added contrib/leyn from Francky Leyn
+noweb-mode.el no longer treats @x as chunk end for non-white x (Chris Milner)
+Don't use signed char to index array of 256 in recognize.nw (Michael Herrmann)
+Added explanation for WNT to FAQ.
+Support \ quoting in argument to elide
+Support multiple -R options on the same notangle command line.
+Change tohtml so that noweave -latex+html doesn't protect anchor texts
+   in a rawhtml environment (???)
+Added to /usr/doc/noweb for Slackware binary distribution
+Slackware binary distribution now includes emacs noweb mode.
+Updated internal docs in support.nw to explain the great \nwlbrace trouble
+Use gcc -ansi -pedantic in Makefiles.
+Remove multicols environment from examples/wc.nw (Yotam Medini)
+Change noweave and totex to support subscripting identifiers used in quoted code
+Fixed bug in l2h (bad conversion of tables).
+Make l2h of \section use CPS (for newline between \section and {)
+Added letenv to l2h, and changed verbatim to use environment name as terminator
+
+
+CHANGES FOR VERSION 2.8a
+
+noweave complains if you use -x with -index or -indexfrom
+installation now includes noweb-mode.el
+noroots no longer treats uses in quoted code as real uses (David Bruce)
+file INSTALL now notes that 'awkname' is always needed (Robert Solovay)
+file INSTALL now notes that texhash(1) may be needed (Robert Solovay)
+mnt (noweb script) now complains about chunks named <<*>> (Robert Solovay)
+lots of rcs identifiers and names everywhere
+all man pages should carry version numbers
+Use Stephen Parker's htmltoc, with many bug fixes and improvements.
+
+
+CHANGES FOR VERSION 2.8
+
+fixed unbalanced brace in support.nw for nwmac.tex (Hartmut Henkel)
+changed notangle script so notangle -L preserves tabs (Saul London, NR)
+changed uniqueid in noidx to avoid everything except letters, digits,
+	and a few known special chars.  fixes the Norwegian bug (Hans
+	Husum) and also the non-Posix regexp (Christian Wagner)
+update recognizer.nw to use 128-node recognizer for larger character sets
+	as per Christian Wagner
+$arkopts -> $markopts for noweave -v
+noweave now uses \documentclass for headers
+fixed a bug in tohtml ``impossible character to skip''
+hacked \catcode \other for " in \setupcode, 
+     which is better for german.sty even though \setupmodname is still wrong
+added support for @fatal to all pipeline stages; 
+     noweave and notangle now detect pipeline errors and exit nonzero
+added Lee Wittenberg's changes to support.nw and totex.nw to support
+     printing of index identifiers in different fonts
+updated documentation to be consisten with latex2e, e.g., talk about
+     the noweb 'package' not the 'document-style option'.
+     Kept nowebstyle(1) for backward compatability.
+added \nextchunklabel to support dotNoweb (replaces its \chunklabel)
+massive improvements to l2h, including support for tables
+moved nowebstyle and nowebfilters man pages to section 7
+noweave -v shows @header and @trailer
+
+
+CHANGES FOR VERSION 2.7d
+
+noweb.sty steals \{ and \} in chunk names.  Bad dog! No biscuit!
+Forgot to include [noweb] style in numarkup.nw
+changed <- to &lt;- in tohtml and l2h, and similarly for ->
+HTML output of noweb tools is now weblint-clean
+didn't properly skip <!-- ...> in tohtml
+bug fix for bad indentation when chunk starts at beginning of line
+added many more control sequences to l2h
+added % l2h closure, makes nr's \secn, \fig, and the like possible.
+
+
+
+CHANGES FOR VERSION 2.7c
+
+Fixed bug in l2h, wasn't treating quotes in @use correctly.
+Added -autodefs pascal (a hack)
+Fixed bug in tohtml, with noweave -option longxref was showing uses twice
+Fixed ``black magic'' claim in man page to refer to -option longxref...
+Fixed tohtml to make placement of anchors nest properly when possible
+Underscores in filenames are now in FAQ
+Added the htmltoc command
+
+
+CHANGES FOR VERSION 2.7b
+
+Changed module->chunk in error message 'undefined module name'
+Added touch to `make source' in a forlorn attempt to eliminate once
+      and for all the problem of sources and derived sources with
+      identical timestamps
+Added `make touch' in case CTAN screws up timestamps, and updated FAQ.
+Disabled assertions in lexer (markmain.nw)
+Added pointer to noweb home page to README
+Mention sharpline in the man page entry for notangle -L 
+@@ in column 1 now stands for a single @ sign.
+Change my address from Bellcore to Purdue.
+Preliminary support for hypertext with hyper.sty.
+
+CHANGES FOR VERSION 2.7a
+
+Move @xrev prevdef and @xref nextdef to appear before @defn, to
+     support navigational aids as in Fraser and Hanson's book.
+     Requires changes in totex and tohtml to delay xref output.
+     Support.nw now makes long vs short a noweb option.
+Hack noweave to pass -shortxref to backend on seeing `-option shortxref'
+Offer shortxref support in tohtml.
+Changed noidx to avoid putting anchor labels in empty documentation chunks.
+Fixed bug in l2h; was treating saved ignore flag as text fun after copying bracket. 
+tohtml dumped core if it tried to warn of bad tag with null arg
+Botched local definitions in autodefs files
+SHELL=/bin/sh in Makefiles
+Improvements in l2h, including multiple citations.
+Fixed Makefile in xdoc to build techrep with wc.tex now that examples have moved
+Fix bugs in awkname; thanks to Steven Ooms for the bug report and the fix.
+In INSTALL, noted special awk problems for HP-UX users.
+Change noweb.sty to use \textwidth, not \hsize, to place use/def markup
+Fixed bug in -autodefs.c (confusion around static storage class)
+Quoted code no longer makes l2h forget what mode it was in ($[[x]]+1$)
+Uses in quoted code (e.g., [[<<exported functions>>]]) are now
+  formatted sensibly and with proper cross-reference.  As a side effect,
+  lexical analysis is faster.
+
+CHANGES FOR VERSION 2.7
+
+New directory structure, new Makefiles.
+Distributing gzipped tar file instead of compressed shell archive.
+Added l2h filter to convert latex to HTML.
+Added -markup option to tools
+contrib/norman now has a numarkup, which is markup for nuweb
+Fixed unmarkup to handle nuweb chunks, which don't end in newlines.
+The awk versions of filters are even more inferior to the Icon versions, 
+          and they are barely tested. I will fix bugs as they are reported.
+
+CHANGES FOR VERSION 2.6d (which never left Bellcore)
+
+New copyright, intended to make it possible to sell CD-ROMs containing noweb
+Revisions to the Noweb Hacker's Guide
+Added 'elide' filter to icon directory.
+Changed totex to turn a reference to ??? into one to nw@notdef
+Commented out references to \code and \edoc in support.nw 
+	(too chicken to eliminate them completely)
+Changed lib/tohtml not to use the awk 'length' variable --- mawk barfs
+	(thanks to Bill Trost for bug report)
+Changed tohtml not to plant anchor on < or & because that
+	 could start an SGML tag (thanks to Bill Trost for bug report)
+Awk version of tohtml used && in patterns; some awks couldn't handle it.
+	(thanks to Mark Smucker for bug report)
+Changed \filename to \nwfilename to avoid conflicts with some latex2e packages
+Help for the most frequent problems now in INSTALL.
+Fixed a bug that bit noweave -index when there are multiple definitions
+	 of an identifier; tag of first defn was repeated instead of
+         getting all tags (thanks to Michael Norrish for bug report).
+noweave -html -x was producing local index stuff, but it shouldn't.
+Decided -html shouldn't disable -noindex in noweave script
+Improved tohtml so it needn't insert * for an anchor so often.
+Changed notangle internally so it doesn't complain 
+	if a chunk doesn't end with a newline (possible with nufront)
+changed noweave so -index no longer forces a latex wrapper
+Changed noidx so it won't use HTML specials in unique ids
+Changes tohtml not to quote HTML in chunk names
+
+
+CHANGES FOR VERSION 2.6c
+
+Added -v option to noweave to show the pipeline.
+A preliminary Noweb Hacker's Guide.
+
+CHANGES FOR VERSION 2.6b
+
+Added -autodefs c
+
+Changed installation procedure so that source is no longer distributed
+with contributed software --- you now must install noweb, then build
+contributed software.
+
+Bug fixes:
+
+ - Makefile didn't create .../man/man1
+ - noweave botched -x option, emitted index info anyway
+ - markup complained, incorrectly, about [[<<]] in documentation.
+ - noidx died if it tripped over an identifier used only in quoted code
+ - tohtml wasn't inserting doc anchor into above_defns, so some xrefs
+   that should have read `above' were coming out `below'
+ - when one identifier was a prefix of another, as in
+   Class and Class::member, finduses duplicated the prefix.
+
+
+CHANGES FOR VERSION 2.6a
+
+Fix bug in finduses that bit on the HP snake.
+
+CHANGES FOR VERSION 2.6
+
+For the HTML support
+  - Invented lots of new @xref markup to support cross-referencing and
+    indexing in a formatter-independent way.
+  - Rewrote noidx and totex to push cross-reference and index support into
+    the back end.
+  - Adapted an HTML back end contributed by Bill Trost
+Dave Love provided the bug fixes for latex2e.
+
+CHANGES FOR VERSION 2.5:
+
+Improved Source Code
+
+Several parts of the source code have been rewritten in noweb.  I
+especially call your attention to the contents of the shell, lib, and
+tex directories.  Reading tex/support.nw will help you tinker with
+formatting. 
+
+
+Enhanced Latex Support
+
+Includes INCOMPATIBLE changes to options accepted by noweave (and
+noweave's default behavior).  noweb now supports an index of
+identifiers and identifier cross-reference in a language-independent
+way.  For more information, see the man page for noweave, especially
+the -index option.   The man page for noindex tells how to build
+indexes for large, multi-file documents.
+
+I have added a `noweb' command that acts much like Preston Briggs's
+`nuweb'; it extracts all the source programs and also writes a LaTeX
+document with full cross-referencing.  See the man page for details.
+
+latex support has been improved by changes to noweave, the noweave
+cross-referencer, and the noweb document-style option.  Dave Love and
+Jon Krom provided impetus for some of these changes in the best
+possible way; they sent code.  Improvements include:
+  -- noweave now generates latex headers by default.
+  -- Code chunks are broken across pages only when they are more than
+     a page long. (Thanks to Dave Love.)
+  -- Thanks to Dave Love, cross-referenced definitions that appear on
+     the same page are now numbered 7a, 7b, 7c, etc. (optionally 7.1,
+     7.2, 7.3, or just plain 7; see the noweave man page).
+  -- There is a `noweb' pagestyle, which puts source-file names and
+     dates on the header line.  It is the default page style for noweave.
+  -- noweave inserts no extra newlines, so the line numbers are the
+     same in the .tex and .nw files (Dave Love's suggestion; a major win).
+  -- By using noweave -delay, you can put a latex preamble in the
+     first documentation chunk, and noweave will delay \filename and
+     \begindocs until after the preamble, which becomes a WEB-like
+     ``limbo'' area (suggested by Dave Love, Jon Krom, and others).
+  -- noweave now has a -filter option that lets you name a
+     cross-referencer or prettyprinter on the command line.
+     You can try Jon Krom's cross-referencer by using 
+	noweave -filter $LIB/noxref.krom
+  -- notangle has a -filter option that you can use to implement
+     slightly different semantics, such as Knuth's ``...''
+     abbreviation convention. 
+  -- The awk version of the cross-referencer is now almost as good as
+     the Icon version; the sole remaining difference is that the Icon
+     version ignores case when sorting; the awk version does not.
+  -- Bug fixes in noweave's handling of special characters in chunk names.
+  -- Many of the shell and awk scripts are now noweb files.
+  -- \chunklist is now \nowebchunks, and it need not appear on a line
+     by itself.  \nowebindex provides an index.
+  -- The TeX support is now somewhat documented; see tex/support.nw
+  -- Support for latex's New Font Selection Scheme (whatever that is),
+     thanks again to Dave Love.
+  
+Finally, Kostas Oikonomou has contributed a simple prettyprinter for
+Icon programs, and Conrado Martinez-Parra has contributed a
+prettyprinter for Dijkstra's language of guarded commands.  I have
+made both suitable for use with noweave -filter.
+
+
+Bug Fix
+
+The code that was supposed to prevent a chunk from including itself
+didn't work at all.  So
+<<*>>=
+Forever <<*>>
+@ made notangle very unhappy.

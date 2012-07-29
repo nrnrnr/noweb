@@ -1,0 +1,11 @@
+2.11: Bug fix in parsing; a dozen small repairs
+2.10: nountangle becomes a filter; multilanguage support; ...
+2.9:  Support for hyperref; many small repairs
+2.8:  LaTeX2e, support for HTML tables
+2.7:  Reads nuweb files, converts latex to HTML
+2.6:  HTML support, necessitating a rewrite of cross-referencer
+2.5:  Index of identifiers and identifier cross-reference
+2.4:  Icon versions of the major pipeline stages
+2.0:  Fully detailed pipeline representation
+1:    Pipelined architecture
+0:    Monolithic notangle; noweave as unholy awk script

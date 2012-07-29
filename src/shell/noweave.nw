@@ -4,7 +4,7 @@ generated shell script.
 <<copyright notice>>=
 # Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $
+# $Id: noweave.nw,v 1.7 2008/10/06 01:03:24 nr Exp $
 @
 Here's the organization of the source:
 <<noweave>>=
@@ -421,7 +421,7 @@ Copy tabs to the output.
 @ \fi
 <<first pass {\tt noweave} options>>=
 -v) echo 'RCS version name $Name:  $' 1>&2
-    echo 'RCS id $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $' 1>&2
+    echo 'RCS id $Id: noweave.nw,v 1.7 2008/10/06 01:03:24 nr Exp $' 1>&2
     verbose=1 ;;
 <<option printout for usage>>=
 echo "-v		Print pipeline and RCS info on standard error" 1>&2

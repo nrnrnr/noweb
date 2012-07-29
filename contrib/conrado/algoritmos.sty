@@ -1,0 +1,169 @@
+\catcode`@=11
+%
+% \listofalgorithms
+%
+% this macro is like \listoffigures or \listoftables; it prepares a
+% list of algorithms/programs using an auxiliary file (.lop)
+% CUSTOMIZATION: the banner of the list is a string defined by \listalgorithmsname;
+% the default value is ``List of Algorithms''
+
+\def\listofalgorithms{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
+  \fi\chapter*{\listalgorithmsname\@mkboth
+   {\uppercase{\listalgorithmsname}}{\uppercase{\listalgorithmsname}}}
+   \addcontentsline{toc}{chapter}{\listalgorithmsname}
+   {\ssp\@starttoc{lop}}\if@restonecol
+  \twocolumn\fi}
+\let\l@algorithm\l@figure
+
+\def\listalgorithmsname{List of Algorithms}
+
+% \begin{algorithm} ... \end{algorithm} 
+%
+% the 'algorithm' environment encloses a float object (like figure or table)
+% algorithm's get their own numbering; captions begin with
+% ``Algorithm'', then the number, and then the text;  
+% and there is an entry in the .lop file for each 'algorithm'
+% CUSTOMIZATION: the first word in a caption is given by \algorithmname
+
+\newcounter{algorithm}
+\def\thealgorithm{\@arabic\c@algorithm}
+\def\fps@algorithm{tbp}
+\def\ftype@algorithm{4}
+\def\ext@algorithm{lop}
+\def\fnum@algorithm{\algorithmname\ \thealgorithm}
+\def\algorithm{\@float{algorithm}}
+\def\endalgorithm{\end@float}
+\@namedef{algorithm*}{\@dblfloat{algorithm}}
+\@namedef{endalgorithm*}{\end@dblalgorithm}
+
+\def\algorithmname{Algorithm}
+
+% \begin{code} ... \end{code} 
+%
+% this environment is a slight modification of the tabbing environment.
+% the specific characteristics are:
+%  0) it has a parameter from xref information
+%  1) there is a small skip between the paragraph above and the first
+%  line of the code.
+%  2) a rule is drawn at the beginning and at the end of the code.
+%  3) all lines are typeset in math mode
+%  4) |<something>| prints <something> in \rm if issued inside math
+%      mode (for instance, inside this environment);  
+%     and in \sl if issued outside math mode
+%  5) _ can be used instead of \_ inside the code environments and in
+%     text; it produces subscripts in math mode as usual
+%  6) <return>'s are obeyed; if you want to break lines in the source
+%  but not in the final document terminate the line with a comment char %
+%  7) you can leave a blank line using \\
+%
+% it also introduces a command \numberlines that has no effect in this
+% environment, but it has in the *-form of code
+% CUST: \algosep and \algoruleheight are the length parameters that
+% give the amount of skip between the previous paragraph and the
+% beginning of code, and the width of the rule.
+% Both have default value 0pt. \algofontsize allows changing the font size
+% of the text written inside a code environment. The default is \footnotesize
+
+
+\def\numberlines{}
+\newlength{\algosep}
+\newlength{\algoruleheight}
+\def\rulecode{\rule{\textwidth}{\algoruleheight}}
+\def\sepcode{\vspace{\algosep}}
+\def\algofontsize{\footnotesize}
+\newif\ifinsidecode
+\insidecodefalse
+
+\def\@programcr{$\@tabcr$}
+
+{\catcode`\;=\active \gdef;{\semicolon\;}}
+\mathchardef\semicolon="603B
+
+\catcode`\_=\active \gdef_{\ifinsidecode\_\else\ifmmode\sb\else\_\fi\fi}
+
+\catcode`\|=12\relax
+\def\origbar{|}
+\catcode`\|=\active
+
+\def|{\ifx\@sharp\relax\origbar\else\@dovar\fi}
+\def\@dovar#1#2|{#1\ifmmode{\mbox{\rm #2}}\else{\sl #2}\fi} 
+
+
+\def\@tabcommandson{% activate tabbing commands:
+    % \tab sets a tab stop and adds one to the margin tab:
+    \def\tab{$\=\+$}
+    % Must finish current field before testing if at margin:
+    \def\@finishfield{\@stopfield\@addfield\@startfield}
+    % \untab removes one tab stop and moves left if at the beginning of a line:
+    \def\untab{$\@finishfield\@ifatmargin\@ltab\else\relax\fi\-$}
+    % \@marginspace adds an extra space unless there is no text on the line:
+    \def\@marginspace{$\@finishfield$\@ifatmargin\relax\else\ \fi}}
+
+\def\@tabcommandsoff{% deactivate tabbing commands:
+    \let\tab=\relax
+    \let\@finishfield=\relax
+    \let\untab=\relax
+    \let\@marginspace=\ % never at margin thus always a space
+}
+\@tabcommandsoff
+
+\def\code#1{\par\sepcode
+\noindent\rulecode\algofontsize\numberlines\insidecodetrue
+\@tabcommandson \obeycr
+\lineskip \z@\let\>\@rtab\let\<\@ltab\let\=\@settab
+     \let\+\@tabplus\let\-\@tabminus\let\t\tab\let\u\untab
+\let\\=\@programcr 
+\global\@hightab\@firsttab \global\@nxttabmar\@firsttab
+\dimen\@firsttab\@totalleftmargin \global\@tabpush0
+\global\@rjfieldfalse \trivlist
+\item[]\if@minipage\else\vskip\parskip\fi
+\setbox\@tabfbox\hbox{\rlap{\indent\hskip\@totalleftmargin
+\the\everypar}}\def\@itemfudge{\box\@tabfbox}\@startline\ignorespaces
+$\@gobblecr
+}
+
+\def\endcode{$\@stopline\ifnum\@tabpush > 0 \@badpoptabs
+\fi\endtrivlist\noindent\@tabcommandsoff
+\rulecode
+\sepcode
+}
+
+% \begin{code*} ... \end{code*} 
+% 
+% the *-form of code numbers sequentially each line of the code (lines
+% are separated by \\'s)
+% CUST: the label of each line can be easily changed, by redefining
+% the macro \codelinelabel and/or the macro \thecodeline; the counter
+% is codeline.
+
+\newcounter{codeline}
+\def\thecodeline{\arabic{codeline}}
+\def\codelinelabel{\thecodeline.\ \ }
+
+\@namedef{code*}{\def\numberlines{\setcounter{codeline}{0}
+\def\@stopline{\addtocounter{codeline}{1}
+\unskip\@stopfield\if@rjfield \global\@rjfieldfalse
+   \@tempdima\@totalleftmargin \advance\@tempdima\linewidth
+\hbox to\@tempdima{\@itemfudge\codelinelabel\hskip\dimen\@curtabmar
+   \box\@curline\hfil\box\@curfield}\else\@addfield
+   \hbox{\@itemfudge\codelinelabel\hskip\dimen\@curtabmar\box\@curline}\fi}
+}\code}                                 
+\@namedef{endcode*}{\endcode}
+
+\catcode`@=12
+
+% \begin{cntcode} ... \end{cntcode}
+%
+% a slight variation of the code environment, cntcode centers its
+% contents; it should be used only if there is no page break in
+% the middle of the code; that means that its usefulness is limited to
+% small chunks of code, specifications, short declarations, ...
+\newlength{\codewidth}
+\setlength{\codewidth}{0.7\textwidth}
+\newenvironment{cntcode}{\def\sepcode{}\def\rulecode{}\centering
+\begin{minipage}[t]{\codewidth}
+\begin{code}}{\end{code}\end{minipage}
+\par}
+
+
+

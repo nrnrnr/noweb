@@ -1,0 +1,2 @@
+dots.nw enables the use of trailing dots in chunk names.  It does the same
+job as the example program `disambiguate.nw', but it is written in perl.

@@ -1,0 +1,136 @@
+Hi Norman
+
+I'm one of your noweb fans (one of these days you'll get a postcard from
+Denmark) since version 2.6c. I use it in several Unix systems (Sun4, Solaris,
+HPUX, Linux) and in a PC running Dos. I am able to use Noweb in the same way
+under both Dos and Unix. This means Dos+Icon+LaTeX2e in all platforms.
+
+When I downloaded Noweb 2.6c I had problems compiling it for Dos. In a way the
+information on how to do it was there (e.g. the 'install.dos' file from Lee
+Wittenburg), but it just gave general guidelines and it used Awk instead of
+Icon. To be able to compile and use Icon took one day's work and several
+machine crashes. So I wrote a kind of HOWTO for my own use when the next
+version came around.
+
+Noweb 2.7 should have been easy, but it took a couple of hours because the
+directory hierarchy had changed. Now there are Dos binaries on the
+distribution, but they have a couple of problems (besides being from 2.6c).
+
+Today I just downloaded Noweb 2.7a. It has binaries for both 2.6c and 2.7, but 
+that version 2.7 if for the Watcom compiler (I have it but it is not installed)
+and it uses Perl, which is nice but is risky if you change your code.
+After half an hour I had updated my scripts to cope with version 2.7a and
+after that I just compiled the source and got 2.7a Dos binaries.
+
+So I cleaned up my HOWTO and I'm asking if you would be interested in putting
+it in the next noweb distribution. Here is why you might be interested: 
+
+1- no binaries, only text files i.e. reduced space usage. You already have Dos
+binaries in your distribution and you wouldn't want more. For those users that
+don't manage to build it, I offer to supply ftp access to the binaries (all
+they have to do is ask). Another advantage is that my scripts might work
+without changes in the next Noweb version (if you don't change the directory
+hierarchy nor the part of the makefiles that I'm patching nor add anything new
+that requires patching). Gzip compressed the files take about 40 KB, expanded
+about 112 KB. Notice that the scripts have comments and check for errors trying
+to fail gracefully, otherwise they would be one fourth as big. Also more than
+two thirds is documentation files
+
+2- the noweb/src/install.dos doesn't say enough (in my case it required 1 day's
+work), noweb/binaries/dos-2.6c.zip is already two versions behind and
+although it uses Icon it does not use Icon for a PC 386 (or above) thus memory
+problems are to be expected. Also only some of the shell scripts were
+translated to C++, thus using noweb at work (Unix) and home (Dos) wouldn't be
+exactly the same. The same applies to the Dos binaries for version 2.7, using 
+Perl might make a difference
+
+3- minimum hardware/software requirements are a PC386 and the MKS Toolkit
+(commercial software). Any user that is thinking about using Noweb in an
+e.g. PC 286 is not doing serious work (or is brave). Thus asking for a 386 as a
+minimum is reasonable. It is a pity that one has to rely on commercial software
+but although there are some shareware Unix shells, I have no experience with
+them thus I don't know how good they are. The MKS toolkit is very popular and
+the price tag is quite reasonable (I think around $250). It closely follows
+Posix, there are versions for Dos, OS/2 and Win NT. It offers a Korn shell and
+all the standard Unix utilities, e.g. find, tar, man, awk, sed, vi, make. The
+only thing missing is multitasking (I manage to get a kind of multitasking by
+unning several Dos boxes under Windows, but that is another story). One can
+even use '/' instead of '\'.
+
+4- if the user has the above then the missing parts can be downloaded. I supply
+ftp sites and directories where to find DJGPP binaries (the PC386 Dos port of
+gcc, gmake, gzip, etc), Icon PC386 binaries, and LaTeX2e PC386 binaries (I
+supply an original document of John Refling annotated by me because the
+installation for a normal user is a nightmare, with that document it is
+straightforward, my annotations only fix some small bugs in that document and
+explain a few more points). As an option GhostScript can also be used
+
+5- after the user has MKS, DJGPP, Icon, and LaTeX2e (latex2e can be installed
+after noweb) properly installed, to get noweb 2.7a up and running all he/she 
+has to do is to download it and to edit a one line script (in the same fashion 
+as your noweb/src/nwmake) to specify the paths.
+
+6- that one line script works as follows: it supplies the args to another
+script which generates a third script. If the user is lucky running that script
+is enough (it works for me). Otherwise he/she has to look at that script and
+compare it with my document which explains ALL the steps required for fixing
+Noweb to run under Dos limitations. The generated script begins by renaming
+some of your makefiles and replacing them with equivalent makefiles (patched
+with awk scripts to circunvent Dos problems), then it uses GNU Make and Icon to
+compile the Icon sources, GNU Make and gcc to compile the C sources, and MKS
+Make and the Korn shell to install noweb. It might seem contrived but it avoids
+out of memory errors and I want to use your makefiles (i.e. slightly patched
+versions of them), not to supply my own makefiles which would be more sensitive
+to changes in your source code
+
+7- for troubleshooting I supply a document that explains all the steps for
+building Noweb, and I also supply a list of the MKS bugs that I discovered (one
+of them while compiling Noweb). I also discovered a couple of bugs/problems in
+your code, all of them trivial except one (the missing chunk problem, this is
+easy to reproduce in Dos but tough in Unix). See the file 
+noweb/contrib/avs/report1.bug
+
+8- notice that the user gets EVERYTHING, e.g. 'cd noweb/src/xdoc; latex guide;
+dvips guide' works (any missing METAFONT fonts will be generated on the
+fly). Then if he/she does not have a PostScript printer he/she can get
+GhostScript (mentioned in the ftpsites.txt) to translate for the printer at
+hand. The same applies to all Noweb commands (they work as in Unix). This
+allows using Noweb for doing serious literate programming on a Dos PC all the
+way down to the printing process.
+
+9- I assume that the next version won't change the directory hierarchy thus my
+scripts might work without change or will need half an hour work to update them
+(I had to update my 2.7 scripts to 2.7a because you changed sensitive parts of
+your makefiles)
+
+10- I don't supply makefiles for commercial C compilers. As noweb is free I'll
+rather use as much free software as possible. MKS is the unfortunate exception.
+
+The tar file (39 KB) ftp.daimi.aau.dk:/pub/empl/avs/avs386_noweb27a.tar.gz
+has files that expand into noweb/contrib/avs (I copied the style of the other
+contributions, e.g. readme, email). By uncompressing noweb27a.tar.gz and
+avs386_noweb27a.tar.gz from the same directory and by editing a single line of
+my script 'noweb/contrib/avs/myenv.ksh' one can compile Noweb 2.7a for Dos.
+Here is what that line looks like in my case:
+	generate i:/bin g:/usr/local/lib/noweb g:/man h:/emtex/texinputs/local j:/djgpp/bin/make.exe d:/tmp e:/bin/icont.exe
+
+If you think this is interesting you might
+a) mention it in comp.programming.literate
+b) add it to the noweb 2.7b distribution, after all now this allows me to build
+   and install Noweb 2.7a from the 2 tar files in just under 3 minutes ;-)
+
+Regards
+/avs
+
+P.S: myself I switched to Linux but up to now Noweb under Dos helped me a
+lot. Although I won't be using Noweb under Dos so much in the future I'm still
+willing to support it (i.e. any eventual updates to my recipe). And if you ever
+give me a prerelease of a new Noweb (with a week's notice) I will supply you
+with either the Dos binaries for incorporating into the official distribution 
+or better still with updated patches/scripts
+
+P.S.: if you want the noweb 2.7a Dos binaries just ask
+
+P.S.: remember that the files in avs386_noweb27a.tar.gz were Dos manipulated. 
+      To see any of those files under Unix (e.g. report1.bug) remember to do
+	tr -d '\015' < infile > outfile

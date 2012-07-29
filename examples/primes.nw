@@ -1,10 +1,16 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
+
+% l2h substitution nw <tt>noweb</tt>
+% some insanity is needed to avoid getting a double square bracket
+% l2h substitution [ <b>[</b><b>[</b> 
+% l2h substitution ] <b>]</b><b>]</b>
 \def\nw{{\tt noweb}}
 \def\[{\ifhmode\ \fi$[\mkern-2mu[$}
 \def\]{$]\mkern-2mu]$}
+
 \title{Printing Primes: An example of \nw}
-@
+
 \section{Printing Primes: An example of \nw}
 The following program is essentially the program that appears in 
 Reference~\cite{knuth:literate}, the first article on literate programming,
@@ -40,13 +46,14 @@ The program itself is capable of generating the first [[m]] prime
 numbers for any positive [[m]], as long as the computer's finite
 limitations are not exceeded.
 <<program to print the first thousand prime numbers>>=
-program print_primes(output);
+program `print_primes(output);
   const m = 1000;
         <<other constants of the program>>
   var <<variables of the program>>
     begin <<print the first [[m]] prime numbers>>
     end.
-@
+@ 
+
 \section{Plan of the program}
 We shall proceed to fill out the rest of the program by making
 whatever decisions seem easiest at each step; the idea will be to
@@ -68,11 +75,11 @@ sifficiently large aray of boolean values in whith the $k$th entry is
 [[true]] if and only if the number $k$ is prime; or we could build an
 array of integers in which the $k$th entry is the $k$th prime number.
 Let us choose the latter alternatice, by introducing an intereger
-array called [[p[1..m].]]
-In the documentation becloew, the notation [[p[k] ]]will refer to the
+array called [[p[1..m]]].
+In the documentation below, the notation [[p[k]]] will refer to the
 [[k]]th element of the array [[p]], while $p_k$ will refer to the
 $k$th prime number.
-If the program is correct [[p[k] ]]will equal $p_k$ or it will not yet
+If the program is correct [[p[k]]] will equal $p_k$ or it will not yet
 have nbeen asigned any value.
 <<variables of the program>>=
 p: array [1..m] of integer; 
@@ -84,10 +91,11 @@ rr = 50;
 cc = 4;
 ww = 10;
 <<variables of the program>>=
-page_number: integer;
-page_offset: integer;
-row_offset: integer;
+`page_number: integer;
+`page_offset: integer;
+`row_offset: integer;
 c: 0..cc;
+@ 
 <<print table [[p]]>>=
 begin page_number := 1; page_offset := 1;
 while page_offset <= m do
@@ -129,13 +137,13 @@ repeat j := j + 2;
   <<give to [[j_prime]] the meaning: [[j]] is a prime number>>
 until j_prime
 <<variables of the program>>=
-j_prime: boolean;
+`j_prime: boolean;
 <<initialize the data structures>>=
 j := 1; k := 1; p[1] := 2;
 <<variables of the program>>=
-ord: 2..ord_max;
-  { the smalled index >= 2 such that p_ord squared > j }
-square: integer;
+`ord: 2..ord_max;
+  { the smallest index >= 2 such that p_ord squared > j }
+`square: integer;
   { square = p_ord squared }
 <<initialize the data structures>>=
 ord := 2; square := 9;
@@ -153,24 +161,26 @@ square := p[ord] * p[ord];  { at this point ord <= k }
 <<give to [[j_prime]] the meaning: [[j]] is a prime number>>=
 n := 2; j_prime := true;
 while (n < ord) and j_prime do
-  begin <<if [[p[n] ]]is a factor of [[j]], set [[j_prime := false]]>>;
+  begin <<if [[p[n]]] is a factor of [[j]], set [[j_prime := false]]>>;
   n := n + 1;
   end
 <<variables of the program>>=
 n: 2..ord_max; { runs from 2 to ord when testing divisibility }
 <<variables of the program>>=
-mult: array [2..ord_max] of integer;
+`mult: array [2..ord_max] of integer;
   { runs through multiples of primes }
 <<update variables that depend on [[ord]]>>=
 mult[ord-1] := j;
-<<if [[p[n] ]]is a factor of [[j]], set [[j_prime := false]]>>=
+<<if [[p[n]]] is a factor of [[j]], set [[j_prime := false]]>>=
 while mult[n] < j do
   mult[n] := mult[n] + p[n] + p[n];
 if mult[n] = j then j_prime := false;
 @
 \section{Index}
-\[\nw\ generates no index, but standard {\LaTeX} tools can be used to
-create an index when desired.\]
+\subsection{Chunks}
+\nowebchunks
+\subsection{Identifiers}
+\nowebindex
 
 \bibliographystyle{unsrt}
 \bibliography{web,cs,ramsey}

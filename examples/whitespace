@@ -1,0 +1,10 @@
+
+# whitespace -- noweb filter to make multiple whitespace
+#	characters equivalent to a single space, so that
+#	<< Hello World>>, <<Hello   World>>, 
+#	and <<Hello World   >> all refer to the chunk 
+#	<<Hello World>>
+
+sed -e '/^@use /s/[ \t][ \t]*/ /g' -e '/^@defn /s/[ \t][ \t]*/ /g' \
+    -e '/^@use /s/[ \t]*$//g' -e '/^@defn /s/[ \t]*$//g'
+

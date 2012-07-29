@@ -1,0 +1,32 @@
+\documentstyle[11pt,noweb]{article}
+\noweboptions{longchunks,noidentxref,smallcode}
+\pagestyle{noweb}
+
+\def\noweb/{{\tt noweb}}
+
+\title{A Hack for Typesetting Strings in \noweb/\thanks{This
+code is hereby placed in the public domain.}}
+\author{Lee Wittenberg\\Kean College of New Jersey\\Union, NJ
+07083\\\tt leew@pilot.njin.net}
+
+\begin{document}
+\maketitle
+
+The following macros adjust things so that \noweb/ will use 
+``visible spaces'' in double-quoted strings within code chunks. 
+The same effect can be 
+achieved for single-quoted strings by replacing each occurrence 
+of `[["]]', below, with `[[']]'.
+It doesn't work within \verb"[["~\ldots~\verb"]]" (although I 
+can't figure out why).
+<<*>>=
+\global\let\xsetup=\setupcode
+\bgroup
+	\catcode`\"=\active\gdef\setupcode{\xsetup
+	\catcode`\"=\active\def"##1"{\char`\"\xxx{##1}\char`\"}}%
+\egroup
+\bgroup
+	\catcode`\ =\active\gdef\xxx#1{{\catcode`\ =\active\chardef ='40#1}}%
+\egroup
+@
+\end{document}

@@ -1,0 +1,20 @@
+#!/usr/common/bin/perl
+while(<>)
+{
+# expand wildcard references here, then process as normal
+  if(/^@(use|defn) (.*)$/)
+    {
+      $action=$1;
+      if($2=~/\.{3}$/)
+      { @matches=grep(/^$2.*/i,split(/¤/,$known));
+        if($#matches>0)
+          { die "\nAmbiguous module name `$mod...'"; }
+        elsif($#matches==-1)
+          { die "\nNo match for name `$mod...',line $i "; }
+        else
+          { $mn=@matches[0]; $_="@$action $mn\n"; }
+      }
+      else { $known=$known . "¤$2"; }
+    }
+  print STDOUT $_;
+}

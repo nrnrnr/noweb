@@ -1,0 +1,63 @@
+These are the anonymous ftp sites that I prefer (I am in Europe and these are
+the fastest sites for me)
+
+Noweb 2.7a (only in this site in 29-May-95)
+ftp.shsu.edu:/pub/tex/web 
+
+Noweb 2.7 
+ftp.tex.ac.uk:/tex-archive/web 
+'get noweb.tar.gz' (on the fly compression of noweb dir, 1221834 bytes because
+it includes Dos and Linux binaries) or 'cd noweb' and get file by file (like
+this it's possible to skip the binaries dir)
+
+How to build Noweb 2.7a for Dos + PC386 + MKS toolkit
+ftp.daimi.aau.dk:/pub/empl/avs/avs386_noweb27a.tar.gz
+(my site, just for completeness, you might also want to look there for a newer
+version in case some bug in my scripts has been reported and fixed)
+
+emTeX 386 3.1415 [3c-beta12], LaTeX2e (1-Dec-94 patch level 1), Dvips 5.54
+(several ftp sites must be used, see the file 'jrtex12a.avs')
+
+Chicago LaTeX package (required by noweb/src/xdoc/guide.tex)
+ftp.tex.ac.uk:/tex-archive/biblio/bibtex/contrib/chicago*.* 
+Assuming that you followed the instructions from the file 'jrtex12a.avs' put
+the 3 files (chicago.bst, chicago.sty, chicagoa.bst) in
+?:/emtex/texinputs/local)
+
+DJGPP (GNU software Dos port for PC 386)
+ftp.funet.fi:/pub/mirrors/oak.oakland.edu/Simtel/msdos/djgpp (empty in
+21-Mar-95 due to disk crash)
+or 
+omnigate.clarkson.edu:/pub/msdos/djgpp
+or 
+oak.oakland.edu:/pub/msdos/djgpp
+The easiest way is to get the README's and FAQ (readme.1st, readme.dj,
+djgpp.faq), to read them, and then to get the installation program
+(install.exe, install.dat) and the remaining binaries and docs (the minimum set
+of files that you need is the first FAQ entry, you will also need the Make
+module, and if you have a 386 without a coprocessor the 80387 emulator)
+
+Binaries for Icon 9.0 for MsDos 386/486:
+cs.arizona.edu:/icon/packages/msdos/de-386.lzh 
+(if you don't have lha.exe to unpack the archive you should also get it from
+there)
+
+The MKS Toolkit for Dos is commercial software (Sorry)
+Don't know which is the last version, I use 4.2 (Oct-93)
+Tel: (519) 884-2251                     Mortice Kern Systems Inc.
+Fax: (519) 884-8861                     35 King Street North,
+Technical Advice: (519) 884-2270        Waterloo, Ontario,
+Internet: inquiry@mks.com               N2J 2W9
+CompuServe User ID: 73260,1043          CANADA
+BIX User Name: mks
+
+GhostScript 3.12 
+ftp.funet.fi:/gnu/ghostscript3/aladdin 
+If you don't have a PostScript printer you might want to use GhostScript which
+can take PostScript and translate it to your printer (presuming your printer is
+somehow supported). See 'jrtex12a.avs' for a list of the devices in the gs.exe,
+gs386.exe, gswin.exe, and gswin32s.exe binaries. Notice that gs.exe crawls when
+processing noweave output (after intermediate processing by latex and dvips),
+while gs386.exe is about 40 times faster (about 1 page/second in a 486
+DX2-80). This speed difference does not apply to normal PostScript code it is
+caused by something in the noweb code

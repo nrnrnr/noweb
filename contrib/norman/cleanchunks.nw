@@ -1,0 +1,42 @@
+\section{Code to clean up special characters in chunk names}
+
+Some people want to use {\tt noweb} to browse big pieces of legacy
+code without having to touch any of it by hand.  Since legacy code
+sometimes uses underscores and other special characters in chunk
+names, it makes sense to have a filter to escape special characters in
+chunk names.
+<<*>>=
+procedure main()
+  local tag, line
+  while line := read() do 
+    line ?
+      if tag := =("@defn " | "@use ") then
+        write(tag, TeXliteral(tab(0)))
+      else
+        write(line)
+end
+@
+<<'\\{}$&#^_ ~%'>>=
+<<*>>=
+procedure TeXliteral(arg)
+  static nospace, code, TeXspecials
+  initial { codes := ["\\", 92, "{", 123, "}", 125, "$", 36, "&", 38, "#", 35, "^", 94, 
+                      "_", 95, "%", 37, "~", 126]
+            code := table()
+	    TeXspecials := '\\{}$&#^_~%'
+            while (c := get(codes), n := get(codes)) do code[c] := string(n)
+            if c := !TeXspecials & c ~== " " & not member(code, c) then
+	      stop("internal error, character-code mismatch, report a bug!")
+          }
+  s := ""
+  arg ? {
+    while s ||:= tab(upto(TeXspecials)) do {
+      c := move(1)
+      if member(code, c) then
+        s ||:= "{\\tt\\char" || code[c] || "}"
+      else
+        s ||:= "\\" || c
+    }
+    return s || tab(0)
+  }
+end

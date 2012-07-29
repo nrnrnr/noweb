@@ -21,7 +21,7 @@ efficient solution~\cite{aho:efficient}.
 \paragraph{Boilerplate} \indent\null\par
 
 <<*>>=
-static char rcsid[] = "$Id: recognize.nw,v 1.23 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: recognize.nw,v 1.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
   { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */

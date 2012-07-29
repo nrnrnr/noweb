@@ -1,0 +1,29 @@
+HPUX awk has bugs.  I recommend that you use Brian Kernighan's
+implementation of awk, which is available for free from AT&T.
+Try http://cm.bell-labs.com/who/bwk/.
+
+If you must use HPUX awk, Steven Ooms kindly provided the following
+changes to the awk script "totex".  The problem lines are all situated
+in the function "indexlabel( ident, l )":
+
+---------------start included text---------------
+totex:  gsub(/{/,  ":lb",  l)      # left brace
+...
+totex:  gsub(/{/,  "{\\char123}", arg)
+...
+totex:  gsub(/{\\char92>/, "{\\char92}", arg)
+---------------end included text---------------
+
+The corresponding new lines look as follows:
+
+---------------start included text---------------
+totex:  gsub(/\{/,  ":lb",  l)      # left brace
+...
+totex:  gsub(/\{/,  "{\\char123}", arg)
+...
+totex:  gsub(/\{\\char92>/, "{\\char92}", arg)
+---------------end included text---------------
+
+Also, I'm told that in src/Makefile the strip command in an HPUX8
+machine causes the make to fail. Commenting out the 'strip' fixes the
+problem.

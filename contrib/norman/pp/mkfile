@@ -1,0 +1,24 @@
+ICONT=icont
+
+%: %.icn
+	$ICONT $target
+
+%.icn:	%.nw
+	notangle -L'#line %-1L "%F"%N' $prereq > $target
+
+all:V: pp pp.ps pp.html
+
+$BIN/nwpp: pp.icn
+	$ICONT -o $target $prereq
+
+pp.tex: pp.nw
+	noweave -delay -autodefs icon -index $prereq > $target
+
+pp.html: pp.nw
+	noweave -filter l2h -delay -autodefs icon -index -html $prereq > $target
+
+clean:V:
+	rm -f *~ *.tex *.dvi *.logf *.icn *.u1 *.u2 *.aux *.toc *.log
+
+clobber:V: clean
+	rm -f *.ps *.dvi *.html pp

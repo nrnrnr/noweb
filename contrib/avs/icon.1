@@ -1,0 +1,330 @@
+}
+
+
+ IIIICCCCOOOONNNN((((1111))))							     IIIICCCCOOOONNNN((((1111))))
+			    11113333 MMMMaaaarrrrcccchhhh 1111999999993333 IIIIPPPPDDDD222211119999
+
+
+
+ NNNNAAAAMMMMEEEE
+      icon - interpret or compile Icon programs
+
+ SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
+      icont [ option ... ] file ... [ -x arg ... ]
+      iconc [ option ... ] file ... [ -x arg ... ]
+
+ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
+      icont and iconc each convert an Icon source program into executable
+      form.  icont translates quickly and provides interpretive execution.
+      iconc takes longer to compile but produces programs that execute
+      faster.  icont and iconc for the most part can be used
+      interchangeably.
+
+      This manual page describes both icont and iconc. Where there there are
+      differences in usage between icont and iconc, these are noted.
+
+      FFFFiiiilllleeee NNNNaaaammmmeeeessss:::: Files whose names end in .icn are assumed to be Icon
+      source files. The .icn suffix may be omitted; if it is not present, it
+      is supplied. The character - can be used to indicate an Icon source
+      file given in standard input.  Several source files can be given on
+      the same command line; if so, they are combined to produce a single
+      program.
+
+      The name of the executable file is the base name of the first input
+      file, formed by deleting the suffix, if present. stdin is used for
+      source programs given in standard input.
+
+      PPPPrrrroooocccceeeessssssssiiiinnnngggg:::: As noted in the synopsis above, icont and iconc accept
+      options followed by file names, optionally followed by -x and
+      arguments. If -x is given, the program is executed automatically and
+      any following arguments are passed to it.
+
+      icont: The processing performed by icont consists of two phases:
+      _t_r_a_n_s_l_a_t_i_o_n and _l_i_n_k_i_n_g. During translation, each Icon source file is
+      translated into an intermediate language called _u_c_o_d_e. Two ucode files
+      are produced for each source file, with base names from the source
+      file and suffixes .u1 and .u2.  During linking, the one or more pairs
+      of ucode files are combined to produce a single _i_c_o_d_e file.  The ucode
+      files are deleted after the icode file is created.
+
+      Processing by icont can be terminated after translation by the -c
+      option. In this case, the ucode files are not deleted.  The names of
+      .u1 files from previous translations can be given on the icont command
+      line.  These files and the corresponding .u2 files are included in the
+      linking phase after the translation of any source files.	The suffix
+      .u can be used in place of .u1; in this case the 1 is supplied
+      automatically.  Ucode files that are explicitly named are not deleted.
+
+      iconc: The processing performed by iconc consists of two phases: _c_o_d_e
+      _g_e_n_e_r_a_t_i_o_n and _c_o_m_p_i_l_a_t_i_o_n _a_n_d _l_i_n_k_i_n_g. The code generation phase
+
+
+
+				    - 1 -	Formatted:  December 9, 1994
+
+
+
+
+
+
+ IIIICCCCOOOONNNN((((1111))))							     IIIICCCCOOOONNNN((((1111))))
+			    11113333 MMMMaaaarrrrcccchhhh 1111999999993333 IIIIPPPPDDDD222211119999
+
+
+
+      produces C code, consisting of a .c and a .h file, with the base name
+      of the first source file. These files are then compiled and linked to
+      produce an executable binary file.  The C files normally are deleted
+      after compilation and linking.
+
+      Processing by iconc can be terminated after code generation by the -c
+      option. In this case, the C files are not deleted.
+
+ OOOOPPPPTTTTIIIIOOOONNNNSSSS
+      The following options are recognized by icont and iconc:
+
+      -c  Stop after producing intermediate files and do not delete them.
+
+      -e _f_i_l_e
+	  Redirect standard error output to _f_i_l_e.
+
+      -m  Preprocess each .icn source file with the _m_4(_1) macro processor.
+
+      -o _n_a_m_e
+	  Name the output file _n_a_m_e.
+
+      -s  Suppress informative messages.  Normally, both informative
+	  messages and error messages are sent to standard error output.
+
+      -t  Arrange for &trace to have an initial value of -1 when the program
+	  is executed and for iconc enable debugging features.
+
+      -u  Issue warning messages for undeclared identifiers in the program.
+
+      -E  Direct the results of preprocessing to standard output and inhibit
+	  further processing.
+
+      The following additional options are recognized by iconc:
+
+      -f _s_t_r_i_n_g
+	  Enable features as indicated by the letters in _s_t_r_i_n_g:
+
+	    a all, equivalent to delns
+
+	    d enable debugging features: display(), name(), variable(),
+	      error trace back, and the effect of -f n (see below)
+
+	    e enable error conversion
+
+	    l enable large-integer arithmetic
+
+	    n produce code that keeps track of line numbers and file names
+	      in the source code
+
+	    s enable full string invocation
+
+
+
+
+				    - 2 -	Formatted:  December 9, 1994
+
+
+
+
+
+
+ IIIICCCCOOOONNNN((((1111))))							     IIIICCCCOOOONNNN((((1111))))
+			    11113333 MMMMaaaarrrrcccchhhh 1111999999993333 IIIIPPPPDDDD222211119999
+
+
+
+      -n _s_t_r_i_n_g
+	  Disable specific optimizations. These are indicated by the letters
+	  in _s_t_r_i_n_g:
+
+	    a all, equivalent to cest
+
+	    c control flow optimizations other than switch statement
+	      optimizations
+
+	    e expand operations in-line when reasonable (keywords are always
+	      put in-line)
+
+	    s optimize switch statements associated with operation
+	      invocations
+
+	    t type inference
+
+      -p _a_r_g
+	  Pass _a_r_g on to the C compiler used by iconc
+
+      -r _p_a_t_h
+	  Use the run-time system at _p_a_t_h, which must end with a slash.
+
+      -v _i
+	  Set verbosity level of informative messages to _i
+
+      -_C _p_r_g
+	  Have iconc use the C compiler given by _p_r_g
+
+ EEEENNNNVVVVIIIIRRRROOOONNNNMMMMEEEENNNNTTTT VVVVAAAARRRRIIIIAAAABBBBLLLLEEEESSSS
+      When an Icon program is executed, several environment variables are
+      examined to determine certain execution parameters.  Values in
+      parentheses are the default values.
+
+      BLKSIZE (65000)
+	  The initial size of the allocated block region, in bytes.
+
+      COEXPSIZE (2000)
+	  The size, in words, of each co-expression block.
+
+      DBLIST
+	  The location of data bases for iconc to search before the standard
+	  one.	The value of DBLIST should be a blank-separated string of
+	  the form _p_1 _p_2 ...  _p_n where the _p_i name directories.
+
+      ICONCORE
+	  If set, a core dump is produced for error termination.
+
+      ICONX
+	  The location of iconx, the executor for icode files, is built into
+	  an icode file when it is produced. This location can be overridden
+
+
+
+				    - 3 -	Formatted:  December 9, 1994
+
+
+
+
+
+
+ IIIICCCCOOOONNNN((((1111))))							     IIIICCCCOOOONNNN((((1111))))
+			    11113333 MMMMaaaarrrrcccchhhh 1111999999993333 IIIIPPPPDDDD222211119999
+
+
+
+	  by setting the environment variable ICONX.  If ICONX is not set
+	  and iconx is not found on the built-in path, PATH is searched for
+	  it.  If this environment variable is set, it specifies the
+	  location of iconx to use to execute an icode file.
+
+      IPATH
+	  The location of ucode files specified in link declarations for
+	  icont.  IPATH is a blank-separated list of directories.  The
+	  current directory is always searched first, regardless of the
+	  value of IPATH.
+
+      LPATH
+	  The location of source files specified in link declarations for
+	  iconc.  LPATH is otherwise similar to IPATH.
+
+      MSTKSIZE (10000)
+	  The size, in words, of the main interpreter stack for icont.
+
+      NOERRBUF
+	  By default, &errout is buffered.  If this variable is set, &errout
+	  is not buffered.
+
+      QLSIZE (5000)
+	  The size, in bytes, of the region used for pointers to strings
+	  during garbage collection.
+
+      STRSIZE (65000)
+	  The initial size of the string space, in bytes.
+
+      TRACE
+	  The initial value of &trace.	If this variable has a value, it
+	  overrides the translation-time -t option.
+
+ FFFFIIIILLLLEEEESSSS
+      icont	Icon translator
+      iconc	Icon compiler
+      iconx	Icon executor
+
+ SSSSEEEEEEEE AAAALLLLSSSSOOOO
+      _T_h_e _I_c_o_n _P_r_o_g_r_a_m_m_i_n_g _L_a_n_g_u_a_g_e, Ralph E. Griswold and Madge T.
+      Griswold, Prentice-Hall Inc., Englewood Cliffs, New Jersey, Second
+      Edition, 1990.  _V_e_r_s_i_o_n _8._1_0 _o_f _I_c_o_n, Ralph E. Griswold, Clinton L.
+      Jeffery, and Gregg M. Townsend, IPD212, Department of Computer
+      Science, The University of Arizona, 1993.  _U_s_i_n_g _V_e_r_s_i_o_n _8._1_0 _o_f _t_h_e
+      _I_c_o_n _C_o_m_p_i_l_e_r, Ralph E. Griswold, IPD214, Department of Computer
+      Science, The University of Arizona, 1993.  m4(1), icon_vt(1)
+
+ LLLLIIIIMMMMIIIITTTTAAAATTTTIIIIOOOONNNNSSSS AAAANNNNDDDD BBBBUUUUGGGGSSSS
+      The icode files for the interpreter do not stand alone; the Icon run-
+      time system (iconx) must be present.  Stack overflow is checked using
+      a heuristic that is not always effective.  If the -m option is used,
+
+
+
+				    - 4 -	Formatted:  December 9, 1994
+
+
+
+
+
+
+ IIIICCCCOOOONNNN((((1111))))							     IIIICCCCOOOONNNN((((1111))))
+			    11113333 MMMMaaaarrrrcccchhhh 1111999999993333 IIIIPPPPDDDD222211119999
+
+
+
+      line numbers reported in error messages and tracing messages are from
+      the file after, not before, preprocessing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				    - 5 -	Formatted:  December 9, 1994
+
+
+

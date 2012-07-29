@@ -1,0 +1,33 @@
+<<*>>=
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+@
+[[indextext]] is a hack to introduce suitable ``[[@index nl]],'' but it
+messes up the line counts!
+<<*>>=
+procedure writedefn(defn)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & <<flush index>>
+  else {
+    if *indextext + *defn > 65 then <<flush index>>
+    write("@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+<<flush index>>=
+{ # write("@index nl")		# don't!
+  indextext := ""
+}

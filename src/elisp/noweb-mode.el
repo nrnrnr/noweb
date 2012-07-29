@@ -18,7 +18,7 @@
 ;; 
 ;; See bottom of this file for information on language-dependent highlighting
 ;;
-;; $Id: noweb-mode.el,v 1.18 2008/10/04 20:53:52 nr Exp nr $
+;; $Id: noweb-mode.el,v 1.19 2008/10/06 01:03:05 nr Exp nr $
 ;; $Name: v2_12 $
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -86,7 +86,7 @@
 ;;; Variables
 
 (defconst noweb-mode-RCS-Id
-  "$Id: noweb-mode.el,v 1.18 2008/10/04 20:53:52 nr Exp nr $")
+  "$Id: noweb-mode.el,v 1.19 2008/10/06 01:03:05 nr Exp nr $")
 
 (defconst noweb-mode-RCS-Name
   "$Name: v2_12 $")
@@ -217,6 +217,7 @@ Misc:
 	    noweb-code-mode))
   (setq noweb-mode t)
   (noweb-setup-keymap)
+  (noweb-update-chunk-vector)
   (add-hook 'post-command-hook 'noweb-post-command-hook)
   (add-hook 'noweb-select-doc-mode-hook 'noweb-auto-fill-doc-mode)
   (add-hook 'noweb-select-code-mode-hook 'noweb-auto-fill-code-mode)
@@ -991,3 +992,4 @@ and and update the chunk vector."
 ;; Local Variables:
 ;; mode:emacs-lisp
 ;; End:
+

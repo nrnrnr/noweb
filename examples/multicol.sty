@@ -1,0 +1,525 @@
+%% 
+%% This is file `multicol.sty', generated 
+%% on <1993/10/28> with the docstrip utility (2.1e).
+%% 
+%% The original source files were:
+%% 
+%% multicol.doc  (with options: `style,check,marktrace')
+%% 
+%% Copyright (C) 1989-1992 by Frank Mittelbach. All rights reserved. 
+%% 
+%% This file is part of the multicol package. 
+%% 
+%% IMPORTANT NOTICE: 
+%% 
+%% You are not allowed to change this file. You may however copy 
+%% this file to a file with a different name and then change the copy 
+%% if you obey the restrictions on file changes described in 
+%% readme.mz. 
+%% 
+%% You are NOT ALLOWED to distribute this file alone. You are NOT 
+%% ALLOWED to take money for the distribution or use of this file (or 
+%% a changed version) except for a nominal charge for copying etc. 
+%% 
+%% You are allowed to distribute this file under the condition that 
+%% it is distributed together with all files mentioned in readme.mz1. 
+%% 
+%% If you receive only some of these files from someone, complain! 
+%% 
+%% However, if these files are distributed by established suppliers 
+%% as part of a complete TeX distribution, and the structure of the 
+%% distribution would make it difficult to distribute the whole set 
+%% of files, *those parties* are allowed to distribute only some of 
+%% the files provided that it is made clear that the user will get a 
+%% complete distribution-set upon request to that supplier (not me). 
+%% Notice that this permission is not granted to the end user. 
+%% 
+%% 
+%% For error reports in case of UNCHANGED versions see readme.mz 
+%% 
+%% 
+\def\fileversion{v1.4m}
+\def\filedate{92/09/04}
+\def\docdate {92/09/04}
+
+%% \CheckSum{1101}
+%% \CharacterTable
+%%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%%   Digits        \0\1\2\3\4\5\6\7\8\9
+%%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%%   Dollar        \$     Percent       \%     Ampersand     \&
+%%   Acute accent  \'     Left paren    \(     Right paren   \)
+%%   Asterisk      \*     Plus          \+     Comma         \,
+%%   Minus         \-     Point         \.     Solidus       \/
+%%   Colon         \:     Semicolon     \;     Less than     \<
+%%   Equals        \=     Greater than  \>     Question mark \?
+%%   Commercial at \@     Left bracket  \[     Backslash     \\
+%%   Right bracket \]     Circumflex    \^     Underscore    \_
+%%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%%   Right brace   \}     Tilde         \~}
+%%
+%% Style-option `multicol' to use with LaTeX v2.09
+%% Copyright (C) 1989-1992 Frank Mittelbach, all rights reserved.
+\@ifundefined{mult@cols}{}{\endinput}
+\typeout{Style option: `multicol'
+   \fileversion\space <\filedate> (FMi)}
+\typeout{English documentation
+ \@spaces\@spaces\space<\docdate> (FMi)}
+\def\multicols#1{\col@number#1\relax
+  \ifnum\col@number<\tw@
+     \@warning{Using `\number\col@number'
+       columns doesn't seem a good idea.^^J
+       I therefore use two columns instead}%
+     \col@number\tw@ \fi
+  \ifnum\col@number>5
+     \@warning{Current implementation doesn't
+       support more than five columns.^^J
+       I therefore use five columns instead}%
+     \col@number5 \fi
+  \@ifnextchar[\mult@cols{\mult@cols[]}}
+\def\mult@cols[#1]{\@ifnextchar[%
+  {\mult@@cols{#1}}%
+  {\mult@@cols{#1}[\premulticols]}}
+\def\mult@@cols#1[#2]{%
+  \par
+  \ifinner \@boxedmulticolstrue
+  \else
+    \ifnum \doublecol@number>\z@
+       \@boxedmulticolstrue
+    \fi
+  \fi
+  \ifnum\c@tracingmulticols>\z@
+      \typeout{^^J^^JStarting multicolumn
+               output with \the\col@number
+               \space columns%
+               \if@boxedmulticols\space
+                  (boxed mode)\fi
+               \on@line:^^J}\fi
+   \enough@room{#2}%
+   {#1\par}\addvspace\multicolsep
+   \begingroup
+     \prepare@multicols
+     \if@boxedmulticols
+       \setbox\mult@box\vbox\bgroup
+          \penalty-\@M
+     \fi
+     \ignorespaces}
+\newif\if@boxedmulticols \@boxedmulticolsfalse
+\newbox\mult@box
+\def\enough@room#1{%
+   \if@boxedmulticols\else
+   \par
+   \bgroup\@nobreakfalse\addpenalty\z@\egroup
+   \page@free \pagegoal
+   \advance \page@free -\pagetotal
+   \ifnum \c@tracingmulticols>\z@
+     \typeout{Current page:}%
+     \message{\@spaces goal height=%
+       \the\pagegoal: used \the\pagetotal
+       \space -> free=\the\page@free}%
+     \typeout{\@spaces needed \the#1
+              (for \string#1)}\fi
+   \ifdim \page@free <#1\newpage \fi
+  \fi}
+\def\prepare@multicols{%
+  \multicol@leftmargin\@totalleftmargin
+  \@totalleftmargin\z@
+  \parshape\z@
+  \doublecol@number\col@number
+  \multiply\doublecol@number\tw@
+  \if@boxedmulticols
+    \let\l@kept@firstmark\kept@firstmark
+    \let\l@kept@botmark\kept@botmark
+    \global\let\kept@firstmark\@empty
+    \global\let\kept@botmark\@empty
+  \else
+    \nointerlineskip \null
+    \output{%
+      \global\setbox\partial@page\vbox
+        {%
+         \ifvoid\partial@page\else
+           \@latexerr{Error saving partial
+                      page\on@line}%
+             {The part of the page before
+              the multicols environment was
+              nearly full with the result
+              that starting the environment
+              will produce an overfull
+              page.  Some text may be lost!
+              Please increase \premulticols
+              either generally or for this
+              environment by specifying a
+              suitable value in the second
+              optional argument to the
+              multicols environment.}
+           \unvbox\partial@page
+           \box\last@line
+         \fi
+         \unvbox\@cclv
+         \global\setbox\last@line\lastbox
+        }%
+           \prep@keptmarks
+           \global\let\kept@topmark\firstmark
+          }\eject
+    \advance\@colroom-\ht\partial@page
+    \vsize\col@number\@colroom
+    \advance\vsize\c@collectmore\baselineskip
+    \output{\multi@column@out}%
+    \multiply\count\footins\col@number
+    \multiply\skip \footins\col@number
+    \reinsert@footnotes
+  \fi
+  \vbadness10001 \hbadness5000
+  \tolerance\multicoltolerance
+  \pretolerance\multicolpretolerance
+  \setemergencystretch\col@number\hsize
+  \set@floatcmds
+  \advance\baselineskip\multicolbaselineskip
+  \hsize\linewidth \advance\hsize\columnsep
+  \advance\hsize-\col@number\columnsep
+  \divide\hsize\col@number
+  \full@width\linewidth
+  \linewidth\hsize
+}
+\newdimen\multicol@leftmargin
+\def\endmulticols{\par
+  \if@boxedmulticols
+    \egroup
+    \setbox\@tempboxa\vsplit\mult@box to\z@
+    \balance@columns
+    \return@nonemptymark{first}\kept@firstmark
+    \return@nonemptymark{bot}\kept@botmark
+    \page@sofar
+    \global\let\kept@firstmark\l@kept@firstmark
+    \global\let\kept@botmark\l@kept@botmark
+    \ifnum\c@tracingmulticols>\tw@
+      \typeout{Restore kept marks to%
+           ^^J first: \meaning\kept@firstmark%
+           ^^J bot\space\space:
+                      \meaning\kept@botmark }%
+    \fi
+  \else
+   \bgroup\@nobreakfalse\addpenalty\z@\egroup
+    \output{\balance@columns@out}\eject
+    \ifvbox\partial@page\unvbox\partial@page\fi
+     \global\let\kept@firstmark\@empty
+     \global\let\kept@botmark\@empty
+     \ifnum\c@tracingmulticols>\tw@
+       \typeout{Make kept marks empty}%
+     \fi
+  \fi
+  \@checkend{multicols}%
+  \endgroup
+  \if@boxedmulticols\else
+    \reinsert@footnotes
+  \fi
+  \global\c@unbalance\z@
+  \enough@room\postmulticols
+  \addvspace\multicolsep
+  \ifnum\c@tracingmulticols>\z@
+     \typeout{^^JEnding multicolumn
+              output%
+              \if@boxedmulticols
+                \space(boxed mode)\fi
+              .^^J^^J}\fi}
+\newcount\c@unbalance
+\newcount\c@collectmore
+\newcount\c@tracingmulticols
+\newcount\col@number
+\newcount\doublecol@number
+\newcount\multicoltolerance
+\newcount\multicolpretolerance
+\newdimen\full@width
+\newdimen\page@free
+\newdimen\premulticols
+\newdimen\postmulticols
+\newskip\multicolsep
+\newskip\multicolbaselineskip
+\newbox\partial@page
+\newbox\last@line
+\c@unbalance   = 0
+\c@collectmore = 0
+\c@tracingmulticols = 0
+\col@number = 1
+\multicoltolerance = 9999
+\multicolpretolerance = -1
+\premulticols = 50pt
+\postmulticols= 20pt
+\multicolsep = 12pt plus 4pt minus 3pt
+\multicolbaselineskip=0pt
+\def\process@cols#1#2{\count@#1\relax
+     \loop #2%
+     \advance\count@\tw@
+     \ifnum\count@<\doublecol@number
+   \repeat}
+\def\page@sofar{%
+   \process@cols\z@{\wd\count@\hsize}%
+   \ifnum\c@tracingmulticols>\z@
+   \typeout{Column spec:
+       (\the\multicol@leftmargin\space -->
+        \the\full@width\space = \the\hsize
+        \space x \the\col@number)^^J}%
+   \fi
+\ifvmode\else\errmessage{Multicol Error}\fi
+   \moveright\multicol@leftmargin
+    \hbox to\full@width{%
+     \process@cols\tw@{\box\count@
+       \hss\vrule\@width\columnseprule\hss}%
+     \box\z@
+      \rlap{\phantom p}%
+}%
+}
+\def\reinsert@footnotes{\ifvoid\footins\else
+         \insert\footins{}\fi}
+\def\multi@column@out{%
+   \ifnum\outputpenalty <-\@Mi
+   \speci@ls \else
+   \splittopskip\topskip
+   \splitmaxdepth\maxdepth
+   \dimen@\@colroom
+   \divide\skip\footins\col@number
+   \ifvoid\footins \else
+      \advance\dimen@-\skip\footins
+      \advance\dimen@-\ht\footins   \fi
+   \process@cols\tw@{\setbox\count@
+            \vsplit\@cclv to\dimen@
+            \set@keptmarks
+            \ifshr@nking
+              \setbox\count@\vbox to\dimen@
+                  {\unvbox\count@\vfill}%
+            \fi
+           }%
+   \setbox\z@\vsplit\@cclv to\dimen@
+   \set@keptmarks
+   \ifshr@nking
+      \setbox\z@\vbox to\dimen@
+          {\unvbox\z@\vfill}%
+   \fi
+   \ifvoid\@cclv \else
+       \unvbox\@cclv
+       \penalty\outputpenalty
+       \ifvoid\footins\else
+         \@warning{I moved some lines to
+                       the next page.^^J
+              \@spaces Footnotes on page
+           \thepage\space might be wrong}%
+       \fi
+       \ifnum \c@tracingmulticols>\thr@@
+                    \hrule\allowbreak \fi
+   \fi
+   \ifx\@empty\kept@firstmark
+      \let\firstmark\kept@topmark
+      \let\botmark\kept@topmark
+   \else
+      \let\firstmark\kept@firstmark
+      \let\botmark\kept@botmark
+   \fi
+   \ifnum\c@tracingmulticols>\tw@
+        \typeout{Use kept top
+                 \space\space mark:
+                `\meaning\kept@topmark'%
+              ^^JUse kept first mark:
+                `\meaning\kept@firstmark'%
+              ^^JUse kept bot
+                 \space\space mark:
+                `\meaning\kept@botmark'%
+              ^^JProduce first mark:
+                `\meaning\firstmark'%
+              ^^JProduce bot
+                 \space\space mark:
+                `\meaning\botmark'}%
+   \fi
+   \setbox\@cclv\vbox{\unvbox\partial@page
+                      \page@sofar}%
+   \@makecol\@outputpage
+     \global\let\kept@topmark\botmark
+     \global\let\kept@firstmark\@empty
+     \global\let\kept@botmark\@empty
+     \ifnum\c@tracingmulticols>\tw@
+        \typeout{(Re)Init top
+                 \space\space mark:
+                `\meaning\kept@topmark'}%
+     \fi
+   \global\@colroom\@colht
+   \process@deferreds
+   \@whilesw\if@fcolmade\fi{\@outputpage
+      \global\@colroom\@colht
+      \process@deferreds}%
+   \ifnum\c@tracingmulticols>\@ne
+     \typeout{Colroom: \the\@colht\space
+              after float space removed
+              = \the\@colroom }\fi
+   \global\vsize\col@number\@colroom
+   \global\advance\vsize
+      \c@collectmore\baselineskip
+  \fi}
+\def\speci@ls{%
+   \typeout{Floats and marginpars not
+            allowed inside `multicols'
+            environment!}%
+   \unvbox\@cclv\reinsert@footnotes
+   \xdef\@freelist{\@freelist\@currlist}%
+   \gdef\@currlist{}}
+\def\process@deferreds{%
+   \@floatplacement
+   \@tryfcolumn\@deferlist
+   \if@fcolmade\else
+     \begingroup
+    \let\@tempb\@deferlist
+      \gdef\@deferlist{}%
+      \let\@elt\@scolelt
+        \@tempb \endgroup
+   \fi}
+\newif\ifshr@nking
+\def\raggedcolumns{%
+   \@bsphack\shr@nkingtrue\@esphack}
+\def\flushcolumns{%
+   \@bsphack\shr@nkingfalse\@esphack}
+\def\balance@columns@out{%
+   \setbox\mult@box\vbox{\unvbox\@cclv}%
+   \balance@columns
+   \global\vsize\@colroom
+   \global\advance\vsize\ht\partial@page
+   \unvbox\partial@page
+   \return@nonemptymark{first}\kept@firstmark
+   \return@nonemptymark{bot}\kept@botmark
+   \page@sofar}
+\def\balance@columns{%
+   \setbox\mult@box\vbox to\ht\mult@box{%
+        \unvbox\mult@box
+        \remove@discardable@items
+        }%
+   \get@keptmarks\mult@box
+   \splittopskip\topskip
+   \splitmaxdepth\maxdepth
+   \@tempdima\ht\mult@box
+   \advance\@tempdima\dp\mult@box
+   \divide\@tempdima\col@number
+   \count@\@tempdima
+   \divide\count@\baselineskip
+   \dimen@\count@\baselineskip
+   \advance\dimen@\topskip
+   \ifdim \dimen@ >\@tempdima
+     \advance\dimen@-\baselineskip
+   \fi
+   \advance\dimen@\c@unbalance\baselineskip
+   \ifnum\c@tracingmulticols>\@ne
+      \typeout{Balance columns\on@line:
+        \ifnum\c@unbalance=\z@\else
+       (off balance=\number\c@unbalance)\fi}%
+   \fi
+   \ifnum\dimen@<\topskip
+     \ifnum\c@tracingmulticols>\@ne
+       \typeout{Start value
+          \the\dimen@  \space ->
+          \the\topskip \space (corrected)}%
+     \fi
+     \dimen@\topskip
+   \fi
+   \vbadness\@M \loop
+    {\process@cols\@ne{\global\setbox\count@
+                             \box\voidb@x}}%
+     \global\setbox\@ne\copy\mult@box
+   {\process@cols\thr@@{%
+         \global\setbox\count@
+         \vsplit\@ne to\dimen@
+                        }}%
+   \boxmaxdepth\maxdepth
+   \global\setbox\@ne\vbox{\unvbox\@ne}%
+    \ifnum\c@tracingmulticols>\@ne
+       \message{\@spaces First column
+                = \the\ht\thr@@}\fi
+    \ifshr@nking \global\setbox\thr@@
+                 \vbox{\unvbox\thr@@}%
+       \ifnum\c@tracingmulticols>\@ne
+          \message{ after shrinking
+                    \the\ht\thr@@}\fi\fi
+    \ifnum\c@tracingmulticols>\@ne
+      \message{<> last column =
+               \the\ht\@ne^^J}%
+     \fi
+    \ifdim\ht\@ne >\ht\thr@@
+      \advance\dimen@\p@
+    \repeat
+   \dimen@\ht\thr@@
+   \ifdim\dimen@>\@colroom
+      \dimen@\@colroom
+   \fi
+   \process@cols\z@{\@tempcnta\count@
+        \advance\@tempcnta\@ne
+        \setbox\count@\vbox to\dimen@
+           {\unvbox\@tempcnta
+            \ifshr@nking\vfill\fi}}%
+}
+\@ifundefined{emergencystretch}
+     {\newdimen\emergencystretch}{}
+\def\setemergencystretch#1#2{%
+   \emergencystretch 4pt
+   \multiply\emergencystretch#1}
+
+\def\set@floatcmds{%
+ \let\@dblfloat\@dbflt
+ \def\end@dblfloat{\par
+   \vskip\z@\egroup
+   \ifnum\@floatpenalty<\z@
+     \@cons\@deferlist\@currbox
+   \fi
+   \ifnum\@floatpenalty=-\@Mii
+     \@esphack
+   \fi}}
+\def\kept@topmark{{}{}}
+\let\kept@firstmark\@empty
+\let\kept@botmark\@empty
+\def\return@nonemptymark#1#2{%
+  \ifx#2\@empty
+  \else
+    \ifnum\c@tracingmulticols>\tw@
+      \typeout{Returned #1 mark: \meaning#2}%
+      \nobreak
+    \fi
+    \mark{#2}%
+    \nobreak
+  \fi}
+\def\get@keptmarks#1{%
+  \begingroup
+   \vbadness\@M
+   \setbox#1\copy#1%
+   \setbox#1\vsplit#1to\maxdimen
+   \set@keptmarks
+ \endgroup
+}
+\def\set@keptmarks{%
+   \ifx\kept@firstmark\@empty
+     \expandafter\gdef\expandafter
+        \kept@firstmark
+        \expandafter{\splitfirstmark}%
+     \ifnum\c@tracingmulticols>\tw@
+       \ifx\kept@firstmark\@empty\else
+         \typeout{Set kept first mark:
+               `\meaning\kept@firstmark'}%
+       \fi
+     \fi
+   \fi
+   \expandafter\def\expandafter\@tempa
+      \expandafter{\splitbotmark}%
+   \ifx\@tempa\@empty\else
+      \global\let\kept@botmark\@tempa
+      \ifnum\c@tracingmulticols>\tw@
+        \typeout{Set kept bot mark:
+                 `\meaning\kept@botmark'}%
+      \fi
+   \fi}%
+\def\prep@keptmarks{%
+   \if@boxedmulticols \else
+     \get@keptmarks\partial@page
+   \fi}
+\def\remove@discardable@items{%
+        \unskip\unpenalty\unkern
+        \unskip\unpenalty\unkern
+        \unskip\unpenalty\unkern
+        \unskip\unpenalty\unkern
+}
+\endinput
+%% 
+%% End of file `multicol.sty'.

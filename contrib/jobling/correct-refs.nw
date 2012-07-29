@@ -1,0 +1,390 @@
+%========================================================================%
+% @noweb-file{
+%    author              = "C.P. Jobling",
+%    version             = "$Revision: 1.5 $",
+%    date                = "$Date: 1995/04/01 13:54:43 $,
+%    filename            = "correct-refs.nw",
+%    address             = "Control and computer aided engineering
+%                           Department of Electrical and Electronic Engineering
+%                           University of Wales, Swansea
+%                           Singleton Park
+%                           Swansea SA2 8PP
+%                           Wales, UK",
+%    telephone           = "+44-792-295580",
+%    FAX                 = "+44-792-295686",
+%    checksum            = "",
+%    email               = "C.P.Jobling@Swansea.ac.uk",
+%    codetable           = "ISO/ASCII",
+%    keywords            = "",
+%    supported           = "yes",
+%    abstract            = "Postprocessing routines to correct link
+%                           errors introduced by \verb|rawhtml| when
+%                           anchors are moved into sub-nodes of the
+%                           main HTML document.",
+%    docstring           = "The checksum field above contains a CRC-16
+%                           checksum as the first value, followed by the
+%                           equivalent of the standard UNIX wc (word
+%                           count) utility output of lines, words, and
+%                           characters.  This is produced by Robert
+%                           Solovay's checksum utility.",
+% }
+%========================================================================
+\documentclass[a4paper]{article}
+\usepackage{noweb,html,multicol}
+
+\newcommand{\noweb}{\texttt{noweb}}
+\newcommand{\command}{\texttt{correct-xref}}
+
+\title{\command \\
+       Correct HTML In-Document Anchors and Hyperlinks}
+\author{C.P. Jobling \\
+University of Wales, Swansea \\
+(C.P.Jobling@Swansea.ac.uk)}
+\date{$Date: 1995/04/01 13:54:43 $ \\
+Version $Revision: 1.5 $}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Postprocessing routines to correct link
+errors introduced by \verb|rawhtml| when
+anchors are moved into sub-nodes of the
+main HTML document.
+\end{abstract}
+
+\tableofcontents
+<<Copyright>>=
+# This file is part of the correct-refs.nw package which is
+# Copyright (C) C.P. Jobling, 1995
+#
+# The code may be freely used for any purpose whatever
+# provided that it distributed with
+# the noweb source correct-refs.nw and that this copyright
+# notice is kept intact.
+#
+# Please report any problems, errors or suggestions to
+# Chris Jobling, University of Wales, Swansea
+# email: C.P.Jobling@Swansea.ac.uk
+# www-home page: http://faith.swan.ac.uk/chris.html/cpj.html
+#
+# $Id: correct-refs.nw,v 1.5 1995/04/01 13:54:43 eechris Exp $
+@
+
+\section{Purpose}
+When a \LaTeX $+$ HTML document is processed by \LaTeX 2HTML the
+resulting HTML document consists of a set of smaller documents, called
+``nodes''. Cross-referencing between nodes, works well if \LaTeX{}
+\verb|\label| and \verb|\ref| commands have been used to establish
+them. However, if the \verb|rawhtml| environment is used to create
+HTML anchors, e.g.
+\begin{verbatim}
+I want
+\begin{rawhtml}
+<a name="anchor">this</a>
+\end{rawhtml}
+to be an anchor.
+ :
+ :
+And now I want to go back to the anchor:
+follow this
+\begin{rawhtml}
+<a href="#anchor">link</a>
+\end{rawhtml}
+\end{verbatim}
+will only work if the link and the anchor happen to be in the same
+document. This can only be guaranteed when the \verb|-split 0| option
+is used.
+
+Why is this a problem? The answer is that I am interested in
+``literate programming'' using \noweb{} \cite{ramsey94} which has an
+option to create a \LaTeX{} file for its support of fancy mathematics, tables
+and figures with code-chunks, code and variable crossreferences
+formatted using \verb|rawhtml|. And the cross-references are exactly
+as described above. For largeish programs, particularly those that make
+heavy use of mathematics, tables and figures in the documentation sections
+(exactly the kind that I write!), it is inconvenient to have a single
+HTML file so I want to have the document split into pieces. Hence, I
+have to postprocess the resulting HTML files changing links so that
+the node-name of the anchor is included.
+
+For the previous example, say
+\begin{verbatim}
+I want
+\begin{rawhtml}
+<a name="anchor">this</a>
+\end{rawhtml}
+to be an anchor.
+\end{verbatim}
+ends up as:
+\begin{verbatim}
+I want
+<a name="anchor">this</a>
+to be an anchor.
+\end{verbatim}
+in \texttt{node1.html}
+
+Then any links to this anchor which are of the form
+\begin{verbatim}
+And now I want to go back to the anchor:
+follow this
+<a href="#anchor">link</a>
+\end{verbatim}
+Have to be changed to:
+\begin{verbatim}
+And now I want to go back to the anchor:
+follow this
+<a href="node1.html#anchor">link</a>
+\end{verbatim}
+in every node (except node1.html itself).
+
+In best UNIX, and \noweb{} tradition, the tools to achieve this are
+written in a mixture of \texttt{csh} \cite[Chapter 5]{nutshell-unix},
+\texttt{awk} \cite{awk-book,gawk-manual} and \texttt{awk}
+\cite[Chapter 10]{nutshell-unix} although one day I might redo them in
+\texttt{perl} \cite{perl-llama,perl-camel} for better portability.
+
+\section{Usage}
+The command to correct the cross-references is
+\begin{quote}
+\command{} {\it html-dir}
+\end{quote}
+where {\it html-dir} is the document directory created by \LaTeX 2HTML
+from {\it html-dir.tex}.
+
+\section{The Code}
+
+\subsection{Finding the anchors}
+On examining the HTML created by \LaTeX 2HTML, I noticed that all
+anchors created from \LaTeX{} \verb|\ref|, \verb|\tableofcontents|,
+\verb|\index| and by the cross-referencing done by \LaTeX 2HTML itself
+are of the form
+\begin{verbatim}
+<a name=sometext>blah, blah</a>
+\end{verbatim}
+That is the label name is not enclosed in double quotes. So, providing
+that the anchors that you create in your \verb|rawhtml| environments
+are of the form
+\begin{verbatim}
+<a name="sometext">Blah, blah</a>
+\end{verbatim}
+\command{} will be able to distinguish between anchors and links
+created by \LaTeX 2HTML and anchors and links created by \noweb{} or
+by the author of the original \LaTeX{} document.
+
+Here is an \texttt{awk} script to extract all the anchors from a
+series of documents and to output them in a list in the form
+\begin{verbatim}
+filename:anchor-name1
+filename:anchor-name2
+\end{verbatim}
+
+<<list-anchors.awk>>=
+# list-anchors.awk --- process a set of .html files and list
+#                      anchors in form filename:anchor-name
+# usage: [gn]awk -f list-anchors.awk *.html
+#
+<<Copyright>>
+{   <<Throw away [[<meta name=""]] stuff>>
+        for (i = 1; i <= NF; i++)
+            <<Find and print anchors>>
+}
+@
+
+\LaTeX 2HTML adds \verb|<meta name="">| tags to the head of all nodes.
+These could confuse the anchor finder, so we have to throw them away.
+
+<<Throw away [[<meta name=""]] stuff>>=
+if ($1 != "<meta")
+@
+
+
+This code just compares each field in the line with the pattern
+\verb|^name=".*"$| and when it finds one, strips it to leave just the
+anchor name and writes the filename and anchor name on {\it stdout}.
+<<Find and print anchors>>=
+if ($i ~ /^(name|NAME)\=\".*\".*$/) {
+    anchor = $i
+    sub(/^(name|NAME)\=\"/,"",anchor)
+    sub(/\".*$/,"",anchor)
+    printf("%s:%s\n",FILENAME,anchor)
+}
+@
+
+To use this program to create the anchor list:
+<<Create the list of anchors>>=
+cd $DOC
+echo Creating list of anchors
+gawk -f $LIB/list-anchors.awk *.html | sort -u >! anchor-list
+@
+
+\subsection{Generating link editing scripts}
+
+In order to correct the links in the HTML files, we now use the {\it
+  anchor-list} to control the creation of a set of \texttt{awk}
+scripts, one per html file, which will edit the links and replace
+\begin{verbatim}
+<a href="#anchor">link</a>
+\end{verbatim}
+by
+\begin{verbatim}
+<a href="node.html#anchor">link</a>
+\end{verbatim}
+unless the anchor and link happen to be in the same file.
+
+The processing is again done with a \texttt{[gn]awk} script.
+
+<<awk-scripts.awk>>=
+# awk-scripts.awk --- process a file conatining node:anchor
+#                     information to create a set of awk
+#                     scripts to correct the links in the nodes.
+# usage: [gn]awk -f awk-scripts.awk anchor-list
+#
+<<Copyright>>
+BEGIN {FS = ":"}
+{
+    <<Collect file names and anchors>>
+}
+END {
+    <<produce \texttt{awk} scripts>>
+}
+@
+
+The first part of this script just reads the entry in the {\it
+  anchor-list} and stores the information in arrays for use later.
+
+<<Collect file names and anchors>>=
+if (! ($1 in files)) {
+    files[$1] = NR
+}
+prefix[NR] = $1
+anchor[NR] = $2
+@
+
+To produce the \texttt{awk} scripts we loop over each unique file name
+encountered:
+<<produce \texttt{awk} scripts>>=
+for (file in files) {
+    <<Open new \texttt{awk} script>>
+    <<Write \texttt{awk} commands for each anchor>>
+}
+@
+
+To create a new \texttt{awk} script:
+<<Open new \texttt{awk} script>>=
+<<Create file name for \texttt{awk} script>>
+<<Open file>>
+@
+
+The first thing we need to is
+to get the root of the HTML file and append awk.
+
+<<Create file name for \texttt{awk} script>>=
+filename = file
+sub(/\..*$/,".awk",filename)
+@
+
+Next we open the file using redirection
+<<Open file>>=
+printf("# awk script to correct HTML links in %s\n",file) > filename
+@
+
+To create the \texttt{awk} code, we have to loop over each item in the
+list of anchor names. We throw away any that have the same filename as
+the currently open file. It will be ok to leave these as
+\begin{verbatim}
+<a href="#anchor">link</a>
+\end{verbatim}
+because the anchor is in the same file as the link. The rest get the
+file-name prepended onto each use of the anchor name in all links.
+When this is run, the output will be:
+\begin{verbatim}
+{ gsub(/href=\"#anchor-1\"/,"href=\"node1.html#anchor-1\"") }
+{ gsub(/href=\"#anchor-2\"/,"href=\"node1.html#anchor-2\"") }
+                       :
+                       :
+{ gsub(/href=\"#anchor-n\"/,"href=\"nodem.html#anchor-n\"") }
+{ print $0 }
+\end{verbatim}
+The actual string printing command doesn't look much like this because
+of all the escaping that has to be done.
+
+<<Write \texttt{awk} commands for each anchor>>=
+for (i=1; i < NR; i++) {
+    <<Reject links to anchors in current file>>
+        printf("{ gsub(/href=\\\"#%s\\\"/,\"href=\\\"%s#%s\\\"\") }\n",
+            anchor[i],prefix[i],anchor[i]) >> filename
+}
+printf("{ print $0 }") >> filename
+close(filename)
+@
+
+<<Reject links to anchors in current file>>=
+if (prefix[i] != file)
+@
+
+To create the \texttt{awk} scripts
+<<Create \texttt{awk} scripts for HTML files>>=
+echo Creating awk scripts
+gawk -f $LIB/awk-scripts.awk anchor-list
+@
+
+<<Use the \texttt{awk} scripts to correct HTML nodes>>=
+echo Processing HTML nodes
+foreach f (*.awk)
+   set root=$f:r
+   echo -n Processing $root.html
+   gawk -f $f < $root.html >! /tmp/$root.html
+   echo "..." Done
+   cp $root.html $root.html.bak
+   cp /tmp/$root.html $root.html
+end
+
+@
+
+\subsection{\texttt{csh} Script to do anchor correction}
+<<correct-refs.csh>>=
+#!/usr/bin/csh
+# correct-refs.csh - CSH script file to correct HTML links and anchors
+# usage: correct-refs HTMLDIR
+<<Copyright>>
+unalias rm
+set LIB = $HOME/lib
+set DOC = $argv[1]
+echo Correcting anchors in HTML dir $DOC
+<<Create the list of anchors>>
+<<Create \texttt{awk} scripts for HTML files>>
+<<Use the \texttt{awk} scripts to correct HTML nodes>>
+<<Clean up>>
+@
+
+<<Clean up>>=
+rm *.awk
+rm anchor-list
+echo Done!
+@
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\section*{Code Chunks}
+\nowebchunks
+
+\section*{Revision History}
+
+\begin{description}
+\item[1.3 to 1.4] The {\tt sed} script didn't work for \noweb{}
+  generated long anchor and link names. The substitute command string
+  was too long apparently! I changed the {\tt sed} scripts to {\tt awk
+    scripts}. Also tidied a few bits of the documentation.
+\end{description}
+\end{document}
+
+
+
+
+
+
+
+
+
+

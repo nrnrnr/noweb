@@ -432,7 +432,7 @@ code chunk.  First is the code to report definitions and uses of code.
 /^@xref beginuses/     { <<checkcode>>; printf ".XREFUSES\n" }
 /^@xref notused/       { <<checkcode>>; printf ".XREFNOTUSED\n" }
 /^@xref (def|use)item/ { printf ".ADDLIST %s\n", tag($3) }
-/^@xref end(def|use)s/ { printf ".PRINTLIST\n" }
+/^@xref end(def|use)s/ { printf ".PRINTLIST\n"; code = 1 }
 <<tmac.w>>=
 .de XREFDEFS
 This definition continued in
@@ -654,9 +654,9 @@ done
 
 if [ "$opts" = "" ]
 then
-	# no options, default to -mgm
+	# no options, default to -mm
 	# groff already defaults to -Tps
-	opts="-mgm"
+	opts="-mm"
 fi
 # otherwise assume user passed in all the arguments they want
 

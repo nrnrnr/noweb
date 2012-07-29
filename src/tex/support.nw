@@ -1591,6 +1591,27 @@ This describes the original English text.
 @ 
 
 @
+\subsubsection{Partial support for Icelandic}
+
+Partial translation of noweb into Icelandic courtesy of
+Johann ``Myrkraverk'' Oskarsson" \verb+<johann@myrkraverk.com>+.
+<<language support>>=
+\def\nwopt@icelandic{%
+  \def\@nwlangdepdef{This definition is continued}%
+  \def\@nwlangdepcud{This code is used}%
+  \def\@nwlangdeprtc{Root chunk (not used in this document)}%
+  \def\@nwlangdepcwf{This code is written to file}%
+  \def\@nwlangdepchk{kóða}%
+  \def\@nwlangdepchks{kóðum}%
+  \def\@nwlangdepin{í}%
+  \def\@nwlangdepand{og}%
+  \def\@nwlangdepuss{Notar}%
+  \def\@nwlangdepusd{notað}%
+  \def\@nwlangdepnvu{hvergi notað}%
+  \def\@nwlangdepdfs{Skilgreinir}%
+  \def\@nwlangdepnvd{hvergi skilgreint}%
+}
+@
 \subsubsection{Support for Portuguese}
 
 This contains the text in Portuguese.
@@ -1791,7 +1812,7 @@ Hence:
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
-.B english, french, german, portuges
+.B english, french, german, portuges, icelandic
 Write cross-reference information in the language specified.
 Defaults to 
 .B english.

@@ -1,0 +1,1264 @@
+\documentstyle[noweb]{report}
+
+\title{Nuweb front end for noweb}
+\author{Norman Ramsey\\(from code by Preston Briggs)}
+
+\begin{document}
+\pagenumbering{roman}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+\pagenumbering{arabic}
+
+This code reads one or more nuweb files and produces noweb intermediate code
+ (as described in the {\em Noweb Hackers' Guide}) on
+standard output.
+It was created by modifying version 0.87 of nuweb.
+
+
+
+\chapter{The Overall Structure}
+
+Processing a web requires two major steps:
+\begin{enumerate}
+\item Read the source, accumulating file names, macro names, scraps,
+and lists of cross-references.
+This pass is needed so we can disambiguated scrap names.
+\item Reread the source, transforming it to noweb form on standard output.
+\end{enumerate}
+
+
+\section{Files}
+
+I have divided the program into several files for quicker
+recompilation during development.
+<<global.h>>=
+<<Include files>>
+<<Type declarations>>
+<<Global variable declarations>>
+<<Function prototypes>>
+@
+We'll need at least three of the standard system include files.
+<<Include files>>=
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+@ %def FILE stderr exit fprintf fputs fopen fclose getc putc strlen toupper isupper islower isgraph isspace tempnam remove malloc size_t
+@
+\newpage
+\noindent
+I also like to use [[TRUE]] and [[FALSE]] in my code.
+I'd use an [[enum]] here, except that some systems seem to provide
+definitions of [[TRUE]] and [[FALSE]] be default.  The following
+code seems to work on all the local systems.
+<<Type declarations>>=
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef TRUE
+#define TRUE (!0)
+#endif
+@
+\subsection{The Main Files}
+
+The code is divided into four main files (introduced here) and five
+support files (introduced in the next section).
+The file [[main.c]] will contain the driver for the whole program
+(see Section~\ref{main-routine}).
+<<main.c*>>=
+#include "global.h"
+@
+The first pass over the source file is contained in [[pass1.c]].
+It handles collection of all the file names, macros names, and scraps
+(see Section~\ref{pass-one}).
+<<pass1.c*>>=
+#include "global.h"
+@
+The [[.tex]] file is created during a second pass over the source
+file. The file [[latex.c]] contains the code controlling the
+construction of the [[.tex]] file 
+(see Section~\ref{latex-file}).
+<<latex.c*>>=
+#include "global.h"
+@
+\subsection{Support Files}
+
+The support files contain a variety of support routines used to define
+and manipulate the major data abstractions.
+The file [[input.c]] holds all the routines used for referring to
+source files (see Section~\ref{source-files}).
+<<input.c*>>=
+#include "global.h"
+@
+Creation and lookup of scraps is handled by routines in [[scraps.c]]
+(see Section~\ref{scraps}).
+<<scraps.c*>>=
+#include "global.h"
+@
+The handling of file names and macro names is detailed in [[names.c]]
+(see Section~\ref{names}).
+<<names.c*>>=
+#include "global.h"
+@
+Memory allocation and deallocation is handled by routines in [[arena.c]]
+(see Section~\ref{memory-management}).
+<<arena.c*>>=
+#include "global.h"
+@
+Finally, for best portability, I seem to need a file containing
+(useless!) definitions of all the global variables.
+<<global.c*>>=
+#include "global.h"
+<<Global variable definitions>>
+@
+\section{The Main Routine} \label{main-routine}
+
+The main routine is quite simple in structure.
+It wades through the optional command-line arguments,
+then handles any files listed on the command line.
+<<main.c*>>=
+void main(argc, argv)
+     int argc;
+     char **argv;
+{
+  int arg = 1;
+  <<Interpret command-line arguments>>
+  <<Process the remaining arguments (file names)>>
+  exit(0);
+}
+@
+\subsection{Command-Line Arguments}
+
+There is one possible command-line argument:
+\begin{description}
+\item[\tt -v] The verbose flag. Forces output of progress reports.
+\end{description}
+
+Global flags are declared for each of the arguments.
+<<Global variable declarations>>=
+extern int verbose_flag;  /* if TRUE, write progress information */
+@
+The flags are all initialized for correct default behavior.
+
+<<Global variable definitions>>=
+int verbose_flag = FALSE;
+@
+We save the invocation name of the command in a global variable
+[[command_name]] for use in error messages.
+<<Global variable declarations>>=
+extern char *command_name;
+<<Global variable definitions>>=
+char *command_name = NULL;
+@
+The invocation name is conventionally passed in [[argv[0]]].
+<<Interpret command-line arguments>>=
+command_name = argv[0];
+@
+We need to examine the remaining entries in [[argv]], looking for
+command-line arguments.
+<<Interpret command-line arguments>>=
+while (arg < argc) {
+  char *s = argv[arg];
+  if (*s++ == '-') {
+    <<Interpret the argument string [[s]]>>
+    arg++;
+  }
+  else break;
+}
+@
+Several flags can be stacked behind a single minus sign; therefore,
+we've got to loop through the string, handling them all.
+<<Interpret the argument string [[s]]>>=
+{
+  char c = *s++;
+  while (c) {
+    switch (c) {
+      case 'v': verbose_flag = TRUE;
+                break;
+      default:  fprintf(stderr, "%s: unexpected argument ignored.  ",
+                        command_name);
+                fprintf(stderr, "Usage is: %s [-v] file...\n",
+                        command_name);
+                break;
+    }
+    c = *s++;
+  }
+}
+@
+\subsection{File Names}
+
+We expect at least one file name. While a missing file name might be
+ignored without causing any problems, we take the opportunity to report
+the usage convention.
+<<Process the remaining arguments (file names)>>=
+{
+  if (arg >= argc) {
+    fprintf(stderr, "%s: expected a file name.  ", command_name);
+    fprintf(stderr, "Usage is: %s [-v] file-name...\n", command_name);
+    exit(-1);
+  }
+  do {
+    <<Handle the file name in [[argv[arg]]]>>
+    arg++;
+  } while (arg < argc);
+}
+@
+The code to handle a particular file name is rather more tedious than
+the actual processing of the file. A file name may be an arbitrarily
+complicated path name, with an optional extension. If no extension is
+present, we add [[.w]] as a default. The extended path name will be
+kept in a local variable [[source_name]]. 
+<<Handle the file name in [[argv[arg]]]>>=
+{
+  char source_name[100];
+  <<Build [[source_name]]>>
+  <<Process a file>>
+}
+@
+I bump the pointer [[p]] through all the characters in [[argv[arg]]],
+copying all the characters into [[source_name]] (via the pointer
+[[q]]). 
+
+At each slash, I update [[trim]] to point just past the
+slash in [[source_name]]. The effect is that [[trim]] will point
+at the file name without any leading directory specifications.
+
+The pointer [[dot]] is made to point at the file name extension, if
+present. If there is no extension, we add [[.w]] to the source name.
+In any case, we create the [[tex_name]] from [[trim]], taking
+care to get the correct extension.
+<<Build [[source_name]]>>=
+{
+  char *p = argv[arg];
+  char *q = source_name;
+  char *dot = NULL;
+  char c = *p++;
+  while (c) {
+    *q++ = c;
+    if (c == '/') {
+      dot = NULL;
+    }
+    else if (c == '.')
+      dot = q - 1;
+    c = *p++;
+  }
+  *q = '\0';
+  if (!dot) {
+    *q++ = '.';
+    *q++ = 'w';
+    *q = '\0';
+  }
+}
+@
+Now that we're finally ready to process a file, it's not really too
+complex.  We bundle most of the work into routines [[pass1]]
+(see Section~\ref{pass-one}) and [[write_tex]] (see
+Section~\ref{latex-file}). After we're finished with a
+particular file, we must remember to release its storage (see
+Section~\ref{memory-management}).
+<<Process a file>>=
+{
+  pass1(source_name);
+  write_tex(source_name, "bogus");
+  arena_free();
+}
+@
+\section{Pass One} \label{pass-one}
+
+During the first pass, we scan the file, saving names so we'll be able to 
+disambiguated them later.
+<<Function prototypes>>=
+extern void pass1();
+@
+The routine [[pass1]] takes a single argument, the name of the
+source file. It opens the file, then initializes the scrap structures
+(see Section~\ref{scraps}) and the roots of the file-name tree, the
+macro-name tree, and the tree of user-specified index entries (see 
+Section~\ref{names}). After completing all the
+necessary preparation, we make a pass over the file, filling in all
+our data structures. Next, we seach all the scraps for references to
+the user-specified index entries. Finally, we must reverse all the
+cross-reference lists accumulated while scanning the scraps.
+<<pass1.c*>>=
+void pass1(file_name)
+     char *file_name;
+{
+  if (verbose_flag)
+    fprintf(stderr, "reading %s\n", file_name);
+  source_open(file_name);
+  macro_names = NULL;
+  file_names = NULL;
+  <<Scan the source file, looking for at-sequences>>
+}
+@
+The only thing we look for in the first pass are the command
+sequences. All ordinary text is skipped entirely.
+<<Scan the source file, looking for at-sequences>>=
+{
+  int c = source_get();
+  while (c != EOF) {
+    if (c == '@')
+      <<Scan at-sequence>>
+    c = source_get();
+  }
+}
+@
+Only four of the at-sequences are interesting during the first pass.
+We skip past others immediately; warning if unexpected sequences are
+discovered.
+<<Scan at-sequence>>=
+{
+  c = source_get();
+  switch (c) {
+    case 'O':
+    case 'o': <<Build output file definition>>
+              break;
+    case 'D':
+    case 'd': <<Build macro definition>>
+              break;
+    case '@':
+    case 'u':
+    case 'm':
+    case 'f': /* ignore during this pass */
+              break;
+    default:  fprintf(stderr,
+                      "%s: unexpected @ sequence ignored (%s, line %d)\n",
+                      command_name, source_name, source_line);
+              break;
+  }
+}
+@
+\subsection{Accumulating Definitions}
+
+There are two steps required to handle a definition:
+\begin{enumerate}
+\item Build an entry for the name so we can look it up later.
+\item Skip past the scrap.
+\end{enumerate}
+We go through the same steps for both file names and macro names.
+<<Build output file definition>>=
+{
+  collect_file_name();
+  collect_scrap();
+}
+<<Build macro definition>>=
+{
+  collect_macro_name();
+  collect_scrap();
+}
+@
+\section{Writing the Latex File} \label{latex-file}
+
+The second pass (invoked via a call to [[write_tex]]) copies most of
+the text from the source file straight into a [[.tex]] file.
+Definitions are formatted slightly and cross-reference information is
+printed out.
+
+Note that all the formatting is handled in this section.
+If you don't like the format of definitions or indices or whatever,
+it'll be in this section somewhere. Similarly, if someone wanted to
+modify nuweb to work with a different typesetting system, this would
+be the place to look.
+
+<<Function prototypes>>=
+extern void write_tex();
+@
+We need a few local function declarations before we get into the body
+of [[write_tex]].
+<<latex.c*>>=
+static void copy_scrap();               /* formats the body of a scrap */
+@
+The routine [[write_tex]] takes two file names as parameters: the
+name of the web source file and the name of the [[.tex]] output file.
+<<latex.c*>>=
+void write_tex(file_name, tex_name)
+     char *file_name;
+     char *tex_name;
+{
+    if (verbose_flag)
+      fprintf(stderr, "writing %s\n", "standard output");
+    source_open(file_name);
+    printf("@file %s\n", file_name);
+    <<Copy [[source_file]] into standard output, transforming to noweb>>
+}
+@
+We make our second (and final) pass through the source web, this time
+copying characters straight into the [[.tex]] file. However, we keep
+an eye peeled for [[@]]~characters, which signal a command sequence.
+
+We keep track of state.
+
+<<Copy [[source_file]] into standard output, transforming to noweb>>=
+{
+  int scraps = 1;
+  int c = source_get();
+  int docs_begun = 0;
+  while (c != EOF) {
+    if (c == '@') {
+      <<Interpret at-sequence>>
+    } else {
+      <<begin documentation chunk>>      
+      if (c == '\n')
+        printf("\n@nl\n@text ");
+      else
+        putchar(c);
+      c = source_get();
+    }
+  }
+}
+<<begin documentation chunk>>=
+if (!docs_begun) {
+  docs_begun = 1;
+  printf("@begin docs %d\n", ++chunk_count);
+  printf("@text ");
+}
+@ 
+
+Counting chunks needs a global variable.
+<<Global variable declarations>>=
+
+extern int chunk_count;
+<<Global variable definitions>>=
+
+int chunk_count = 0;
+<<end documentation chunk>>=
+
+if (docs_begun) {
+  printf("\n@end docs %d\n", chunk_count);
+  docs_begun = 0;
+}
+<<Interpret at-sequence>>=
+{
+  int big_definition = FALSE;
+  c = source_get();
+  switch (c) {
+    case 'O': big_definition = TRUE;
+    case 'o': <<end documentation chunk>>
+              <<Write output file definition>>
+              break;
+    case 'D': big_definition = TRUE;
+    case 'd': <<end documentation chunk>>
+              <<Write macro definition>>
+              break;
+    case 'f': <<Write index of file names>>
+              break;
+    case 'm': <<Write index of macro names>>
+              break;
+    case 'u': <<Write index of user-specified names>>
+              break;
+    case '@': <<begin documentation chunk>> putchar(c); /* fall through */
+    default:  c = source_get();
+              break;
+  }
+}
+@
+Macro and file definitions are formatted nearly identically.
+<<Write output file definition>>=
+{
+  Name *name = collect_file_name();
+  printf("@begin code %d\n", ++chunk_count);
+  printf("@defn %s%s\n@nl\n", name->spelling, name->debug_flag ? "*" : "");
+  copy_scrap();
+  <<Finish the scrap environment>>
+}
+<<Write macro definition>>=
+{
+  Name *name = collect_macro_name();
+  printf("@begin code %d\n", ++chunk_count);
+  printf("@defn %s\n@nl\n", name->spelling);
+  copy_scrap();
+  <<Finish the scrap environment>>
+}
+<<Finish the scrap environment>>=
+{
+  printf("\n@end code %d\n", chunk_count);
+  do
+    c = source_get();
+  while (isspace(c));  /* may not be appropriate for noweb */
+}
+@
+\subsubsection{Formatting a Scrap}
+<<latex.c*>>=
+static void copy_scrap()
+{
+  int c = source_get();
+  int indent = 0;
+  printf("@text ");
+  while (1) {
+    switch (c) {
+      case '@': <<Check at-sequence for end-of-scrap>>
+                 break;
+      case '\n': printf("\n@nl\n@text ");
+                 indent = 0;
+                 break;
+      case '\t': <<Expand tab into spaces>>
+                 break;
+      default:   putchar(c);
+                 indent++;
+                 break;
+    }
+    c = source_get();
+  }
+}
+<<Expand tab into spaces>>=
+{
+  int delta = 8 - (indent % 8);
+  indent += delta;
+  while (delta > 0) {
+    putchar(' ');
+    delta--;
+  }
+}
+<<Check at-sequence for end-of-scrap>>=
+{
+  c = source_get();
+  switch (c) {
+    case '@': putchar('@');
+              break;
+    case '|': printf("\n");
+              <<print out index entries>> /* fall through */
+    case '}': return;
+    case '<': <<Format macro name>>
+              break;
+    default : fprintf(stderr, "%s: unexpected @%c in scrap (%s, %d)\n",
+                      command_name, c, source_name, source_line);
+              exit(-1);
+  }
+}
+<<print out index entries>>=
+{
+  do {
+    char new_name[100];
+    char *p = new_name;
+    do 
+      c = source_get();
+    while (isspace(c));
+    if (c != '@') {
+      Name *name;
+      do {
+        *p++ = c;
+        c = source_get();
+      } while (c != '@' && !isspace(c));
+      *p = '\0';
+      printf("@index defn %s\n", new_name);
+    }
+  } while (c != '@');
+  printf("@text ");  /* maintain invariant, even though no more text is coming */
+  c = source_get();
+  if (c != '}') {
+    fprintf(stderr, "%s: unexpected @%c in scrap (%s, %d)\n",
+            command_name, c, source_name, source_line);
+    exit(-1);
+  }
+}
+<<Format macro name>>=
+{
+  Name *name = collect_scrap_name();
+  printf("\n@use %s\n@text ", name->spelling);
+}
+@
+\subsection{Generating the Indices}
+
+<<Write index of file names>>=
+{
+  /* noweb doesn't do files; they're all macros */
+  c = source_get();
+}
+<<Write index of macro names>>=
+{
+  <<begin documentation chunk>>
+  printf("\\nowebchunks ");
+  c = source_get();
+}
+<<Write index of user-specified names>>=
+{
+  <<begin documentation chunk>>
+  printf("\\nowebindex ");
+  c = source_get();
+}
+@
+\chapter{The Support Routines}
+
+\section{Source Files} \label{source-files}
+
+\subsection{Global Declarations}
+
+We need two routines to handle reading the source files.
+<<Function prototypes>>=
+extern void source_open(); /* pass in the name of the source file */
+extern int source_get();   /* no args; returns the next char or EOF */
+@
+There are also two global variables maintained for use in error
+messages and such.
+<<Global variable declarations>>=
+extern char *source_name;  /* name of the current file */
+extern int source_line;    /* current line in the source file */
+<<Global variable definitions>>=
+char *source_name = NULL;
+int source_line = 0;
+@
+\subsection{Local Declarations}
+
+
+<<input.c*>>=
+static FILE *source_file;  /* the current input file */
+static int source_peek;
+static int double_at;
+static int include_depth;
+<<input.c*>>=
+struct {
+  FILE *file;
+  char *name;
+  int line;
+} stack[10];
+@
+\subsection{Reading a File}
+
+The routine [[source_get]] returns the next character from the
+current source file. It notices newlines and keeps the line counter 
+[[source_line]] up to date. It also catches [[EOF]] and watches
+for [[@]]~characters. All other characters are immediately returned.
+<<input.c*>>=
+int source_get()
+{
+  int c = source_peek;
+  switch (c) {
+    case EOF:  <<Handle [[EOF]]>>
+               return c;
+    case '@':  <<Handle an ``at'' character>>
+               return c;
+    case '\n': source_line++;
+    default:   source_peek = getc(source_file);
+               return c;
+  }
+}
+@
+This whole [[@]]~character handling mess is pretty annoying.
+I want to recognize [[@i]] so I can handle include files correctly.
+At the same time, it makes sense to recognize illegal [[@]]~sequences
+and complain; this avoids ever having to check anywhere else.
+Unfortunately, I need to avoid tripping over the [[@@]]~sequence;
+hence this whole unsatisfactory [[double_at]] business.
+<<Handle an ``at'' character>>=
+{
+  c = getc(source_file);
+  if (double_at) {
+    source_peek = c;
+    double_at = FALSE;
+    c = '@';
+  }
+  else
+    switch (c) {
+      case 'i': <<Open an include file>>
+                break;
+      case 'f': case 'm': case 'u':
+      case 'd': case 'o': case 'D': case 'O':
+      case '{': case '}': case '<': case '>': case '|':
+                source_peek = c;
+                c = '@';
+                break;
+      case '@': source_peek = c;
+                double_at = TRUE;
+                break;
+      default:  fprintf(stderr, "%s: bad @ sequence (%s, line %d)\n",
+                        command_name, source_name, source_line);
+                exit(-1);
+    }
+}
+<<Open an include file>>=
+{
+  char name[100];
+  if (include_depth >= 10) {
+    fprintf(stderr, "%s: include nesting too deep (%s, %d)\n",
+            command_name, source_name, source_line);
+    exit(-1);
+  }
+  <<Collect include-file name>>
+  stack[include_depth].name = source_name;
+  stack[include_depth].file = source_file;
+  stack[include_depth].line = source_line + 1;
+  include_depth++;
+  source_line = 1;
+  source_name = save_string(name);
+  source_file = fopen(source_name, "r");
+  if (!source_file) {
+    fprintf(stderr, "%s: can't open include file %s\n",
+     command_name, source_name);
+    exit(-1);
+  }
+  source_peek = getc(source_file);
+  c = source_get();
+}
+<<Collect include-file name>>=
+{
+    char *p = name;
+    do 
+      c = getc(source_file);
+    while (c == ' ' || c == '\t');
+    while (isgraph(c)) {
+      *p++ = c;
+      c = getc(source_file);
+    }
+    *p = '\0';
+    if (c != '\n') {
+      fprintf(stderr, "%s: unexpected characters after file name (%s, %d)\n",
+              command_name, source_name, source_line);
+      exit(-1);
+    }
+}
+@
+If an [[EOF]] is discovered, the current file must be closed and
+input from the next stacked file must be resumed. If no more files are
+on the stack, the [[EOF]] is returned.
+<<Handle [[EOF]]>>=
+{
+  fclose(source_file);
+  if (include_depth) {
+    include_depth--;
+    source_file = stack[include_depth].file;
+    source_line = stack[include_depth].line;
+    source_name = stack[include_depth].name;
+    source_peek = getc(source_file);
+    c = source_get();
+  }
+}
+@
+\subsection{Opening a File}
+
+The routine [[source_open]] takes a file name and tries to open the
+file. If unsuccessful, it complains and halts. Otherwise, it sets 
+[[source_name]], [[source_line]], and [[double_at]].
+<<input.c*>>=
+void source_open(name)
+     char *name;
+{
+  source_file = fopen(name, "r");
+  if (!source_file) {
+    fprintf(stderr, "%s: couldn't open %s\n", command_name, name);
+    exit(-1);
+  }
+  source_name = name;
+  source_line = 1;
+  source_peek = getc(source_file);
+  double_at = FALSE;
+  include_depth = 0;
+}
+@
+\section{Scraps} \label{scraps}
+<<scraps.c*>>=
+void collect_scrap()
+{
+  char *source = save_string(source_name);
+  int line = source_line;
+  <<Accumulate scrap and return>>
+}
+<<Accumulate scrap and return>>=
+{
+  int c = source_get();
+  while (1) {
+    switch (c) {
+      case EOF: fprintf(stderr, "%s: unexpected EOF in scrap (%s, %d)\n",
+                        command_name, source, line);
+                exit(-1);
+      case '@': <<Handle at-sign during scrap accumulation>>
+                break;
+      default:  c = source_get();
+                break;
+    }
+  }
+}
+<<Handle at-sign during scrap accumulation>>=
+{
+  c = source_get();
+  switch (c) {
+    case '@': c = source_get();
+              break;
+    case '|': <<skip user-specified index entries>>
+    case '}': return;
+    case '<': <<Handle macro invocation in scrap>>
+              break;
+    default : fprintf(stderr, "%s: unexpected @%c in scrap (%s, %d)\n",
+                      command_name, c, source_name, source_line);
+              exit(-1);
+  }
+}
+<<skip user-specified index entries>>=
+{
+  do {
+    do 
+      c = source_get();
+    while (c != '@');
+    c = source_get();
+  } while (c == '@');
+  if (c != '}') {
+    fprintf(stderr, "%s: unexpected @%c in scrap (%s, %d)\n",
+            command_name, c, source_name, source_line);
+    exit(-1);
+  }
+}
+<<Handle macro invocation in scrap>>=
+{
+  (void) collect_scrap_name();
+  c = source_get();
+}
+<<Function prototypes>>=
+extern void collect_scrap();
+@ 
+\section{Names} \label{names}
+<<Type declarations>>=
+typedef struct name {
+  char *spelling;
+  struct name *llink;
+  struct name *rlink;
+  int mark;
+  char tab_flag;
+  char indent_flag;
+  char debug_flag;
+} Name;
+<<Global variable declarations>>=
+extern Name *file_names;
+extern Name *macro_names;
+<<Global variable definitions>>=
+Name *file_names = NULL;
+Name *macro_names = NULL;
+<<Function prototypes>>=
+extern Name *collect_file_name();
+extern Name *collect_macro_name();
+extern Name *collect_scrap_name();
+extern Name *name_add();
+extern Name *prefix_add();
+extern char *save_string();
+<<names.c*>>=
+enum { LESS, GREATER, EQUAL, PREFIX, EXTENSION };
+
+static int compare(x, y)
+     char *x;
+     char *y;
+{
+  int len, result;
+  int xl = strlen(x);
+  int yl = strlen(y);
+  int xp = x[xl - 1] == ' ';
+  int yp = y[yl - 1] == ' ';
+  if (xp) xl--;
+  if (yp) yl--;
+  len = xl < yl ? xl : yl;
+  result = strncmp(x, y, len);
+  if (result < 0) return GREATER;
+  else if (result > 0) return LESS;
+  else if (xl < yl) {
+    if (xp) return EXTENSION;
+    else return LESS;
+  }
+  else if (xl > yl) {
+    if (yp) return PREFIX;
+    else return GREATER;
+  }
+  else return EQUAL;
+}
+@ %def compare LESS GREATER EQUAL PREFIX EXTENSION
+<<names.c*>>=
+char *save_string(s)
+     char *s;
+{
+  char *new = (char *) arena_getmem((strlen(s) + 1) * sizeof(char));
+  strcpy(new, s);
+  return new;
+}
+@ %def save_string
+<<names.c*>>=
+static int ambiguous_prefix();
+
+Name *prefix_add(root, spelling)
+     Name **root;
+     char *spelling;
+{
+  Name *node = *root;
+  while (node) {
+    switch (compare(node->spelling, spelling)) {
+    case GREATER:   root = &node->rlink;
+                    break;
+    case LESS:      root = &node->llink;
+                    break;
+    case EQUAL:     return node;
+    case EXTENSION: node->spelling = save_string(spelling);
+                    return node;
+    case PREFIX:    <<Check for ambiguous prefix>>
+                    return node;
+    }
+    node = *root;
+  }
+  <<Create new name entry>>
+}
+@ %def prefix_add
+@
+Since a very short prefix might match more than one macro name, I need
+to check for other matches to avoid mistakes. Basically, I simply
+continue the search down {\em both\/} branches of the tree.
+
+<<Check for ambiguous prefix>>=
+{
+  if (ambiguous_prefix(node->llink, spelling) ||
+      ambiguous_prefix(node->rlink, spelling))
+    fprintf(stderr,
+            "%s: ambiguous prefix @<%s...@> (%s, line %d)\n",
+            command_name, spelling, source_name, source_line);
+}
+<<names.c*>>=
+static int ambiguous_prefix(node, spelling)
+     Name *node;
+     char *spelling;
+{
+  while (node) {
+    switch (compare(node->spelling, spelling)) {
+    case GREATER:   node = node->rlink;
+                    break;
+    case LESS:      node = node->llink;
+                    break;
+    case EQUAL:
+    case EXTENSION:
+    case PREFIX:    return TRUE;
+    }
+  }
+  return FALSE;
+}
+@ %def ambiguous_prefix
+<<names.c*>>=
+Name *name_add(root, spelling)
+     Name **root;
+     char *spelling;
+{
+  Name *node = *root;
+  while (node) {
+    int result = strcmp(node->spelling, spelling);
+    if (result > 0)
+      root = &node->llink;
+    else if (result < 0)
+      root = &node->rlink;
+    else
+      return node;
+    node = *root;
+  }
+  <<Create new name entry>>
+}
+@ %def name_add
+<<Create new name entry>>=
+{
+  node = (Name *) arena_getmem(sizeof(Name));
+  node->spelling = save_string(spelling);
+  node->mark = FALSE;
+  node->llink = NULL;
+  node->rlink = NULL;
+  node->tab_flag = TRUE;
+  node->indent_flag = TRUE;
+  node->debug_flag = FALSE;
+  *root = node;
+  return node;
+}
+@
+Name terminated by whitespace.  Also check for ``per-file'' flags. Keep
+skipping white space until we reach scrap.
+<<names.c*>>=
+Name *collect_file_name()
+{
+  Name *new_name;
+  char name[100];
+  char *p = name;
+  int start_line = source_line;
+  int c = source_get();
+  while (isspace(c))
+    c = source_get();
+  while (isgraph(c)) {
+    *p++ = c;
+    c = source_get();
+  }
+  if (p == name) {
+    fprintf(stderr, "%s: expected file name (%s, %d)\n",
+            command_name, source_name, start_line);
+    exit(-1);
+  }
+  *p = '\0';
+  new_name = name_add(&file_names, name);
+  <<Handle optional per-file flags>>
+  if (c != '@' || source_get() != '{') {
+    fprintf(stderr, "%s: expected @{ after file name (%s, %d)\n",
+            command_name, source_name, start_line);
+    exit(-1);
+  }
+  return new_name;
+}
+@ %def collect_file_name
+<<Handle optional per-file flags>>=
+{
+  while (1) {
+    while (isspace(c))
+      c = source_get();
+    if (c == '-') {
+      c = source_get();
+      do {
+        switch (c) {
+          case 't': new_name->tab_flag = FALSE;
+                    break;
+          case 'd': new_name->debug_flag = TRUE;
+                    break;
+          case 'i': new_name->indent_flag = FALSE;
+                    break;
+          default : fprintf(stderr, "%s: unexpected per-file flag (%s, %d)\n",
+                            command_name, source_name, source_line);
+                    break;
+        }
+        c = source_get();
+      } while (!isspace(c));
+    }
+    else break;
+  }
+}
+@
+Name terminated by \verb+\n+ or \verb+@{+; but keep skipping until \verb+@{+
+<<names.c*>>=
+Name *collect_macro_name()
+{
+  char name[100];
+  char *p = name;
+  int start_line = source_line;
+  int c = source_get();
+  while (isspace(c))
+    c = source_get();
+  while (c != EOF) {
+    switch (c) {
+      case '@':  <<Check for terminating at-sequence and return name>>
+                 break;
+      case '\t':
+      case ' ':  *p++ = ' ';
+                 do
+                   c = source_get();
+                 while (c == ' ' || c == '\t');
+                 break;
+      case '\n': <<Skip until scrap begins, then return name>>
+      default:   *p++ = c;
+                 c = source_get();
+                 break;
+    }
+  }
+  fprintf(stderr, "%s: expected macro name (%s, %d)\n",
+          command_name, source_name, start_line);
+  exit(-1);
+  return NULL;  /* unreachable return to avoid warnings on some compilers */
+}
+@ %def collect_macro_name
+<<Check for terminating at-sequence and return name>>=
+{
+  c = source_get();
+  switch (c) {
+    case '@': *p++ = c;
+              break;
+    case '{': <<Cleanup and install name>>
+    default:  fprintf(stderr,
+                      "%s: unexpected @%c in macro name (%s, %d)\n",
+                      command_name, c, source_name, start_line);
+              exit(-1);
+  }
+}
+<<Cleanup and install name>>=
+{
+  if (p > name && p[-1] == ' ')
+    p--;
+  if (p - name > 3 && p[-1] == '.' && p[-2] == '.' && p[-3] == '.') {
+    p[-3] = ' ';
+    p -= 2;
+  }
+  if (p == name || name[0] == ' ') {
+    fprintf(stderr, "%s: empty scrap name (%s, %d)\n",
+            command_name, source_name, source_line);
+    exit(-1);
+  }
+  *p = '\0';
+  return prefix_add(&macro_names, name);
+}
+<<Skip until scrap begins, then return name>>=
+{
+  do
+    c = source_get();
+  while (isspace(c));
+  if (c != '@' || source_get() != '{') {
+    fprintf(stderr, "%s: expected @{ after macro name (%s, %d)\n",
+            command_name, source_name, start_line);
+    exit(-1);
+  }
+  <<Cleanup and install name>>
+}
+@
+Terminated by \verb+@>+
+<<names.c*>>=
+Name *collect_scrap_name()
+{
+  char name[100];
+  char *p = name;
+  int c = source_get();
+  while (c == ' ' || c == '\t')
+    c = source_get();
+  while (c != EOF) {
+    switch (c) {
+      case '@':  <<Look for end of scrap name and return>>
+                 break;
+      case '\t':
+      case ' ':  *p++ = ' ';
+                 do
+                   c = source_get();
+                 while (c == ' ' || c == '\t');
+                 break;
+      default:   if (!isgraph(c)) {
+                   fprintf(stderr,
+                           "%s: unexpected character in macro name (%s, %d)\n",
+                           command_name, source_name, source_line);
+                   exit(-1);
+                 }
+                 *p++ = c;
+                 c = source_get();
+                 break;
+    }
+  }
+  fprintf(stderr, "%s: unexpected end of file (%s, %d)\n",
+          command_name, source_name, source_line);
+  exit(-1);
+  return NULL;  /* unreachable return to avoid warnings on some compilers */
+}
+@ %def collect_scrap_name
+<<Look for end of scrap name and return>>=
+{
+  c = source_get();
+  switch (c) {
+    case '@': *p++ = c;
+              c = source_get();
+              break;
+    case '>': <<Cleanup and install name>>
+    default:  fprintf(stderr,
+                      "%s: unexpected @%c in macro name (%s, %d)\n",
+                      command_name, c, source_name, source_line);
+              exit(-1);
+  }
+}
+@
+\section{Memory Management} \label{memory-management}
+
+I manage memory using a simple scheme inspired by Hanson's idea of
+{\em arenas\/}~\cite{hanson:90}.
+Basically, I allocate all the storage required when processing a
+source file (primarily for names and scraps) using calls to 
+[[arena_getmem(n)]], where [[n]] specifies the number of bytes to
+be allocated. When the storage is no longer required, the entire arena
+is freed with a single call to  [[arena_free()]]. Both operations
+are quite fast.
+<<Function prototypes>>=
+extern void *arena_getmem();
+extern void arena_free();
+<<arena.c*>>=
+typedef struct chunk {
+  struct chunk *next;
+  char *limit;
+  char *avail;
+} Chunk;
+@ %def Chunk
+@
+We define an empty chunk called [[first]]. The variable [[arena]] points
+at the current chunk of memory; it's initially pointed at [[first]].
+As soon as some storage is required, a ``real'' chunk of memory will
+be allocated and attached to [[first->next]]; storage will be
+allocated from the new chunk (and later chunks if necessary).
+<<arena.c*>>=
+static Chunk first = { NULL, NULL, NULL };
+static Chunk *arena = &first;
+@ %def first arena
+@
+\subsection{Allocating Memory}
+
+The routine [[arena_getmem(n)]] returns a pointer to (at least) 
+[[n]] bytes of memory. Note that [[n]] is rounded up to ensure
+that returned pointers are always aligned.  We align to the nearest
+8~byte segment, since that'll satisfy the more common 2-byte and
+4-byte alignment restrictions too.
+
+<<arena.c*>>=
+void *arena_getmem(n)
+     size_t n;
+{
+  char *q;
+  char *p = arena->avail;
+  n = (n + 7) & ~7;             /* ensuring alignment to 8 bytes */
+  q = p + n;
+  if (q <= arena->limit) {
+    arena->avail = q;
+    return p;
+  }
+  <<Find a new chunk of memory>>
+}
+@ %def arena_getmem
+@
+If the current chunk doesn't have adequate space (at least [[n]]
+bytes) we examine the rest of the list of chunks (starting at 
+[[arena->next]]) looking for a chunk with adequate space. If [[n]]
+is very large, we may not find it right away or we may not find a
+suitable chunk at all.
+<<Find a new chunk of memory>>=
+{
+  Chunk *ap = arena;
+  Chunk *np = ap->next;
+  while (np) {
+    char *v = sizeof(Chunk) + (char *) np;
+    if (v + n <= np->limit) {
+      np->avail = v + n;
+      arena = np;
+      return v;
+    }
+    ap = np;
+    np = ap->next;
+  }
+  <<Allocate a new chunk of memory>>
+}
+@
+If there isn't a suitable chunk of memory on the free list, then we
+need to allocate a new one.
+<<Allocate a new chunk of memory>>=
+{
+  size_t m = n + 10000;
+  np = (Chunk *) malloc(m);
+  np->limit = m + (char *) np;
+  np->avail = n + sizeof(Chunk) + (char *) np;
+  np->next = NULL;
+  ap->next = np;
+  arena = np;
+  return sizeof(Chunk) + (char *) np;
+}
+@
+\subsection{Freeing Memory}
+
+To free all the memory in the arena, we need only point [[arena]]
+back to the first empty chunk.
+<<arena.c*>>=
+void arena_free()
+{
+  arena = &first;
+}
+@ %def arena_free
+@
+\chapter{Indices} \label{indices}
+
+\section{Chunks}
+
+\nowebchunks 
+
+\section{Identifiers}
+
+Knuth prints his index of indentifiers in a two-column format.
+I could force this automatically by emitting the [[\twocolumn]]
+command; but this has the side effect of forcing a new page.
+Therefore, it seems better to leave it this up to the user.
+
+\nowebindex 
+
+\bibliographystyle{plain}
+\bibliography{literate}
+
+\end{document}

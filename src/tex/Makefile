@@ -23,3 +23,4 @@ support.tex: support.nw
 clean: 
 	/bin/rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
 	/bin/rm -f support.tex
+clobber: clean

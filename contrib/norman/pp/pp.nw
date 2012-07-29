@@ -1,0 +1,314 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+
+\documentclass {article}
+\usepackage {noweb}
+
+\title {Simple prettyprinting with Noweb}
+\author{Norman Ramsey\\ \texttt{nr@eecs.harvard.edu}}
+
+\begin {document}
+@
+\maketitle
+
+\section {Introduction}
+
+This is a pretty-printer, written as a filter for the noweb
+literate-programming tool.
+The prettyprinter does not touch indentation and line breaks; what it
+does is break each code line into tokens, then reformat the tokens.
+Some of the prettyprinter's capabilities are specified in a
+translation table.
+This table is written in a file, which must be named as the first argument.
+The prettyprinter will:
+\begin{itemize}
+\item format special tokens as specified in the parameter file
+\item keep track of which tokens need to be in math mode, and take
+care of it
+\item change underscores to subscripts in the names of identifiers
+\end{itemize}
+The prettyprinter doesn't do a great job with quoted strings, and it
+doesn't do anything intelligent with comments.
+Users are invited to improve these aspects.
+
+Using the prettyprinter requires changing the {\TeX} code that noweb
+runs at the start of a code chunk.  This may do the job:
+\begin{verbatim}
+\usepackage{noweb}
+\let\originalprime='
+\def\setupcode{\catcode`\ =10 \catcode`\'=13 \regressprime}
+{\catcode`\'=\active 
+ \makeatletter
+ \gdef\regressprime{\def'{^\bgroup\prim@s}}}
+\let\Tt\relax
+\end{verbatim}
+
+The prettyprinter uses the ``finduses'' model of symbols, alphanumerics, and
+delimiters.
+A token is 
+\begin{itemize}
+\item whitespace,
+\item a maximal string of symbols, 
+\item a maximal string of alphanumerics
+\item a single delimiter, or
+\item a string that begins with a delimiter and appears in the
+translation table.
+\end{itemize}
+<<*>>=
+global alphanum, symbols # anything else is a delimiter
+@ The defaults are as in ``finduses.''
+<<initialization>>=
+alphanum := &letters ++ &digits ++ '_\'@#'
+symbols := '!%^&*-+:=|~<>./?`'
+@ 
+All tokens become {\TeX} strings, and we track three kinds.
+<<*>>=
+record space(string)	# white space
+record math(string)	# string to appear in math mode
+record nonmath(string)	# string to appear outside of math mode
+@ Space between two math tokens goes in math mode; space adjacent to a
+nonmath token goes in nonmath mode.
+@
+Sometimes we have to convert something to math mode.
+<<*>>=
+procedure mathcvt(s)
+  return case type(s) of {
+    "math" | "space" : s
+    "nonmath" : math("\\mbox{" || s.string || "}")
+  }
+  stop("bad math conversion of ", image(s))
+end
+procedure mathstring(s)
+  return mathcvt(s).string
+end
+@
+A table [[translation]] defines a translation into \TeX\ code for every interesting
+token in the target language.
+The table is a sequence of lines of the form
+\begin{quote}
+\begin{tabular}{ll}
+\verb+$+\emph{token} \emph{translation}&A math-mode token\\
+\verb+-+\emph{token} \emph{translation}&A non-math token\\
+\verb+A+\emph{chars}&List of all characters to be considered alphanumerics\\
+\verb+S+\emph{chars}&List of all characters to be considered symbols\\
+\end{tabular}
+\end{quote}
+Tokens, including identifiers and symbols, are considered to be
+math-mode tokens unless the translation table specifies otherwise.
+<<*>>=
+procedure read_translation(fname)
+  local f, line, k, v, t
+  f := open(fname) | stop("Cannot open file ", fname)
+  t := table()
+  while line := read(f) do
+    line ?
+      case move(1) of {
+        "$" : { tab(many(' \t')); k := tab(upto(' \t')); tab(many(' \t')); v := tab(0)
+                t[k] := math(v) }
+        "-" : { tab(many(' \t')); k := tab(upto(' \t')); tab(many(' \t')); v := tab(0)
+                t[k] := nonmath(v) }
+        "A" : alphanum := cset(tab(0)) 
+        "S" : symbols := cset(tab(0)) 
+        default : stop("Table entry must begin with $ or - or A or S")
+    }
+  close(f)
+  return t
+end
+@ 
+The rest is uninteresting Icon code, which surely could be better documented.
+<<*>>=
+global trans
+procedure main(args)
+  local curline, curmath
+  <<initialization>>
+  trans := read_translation(get(args)) | stop("Must specify translation table")
+  <<add \TeX\ specials to [[trans]]>>
+  dtrans := table()
+  every k := key(trans) & not any(symbols, k) & not any(alphanum, k) do
+    dtrans[k] := trans[k]
+  curline := []
+  code := &null
+  while line := read() do 
+    line ? { <<consume input>> }
+end
+@ 
+Instead of escaping the {\TeX} specials, I just put them in the
+translation table if they aren't already.
+<<add \TeX\ specials to [[trans]]>>=
+every c := !"{}#$%^&_" do /trans[c] := math("\\" || c)
+/trans["\\"] := math("\\backslash ")
+@
+We accumulate tokens into [[curline]], then emit them when we reach
+the end of a line or the end of code.
+<<consume input>>=
+="@" | stop("Malformed line in noweb pipeline")
+keyword := tab(upto(' ')|0)
+value := if pos(0) then &null else (=" ", tab(0))
+case keyword of {
+  "begin" : {if match("code", value) then code := 1 else code := &null
+		write(line)}
+  "end" : { <<drain accumulation>>; code := &null; write(line) }
+  "quote" : {code := 1; write(line)}
+  "endquote" : {<<drain accumulation>>; code := &null; write(line)}
+  "text" : if \code then {<<accumulate [[value]]>>} else write(line) 
+  "nl" | "use" : { <<drain accumulation>>; write(line) }
+  default : write(line)
+}
+@ 
+Converting text to tokens is the heart of the algorithm.
+This code looks at the first character and finds maximal sequences.
+Digit sequences are treated specially
+Strings with single or double quotes are hacked in.
+<<accumulate [[value]]>>=
+value ?
+  while not pos(0) do
+    if any(' \t') then put(curline, space(tab(many(' \t'))))
+    else if any(alphanum) then { # maximal alphanumeric string
+      id := tab(many(alphanum))
+      put(curline, xform_alphanum(id))
+    } else if any(symbols) then { # maximal symbol string
+      id := tab(many(symbols))
+      put(curline, xform_symbols(id))
+    } else if delim := =("\"" | "'") then { 
+      put(curline, xform_literal(delim || tab(find(delim)) || =delim))
+    } else if =(id := key(dtrans)) then { # if delimiter starts table string, xlate
+      put(curline, dtrans[id])
+    } else { # single delimiter character
+       put(curline, math(move(1)))
+    }
+@ 
+Underscores become subscripts, initial hats become hats, and we wrap
+long strings in \verb+\mathit+ unless they are strings of digits.
+Leading underscores are botched.
+<<*>>=
+procedure xform_alphanum(id)
+  local base
+  if \trans[id] then return trans[id]
+  if id[1] == "^" then # scope is to end of symbol
+    return math("\\nwpphat{" || mathstring(xform_alphanum(id[2:0])) || "}")
+  id ? 
+    if *(base := tab(upto('_'))) > 0 & move(1) & not pos(0) then
+      return math(mathstring(xform_alphanum(base)) || "_" ||
+		  mathstring(xform_alphanum(tab(0))))
+    else
+      return math(mathwrap(tab(0)))
+end
+procedure mathwrap(s)
+  if *s = 1 then return s
+  else if s ? (tab(upto('\'') == 2), tab(many('\'')), pos(0)) then
+    return "{" || s || "}"
+  else if upto(~&digits, s) then return "{\\mathit{" || s || "}}"
+  else return s # numbers don't get italic
+end
+@ 
+Symbols don't get any of this massaging.
+<<*>>=
+procedure xform_symbols(id)
+  if \trans[id] then return trans[id]
+  return math(id)
+end
+@ 
+I haven't tested any of this literal jazz.
+<<*>>=
+procedure xform_literal(id)
+  static chars 
+  initial chars := "=|+-@!$#" || &letters || &digits
+  if c := !chars & not(find(c, id)) then
+    return nonmath("\\verb" || c || id || c)
+  else
+    return nonmath("\\texttt{" || id || "}")
+end
+@ 
+To emit tokens, I track mathness, and I turn it on and off
+appropriately.
+I also make sure to get space outside of math mode wherever
+appropriate, so it will show up.
+<<drain accumulation>>=
+if *curline > 0 then {
+  writes("@literal ")
+  curmath := &null
+  while t := get(curline) do
+    case type(t) of {
+      "math" :    { <<ensure math>>;     writes(t.string) }
+      "nonmath" : { <<ensure non-math>>; writes(t.string) }
+      "space"   : { if /curmath then writes(repl("{\\ }", *t.string))
+                    else if type(curline[1]) == "math" then writes(t.string)
+                    else { <<ensure non-math>>; writes(repl("{\\ }", *t.string)) }
+                  }
+      default : stop("This can't happen ---  bad token ", image(t))
+    }
+  <<ensure non-math>>
+  write()
+}
+<<ensure math>>=
+/curmath := 1 & writes("\\(")
+<<ensure non-math>>=
+\curmath := &null & writes("\\)")
+@
+\section{Example}
+Here's a fragment of source code I used in a paper:
+\begin{verbatim}
+fun simple () =
+  let (b_I --> PC := target_I | I_c) = tgt[PC]
+  in  if [[b_I]] then
+        PC := [[target_I]] | [[I_c]]
+      else
+        PC := succ(PC) | [[I_c]]
+      fi
+      ; simple()
+  end
+\end{verbatim}
+Here's the corresponding output\ifhtml
+, which looks pretty stupid in HTML because it's intended for {\TeX}\fi:
+\begin{trivlist}
+\item \obeylines
+\textbf{fun}\ \({\mathit{simple}} () \equiv \)
+\ \ \textbf{let}\ \((b_I \mathbin{\rightarrow} {\mathit{PC}} \mathrel{:=} {\mathit{target}}_I \mathrel{|} I_c) \equiv  {\mathit{tgt}}[{\mathit{PC}}]\)
+\ \ \textbf{in}\ \ \textbf{if}\ \([\![b_I]\!]\)\ \textbf{then}
+\ \ \ \ \ \ \ \ \({\mathit{PC}} \mathrel{:=} [\![{\mathit{target}}_I]\!] \mathrel{|} [\![I_c]\!]\)
+\ \ \ \ \ \ \textbf{else}
+\ \ \ \ \ \ \ \ \({\mathit{PC}} \mathrel{:=} {\mathit{succ}}({\mathit{PC}}) \mathrel{|} [\![I_c]\!]\)
+\ \ \ \ \ \ \textbf{fi}
+\ \ \ \ \ \ \(; {\mathit{simple}}()\)
+\ \ \textbf{end}
+\end{trivlist}
+@
+And finally, 
+here's the translation table I used:
+{\small
+\begin{verbatim}
+A^_'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#
+S!%&*-+:=|~<>./?`
+$true \textbf{true}
+$false \textbf{false}
+-if \textbf{if}
+-then \textbf{then}
+-else \textbf{else}
+-fi \textbf{fi}
+-fun \textbf{fun}
+-let \textbf{let}
+-in \textbf{in}
+-end \textbf{end}
+$@[[ [\![
+$@]] ]\!]
+$:= \mathrel{:=}
+$andalso \land 
+$--> \mathbin{\rightarrow}
+$= \equiv 
+$== =
+$| \mathrel{|}
+$~ \mathord{-}
+$not \lnot 
+$!= \ne 
+$<= \le 
+$>= \ge 
+$... \bullet 
+\end{verbatim}
+\par}
+
+
+\appendix
+\section {Index}
+\nowebindex
+\nowebchunks
+@
+\end {document}

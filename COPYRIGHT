@@ -1,28 +1,22 @@
-Noweb is copyright 1989-1997 by Norman Ramsey.  All rights reserved.
+Noweb is copyright 1989-2000 by Norman Ramsey.  All rights reserved.
 
 Noweb is protected by copyright.  It is not public-domain
 software or shareware, and it is not protected by a ``copyleft''
 agreement like the one used by the Free Software Foundation.
 
-Noweb is available free for any use.  You may redistribute noweb in
-whole or in part provided you acknowledge its source and include this
-COPYRIGHT file.  You may modify noweb and create derived works,
-provided you retain this copyright notice, but the result may not be
-called noweb without my written consent.
+Noweb is available free for any use in any field of endeavor.  You may
+redistribute noweb in whole or in part provided you acknowledge its
+source and include this COPYRIGHT file.  You may modify noweb and
+create derived works, provided you retain this copyright notice, but
+the result may not be called noweb without my written consent.  
 
 You may sell noweb if you wish.  For example, you may sell a CD-ROM
 including noweb.  
 
-You may not sell a derived work in which noweb is a significant part
-of the value of the product.  A literate-programming editor based on
-the noweb source code is an example of this kind of product.
-
-You may use noweb in products as long as you charge for only those
-components that are entirely your own and you acknowledge the use of
-noweb clearly in all product documentation and distribution media. You
-must state clearly that your product uses or is based on noweb and
+You may sell a derived work, provided that all source code for your
+derived work is available, at no additional charge, to anyone who buys
+your derived work in any form.  You must give permisson for said
+source code to be used and modified under the terms of this license.
+You must state clearly that your work uses or is based on noweb and
 that noweb is available free of change.  You must also request that
-bug reports on your product be reported to you.  Using noweb to build
-any program not related to literate programming is an example of this
-kind of product.  So is building a literate-programming editor that
-uses the noweb intermediate representation or calls the noweb tools.
+bug reports on your work be reported to you.

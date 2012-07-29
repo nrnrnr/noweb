@@ -1,0 +1,541 @@
+% -*-lang : icon-*-
+
+\documentclass [11pt] {article}
+\usepackage {noweb}
+\usepackage {fullpage}
+\pagestyle {noweb}
+
+\title {Extending Noweb With Some Typesetting}
+\author{Kostas N. Oikonomou \\  \textsf{ko@surya.ho.att.com}}
+
+\begin {document}
+\maketitle
+\tableofcontents
+
+@
+\section {Introduction}
+
+This is a pretty-printer, written in Icon, for the [[noweb]] system. The capabilities
+of the prettyprinter are to typeset reserved words, comments, quoted strings, and
+special (e.g.\ mathematical) symbols of the target language in an almost arbitrary
+way\footnote{It is also possible to typeset identifiers arbitrarily.}. This
+generality is achieved by the brute-force method of looking up the translation of
+(\TeX\ code for) a token in a table. See \S\ref{sec:lang} for the languages that can
+be handled.  Adding a new language entails making additions \emph{only} to
+\S\ref{sec:lang}. All the material in \S\ref{sec:ind} is language-independent, and
+should not be touched.
+
+The pretty-printer's design is based on the following two premises:
+\begin {itemize}
+  \item It should be as independent of the target language as possible, and
+  \item We don't want to write a full-blown scanner for the target language.
+\end {itemize}
+Strings of characters of the target language which we want to typeset specially are
+called ``interesting tokens''. Having had some experience with Web and SpiderWeb, we
+define three categories of interesting tokens:
+\begin {enumerate}
+  \item Reserved words of the target language: we want to typeset them in bold, say.
+  \item Other strings that we want to typeset specially: e.g. $\le$ for [[<=]].
+  \item Comment and quoting tokens (characters): we want what follows them or what is
+    enclosed by them to be typeset literally.
+\end {enumerate}
+In addition, comments are typeset in roman font, and math mode is active in comments.
+
+A table [[translation]] defines a translation into \TeX\ code for every interesting
+token in the target language. Here is an excerpt from the translation table for
+Object-Oriented Turing:
+\begin {center}
+  \begin {tabular}{l}
+    [[translation["addressint"] := "{\\ttb{}addressint}"]] \\
+    [[translation["all"] := "{\\ttb{}all}"]] \\
+    [[translation["and"] := "\\(\\land\\)"]] \\
+    [[translation["anyclass"] := "{\\ttb{}anyclass}"]] \\
+    [[translation["array"] := "{\\ttb{}array}"]] \\
+    [[translation["~="] := "\\(\\neq\\)"]]
+  \end {tabular}
+\end {center}
+(Here the control sequence \verb+\ttb+ selects the bold typewriter font
+cmttb10\footnote{The empty group \{\} serves to separate the control sequence from
+its argument without introducing an extra space.}.) We use four sets of strings to
+define the tokens in categories 2 and 3:
+\begin {center}
+  [[special]], [[comment1]], [[comment2]], [[quote2]].
+\end {center}
+[[comment1]] is for unbalanced comment strings (e.g.\ the character [[%]] in Turing
+and [[#]] in Icon), [[comment2]] is for balanced comment strings (e.g.\ [[/*]] and
+[[*/]]), and [[quote2]] is for literal quotes, such as [["]], which we assume to be
+balanced.
+
+Our approach to recognizing the interesting tokens while scanning a line, is to have
+a set of characters [[interesting]] (an Icon cset), containing all the characters by
+which an interesting token may begin. [[interesting]] is the union of
+\begin {itemize}
+  \item the cset defining the characters which may begin a reserved word, and
+  \item the cset containing the initial characters of all strings in the special,
+    comment, and quote sets.
+\end {itemize}
+The basic idea is this: given a line of text, we scan up to a character in
+[[interesting]], and, depending on what this character is, we may try to complete the
+token by further scanning.  If we succeed, we look up the token in the
+[[translation]] table, and if the token is found, we output its translation,
+otherwise we output the token itself unchanged. When comment or quote tokens are
+recognized, further processing of the line may stop altogether, or temporarily, until
+a matching token is found.
+
+
+\section {Languages}
+\label{sec:lang} 
+The languages handled at the moment are C, C++, Icon, Object-Oriented Turing (OOT),
+and Mathematica. Looking at the structure that follows should make it clear that
+adding another language should be easy. Only this section has to be touched.
+<<C>>=
+<<[[main]] for C>>
+<<Language-independent procedures>>
+@
+<<C++>>=
+<<[[main]] for C++>>
+<<Language-independent procedures>>
+@
+<<OOT>>=
+<<[[main]] for OOT>>
+<<Language-independent procedures>>
+@
+<<Icon>>=
+<<[[main]] for Icon>>
+<<Language-independent procedures>>
+@
+<<Mathematica>>=
+<<[[main]] for Mathematica>>
+<<Language-independent procedures>>
+@
+
+
+@
+\subsection {Main Procedures}
+
+<<[[main]] for C>>=
+procedure main(args)
+  <<Local variables>>
+  $include "C_translation_table"
+  <<C interesting tokens>>
+  <<Emit special {\TeX} definitions>>
+  while line := read() do filter(line)
+end
+@
+@
+<<[[main]] for C++>>=
+procedure main(args)
+  <<Local variables>>
+  $include "C++_translation_table"
+  <<C interesting tokens>>
+  <<Emit special {\TeX} definitions>>
+  while line := read() do filter(line)
+end
+@
+@
+<<[[main]] for OOT>>=
+procedure main(args)
+  <<Local variables>>
+  $include "oot_translation_table"
+  <<OOT interesting tokens>>
+  <<Emit special {\TeX} definitions>>
+  while line := read() do filter(line)
+end
+@
+@
+<<[[main]] for Icon>>=
+procedure main(args)
+  <<Local variables>>
+  $include "icon_translation_table"
+  <<Icon interesting tokens>>
+  <<Emit special {\TeX} definitions>>
+  while line := read() do filter(line)
+end
+@
+@
+<<[[main]] for Mathematica>>=
+procedure main(args)
+  <<Local variables>>
+  $include "math_translation_table"
+  <<Mathematica interesting tokens>>
+  <<Emit special {\TeX} definitions>>
+  while line := read() do filter(line)
+end
+@
+
+
+@
+\subsection {Definition of the Interesting Tokens}
+\label{sec:int} 
+
+\textsc{Note}: all of the lists [[special]] must be arranged so that longest tokens
+come first!
+<<OOT interesting tokens>>=
+res_word_chars := &letters ++ '#'
+id_chars := res_word_chars ++ &digits ++ '_'
+comment1 := ["%"]  # Unbalanced comment
+comment2 := [["/*", "*/"]]  # Balanced comment. This is a set of \emph{pairs}.
+quote2 := [["\"","\""]]     # Balanced quote
+# The special tokens must be sorted so that longest strings come first!
+special := ["~=", "**", ">=", "<=", "=>", "->", ">", "<"]
+<<Detecting the beginning of a token>>
+@
+@ Icon presents an interesting problem, unresolved at this time.  See \S\ref{sec:todo}.
+<<Icon interesting tokens>>=
+res_word_chars := &letters ++ '&$'
+id_chars := res_word_chars ++ &digits ++ '_'
+comment1 := ["#"]
+comment2 := [[]]
+quote2 := [["\"","\""], ["\'","\'"]]
+special := ["\\", "||", ">=", "<=", "=>", "~=", "++", "**", "--", "{", "}", "<", ">"]
+<<Detecting the beginning of a token>>
+@
+<<Mathematica interesting tokens>>=
+res_word_chars := &letters ++ '&$'
+id_chars := res_word_chars ++ &digits
+comment1 := []
+comment2 := [["(*", "*)"]]
+quote2 := [["\"", "\""]]
+special := ["!=", "==", ">=", "<=", "->", "||", "&&", "<>", "**", "{", "}", "<", ">"]
+<<Detecting the beginning of a token>>
+@
+<<C interesting tokens>>=
+res_word_chars := &letters ++ '#'
+id_chars := res_word_chars ++ &digits ++ '_'
+comment1 := []
+comment2 := [["/*", "*/"]]
+quote2 := [["\"","\""],["\'","\'"]]
+special := ["!=", ">=", "<=", "@<<", "@>>", "||", "&&", "->", "{", "}", "<", ">"]
+<<Detecting the beginning of a token>>
+@
+
+
+
+@
+\section {Language-Independent Pretty-Printing}
+\label{sec:ind} 
+<<Language-independent procedures>>=
+<<Global variables>>
+<<Procedure [[filter]]>>
+<<Procedure [[TeXify]]>>
+@
+
+@
+\subsection {Detecting the Beginning of a Token}
+
+For each interesting category define a cset containing the characters by which a
+token in that category may begin.
+<<Detecting the beginning of a token>>=
+begin_comment1 := begin_comment2 := begin_quote2 := begin_special := ''
+every e := !comment1 do begin_comment1 ++:= cset(e[1])
+every e := !comment2 do begin_comment2 ++:= cset(e[1][1])
+every e := !quote2 do begin_quote2 ++:= cset(e[1])
+every e := !special do begin_special ++:= cset(e[1])
+<<Check that these sets are disjoint>>
+interesting := res_word_chars ++ begin_comment1 ++ begin_comment2 ++
+  begin_quote2 ++ begin_special
+@
+@ The token recognition method used in procedure [[TeXify]] is based on the
+assumption that the above sets are mutually disjoint, and that they also do not
+intersect the set [[id_chars]]. If this assumption does not hold, the results are
+unpredictable.
+<<Check that these sets are disjoint>>=
+I := begin_comment1 ** begin_comment2 ** begin_quote2 ** begin_special ** id_chars
+if *I ~= 0 then stop ("** Pretty-printer problem: the characters in the set ",
+		 image(I), "\n may begin tokens in more than one category!")
+@
+
+@ Local and global variables for the [[main]]'s.
+\enlargethispage*{1cm}
+<<Local variables>>=
+local line, special_set
+<<Global variables>>=
+global translation, res_word_chars, id_chars, special, comment1, comment2, quote2
+global interesting, begin_special, begin_comment1, begin_comment2, begin_quote2
+@
+
+
+@
+\subsection {The procedure TeXify}
+
+This procedure formats [[@text]] lines in the [[noweb]] file. It is called by
+procedure [[filter]]. Note that every \TeX{}ified line is a ``literal'' in
+[[noweb]]'s sense. 
+<<Procedure [[TeXify]]>>=
+procedure TeXify(line, p0)
+  <<Local variables for [[TeXify]]>>
+  writes("@literal ")
+  line ?
+    {if \in_comment1 then
+       <<Write unbalanced comment text>>
+     else if \in_comment2 then
+       <<Write balanced comment text>>
+     else if \in_quote then
+       <<Write quoted text>>
+     else
+       <<Not inside a comment or quote>>
+     # Write the remainder of the line, if any.
+     writes(tab(0))
+    }
+  write()
+end
+@
+@
+<<Not inside a comment or quote>>=
+while writes(tab(upto(interesting))) do
+  case &pos+1 of {
+    # To understand the \texttt{&pos+1}, look at Icon's semantics of \texttt{case} and of \texttt{any}.
+    any(id_chars) : <<Identifier or reserved word>>
+    any(begin_special) : <<Possible ``special'' token>>
+    any(begin_comment1) : <<Possible unbalanced comment>>
+    any(begin_comment2) : <<Possible balanced comment>>
+    any(begin_quote2) : <<Possible quote>>
+    default : <<Internal error!>>
+  }
+@
+@ Well, if we got here there's something wrong in the scanning algorithm. [[p0]] is
+the position in the line of the source file where the argument [[line]] of [[TeXify]]
+begins.
+<<Internal error!>>=
+stop("\n** Error in pretty-printer procedure TeXify:\n   input line ", line_num,
+     ", column ", p0+&pos-2)
+# Note: this is the column in the Emacs sense, i.e.\ the first character is in column 0.
+@
+
+
+@
+\subsubsection {Handling the interesting tokens}
+
+All identifiers will be matched (and some non-identifiers, such as explicit numeric
+constants), but the [[translation]] table defines \TeX\ code for reserved words
+only. Matching this larger set allows one to include translations for some
+identifiers too.
+
+As an exercise in understanding Icon's semantics, spend some time figuring out why
+saying {\ttfamily writes(if t := translation[token] then t else token)} will
+\emph{not} work here\footnote{Hint: consider the case in which no translation is
+defined for the token.}.
+<<Identifier or reserved word>>=
+{token := tab(many(id_chars))
+ t := translation[token]
+ writes(if \t then t else token)}
+@
+
+@ There are two issues here.  Suppose our set [[special]] contains both [[=]] and
+[[==]], and it does not contain [[=-]].  What happens when we encounter [[=]]?
+First, we have to be sure that this is not the string [[==]].  So (a) we must match
+the {\em longest\/} token in [[special]], in case a special token is a prefix of
+another special token.  Second, we must check that we do not have the string [[=-]],
+since this is not a special token.  So (b) we must check that a token in [[special]]
+is followed by a proper terminating character.
+
+To ensure (a), [[match(!special)]] will match the longest token if the list
+[[special]] is arranged so that longest tokens come first, as noted in
+\S\ref{sec:int}.  To ensure (b) define the cset [[not_special]]:
+<<Global variables>>=
+global not_special
+<<Detecting the beginning of a token>>=
+special_set := ''
+every e := !special do special_set ++:= cset(e)
+not_special := ~special_set
+@
+
+@ We will {\em assume\/} that if a token in [[special]] is followed by a character in
+[[not_special]] (or the end of the line), then it is a legitimate special token.  So
+<<Possible ``special'' token>>=
+if (token := tab(match(!special)) & (any(not_special) | pos(0))) then
+  writes(translation[token])
+else
+  writes(move(1))
+@
+
+
+@
+\subsubsection {Comments and quotes}
+
+Procedures [[filter]] and [[TeXify]] interact via the variables [[in_comment]] and
+[[in_quote]] in handling comments and quotes. This is because the [[finduses]] and
+[[noidx]] filters are language-independent, and so can insert spurious [[@index]] and
+[[@xref]] lines in the middle of commented or quoted text of the target language.
+While this is merely an annoyance with balanced quotes and comments, it causes a real
+problem with unbalanced comments, in that [[TeXify]] cannot detect the end of an
+\emph{unbalanced} comment.  This must be done by [[filter]], when it encounters a
+[[@nl]] line. See \S\ref{sec:filter} for some more details.
+<<Global variables>>=
+global in_comment1, in_comment2, in_quote
+@
+
+
+@ If we match a token in [[comment1]], we output it and the rest of the line as is,
+but in [[\rm]] font. Within a comment, characters special to \TeX\ are active,
+e.g. \verb+$x^2$+ will produce $x^2$. A problem with this is that if you comment out
+the (C) line \verb+printf("Hi there!\n")+, \TeX\ will complain that [[\n]] is an
+undefined control sequence. 
+<<Possible unbalanced comment>>=
+if writes(tab(match(!comment1))) then
+  {in_comment1 := "yes"
+   writes("\\begcom{}" || tab(0))
+   break}  # We let \texttt{filter} detect the end of the comment.
+else
+  writes(move(1))  # The character wasn't the beginning of a comment token.
+@
+
+
+@ If we are at this point, it is not necessarily true that we have found a comment.
+For example, in \textsl{Mathematica} comments begin with a [[(]], which may also
+appear in [[x+(y+z)]]. The additional complexity comes from the fact the we have to
+handle comments extending over many lines.
+<<Possible balanced comment>>=
+{every c := !comment2 do
+   # The conjunction is needed here!
+   {writes(c_open := tab(match(c[1]))) & c_close := c[2] & break}
+ if \c_open then
+   {in_comment2 := "yes"
+    writes("\\begcom{}")
+    <<Write balanced comment text>>}
+ else
+   writes(move(1)) # The character wasn't the beginning of a comment after all.
+}
+@
+@ Quoted strings may extend over multiple lines. Except for the formatting, we handle
+them like balanced comments.
+<<Possible quote>>=
+{every q := !quote2 do
+  {writes(q_open := tab(match(q[1]))) & q_close := q[2] & break}
+ if \q_open then
+   {in_quote := "yes"
+    <<Write quoted text>>}
+ else
+   writes(move(1)) # The character wasn't the beginning of a quoting token.
+}
+@
+@
+<<Write unbalanced comment text>>=
+writes(tab(0))
+@
+@
+<<Write balanced comment text>>=
+{if writes(tab(find(c_close))) then # Comment ends here
+   {writes("\\endcom{}" || move(*c_close))
+    in_comment2 := &null}
+ else # Comment doesn't close on this line
+   writes(tab(0)) 
+}
+@
+@ After encountering a quote we write literally, except that we precede every
+character special to \TeX\ by a backslash and follow it by an empty group. (This is
+necessary for the characters ``\~{}'' and ``\^{}''.)
+<<Write quoted text>>=
+{q := tab(find(q_close)|0) # $q$ doesn't include the closing quote.
+ q ? {while writes(tab(upto(TeXspecial))) do writes("\\" || move(1) || "{}")
+      writes(tab(0))}
+ if writes(tab(match(q_close))) then # Quote ends on this line
+   in_quote := &null
+}
+@
+@
+<<Local variables for [[TeXify]]>>=
+local token, c, t, q, c_open
+static c_close, q_close, TeXspecial
+initial {TeXspecial := '\\${}&#^_%~'} # The cset of characters treated specially by \TeX.
+@
+
+
+
+@
+\subsection {Filtering the Input}
+\label{sec:filter} 
+
+First we set up the typewriter bold font [[\ttb]], corresponding to cmttb10. Then we
+define the macros [[\begcom]] (begin comment) and [[\endcom]].  [[\begcom]]
+\begin {itemize}
+  \item switches to [[\rmfamily]],
+  \item activates [[$]] by changing its catcode to 3,
+  \item makes the characters ``\texttt{\^{}}'' and ``[[_]]'' active for superscripts
+    and subscripts,
+  \item changes the catcode of the space character to 10.  This way comments will be
+    typeset normally, and not as if [[\obeyspaces]] were active.
+\end {itemize}
+<<Emit special {\TeX} definitions>>=
+write("@literal \\DeclareFontShape{OT1}{cmtt}{bx}{n}{ <-> cmttb10 }{}")
+write("@nl")
+write("@literal \\def\\ttb{\\bfseries}")
+write("@nl")
+write("@literal \\def\\begcom{\\begingroup\\rmfamily \\catcode`\\$=3_
+  \\catcode`\\^=7 \\catcode`\\_=8 \\catcode`\\ =10}")
+write("@nl")
+write("@literal \\def\\endcom{\\endgroup}")
+write("@nl")
+@
+
+
+@ Procedure [[filter]] is straightforward, except that it interacts with [[TeXify]]
+when it comes to comments and quotes.  [[line_num]] is used by both.
+<<Global variables>>=
+global line_num
+<<Emit special {\TeX} definitions>>=
+line_num := 0
+<<Procedure [[filter]]>>=
+procedure filter(line)
+  static kind  # Local and static.
+  local keyword, rest, p0
+  line_num := line_num + 1 # line no. in the input file; used by \texttt{TeXify}.
+  line ? (keyword := tab(upto(' ')|0) &
+          rest := if tab(match(" ")) then {p0 := &pos; tab(0)} else &null)
+  case keyword of {
+    "@begin" : {rest ? kind := tab(many(&letters)) 
+		write(line)}
+    "@text" : if \kind == "code" then TeXify(rest,p0) else write(line)
+    "@nl" : {if \in_comment1 then # This must be an unbalanced comment.
+	      {write("@literal \\endcom{}"); in_comment1 := &null}
+	     write(line)}
+    "@index" | "@xref" : <<Not if in comment or quote!>>
+    default : write(line)
+  }
+  return
+end
+@
+
+@ Don't output spurious [[@index]] or [[@xref]] lines when in a comment or quote.
+([[@index]] is produced by [[finduses]] and [[@xref]] by [[noidx]].)
+This works only if the language filter is run {\em before\/} [[noidx]].
+<<Not if in comment or quote!>>=
+if /in_comment1 & /in_comment2 & /in_quote then write(line)
+@
+
+
+
+@
+\section {To do}
+\label{sec:todo} 
+
+We have the following unresolved issue, exemplified by Icon.  The current filter
+translates the symbol ``\&''as ``$\land$'', even though ``\&'' is {\em not\/} in
+Icon's [[special]].  This happens because ``\&'' is in Icon's [[res_word_chars]], and
+a translation for it is defined in [[icon_translation_table]].  So when [[TeXify]]
+encounters it, it recognizes it as an Icon reserved word, and uses the translation
+defined for it.  Now if this translation is not wanted, remove ``\&'' from
+[[icon_translation_table]] and don't bother me any more.  However, if this
+translation is ok, we have an inconsistency, in that ``\&'' is not in [[special]].
+
+While this is not a real problem, achieving consistency (which may be needed in a
+more general case) is not so easy.  If we add ``\&'' to [[special]], the check in
+$\langle$\textit{Check that these sets are disjoint\/}$\rangle$ will fail.  To fix
+this, we could
+\begin {enumerate}
+  \item Add a constraint to the recognition of a reserved word: it has to be
+    a token of length $>1$.
+  \item Revise the [[case]] structure in $\langle$\textit{Not inside a comment or
+    quote\/}$\rangle$, as it will no longer work. 
+\end {enumerate}
+We could also consider having a separate translation table for special tokens.
+@
+
+
+@
+\appendix
+\section {Index}
+\nowebindex
+
+
+\end {document}

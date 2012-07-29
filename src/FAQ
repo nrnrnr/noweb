@@ -47,11 +47,9 @@ programs use a DOS extender which doesn't work in an NT console.
 
 Q. I'm having trouble getting noweb to work on Windows XP.
 
-    A. Some users are very satisfied with a distribution from http://
-    www.literateprogramming.org. This distribution requires Cygwin (in
-    particular, Cygwin's bash shell) to get the pipes and so on working. The
-    installation instructions are at http://www.literateprogramming.com/noweb/
-    nowebinstall.html.
+    A. Bad news. There used to be a distribution from literateprogramming.org,
+    but as of January 2010, that domain is no longer registered, and I don't
+    know where the distribution went.
 
 Indentation of code, especially FORTRAN
 
@@ -322,6 +320,21 @@ wrong, and the cursor jumps to a strange place. How can I make emacs behave?
     Moore's law grand?
 
 Other Questions
+
+Q. What about noweb 3?
+
+    A. I use the alpha version, which is alpha only because the new Hackers'
+    Guide is not finished. But don't look for a release before I retire.
+    Noweb 3 is definitely an improvement over noweb 2, but for most people,
+    it's not enough of an improvement for me to go to the trouble of making a
+    real release. Noweb 3 was started in 1996(!) in response to situations that
+    no longer obtain, and by 2000 it was substantially complete?the last
+    significant revisions being done when I was first drafting my textbook.
+
+    Today performance is no longer an issue, and with Darwin and mingw/cygwin,
+    portability is less of a concern as well. And with Lua 5.1 available, no
+    sane person wants to use Lua 2.5. I believe that noweb 3 no longer fills a
+    need.
 
 Q. I compiled and installed, and everything looks OK, but when I ran the
 examples, two things do not work.

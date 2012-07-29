@@ -1,0 +1,19 @@
+Prettyprinters for Icon and C++ based on Kostas's work, but using Computer Modern fonts.
+Prettyprinters for Icon and C++ based on Kostas's work, but using Computer Mode
+rn fonts.
+
+Theres is no Makefile 
+Type
+> noweave -x -delay pp.nw > pp.tex  <       /* creates pp.tex              */
+> latex pp.tex  <                           /* creates pp.dvi and warnings */
+> latex pp.tex  <                           /* creates final pp.dvi        */
+to get documentation and
+> noweb -t pp.nw <                          /* creates cnw.icn and inw.icn */
+> iconc cnw.icn  <                          /* creates cnw                 */
+> iconc inw.icn  <                          /* creates inw                 */
+to get filters named cnw and inw. 
+(Maybe you have to use full path-names for noweave, noweb, latex and iconc)
+
+For installation: Look at the other Makefiles in contrib/* 
+
+Cleaning up is trivial: Remove pp.aux, pp.log, pp.tex, inw.icn and cnw.icn 

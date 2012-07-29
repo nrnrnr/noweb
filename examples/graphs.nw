@@ -1,0 +1,244 @@
+This is a noweb file for doing all the graphs in the paper.  It sets 
+up generic chunks for setting up the axis sizes, etc, and gets all of 
+the graph's data from data.nw.  
+
+@ This first chunk is to be used by all graphs.  It sets up the axis
+sizes, as well as the font sizes for labels.
+<<Standard Defaults>>=
+  yaxis size 1.9  hash_labels fontsize 7 label fontsize 8 draw
+  xaxis size 2.14 hash_labels fontsize 7 label fontsize 8 draw
+  title fontsize 10
+@ 
+The following chunks define the curves for the four different 
+types of checkpointing algorithms.  
+<<Sequential Curve>>=
+  newcurve marktype circle  fill 1 linetype solid
+<<Concurrent Curve>>=
+  newcurve marktype diamond fill 0 linetype solid
+<<Low Latency Curve>>=
+  newcurve marktype box     fill 1 linetype solid
+<<Low Latency Large Curve>>=
+  newcurve marktype box     fill 0 linetype solid
+@ 
+Finally, this chunk is for the split legends of graphs 1-4.
+<<Legend>>=
+newgraph
+  inherit_axes
+  xaxis min 0 max 10 nodraw
+  yaxis min 0 max 10 nodraw
+  <<Sequential Curve>> label fontsize 7 : Sequential
+  <<Concurrent Curve>> label fontsize 7 : Concurrent
+  legend x 0 y 11.5
+newgraph
+  inherit_axes
+  <<Low Latency Curve>>       label fontsize 7 : Low Latency, Conc.
+  <<Low Latency Large Curve>> label fontsize 7 : Low Lat., Conc., Large
+  legend x 4.7 y 11.5
+@ 
+----  THE GRAPHS ----
+@ 
+GRAPHS 1 \& 2
+<<Graphs 1n2>>=
+Y 3
+newgraph              x_translate -1.37 
+  <<Graph 1>>
+newgraph inherit_axes x_translate  1.7  
+  <<Graph 2>>
+@ 
+Graph \#1: Checkpoint time.  This is the wall-clock time to take one
+checkpoint of a merge-sort program.
+<<Graph 1>>=
+  <<Standard Defaults>>
+  title : Graph 1: Checkpoint Time.
+  xaxis min 0 max 10 hash 2  mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max 70 hash 10 mhash 1 label : Time (sec)
+  <<Sequential Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | head -6 | awk '{print $1" "$2}'
+  <<Concurrent Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | head -6 | awk '{print $1" "$3}'
+  <<Low Latency Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | head -6 | awk '{print $1" "$4}'
+  <<Low Latency Large Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | head -6 | awk '{print $1" "$5}'
+  <<Legend>>
+
+@ 
+Graph \#2: Checkpoint overhead.  This is the extra time that it took
+the program to complete after taking one checkpoint.
+<<Graph 2>>=
+  <<Standard Defaults>>
+  title : Graph 2: Checkpoint Overhead.
+  xaxis min 0 max 10 hash 2  mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max 35 hash 10 mhash 1 label : Time (sec)
+  <<Sequential Curve>>
+    pts shell : notangle -R"Overhead" data.nw | awk '{print $1" "$2}'
+  <<Concurrent Curve>>
+    pts shell : notangle -R"Overhead" data.nw | awk '{print $1" "$3}'
+  <<Low Latency Curve>>
+    pts shell : notangle -R"Overhead" data.nw | awk '{print $1" "$4}'
+  <<Low Latency Large Curve>>
+    pts shell : notangle -R"Overhead" data.nw | awk '{print $1" "$5}'
+  <<Legend>>
+@ 
+GRAPHS 3 \& 4
+<<Graphs 3n4>>=
+  Y 3
+  newgraph              x_translate -1.37 
+    <<Graph 3>>
+  newgraph inherit_axes x_translate  1.7  
+    <<Graph 4>>
+@ 
+Graph \#3: Checkpoint Overhead Percentage.  This is the percentage
+of the checkpointing time which is overhead incurred on the target
+program
+<<Graph 3>>=
+  <<Standard Defaults>>
+  title : Graph 3: Checkpoint Overhead Percentage
+  xaxis min 0 max 10 hash 2  mhash 1  label : Heap Size (MBytes)
+  yaxis min 0 max 100 hash 10 mhash 1 label : % Overhead
+  <<Sequential Curve>>
+    pts shell : notangle -R"Ckp %age" data.nw | awk '{print $1" "$2}'
+  <<Concurrent Curve>>
+    pts shell : notangle -R"Ckp %age" data.nw | awk '{print $1" "$3}'
+  <<Low Latency Curve>>
+    pts shell : notangle -R"Ckp %age" data.nw | awk '{print $1" "$4}'
+  <<Low Latency Large Curve>>
+    pts shell : notangle -R"Ckp %age" data.nw | awk '{print $1" "$5}'
+  <<Legend>>
+@ 
+Graph \#4:  This displays what happens when the heaps get big
+<<Graph 4>>=
+  <<Standard Defaults>>
+  title : Graph 4: Checkpoint Time for Large Heaps.
+  xaxis min 0 max 13  hash 2   mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max 700 hash 100 mhash 1 label : Time (sec)
+  <<Sequential Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | awk '{print $1" "$2}'
+  <<Concurrent Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | awk '{print $1" "$3}'
+  <<Low Latency Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | awk '{print $1" "$4}'
+  <<Low Latency Large Curve>>
+    pts shell : notangle -R"Ckp Time" data.nw | awk '{print $1" "$5}'
+  <<Legend>>
+@ 
+Graph \#5: Latency Data
+<<Graph 5>>=
+  Y 3
+  newgraph
+  <<Standard Defaults>>
+  title : Graph 5: Latency Data.
+  xaxis min 0 max 13  hash 2   mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max .351 hash .1 mhash 1 label : Time(sec)
+  newcurve marktype circle fill 1 linetype solid
+    pts shell : notangle -R"Latency" data.nw | awk '{print $1" "$2}'
+    label : Initial Stop Time
+  newcurve marktype circle fill 0 linetype solid
+    pts shell : notangle -R"Latency" data.nw | awk '{print $1" "$3}'
+    label : Maximum Trap Time
+  legend right
+@ 
+GRAPHS 6 \& 7
+<<Graphs 6n7>>=
+  Y 3
+  newgraph              x_translate -1.37 
+    <<Graph 6>>
+  newgraph inherit_axes x_translate  1.7  
+    <<Graph 7>>
+@ 
+Graph \#6: Number of traps vs Segment Size
+<<Graph 6>>=
+  <<Standard Defaults>>
+  title : Graph 6: Number of Traps vs. Segment Size.
+  xaxis min 0 max 128  hash 32  mhash 1 label : Segment Size (KBytes)
+  yaxis min 0 max 1000 hash 200 mhash 1 label : Number of Traps
+  newcurve marktype circle fill 1 linetype solid
+    pts shell : notangle -R"Num Traps" data.nw
+@ 
+Graph \#7: Number of traps vs Segment Size
+<<Graph 7>>=
+  <<Standard Defaults>>
+  title : Graph 7: Maximum Trap Time vs. Segment Size.
+  xaxis min 0 max 128 hash 32 mhash 1 label : Segment Size (KBytes)
+  yaxis min 0 max 1.4 hash .2 mhash 1 label : Maximum Trap Time (Sec)
+  newcurve marktype circle fill 1 linetype solid
+    pts shell : notangle -R"Trap Time" data.nw
+@ 
+Graph \#8: Frequency of Traps
+<<Graph 8>>=
+  Y 3
+  newgraph
+  <<Standard Defaults>>
+  title : Graph \#8: Frequency of Traps.
+  xaxis min 0 max 2.6001 hash .5 mhash 4 
+    label : Starting Time of 0.1 second interval (sec)
+  yaxis min 0 max 10 hash 1 mhash 0
+    label : Traps per 0.1 second Interval
+  newcurve marktype circle fill 0 pts 
+  shell : notangle -R"Freq" data.nw 
+  newstring hjr vjc fontsize 7 x 2.6 y 10 : Average Trap Time = 0.015 seconds 
+@ 
+GRAPHS 9 \& 10
+<<Graphs 9n10>>=
+  Y 3
+  newgraph              x_translate -1.37 
+    <<Graph 9>>
+  newgraph inherit_axes x_translate  1.7  
+    <<Graph 10>>
+@ 
+Graph 9 \& 10 have bizarre legends as well:
+<<Merge>>=
+  newcurve marktype circle   fill 0 linetype solid
+<<Trs>>=
+  newcurve marktype triangle fill 0 linetype none
+<<Pattern>>=
+  newcurve marktype diamond  fill 1 linetype none
+<<Bubble>>=
+  newcurve marktype cross    fill 1 linetype none
+<<Matrix>>=
+  newcurve marktype box      fill 1 linetype none
+<<9n10 Legend>>=
+  newgraph inherit_axes
+    xaxis min 0 max 10 nodraw
+    yaxis min 0 max 10 nodraw
+    <<Merge>> 
+      label fontsize 7 : Merge Sort
+    <<Trs>> 
+      label fontsize 7 : Travelling Salesman
+    <<Pattern>> 
+      label fontsize 7 : Pattern Match
+    legend x 0 y 12
+  newgraph inherit_axes
+    <<Bubble>>
+      label fontsize 7 : Bubble Sort
+    <<Matrix>>
+      label fontsize 7 : Matrix Multiplication
+    legend x 5.6 y 12
+@ 
+Graph \#9: 
+<<Graph 9>>=
+  <<Standard Defaults>>
+  title : Graph 9: Checkpoint Time of Other Benchmarks.
+  xaxis min 0 max 10 hash 2  mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max 40 hash 10 mhash 1 label : Time (sec)
+  <<Merge>>
+    pts shell : notangle -R"Ckp Time" data.nw | head -6 | awk '{print $1" "$4}'
+  <<Trs>>     pts  .064  2.359
+  <<Pattern>> pts 1.233  6.374
+  <<Bubble>>  pts  .513  3.91
+  <<Matrix>>  pts 3.000 14.71
+  <<9n10 Legend>>
+@ 
+Graph \#10: 
+<<Graph 10>>=
+  <<Standard Defaults>>
+  title : Graph 10: Checkpoint Overhead of Other Benchmarks.
+  xaxis min 0 max 10 hash 2  mhash 1 label : Heap Size (MBytes)
+  yaxis min 0 max 5  hash 1  mhash 1 label : Time (sec)
+  <<Merge>>
+    pts shell : notangle -R"Overhead" data.nw | awk '{print $1" "$4}'
+  <<Trs>>     pts  .064  0.17
+  <<Pattern>> pts 1.233  0.07
+  <<Bubble>>  pts  .513  0.07
+  <<Matrix>>  pts 3.000  0.75
+  <<9n10 Legend>>

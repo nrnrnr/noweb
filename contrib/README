@@ -1,0 +1,9 @@
+These directories contain software that was contributed by users of
+noweb.  Each directory contains a file called `email' that has the
+email address of the contributor.  I don't pretend to have copyright
+rights, and I don't provide any warranty or any support.  If you find
+something useful here, we're both pleased.
+
+Some contributed software contains binaries or is too big to be
+included in the standard noweb distribution.  In such cases, the
+directories here may contain only pointers to anonymous ftp sites.  

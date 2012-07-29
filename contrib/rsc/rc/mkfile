@@ -1,0 +1,28 @@
+
+RCTARG=cpif noroots noweave notangle nountangle
+RCLIBTARG=emptydefn noidx noindex toascii tohtml totex unmarkup noweb
+AWKTARG=noidx.awk noindex.awk toascii1.awk toascii2.awk tohtml.awk 
+
+%:	%.nw
+	notangle -R$stem $stem.nw >$stem
+
+%2.awk:	%.nw
+	notangle -R$target $stem.nw >$target
+%1.awk:	%.nw
+	notangle -R$target $stem.nw >$target
+%.awk:	%.nw
+	notangle -R$target $stem.nw >$target
+
+TARG=$RCTARG $RCLIBTARG $AWKTARG
+
+default:V: $TARG
+
+clean:V:
+	rm $TARG
+
+install:V:
+	cp $RCTARG /rc/bin
+	cp $RCLIBTARG /sys/lib/noweb/bin/rc
+	chmod 775 /rc/bin/^($RCTARG)
+	chmod 775 /sys/lib/noweb/bin/rc/^($RCLIBTARG)
+	cp $AWKTARG /sys/lib/noweb

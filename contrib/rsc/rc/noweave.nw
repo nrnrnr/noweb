@@ -1,0 +1,594 @@
+\section{Weaving a {\tt noweb} file into a \TeX file}
+The copyright applies both to the {\tt noweb} source and to the
+generated shell script.
+<<copyright notice>>=
+# Copyright 1991-1997 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+# $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $
+#
+# Translated from sh to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+@
+Here's the organization of the source:
+<<noweave>>=
+#!/bin/rc
+<<copyright notice>>
+rfork en
+<<initialization>>
+<<set up /bin union>>
+<<scan options and arguments>>
+{
+	<<emit markup on standard output>>
+	status=''
+} | {
+	args=(`{echo $noindex $delay $shortxref})
+	eval $backend $args
+}
+exit $status
+<<if verbose, show back end>>=
+if(! ~ $verbose '') 
+	echo $backend $noindex $delay $shortxref >[1=2]
+@
+The first item of initialization is to locate the {\tt noweb} library.
+<<initialization>>= 
+LIB=/sys/lib/noweb
+@
+We need to add the {\tt noweb} bin directories to the union mount on {\tt /bin
+.
+<<set up /bin union>>=
+bind -b $LIB/bin/$objtype /bin
+bind -b $LIB/bin/rc /bin
+@
+We continue with initialization.
+We use strings throughout rather than {\tt rc} lists,
+since we're just going to echo it anyway, and it makes
+keeping the filterlist easy.
+<<initialization>>=
+markup=markup
+backend=totex
+wrapper=''
+delay=''
+args=''
+markopts=''
+noweboptions=''
+autodefs=''
+verbose=''
+shortxref=''
+noquote=-noquote
+docanchor=''
+noindex=-noindex
+filterlist=()
+# following supported by change in totex back end
+noquote=''
+@
+I make two passes over the arguments so as not to require that options
+be given in a certain order
+<<scan options and arguments>>=
+saveargs=($*)
+arg=''
+while(! ~ $#* 0) {
+	switch($1) {
+	<<first pass {\tt noweave} options>>
+	case -
+		arg=$arg^' '$1
+	case -*
+		echo $0': unrecognized option '$1 >[1=2]
+		<<show usage>>
+		exit usage
+	case *
+		arg=$arg^' '$1
+	}
+	shift
+}
+<<insist first-pass options are self-consistent>>
+if(~ $wrapper '')
+	wrapper=latex
+
+*=$saveargs
+shift
+
+while(! ~ $#* 0) {
+	switch($1) {
+	<<second pass {\tt noweave} options>>
+	}
+	shift
+}
+
+<<add [[$newopt]] to [[noweboptions]]>>=
+if(~ $noweboptions '')
+	noweboptions=$newopt
+if not
+	noweboptions=$noweboptions','$newopt
+
+<<first pass {\tt noweave} options>>=
+case -latex
+	if(! ~ $wrapper none)
+		wrapper=latex
+case -tex
+	wrapper=tex
+case -html
+	if(! ~ $wrapper none)
+		wrapper=html
+	backend='tohtml -localindex'
+	noquote=''
+	docanchor='-docanchor 10'
+case -latex+html
+	if(! ~ $wrapper none)
+		wrapper=latex
+	backend='tohtml -localindex -raw'
+	noquote=''
+	docanchor='-docanchor 10'
+case -ascii
+	wrapper=none
+	backend=toascii
+case -troff
+	backend=toroff
+case -n
+	wrapper=none
+case -backend
+	backend=$2
+	shift
+case -markup
+	markup=$2
+	shift
+@
+Note some versions of echo break on [[echo "-n..."]], echoing nothing 
+at all.  The leading space is claimed to prevent this problem.
+<<option printout for usage>>=
+echo '-latex		Emit LaTeX with headers and trailers (default).' >[1=2]
+echo '-tex		Emit plain TeX with headers and trailers.' >[1=2]
+echo '-html		Emit HTML with headers and trailers.' >[1=2]
+echo '-latex+html	Assume LaTeX in documentation, but use HTML in code.' >
+1=2]
+# echo '-ascii            Emit ASCII.' >[1=2]
+echo '-troff            Emit troff (actually GNU groff).' >[1=2]
+echo ' -n		Don''t use any header or trailer.' >[1=2]
+echo '-markup frontend  Parse input with frontend (e.g., numarkup).' >[1=2]
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-latex
+Emit LaTeX, including wrapper in 
+.B article
+style with the
+.B noweb
+package and page style. (Default)
+.TP 
+.B \-tex
+Emit plain TeX, including wrapper with
+.B nwmac
+macros.
+.TP
+.B \-html
+Emit HTML, using HTML wrapper.
+The output is uninteresting without \fB-index\fP or \fB-x\fP.
+The tags \fB<nowebchunks>\fP and \fB<nowebindex>\fP, on lines by themselves,
+produce a list of chunks and an index of identifiers, respectively.
+If these tags are not present, the list and index are placed at the end of the
+file.
+.TP
+.B \-latex+html
+Assume documentation chunks are LaTeX, but generate HTML for code chunks,
+suitably marked so conversion with 
+.I latex2html(1)
+yields reasonable output.
+A LaTeX wrapper is implied, but can be turned off with \fB-n\fP.
+.I Use of this option is 
+.B deprecated; 
+use
+.B \-html
+with 
+.B "\-filter l2h"
+instead.
+<<noweave man page option table>>=
+.TP
+.B \-troff
+Emit 
+.IR troff (1)
+markup (with no wrapper).
+The result should be processed with 
+.IR noroff (1).
+Bug reports for 
+.B \-troff
+to Aharon Robbins
+.B <arnold@gnu.org>.
+<<bogus noweave man page option table>>=
+.TP
+.B \-ascii
+Emit ASCII (with no wrapper).
+Bug reports for 
+.B \-ascii
+to Phil Bewig
+.B <pbewig@netcom.com>.
+<<noweave man page option table>>=
+.TP
+.B \-n
+Don't use any wrapper (header or trailer).
+This option is useful when \fInoweave\fP's output will be
+a part of a larger document.
+See also 
+.B \-delay.
+@ \fi
+A common bug seems to be using both [[-x]] and [[-index]] on the same
+command line, so I complain about it.
+<<insist first-pass options are self-consistent>>=
+if(! ~ $using_xref '' && ! ~ $using_index '') {
+	echo $0': you may not use -x with -index or -indexfrom (drop the -x)' >
+1=2]
+	exit -x-index
+}
+<<initialization>>=
+using_index=''
+using_xref=''
+@ 
+<<first pass {\tt noweave} options>>=
+case -filter
+	shift
+case -x
+	using_xref=1
+case -index
+	noindex=''
+	using_index=1
+case -indexfrom
+	shift
+	noindex=''
+	using_index=1
+<<second pass {\tt noweave} options>>=
+case -filter
+	newfilter=$2
+	shift
+	<<add [[$newfilter]]>>
+case -x
+	newfilter='finduses noquote'
+	<<add [[$newfilter]]>>
+case -index
+	newfilter='finduses '^$noquote
+	<<add [[$newfilter]]>>
+	newfilter='noidx '^$docanchor^' '^$delay
+	<<add [[$newfilter]]>>
+case -indexfrom
+	newfilter='finduses '^$noquote^' '^$2
+	<<add [[$newfilter]]>>
+	newfilter='noidx '^$docanchor^' '^$delay
+	<<add [[$newfilter]]>>
+	shift
+<<option printout for usage>>=
+echo '-x		Use the default cross-referencer (needs LaTeX or HTML).
+ >[1=2]
+echo '-index		Create index using identifiers defined in input files.'
+ >[1=2]
+echo '-indexfrom defs	Create index of identifers listed in file defs.'  >[1=2
+
+echo '-filter cmd	Filter through ''cmd'' before weaving; cmd could pretty
+rint'  >[1=2]
+echo '			or perform other functions.'  >[1=2]
+@ \iffalse
+<<noweave man page indexing options>>=
+.TP
+.B \-x
+For 
+.I LaTeX,
+add a page number to each chunk name identifying the location of that
+chunk's definition, and emit cross-reference information relating definitions 
+nd uses.
+For 
+.I HTML,
+create hypertext links between uses and definitions of chunks.
+When
+.B noweave -x
+is used with
+.I LaTeX,
+the control sequence
+.B "\\\\nowebchunks"
+expands to a sorted list of all code chunks.
+.TP
+.B \-index
+Build cross-reference information (or hypertext links) for identifiers defined
+by
+.br
+.B "@ %def" 
+.I identifiers
+.br
+Definitions are those found in input files.
+Requires
+.I LaTeX
+or
+.I HTML.
+.B \-index
+implies
+.B \-x;
+including both will generate strange-looking output.
+.I noweave
+does not generate
+cross-references to identifiers that appear in quoted code (\fB@[[\fP...\fB@]]
+fP),
+but it does generate hypertext links.
+When
+.B noweave -index
+is used with
+.I LaTeX, 
+the control sequence
+.B "\\\\nowebindex"
+expands to an index of identifiers.
+.TP
+.B \-indexfrom \fIindex\fP
+Like 
+.B \-index,
+but the identifiers to be indexed are taken from file \fIindex\fP.
+See
+.I noindex(1).
+<<noweave man page option table>>=
+.TP
+.B \-filter \fIcmd\fP
+Filters the 
+.I noweb
+source through 
+.I cmd
+after converting it to tool form and before converting to
+.I TeX.
+.I noweave
+looks for 
+.I cmd
+first on the user's
+.B PATH,
+then in
+.B |LIBDIR|.
+Such filters
+can be used to add features to
+.I noweave;
+for an example, see
+.B |LIBDIR|/noxref.krom.
+.I Noweave
+supports up to four filters; one can get more by shell trickery, 
+for example, \fB-filter "icon.filter | noidx"\fP.
+The \fB-autodefs\fP,
+\fB-x\fP, \fB-index\fP, and \fB-indexfrom\fP options are implemented as filter
+.
+Filters are executed with the shell's
+.B eval
+command, so
+.I cmd
+should be quoted accordingly.
+<<description of -markup option>>
+@ \fi 
+Note that it would be appropriate to look for autodefs
+using [[[ -x $newfilter ]]],
+but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
+do in a portable way is [[test -r]].
+<<first pass {\tt noweave} options>>=
+case -autodefs
+	newfilter='autodefs.'^$2
+	if(test -r $newfilter) {
+		<<add [[$newfilter]]>>
+	}
+	if not {
+		echo $0^': don''t know how to find definitions for '^$2
+		exit defns
+	}
+	shift
+
+case -showautodefs
+	<<print all legal [[-autodefs]] or complain>>
+	exit complain
+<<option printout for usage>>=
+echo '-autodefs lang	Source is in language ''lang''; find definitions automa
+ically.' >[1=2]
+echo '-showautodefs	List languages that can be used with -autodefs' >[1=2]
+@ \iffalse
+<<noweave man page indexing options>>=
+.TP
+.B \-autodefs \fIlang\fP
+Discover identifier definitions automatically.
+Code in chunks must be in language \fIlang\fP.
+Permissible \fIlang\fPs vary but may include
+.B tex
+or 
+.B icon.
+Useless without
+.B \-index,
+which it must precede.
+.TP
+.B \-showautodefs
+Show values of \fIlang\fP usable with \fB-autodefs\fP.
+@ \fi 
+Same note as above regarding [[test -x]] vs [[test -r]].
+<<print all legal [[-autodefs]] or complain>>=
+foundautodefs=no
+for(i in $LIB/autodefs.*) {
+	if(test -r $i) {
+		echo 'Supports -autodefs '^$i | sed 's!$LIB/autodefs\.!!' >[1=2
+
+		foundautodefs=yes
+	}
+}
+if(~ $foundautodefs no)
+	echo 'Does not support -autodefs' >[1=2]
+@
+Here's an embarrassing hack --- if we spot \verb+-option shortxref+ 
+or \verb+-option longxref+ on the
+command line, we pass something suitable to the back end, in case we're doing
+HTML.
+<<first pass {\tt noweave} options>>=
+case -option
+	newopt=$2
+	shift
+	if(~ $newopt shortxref)
+		shortxref=-shortxref
+	if(~ $newopt longxref)
+		shortxref=-longxref
+         <<add [[$newopt]] to [[noweboptions]]>>
+<<option printout for usage>>=
+echo '-option opt	Add \noweboptions{opt} to header (latex only)' >[1=2]
+@ \iffalse
+<<noweave man page option table>>=
+.TP 
+.B \-option \fIopt\fP
+Adds \fB\enoweboptions{\fP\fIopt\fP\fB}\fP to the
+.I LaTeX
+header.
+See 
+.I nowebstyle(1) 
+for values of
+.I opt.
+Normally useful only with the
+.B \-latex
+option, but 
+.B "\-option longxref"
+works black magic with 
+.B \-html.
+@ \fi
+<<first pass {\tt noweave} options>>=
+# case -nodelay
+#	delay=''
+case -delay
+	delay=-delay
+	wrapper=none
+<<option printout for usage>>=
+echo '-delay		Delay markup until after first documentation chunk.' >[
+=2]
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-delay
+By default, 
+.I noweave
+puts file-name and other information into the output before the first chunk
+of the program.
+.B \-delay
+delays that information until after the first documentation chunk, making
+act a little bit like the 
+.I WEB
+``limbo.''
+The option is typically used to enable a user to put a specialized
+.I LaTeX
+.B "\\\\documentclass"
+command and other preamble material in the first documentation chunk.
+This option also forces trailing cross-referencing information to be emitted
+just before the final chunk, instead of at the end of the document;
+the final chunk is expected to contain
+.B "\\\\end{document}."
+The 
+.B \-delay
+option implies the
+.B \-n 
+option.
+@ \fi
+% .TP
+% .B \-nodelay
+% Don't delay, put file-name and other information right after header. (Defaul
+)
+% @ \fi
+<<first pass {\tt noweave} options>>=
+case -t*
+	markopts=$markopts' '$1
+<<option printout for usage>>=
+echo '-tk		Expand tab stops every k columns' >[1=2]
+echo '-t		Copy tabs to the output' >[1=2]
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-t\fIk\fP
+Expand tabs with stops every \fIk\fP columns.
+(Default is to expand every 8 columns.)
+.TP
+.B \-t
+Copy tabs to the output.
+@ \fi
+<<first pass {\tt noweave} options>>=
+case -v
+	echo 'RCS id $Id: noweave.nw,v 1.6 1998/08/17 00:10:34 nr Exp nr $' >[1
+2]
+	verbose=1
+<<option printout for usage>>=
+echo '-v		Print pipeline and RCS info on standard error' >[1=2]
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-v
+Print the pipeline and RCS info on standard error.
+@ \fi
+\iffalse
+<<man page: WEAVING section>>=
+Output from \fInoweave\fP can
+be used in \fITeX\fP documents that 
+.B "\\\\input nwmac,"
+in \fILaTeX\fP documents that  use the
+.B noweb
+package (see \fInowebstyle(1)\fP),
+and in \fIHTML\fP documents to be browsed with 
+.I Mosaic(1).
+.I Noweave
+treats code chunks somewhat like
+.I LaTeX list environments.
+If the ``\fB@ \fP'' that terminates a code chunk is followed immediately by te
+t,
+that text follows the code chunk without a paragraph break.
+If the rest of the line is blank, 
+.I noweave
+puts 
+.I TeX
+into ``vertical mode,'' and later text starts a fresh, indented paragraph.
+.PP
+No page breaks occur in the middle of code chunks unless necessary to avoid
+an overfull vbox.
+The documentation chunk immediately preceding a code chunk appears on
+the same page as that code chunk unless doing so would violate the previous ru
+e.
+.PP
+.I Noweave
+inserts no extra newlines in its \fITeX\fP output, so the line numbers given
+in
+.I TeX
+error messages are the same as those in the input file.
+.PP
+.I noweave
+has
+options that dictate choice of 
+formatter
+and that support different formatting idioms and tools.
+Basic options are described here; options related to index
+and cross-reference information are described in the 
+INDEXING AND CROSS-REFERENCE section.
+<<noweave man page option table>>
+@
+<<man page: INDEXING AND CROSS-REFERENCE section>>=
+
+@ \fi
+<<add [[$newfilter]]>>=
+filterlist=($filterlist $newfilter)
+<<show usage>>=
+echo 'Usage: '$0' [options] [files]' >[1=2]
+echo 'Options recognized are:' >[1=2]
+<<option printout for usage>>
+@
+To avoid inserting any extra newlines into the output, 
+I use [[@literal]]to insert headers and trailers.
+<<emit markup on standard output>>=
+header=''
+# whatis wrapper
+# whatis arg
+switch($wrapper) {
+case none
+	;
+case latex
+	header='@header '^$wrapper^' '^$noweboptions
+	trailer='@trailer '^$wrapper
+case *
+	header='@header '^$wrapper^$arg
+}
+if(! ~ $header '')
+	echo $header
+<<if verbose, make noise about pipeline>>
+<<if verbose, show back end>>
+if(~ $#filterlist 0)
+	filterlist=cat
+pipeline='| '^$filterlist
+pipeline=cat^$"pipeline
+
+# whatis pipeline
+argx=(`{echo $markopts $arg})
+# whatis argx
+$markup $argx | eval $pipeline
+if(! ~ $trailer '')
+	echo $trailer
+<<if verbose, make noise about pipeline>>=

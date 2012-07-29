@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# noweb filter to handle #line directives in noweb input
+#
+# sample usage:
+#
+#  preprocessor files | notangle -L -filter sharpline - > result.c
+#
+
+nawk '
+BEGIN { linestart = 1 }
+/^(@nl|@index nl)$/ { linestart = 1; print; next }
+/^@text #line +[0-9]+$/ {
+  if (linestart)
+    printf "@line %d\n", $3
+  else
+    print
+  linestart = 0; next
+}
+/^@text #line +[0-9]+ +".*"$/ {
+  if (linestart) {
+    thisline = $3
+    sub(/^@text #line +[0-9]+ +/, "")
+    thisfile = substr($0, 2, length($0) - 2)
+    printf "@file %s\n@line %d\n", thisfile, thisline
+  } else
+    print
+  linestart = 0; next
+}
+/^@(text |quote )/ { linestart = 0 }
+{ print }' "$@"

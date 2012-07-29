@@ -1,0 +1,150 @@
+#!/usr/bin/perl -w
+
+# Noweb filter which calls enscript to prettyprint according to
+# @language directives (see guesslang and inheritlang filters to have
+# those directive automatically generated).
+
+# Copyright (c) 2003 by Yann Dirson <ydirson@altern.org>
+
+# Distribute under the terms of the GNU General Public Licence,
+# version 2.
+
+# FIXME:
+# - @use in code chunks is not supported for all @language's yet
+#   => find a way to plug external data ?
+# - when a perl chunk ends with comment lines, we get enscript
+#   trailers in woven output
+
+use strict;
+use File::Temp qw(tempfile);
+
+my $mangledID='__NOWEB__mangled__use__';
+sub mangle_use {
+  my ($usedchunk, $lang) = @_;
+
+  if (grep { $lang eq $_ } ('perl', 'c', 'c++') ) {
+    return "$mangledID (\"$usedchunk\")\n";
+  } else {
+    die "Don't know how to mangle \@use for language $lang";
+  }
+}
+
+sub demangle_use {
+  my ($mangled, $lang) = @_;
+
+  if (grep { $lang eq $_ } ('perl', 'c', 'c++') ) {
+    $mangled =~ m|^(.*)$mangledID \((?:<B>)?(?:<FONT.*>)?\&quot;(.*)\&quot;(?:</FONT>)?(?:</B>)?\)(.*)$|;
+    return ($1, $2, $3);
+  } else {
+    die "Don't know how to demangle \@use for language $lang";
+  }
+}
+
+
+# Find out languages supported by the available version of enscript
+
+my @knownlangs;
+open (LANGS, 'enscript --help-highlight | grep ^Name: |') or
+  die "enscript --help-highlight failed: $!";
+while (<LANGS>) {
+  chomp;
+  @_ = split /\s+/;
+  push @knownlangs, $_[1];
+}
+
+
+while (<STDIN>) {
+  if (m/^\@begin code/) {
+
+    # we found a code chunk, now bufferize its contents until
+    # @language, or until @end if no @language is there.  Store in
+    # $event which of these 2 events just occured
+
+    my (@buffer, $event);
+    push @buffer, $_;
+    while (defined($_ = <STDIN>) and
+	     not ((m/^\@end code / and $event = [1]) or
+		  (m/^\@language (.*)/ and $event = [2, $1])) ) {
+      push @buffer, $_;
+    }
+    die "$0 hit EOF before seing \@end code or \@language" unless defined $event;
+
+    if ($event->[0] == 1) {
+      # we got @end first, everything read goes through unmodified
+
+      push @buffer, $_;		# the @end line
+      # no declared language: dump @buffer
+      foreach (@buffer) { print; }
+    } else {
+      # we found @language...
+
+      # check that language is supported
+      my $lang = $event->[1];
+      if (grep { $_ eq $lang } @knownlangs ) {
+	# language is supported
+
+	# (implicitely) drop @language from output, read remainder
+	my $chunknum;
+	while (defined($_ = <STDIN>) and not (m/^\@end code (.*)/ and $chunknum = $1)) {
+	  push @buffer, $_;
+	}
+	# we don't want "@end code" in the buffer, delay its output
+        my $endcode = $_;
+
+        # transform the code chunk to be accepted by enscript, and
+        # store it into an auto-unlinked temporary file
+
+	my $tmp = new File::Temp();
+	# demangle @-directives into something suitable for enscript
+	foreach (@buffer) {
+	  if (m/^\@text (.*)/ ) {
+	    print $tmp $1;
+	  } elsif (m/^\@nl$/) {
+	    print $tmp "\n";
+	  } elsif (m/^\@use (.*)/) {
+	    print $tmp mangle_use ($1, $lang);
+	  } else {
+	    print;
+	  }
+	}
+
+	# pipe, remangle
+	open PRETTY, "enscript --highlight=$lang --language=html " .
+	  join (' ', @ARGV) .
+	  " --silent -o - $tmp |" or
+	    die "enscript failed: $!";
+	{
+	  my $started = undef;
+	  while (<PRETTY>) {
+	    if (m|^<PRE>$|) {
+	      $started = 1;
+	      next;
+	    }
+	    if (m|^</PRE>$|) {
+	      last;
+	    }
+
+	    if (m/$mangledID/) {
+	      my ($prefix, $use, $suffix) = demangle_use ($_, $lang);
+	      print "\@literal $prefix\n" if $prefix ne '';
+	      print "\@use $use\n" ; 
+	      print "\@literal $suffix\n" if $suffix ne '';
+	      next;
+	    }
+	    print "\@literal $_\@nl\n" if defined $started;
+	  }
+	}
+	close PRETTY;
+	close $tmp;		# auto-unlinked
+
+	print $endcode;
+      } else {
+        push @buffer, $_;	# the @language line
+	# unsupported language: dump @buffer
+	foreach (@buffer) { print; }
+      }
+    }
+  } else {
+    print $_;
+  }
+}

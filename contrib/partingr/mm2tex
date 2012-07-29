@@ -1,0 +1,41 @@
+#!/usr/common/bin/perl
+do "TeXthings" || die "$!";
+print "\\input nwmac ";
+while(<>)
+{
+  if(/^@begin code (.*)$/)    { print "\\nwbegincode{$1}"; $code=1; $text=5; }
+  elsif(/^@end code/)         { print "\\nwendcode{}\\filbreak$defing"; $code=0; }
+  elsif(/^@begin docs (.*)$/) { print "\\nwbegindocs{$1}"; $text=0; $textmode=0; }
+  elsif(/^@end docs/)         { print "\\nwenddocs{}"; }
+  elsif(/^@text (.*)$/)
+  { $text+=length $1;
+    if($code==1)       { print  &escapebslash($1); }
+    elsif($quoting==1) { print  &TeXliteral($1); }
+    else               { print  $1; }
+    $textmode=1 if $text>0;
+  }
+  elsif(/^@nl$/)
+  { if($code==0)
+    { if($text==0)
+        { if($textmode==1) { print  "\\nwdocspar\\noindent\n"; }
+          else             { print  "\n"; }
+          $textmode=1; $text=1;
+        }
+      else         { print  "\n"; }
+    }
+    elsif($quoting) { print  "\\nwnewline"; }
+    else { if($text>0) { print  "\n"; } }
+  }
+  elsif(/^@defn (.*)$/)
+  { $name=$1;
+    print  "\\moddef{",&convquotes($name),"}\\",@defns{$name},"endmoddef";
+    @defns{$name}='plus';
+  }
+  elsif(/^@use (.*)$/)
+   { print  "\\LA{}",&convquotes($1),"\\RA{}"; }
+  elsif(/^@quote$/)           { $quoting=1; print  "{\\tt "; }
+  elsif(/^@endquote$/)        { $quoting=0; print  "}"; $textmode=0; }
+  elsif(/^@file (.*)$/)       { $filename=$1; print  "\\filename{$filename}"; }
+  elsif(/^@literal (.*)$/)    { print  "$1"; }
+}
+print "\\bye\n";

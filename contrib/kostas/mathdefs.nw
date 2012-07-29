@@ -1,0 +1,24 @@
+\section{Finding \textsl{Mathematica} definitions}
+
+This will simply recognize definitions made with ``:=''.
+<<*>>=
+procedure main(args)
+  go()
+end
+<<*>>=
+procedure postpass(name, arg)
+  static kind, id
+  initial {kind := "bogus"; id := &letters ++ &digits}
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then
+       arg ? if s := tab(find(":=")) then
+	       {s ? {tab(many(' ')); writedefn(tab(many(id)))}
+       }
+  }
+  return
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end

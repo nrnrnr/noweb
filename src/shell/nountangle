@@ -4,28 +4,34 @@
 # See file COPYRIGHT for more information.
 # set -x
 LIB=|LIBDIR|
-opt= 
-arg=
+markup=$LIB/markup opt= arg= filters=
+width=72 subst='gsub("\\*/", "* /", s)' format='/* %%-%ds */'
 
-width=72
-subst='gsub("\\*/", "* /", s)'
-format='/* %%-%ds */'
-
-for i do
-        case $i in
-        -ml|-m3) format='(* %%-%ds *)' ; subst='gsub("\\*\\)", "* )", s)' ;;
-        -awk)    format='# %%%ds' ;      subst=' ' ;;
-        -c)      format='/* %%-%ds */'   subst='gsub("\\*/", "* /", s)' ;;
-	-pascal) format='{ %%-%ds }' ;   subst='gsub("[{}]", "-", s)' ;;
+while [ $# -gt 0 ]; do
+	case $1 in
+        -ml|-m3) format='(* %%-%ds *)' ;        
+                 subst='gsub("\\*\\)", "* )", s); gsub("\\(\\*", "( *", s)' ;;
+        -awk|-icn|-icon)    format='# %%-%ds' ; subst=' ' ;;
+	-lisp|-scm)	    format=';;; %%-%ds' ; subst=' ' ;;
+        -matlab) format='%%%% %%-%ds' ;         subst=' ' ;;
+        -c++)    format='// %%-%ds' ;           subst=' ' ;;
+        -c)      format='/* %%-%ds */'          subst='gsub("\\*/", "* /", s)' ;;
+	-pascal) format='{ %%-%ds }' ;          subst='gsub("[{}]", "-", s)' ;;
+        -f77)    format='C %%-%ds' ;            subst=' ' ;;
+        -f90)    format='! %%-%ds' ;            subst=' ' ;;
+        -tex)    format='%%%% %%-%ds' ;         subst=' ' ;;
         -L*) ;; # deliberately ignore requests for #line
-        -w[0-9][0-9]*)    width=`echo $i | sed 's/^-w//'` ;;
-	-)  arg="$arg '$i'" ;;
-        -*) opt="$opt '$i'" ;;
-        *)  arg="$arg '$i'" ;;
+        -w[0-9][0-9]*)    width=`echo $1 | sed 's/^-w//'` ;;
+	-filter) filters=" $filters | $2 " ; shift ;;
+	-markup) markup="$2" ; shift ;;
+	-)  arg="$arg '$1'" ;;
+        -*) opt="$opt '$1'" ;;
+        *)  arg="$arg '$1'" ;;
         esac
+	shift
 done
 
-eval "$LIB/markup $arg" |
+PATH="$PATH:$LIB" eval "$markup $arg $filters" |
 nawk 'BEGIN { line = 0; capture = 0; format=sprintf("'"$format"'",'"$width"') }
 
 function comment(s) {

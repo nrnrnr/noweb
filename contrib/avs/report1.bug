@@ -1,0 +1,97 @@
+Noweb 2.7a bug report (avs@daimi.aau.dk, 29-May-95)
+
+*****************
+"strip problem in hpux8"
+
+In noweb/src/Makefile the strip command in an HPUX8 machine causes the make to
+fail. Commenting out the 'strip' fixes the problem
+
+*****************
+\n problem in -option output of 'noweave -h'
+
+The 'Add \noweboptions{opt} to ...' should be 'Add noweboptions{opt} to ...'
+
+*****************
+Dates problem in source code distribution (as of 29-May-95)
+
+I used ftp get with on the fly compression of the noweb dir to a .tar.gz file
+thus I got the original dates (I didn't cause the dates problem)
+
+The .nw files are not always older than the generated files and the same 
+applies to the man page files (regarding the nroff processed man pages). The 
+problem seems to be that the dates are identical instead of say 1 second older.
+A simple fix is:
+
+cd noweb/src
+find . -name "*.nw" -exec touch -t 9502231200 "{}" \;
+find xdoc -name "*.1" -exec touch -t 9502241200 "{}" \;
+
+*****************
+Style hook in 'src/tex/support.nw' page 21
+
+The margin note style hook in page 21 is wrong handed (should have come on the 
+right instead of on the left)
+
+*****************
+There is a problem with noweb 2.7a/LaTeX: some chunks might disappear from the
+LaTeX output, i.e. they are in the output .tex file but in the .dvi file they
+come out as white space (sometimes this is noticed because it seems strange
+that a page has a big block of white space in the middle, but if it is in the
+end of the page the disappearance might go unnoticed)
+
+A similar problem was found with noweb 2.6c and 2.7 (I didn't report it
+before). I was once able under Unix (HPUX8) to see the problem, but 
+unfortunately I'm unable to reproduce it (sorry!). I can see it under Dos with 
+e.g in 2.7a
+	cd noweb/src/tex
+	noweb support.nw
+	latex support
+	latex support
+	latex support
+	v support 
+		(v is the Dos equivalent of xdvi)
+The section 2.2 in page 7 and the chunks 9b and 28b come out as a white 
+rectangle in the middle of the page. If you want I can send you the .dvi files 
+(Dos generated) that show the disappearance. This is a subtle problem
+
+The problem can always be solved by adding an empty newline (to make a
+paragraph). In my noweb source file the problem causes a chunk of documentation
+to disappear. A doc chunk comes after a code chunk and if I started with '@
+...', i.e. a '@' followed by a blank followed by the text the chunk came out as
+white space, but if I added a newline to the '@' (i.e. started the text in the
+next line) everything was OK (the lost chunk could be seen in the .tex file, it
+just didn't make to the .dvi file). This didn't happen everywhere or always
+only in some doc or code chunks and only in some particular circunstances,
+i.e. adding a couple of lines several pages before (which changed the page
+layout in the problematic page) made the problem disappear
+
+Using diff to compare the .tex outputs I noticed that the only difference is
+that the \n makes its way to the .tex output thus the problem does not seem to
+be with the noweb scripts but with the noweb LaTeX support code (nwmac.tex or
+noweb.sty)
+
+Or maybe it's a LaTeX bug (it is NOT only a bug in the emTeX Dos port because
+the first time I saw this it was in an Unix machine running Latex 2.09)
+
+Other symptoms:
+	a) using the .dvi file (Dos generated) and seeing it under Linux
+	   caused a crash (floating point exception) when viewing the affected
+	   pages (7, 9, 28). No problem if those pages were skipped (i.e. never
+	   displayed on the screen). When with a now lost .nw file
+	   I saw chunks disappearing under HPUX8 I also got floating point
+	   exceptions and core dumps (until I made a slight change in the page
+	   layout which caused the core dumps to disappear, still the missing 
+	   chunks hapenned still later on). Seeing the .dvi file under Dos does
+	   not cause any crashes, only a white rectangle in the affected area
+	b) using the .tex file (Dos generated) caused no problem under Linux
+
+My tentative diagnostic:
+	- it is not a LaTeX2e specific problem (I saw it under LaTeX)
+	- it is not a Dos specific problem (I saw it under HPUX8)
+	- it is not a noweb/noweave problem (if the .tex output is manipulated
+		under another machine it works fine)
+	- it is either in the LaTeX support file noweb.sty or in LaTeX, still
+	  it is a machine dependent problem rare under Unix frequent under Dos
+
+If I manage to pinpoint the problem, or reproduce it under Unix I'll let you
+know

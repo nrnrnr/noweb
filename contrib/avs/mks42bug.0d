@@ -1,0 +1,128 @@
+                         MKS Toolkit 4.2 Dos Bugs
+
+Environment: 486DX2-80 VLbus, 32 MB RAM, 2 EIDE HDs, ATI Mach64 GPT 2048K VLbus
+Sblaster 16 ASP, Logitech serial Mouseman, Ms-Dos6.22, WfW3.11 (32 bits disk 
+access/32 bits file access), QEMM7.5, Stacker4.0 for OS/2 & Dos, 
+OS/2 boot manager (Dos/Win, Warp, Linux)
+
+1- bin32/diff.exe doesn't do correctly wild card expansion under command.com
+   (i.e. doesn't use glob.exe correctly). It works fine under the Korn shell.
+   No problems with bin/diff.exe
+   (as it can be much faster than the 16 bits diff, e.g. 5s against 18s, I
+   just renamed it to diff32.exe)
+   BUT: it seems that in some cases with QEMM 7.5 diff32 works sometimes with
+   wildcards expansion, and it is diff.exe that crashes when wild card expansion
+   is used and at the same time there are differences (QEMM says invalid ...).
+   Notice that it seems that if the 2 files are identical no problem! Under
+   a clean boot no crash, but again no one can check if invalid statements
+   are used. See the 2 files MOD_FBUS.LST and LIXO for an example of a crash!
+
+2- bin/find.exe with the option -exec doesn't always work correctly under
+   command.com (Ms-Dos 6.2 or Ms-Dos 6.22). The 1st exec works, the 2nd gives a
+   memory allocation error (under Ms-Dos 6.2) or an unspecified error (under
+   Ms-Dos 6.22).
+   E.g.:
+        find . -type f -exec ls -l {} ;
+   always works, but in
+        find . -name "*.zip" -exec ls -l {} ;
+   only the first exec works, the 2nd gives the error message
+        find: cannot execute "ls": not a directory or path not found
+   and find aborts.
+   The same behaviour occurs with executing non MKS commands.
+   No problems if executing under the Korn shell.
+   The find.exe from version 2.3 of the MKS toolkit works fine under
+   command.com, thus this is a new bug.
+
+3- the Korn shell crashes if one presses ctrl-BREAK (even ctrl-alt-del doesn't
+   work). Under windows it "violates system integrity" and windows terminates
+   it and asks one to reboot the machine because it should be unstable. Under
+   Qemm, Qemm also complains in the same way. The setting of 'break' in
+   config.sys/autoexec.bat (i.e. ON/OFF) is not relevant here
+
+4- there are several bugs in bin/pax.exe
+   a) -i never works (i.e. whether one writes a name, presses '.' or
+      presses return it always is unable to create that file)
+   b) -s only works partially, most of the time (using s/.../.../p to see
+      what happens) it does erroneous substitutions. It seems to work if
+      all ocurrences of '.' or '/' on the original name are matched by
+      using a '.' (e.g. never use a regular expression that matches both the
+      basename and the extension)
+   c) using '-f path' if path has a backslash anywhere then it crashes
+      (e.g. using 'pax -f g:\users\foo.tar' from the DOS prompt). The
+      crash looks like an infinite loop. If running in a Dos window then it
+      is possible to kill that window without crashing the system
+   d) this is not really a bug but a thing that would come handy. It would be
+      good if pax discarded the sufix ',v' from the filenames, this because
+      Unix RCS adds that kind of sufix and when extracting it creates an
+      invalid filename. In the current version 'RCS/filename.txt,v' extracts
+      correctly (because it already has a 3 char extension thus the ',v' is
+      discarded) but RCS/filename.c,v doesn't extract at all (and as there
+      are bugs in the option -s it is hard to extract those filenames)
+      (a good thing with tar/pax is that when creating a tar file if one
+      specifies a longer filename or a filename with a mixture of upper/lower
+      case the file will be stored in the tar file with that name, this
+      simplifies going back and forward between Ms-Dos/Unix if after truncation
+      and case convertion no filenames are equal. Thus it would be also good
+      if it did accept ',v' when creating a tar file under Ms-Dos)
+#
+# How to extract RCS files from a tar file if they have ',v' on their name
+#
+# Warning: pax has bugs, -i doesn't work, -s only works if all ocurrences of
+#      either '.' or '/' in the expression to match are matched by using '.'
+# Assuming filenames of the type 'cpnauto/RCS/*.*,v', extracts to 'rcs/*.*'
+# BUG: a filename without an extension (e.g. cpnauto/RCS/makefile,v') loses
+#      the last char (i.e. becomes 'rcs/makefil')
+#
+# Don't try to automate (e.g. to use args, the bugs in the handling of -s
+# will probably defeat any attempts)
+#
+pax -f /cpnauto.tar >cpnauto.lst
+pax -krvf /cpnauto.tar -s '/cpnauto\(.\)RCS.\([a-z0-9_]*\).\([a-z]*\),v/rcs\1\2.\3/p' `grep RCS cpnauto.lst`
+
+5- bin/tar.exe crashes (infinite loop?) when given wildcards, e.g.
+   'tar tvf *.tar' from the Dos prompt (command.com) and there is a single
+   file with extension .tar in that dir, no problem if using the full
+   filename [check if it is the same as 4-c)]. It also crashes if a backslash
+   is given in a pathname (infinite loop)
+
+6- there is no online man page for dircmp(1) although 'man tkerrat' says there
+   is. Anyhow dircmp(1) works
+
+   Usage: dircmp [-ds] dir1 dir2
+
+     -d -> works only for text files, shows differences in diff format
+     -s -> silent mode (non verbose, only the differences)
+
+7- 'make -f makefile' doesn't work, it always tries to use makefile.mak as
+    the makefile. Probably because 'whence -v makefile' says that makefile
+    is a function. Not checked any further
+
+8- man who(1) says that login(1) only uses the file $ROOTDIR/etc/utmp if
+   it already exists, this is not true, it is created if it does not exist.
+   Anyhow one can still install MKS in a READONLY drive because if etc/utmp is
+   set to READONLY it is not changed and there is no error message (it is not
+   enough to only have the drive but not the file write protected, in that case
+   one gets an error message: Write protect error writing drive ?)
+
+9- bin/cmp.exe gives an exit code of 3 if one of the files to be compared cannot
+   be open or doesn't exist, this is in contrast with the MKS man page (and with
+   Unix) which says that an error code of 2 is to be given. If only 1 filename
+   or more than 2 filenames are given, an exit code of 2 occurs, if one of the
+   files does not exist (the 1st or the 2nd) an exit code code of 3 occurs
+
+10- the date of the '.' and '..' entries given by 'ls -al' is wrong, it's
+    always 31-Dec-79 (i.e. 0, because the PC time starts at 1-Jan-80). In other
+    words if current dir is 'foo/bar' then to get the creation date of dir
+    'bar' one has to do 'ls -ld ../bar' instead of just 'ls -ld .'
+
+11- 'vi -x pathname' where pathname is not from the current dir
+     or has dir names (e.g. ./filename.txt)
+     Under command.com do not use '/' but '\' otherwise one gets
+     0 lines 0 chars (even if the file exists). Under the Korn shell
+     do not use '\\' but use '/' otherwise 0 lines 0 chars.
+     This has something to do with the implicit call to crypt (caused by 
+     the -x).
+     This bug is not very serious because usually one uses '\' under
+     command.com and '/' under  the korn shell, still all the MKS toolkit 
+     commands are supposed to accept both (and I usually use '/' even
+     under command.com)

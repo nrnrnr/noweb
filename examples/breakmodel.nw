@@ -1,0 +1,459 @@
+% \global\def\begindocs#1{\relax}
+% \global\let\enddocs=\relax
+
+{\def\semifilbreak#1{\vskip0pt plus #1\penalty-200\vskip0pt plus -#1}
+\def\single{\def\baselinestretch{1.0}\small\normalsize}
+
+% l2h ignore semifilbreak {
+% l2h ignore single 
+
+% l2h substitution LA &lt;
+% l2h substitution RA &gt;
+
+\section{A Formal Model of Breakpoints}
+\label{appendix:breakpoint-model}
+This appendix provides a formal model of {\tt ldb}'s follow-set breakpoints.
+The model takes the form of a PROMELA program~\cite{holzmann:design}. 
+PROMELA programs define several threads of control that communicate by
+passing messages.  
+Each thread of control runs a program written in a guarded-command
+language with a C-like syntax.
+Programs may be nondeterministic.
+PROMELA can simulate the execution of a program and
+search its state space for states violating assertions embedded in the
+program.
+The simulator also searches for states with no successors, i.e.,
+deadlocks.
+
+The PROMELA code in this appendix models {\tt ldb}'s implementation of
+breakpoints.
+Although {\tt ldb} does not work with multithreaded programs, the
+model uses multiple threads because a procedure call from {\tt ldb} to
+a target process effectively creates a new thread.
+The assertions embedded in the model specify that the debugger
+takes a breakpoint action just before any thread's
+successful execution of the instruction at the breakpoint.
+Breakpoints may be implemented either in the operating system or in
+the debugger itself; the choice does not affect the model used here.
+The model assumes it can plant trap instructions in
+the instruction stream of the target program, and that 
+it will be notified when the target program encounters a trap.
+The model also suits a machine with a ``trace mode''
+ that causes a trap after the execution of every instruction.
+
+
+The model has a single
+breakpoint. 
+To keep the state space small, the model has only two threads, so that
+ a single bit can represent thread [[id]]s.\label{noweb-sample-page-number}
+<<declarations>>=
+#define NTHREADS 2
+#define threadid bit
+@ \noindent
+The {\footnotesize\pageref{noweb-sample-page-number}} in
+\LA{}declarations~\footnotesize\pageref{noweb-sample-page-number}\RA{}
+is the page number on which the definition appears.
+
+\section{Modeling the program counter and execution}
+To keep things simple, I partition the possible values of the program
+counter into three sets:
+\begin{quote}
+\begin{tabular}{ll}
+  [[Break]]&the breakpoint itself,\\
+  [[Follow]]&the instruction(s) following the breakpoint,\\
+  [[Outside]]&outside the breakpoint.\\
+\end{tabular}
+\end{quote}
+\semifilbreak{2\baselineskip}
+\noindent The three sets are modeled by the following constants.
+<<declarations>>=
+#define NPCS 3
+#define Break   0	/* pc at the breakpoint */
+#define Follow  1	/* pc in breakpoint's follow set */
+#define Outside 2	/* all other pc's */
+@ 
+
+The ability to plant traps is modeled by the array [[trapped]], which
+records whether a trap instruction has been 
+stored at a particular location:
+<<declarations>>=
+bool trapped[NPCS];
+@
+
+The model has five active components: two threads, a CPU that
+executes one thread at a time, the breakpoint, and the rest of the debugger.
+Here are the channels that are used for communication between the
+threads, the CPU, the breakpoint, and the debugger.
+Taking a breakpoint action is modeled by sending a message on the channel 
+[[breakaction]].
+<<declarations>>=
+chan execute[NTHREADS] = [0] of {bit};	  /* try to execute instruction */
+chan cont[NTHREADS]    = [0] of {bit};	  /* instruction executed */
+chan trap              = [0] of {byte};	  /* CPU trapped on id! */
+chan resume            = [0] of {bit};	  /* debugger resumed after trap */
+chan breakaction       = [0] of {byte};	  /* deliver breakpoint to debugger */
+@ \noindent [[[0]]] indicates that the channels are synchronous;
+ senders block until a receiver is ready and vice~versa.{\hfuzz=0.9pt\par}
+
+The communication structure is:
+\begin{center}
+\setlength{\unitlength}{0.01in}%
+\footnotesize
+\begin{picture}(580,180)( 50,-90)
+\thicklines
+\put(585,  0){\oval(90,60)}
+\put(402,  0){\oval(90,62)}
+\put(252,  0){\oval(90,60)}
+\put( 95, 60){\oval(90,60)}
+\put( 95,-60){\oval(90,60)}
+\put(295, 10){\vector( 1, 0){ 60}}
+\put(355,-10){\vector(-1, 0){ 60}}
+\put(450,  0){\vector( 1, 0){ 90}}
+\put(140, 55){\vector( 2,-1){ 70}}
+\put(205, 10){\vector(-2, 1){ 70}}
+\put(135,-45){\vector( 2, 1){ 70}}
+\put(210,-20){\vector(-2,-1){ 70}}
+\put(585,  0){\makebox(0,0){{\tt debugger()}}}
+\put(402,  0){\makebox(0,0){{\tt breakpoint()}}}
+\put(255,  0){\makebox(0,0){{\tt CPU()}}}
+\put( 95,-65){\makebox(0,0)[b]{{\tt thread(1)}}}
+\put( 95, 55){\makebox(0,0)[b]{{\tt thread(0)}}}
+\put(165,-21){\makebox(0,0)[rb]{{\tt execute[1]}}}
+\put(165, 16){\makebox(0,0)[rb]{{\tt cont[0]}}}
+\put(170,-50){\makebox(0,0)[lb]{{\tt cont[1]}}}
+\put(165, 50){\makebox(0,0)[lb]{{\tt execute[0]}}}
+\put(330,-20){\makebox(0,0)[b]{{\tt resume}}}
+\put(330, 15){\makebox(0,0)[b]{{\tt trap!id}}}
+\put(493,  5){\makebox(0,0)[b]{{\tt breakaction!id}}}
+\end{picture}
+\end{center}
+@
+
+\noindent The CPU repeats the following steps.
+\begin{enumerate}\single
+\item
+Wait for a thread to attempt to execute the instruction at [[pc]].
+\item
+If the instruction is a trap, notify the debugger.
+When the debugger tells the CPU to resume, [[pc]] is unchanged.
+\item
+If the instruction is not a trap, advance [[pc]].
+\item
+Ask the thread to continue executing.
+\end{enumerate} 
+There is only one debugger, but there are multiple threads, and each
+one has its own [[pc]] and its own communication with the CPU.
+When the CPU notifies the debugger of a trap, it identifies the
+trapping thread.
+Other messages are used only for synchronization, so they send and
+receive the nonsense variable [[x]].
+<<declarations>>=
+bit x;			/* junk variable for sending messages */
+@
+A [[proctype]] is a procedure that a thread can execute; this one
+models the CPU.
+ [[c?x]] receives the value [[x]] on channel [[c]]; [[c!x]] sends.
+Arrows ([[->]]) separate guards from commands.
+<<proctypes>>=
+proctype CPU(byte count) {
+  threadid id = 0;
+  do
+  :: execute[id]?x ->
+       if
+       ::  trapped[pc[id]] -> trap!id ; resume?x
+       :: !trapped[pc[id]] -> <<advance [[pc[id]]]>>
+       fi;
+       cont[id]!x;
+       <<possible context switch (change of [[id]])>>
+  od
+}
+@ Context switching is discussed below.
+@
+\semifilbreak{1in} % page tuning
+@ 
+Since the program counter is an abstraction, advancing it does not
+mean incrementing it.  A successful execution at [[Break]] is
+guaranteed to be followed by an attempt to execute [[Follow]];
+aside from that, any instruction can follow any other.
+<<advance [[pc[id]]]>>=
+if
+:: pc[id] == Break -> pc[id] = Follow
+:: pc[id] != Break -> /* any instruction can be next */
+     if 
+     :: pc[id] = Outside
+     :: pc[id] = Break
+     :: pc[id] = Follow
+     fi
+fi
+@ \noindent
+The second [[if]] statement has no guards, so an alternative is
+chosen nondeterministically. 
+
+All threads begin execution outside the breakpoint.
+<<declarations>>=
+byte pc[NTHREADS];
+<<initialize data for thread [[id]]>>=
+pc[id] = Outside;
+
+@
+\section{Counting events}
+The correctness criterion for the breakpoint implementation is that
+one breakpoint action must be taken for every
+successful execution of an instruction at [[Break]].
+[[threadcount[id]]] counts how many times thread~[[id]]
+has executed the breakpoint, and [[actioncount[id]]] counts how many
+breakpoint actions  have been taken on behalf of thread~[[id]]. 
+<<declarations>>=
+byte threadcount[NTHREADS];
+byte actioncount[NTHREADS];
+<<initialize data for thread [[id]]>>=
+threadcount[id] = 0;
+actioncount[id] = 0;
+@
+\semifilbreak{0.75in} % page tuning
+@
+Here is the model of a thread, including the assertion that the thread
+and debugger counts are the same:
+<<proctypes>>=
+proctype thread(threadid id) {
+  do
+  :: if
+     :: pc[id] == Break -> execute[id]!x; cont[id]?x;
+          <<if successfully executed [[Break]], increment [[threadcount[id]]]>>
+     :: pc[id] != Break -> execute[id]!x; cont[id]?x
+     fi;
+     assert(pc[id] != Outside || threadcount[id] == actioncount[id])
+  od
+}
+@ 
+The corresponding model of the debugger is
+<<proctypes>>=
+proctype debugger() {
+  threadid id;
+  do 
+  :: atomic { breakaction?id -> <<increment [[actioncount[id]]]>> }
+  od
+}
+@ \noindent
+[[atomic]] groups statements into a single atomic action.
+When the debugger takes a breakpoint action, it atomically increments 
+[[actioncount[id]]].
+Without [[atomic]], it might delay incrementing the counter and
+invalidate the assertion above.
+
+A thread knows it has successfully executed [[Break]] if the [[pc]]
+has changed:
+<<if successfully executed [[Break]], increment [[threadcount[id]]]>>=
+if
+:: pc[id] != Break -> <<increment [[threadcount[id]]]>>
+:: pc[id] == Break -> skip
+fi
+@
+ To keep the state space small, I restrict the values of the
+counters to be in the range [[0..3]].
+<<increment [[threadcount[id]]]>>=
+threadcount[id] = (threadcount[id] + 1) % 4
+<<increment [[actioncount[id]]]>>=
+actioncount[id] = (actioncount[id] + 1) % 4
+@
+\section{Implementing the breakpoint}
+There is a long tradition of implementing breakpoints using traps
+and single stepping.  To set a breakpoint at $I$, plant a trap
+at $I$.  When the target program hits the trap, that's a breakpoint
+event.
+To resume execution after the breakpoint, 
+ restore the original instruction to $I$,
+ single step the machine to execute just the instruction at $I$,
+and once again plant a trap at $I$ and continue execution.
+Not all machines have a single-step mode in hardware, but
+single stepping can be simulated in software by using more trap
+instructions. 
+In my model, I eliminate single stepping entirely, working directly
+with trap instructions and  a follow set
+(modeled by [[Follow]]).
+
+The simpler model does not preclude the use of hardware single stepping.
+One of the operations in the model is planting traps at the locations
+in the follow set of an instruction.
+This operation can be implemented either by computing the follow set
+and planting actual traps, or by setting a trace bit on a machine with
+hardware single stepping.
+
+\semifilbreak{3\baselineskip}
+
+An active breakpoint is trapped either on the instruction of the
+breakpoint itself or on that instruction's follow set.
+The breakpoint keeps track of which state it is in, with the following 
+invariant.
+\begin{verbatim}
+   breakstate == Break  && trapped[Break] = 1 && trapped[Follow] = 0
+|| breakstate == Follow && trapped[Break] = 0 && trapped[Follow] = 1
+\end{verbatim}
+<<declarations>>=
+byte breakstate = Break;
+<<initialization>>=
+trapped[Break] = 1;
+@ Changing the state preserves the invariant.\label{move-traps-page}
+<<move traps to [[Break]]>>=
+atomic { breakstate = Break;  trapped[Break] = 1; trapped[Follow] = 0 }
+<<move traps to [[Follow]]>>=
+atomic { breakstate = Follow; trapped[Break] = 0; trapped[Follow] = 1 }
+@
+
+It's necessary to keep track of the state of each thread with respect
+to the breakpoint.  A thread is ``in the breakpoint'' if it has
+trapped at [[Break]], and it does not ``leave the breakpoint'' until
+it traps at [[Follow]].  Threads are initially outside the breakpoint.
+<<declarations>>=
+bit  inbreak[NTHREADS];
+<<initialize data for thread [[id]]>>=
+inbreak[id] = 0;
+@
+\semifilbreak{2in} % page tuning
+@
+One possible implementation just keeps track of the various states and
+delivers a breakpoint event at the right time:
+<<candidate breakpoint implementation>>=
+proctype breakpoint() {
+  threadid id;
+
+  do
+  :: trap?id ->
+       if
+       :: breakstate == Break ->
+            if 
+            :: !inbreak[id] -> breakaction!id ; inbreak[id] = 1
+            ::  inbreak[id] -> skip /* no event */
+            fi;
+            <<move traps to [[Follow]]>>
+       :: breakstate == Follow ->
+            if 
+            ::  inbreak[id] -> inbreak[id] = 0
+            :: !inbreak[id] -> skip
+            fi;
+            <<move traps to [[Break]]>>
+       fi;  
+       resume!x
+  od
+}
+@ 
+This implementation works fine for a single thread.
+With two threads, the PROMELA state-space search finds the
+following erroneous execution sequence
+(attempted executions that trap are marked with a {*}):
+\begin{quote}\single
+\begin{tabular}{llcc}
+breakpoint (debugger)& CPU       & thread 0     &   thread 1\\
+&       &   [[Outside]]\\
+&       &   [[Break]]\rlap{*}\\
+%\multicolumn{3}{l}
+{\LA{}take breakpoint action\RA{}}\\
+{\LA{}move traps to [[Follow]]~\footnotesize\pageref{move-traps-page}\RA{}}\\
+resume\\
+&context switch\\
+        &&&                  [[Outside]]\\
+        &&&                  [[Break]]\\
+        &&& [[Follow]]\rlap{*}\\
+%\multicolumn{3}{l}
+{\LA{}take no action\RA{}}\\
+{\LA{}move traps to [[Break]]~\footnotesize\pageref{move-traps-page}\RA{}}\\
+resume\\
+           &&&              [[Outside]]\\
+&context switch\\
+         && [[Follow]]\\
+         && [[Outside]]\\
+\end{tabular} 
+\end{quote} 
+In this execution sequence, thread~1 goes through the breakpoint
+without triggering a breakpoint action. 
+In an earlier version of {\tt ldb}, this sequence could be provoked by
+executing a procedure call after the user's program hit a breakpoint;
+the user's program was thread~0, and the procedure call was thread~1.
+
+%%%% \semifilbreak{3in} % page tuning
+To prevent such an occurrence, the CPU must not be permitted to change
+contexts when a thread is in the middle of a breakpoint.
+If the CPU can change contexts only when [[noswitch == 0]], then the
+following breakpoint implementation works correctly.
+<<proctypes>>=
+proctype breakpoint() {
+  threadid id;
+
+  do
+  :: trap?id ->
+       if
+       :: breakstate == Break ->
+            if 
+            :: !inbreak[id] -> breakaction!id ; inbreak[id] = 1
+            ::  inbreak[id] -> assert(0)
+            fi;
+	    noswitch = noswitch + 1;
+            <<move traps to [[Follow]]>>
+       :: breakstate == Follow ->
+            if 
+            ::  inbreak[id] -> inbreak[id] = 0
+            :: !inbreak[id] -> assert(0)
+            fi;
+            noswitch = noswitch - 1;
+            <<move traps to [[Break]]>>
+       fi;  
+       resume!x
+  od
+}
+@ \noindent The ban on context switching makes it possible to strengthen
+ [[skip]] to [[assert(0)]].
+
+[[noswitch]] is declared to be a counter, not a bit, because that
+implementation  generalizes to multiple breakpoints.
+<<declarations>>=
+byte noswitch = 0;
+@
+\semifilbreak{1.6in} % page tuning
+@
+The CPU code to do the context switching correctly is:
+<<possible context switch (change of [[id]])>>=
+if 
+:: noswitch == 0 -> <<set [[id]] randomly>>
+:: noswitch  > 0 -> skip
+fi
+<<set [[id]] randomly>>=
+atomic {
+  if
+  :: id = 0
+  :: id = 1
+  fi
+}
+@
+\section{Completing the model}
+The boilerplate needed to turn the model into
+a complete PROMELA specification is:
+<<*>>=
+<<declarations>>
+<<proctypes>>
+init {
+  threadid id;
+  atomic { 
+    <<initialization>> 
+    <<for $0 \le \tt id < NTHREADS$, initialize data for thread [[id]]>>;
+    run thread(0);
+    run thread(1);
+    run debugger();
+    run breakpoint();
+    run CPU (2) 
+  }
+}
+@ \semifilbreak{1in}
+<<for $0 \le \tt id < NTHREADS$, initialize data for thread [[id]]>>=
+id = 0;
+do
+:: id < NTHREADS -> <<initialize data for thread [[id]]>> 
+   if 
+   :: id == NTHREADS - 1  -> break
+   :: id <  NTHREADS - 1  -> id = id + 1
+   fi
+od
+@
+}
+@
+\section{List of chunks}
+\nowebchunks

@@ -1,0 +1,29 @@
+
+case $# in
+  1) ;;
+  *) echo "Usage: `basename $0` [awk|nawk|gawk]" 1>&2; exit 1
+esac
+
+rc=0
+new=/tmp/$$.new; old=/tmp/$$.old
+
+for file in lib/emptydefn lib/unmarkup lib/toascii lib/btdefn \
+                        awk/noidx awk/totex awk/tohtml awk/noindex \
+                        shell/noroff shell/toroff lib/pipedocs \
+                        shell/nocount shell/nountangle shell/noweb shell/noroots
+do
+  trap 'rm -f $new $old; exit 1' 1 2 15 # clean up files
+  if sed -e "s/nawk '/$1 '/" -e "s/nawk -f/$1 -f/" -e "s/AWK=nawk/AWK=$1/" <$file >$new
+  then
+    cp $file $old       # save original file
+    trap 'trap "" 1 2 15; cp $old $file # ignore signals
+          rm -f $new $old; exit 1' 1 2 15       # during restore
+    cp $new $file
+  else
+    echo "awkname: failed to change $file" 1>&2
+    rc=1
+  fi
+done
+rm -f $new $old
+exit $rc
+

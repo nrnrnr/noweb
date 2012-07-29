@@ -21,7 +21,7 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
-static char rcsid[] = "$Id: markup.nw,v 2.23 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: markup.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
   { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */

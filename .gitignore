@@ -1,0 +1,14 @@
+*.aux 
+*.bbl
+*.dvi
+*~
+.#*
+src/*/#.*#
+binaries/dos-*
+binaries/linux-*
+binaries/win32-*
+/DATE
+src/c/doc.ps
+src/c/doc.aux
+src/c/*.aux
+contrib/*/*/*.aux

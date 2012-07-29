@@ -1,0 +1,66 @@
+eval 'exec perl -S $0 ${1+"$@"}'
+    if 0;
+
+$sentinel     = "<tableofcontents>";
+$sentinel_end = "</tableofcontents>";
+
+while (<>) {
+    push(@file, $_) unless (/^$sentinel/ .. /^$sentinel_end/);
+    push(@file, $_) if (/^$sentinel/ || /^$sentinel_end/);
+}
+
+$intro = -1;
+
+$outerlevel = 1;
+
+$curlevel = $outerlevel;
+foreach $i (0..$#file) {
+
+    if ($file[$i] =~ m|$sentinel|) {$intro = $i;}
+
+    next unless $file[$i] =~ m|<[hH]([23])>\s*((.*\S)*)\s*</[hH]\1>|;
+    $nowlevel = $1;
+    $label = $heading = $2;
+
+    while ($nowlevel > $curlevel) {
+      push(@toc, "<ul compact>\n");
+      $curlevel++;
+    }
+    while ($nowlevel < $curlevel) {
+      push(@toc, "</ul>\n");
+      $curlevel--;
+    }
+    if ($file[$i] =~ m/name="([^"]+)"/i) {
+	$label = $1;
+        $heading =~ s/name="/href="#/i;
+        push(@toc, "<li>$heading\n");
+    } else {
+	$label =~ s/\W//g;
+	$label =~ tr/A-Z/a-z/;
+	$label = substr($label, 0, 6) . "00";
+	$label++ while (defined $labels{$label});
+#	$file[$i] =~ s|\Q$heading\E|<a name="$label">$&</a>|;
+	$file[$i] =~ s|$heading|<a name="$label">$&</a>|;
+        push(@toc, qq{<li><a href="#$label">$heading</a>\n});
+    }
+    $labels{$label}++;
+}
+$nowlevel = $outerlevel;
+while ($nowlevel > $curlevel) {
+  push(@toc, "<ul compact>\n");
+  $curlevel++;
+}
+while ($nowlevel < $curlevel) {
+  push(@toc, "</ul>\n");
+  $curlevel--;
+}
+
+if ($intro >= 0) {
+  print @file[0..$intro];
+  print @toc;
+  print @file[$intro+1 .. $#file];
+} else {
+  print @file;
+}
+
+

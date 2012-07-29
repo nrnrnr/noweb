@@ -1,0 +1,2 @@
+#!/bin/sh
+sed '/^version $Name:/s/_/./g;/^version $Name:/s/ $\././;/^version $Name:/s/$Name: v//'

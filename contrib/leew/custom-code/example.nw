@@ -1,0 +1,101 @@
+% to weave:
+%   noweave -t4 -delay -index example.nw -filter custom-code >example.tex
+% 
+\documentclass{article}
+\usepackage{noweb}
+\noweboptions{smallcode}
+\topmargin=0pt
+\textheight=9in
+\def\sub#1{$_{#1}$}
+\def\minus{-}
+\def\plus{+}
+\def\equals{=}
+\def\lt{<}
+\def\gt{>}
+\def\neliac{%
+    \catcode`_=\active%
+    \catcode`|=\active%
+    \catcode`&=\active%
+    \catcode`*=\active%
+    \catcode`'=\active%
+    \catcode`^=\active%
+    \catcode`-=\active%
+    \catcode`+=\active%
+    \catcode`==\active%
+    \catcode`<=\active%
+    \catcode`>=\active%
+    \catcode`/=\active%
+}
+\bgroup\neliac
+\global\def\nwcustomcode{\neliac%
+    \global\def_##1{\sub{##1}}%
+    \global\def|{$\cup$}%
+    \global\def&{$\cap$}%
+    \global\def*{$\times$}%
+    \global\def'{$\vert$}%
+    \global\def^{$\uparrow$}%
+    \global\def+{$\plus$}%
+    \global\def={$\equals$}%
+    \global\def/##1{\(\ifx##1=\ne\else\slash##1\fi\)}%
+    \global\def<##1{\(\ifx##1=\le\else\lt##1\fi\)}%
+    \global\def>##1{\(\ifx##1=\ge\else\gt##1\fi\)}%
+    \global\def-##1{\(\ifx##1>\to\else\minus##1\fi\)}%
+}
+\egroup
+
+\begin{document}
+Here is some actual code from the original Neliac compiler for the
+Univac M-460 ``Countess'' computer (written in Neliac, of course):
+<<*>>=
+DEBUG SCAN:
+i = 0: standard compiling location -> i; ;
+j = 0: obj prog std last address -> j; ;
+i = i(1)j{ [i] = straight jump function | [i] = return jump function:
+	fault 9. ; [i](15 -> 29) = 61000_8 & [i](0 -> 14) - bias -> k /= 0:
+	{ [k] = 0 | [k] = straight jump function: fault 10. ;  }; ;
+l'oop exit:  }. check key sets, turn off flex, clear indices,
+key[2] /= 0: dump name lists and stop. exit.
+F'AULT 9:
+start flex, carriage return upper case, 69 -> lower loop limit,
+72 -> upper loop limit, dump a title,
+n = 177_8(1)0{ undefined name location[n] = i:
+	write undefined name, continue. ;  },
+C'ONTINUE: write address, loop exit.
+F'AULT 10:
+start flex, carriage return upper case,
+77 -> lower loop limit, 82 -> upper loop limit, dump a title,
+n = 777_8(1)0{ name address[n] - bias = k: write name, go on. ;  },
+k -> upper dump buffer[1], dump five number,
+G'O ON: write address, loop exit.
+W'RITE ADDRESS:
+{ 73 -> lower loop limit, 76 -> upper loop limit, dump a title,
+i -> upper dump buffer[1], dump five numbers,  }. e'xit: . .
+@
+And here is the very same code without the \verb"custom-code"
+typesetting:\let\nwcustomcode=\relax
+<<*>>=
+DEBUG SCAN:
+i = 0: standard compiling location -> i; ;
+j = 0: obj prog std last address -> j; ;
+i = i(1)j{ [i] = straight jump function | [i] = return jump function:
+	fault 9. ; [i](15 -> 29) = 61000_8 & [i](0 -> 14) - bias -> k /= 0:
+	{ [k] = 0 | [k] = straight jump function: fault 10. ;  }; ;
+l'oop exit:  }. check key sets, turn off flex, clear indices,
+key[2] /= 0: dump name lists and stop. exit.
+F'AULT 9:
+start flex, carriage return upper case, 69 -> lower loop limit,
+72 -> upper loop limit, dump a title,
+n = 177_8(1)0{ undefined name location[n] = i:
+	write undefined name, continue. ;  },
+C'ONTINUE: write address, loop exit.
+F'AULT 10:
+start flex, carriage return upper case,
+77 -> lower loop limit, 82 -> upper loop limit, dump a title,
+n = 777_8(1)0{ name address[n] - bias = k: write name, go on. ;  },
+k -> upper dump buffer[1], dump five number,
+G'O ON: write address, loop exit.
+W'RITE ADDRESS:
+{ 73 -> lower loop limit, 76 -> upper loop limit, dump a title,
+i -> upper dump buffer[1], dump five numbers,  }. e'xit: . .
+@ \relax
+\end{document}

@@ -1,0 +1,8 @@
+@ This is a test script which displays the ability of my new noweb-script to
+actually execute a script which is embedded in a noweb styled file.  This test
+case ensures that nothing is run when there is no interpreter specified.
+
+<<*>>=
+/bin/false -- nothing here.
+
+@ And that should do it.

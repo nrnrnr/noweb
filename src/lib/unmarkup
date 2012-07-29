@@ -5,8 +5,8 @@
 
 nawk '
 BEGIN {
-  rcsid = "$Id: unmarkup,v 1.19 2008/10/04 20:53:51 nr Exp nr $"
-  rcsname = "$Name: v2_12 $"
+  rcsid = "$Id: unmarkup,v 1.20 2008/10/06 01:03:05 nr Exp $"
+  rcsname = "$Name:  $"
   firstdoc = 1
 }
 /^@begin docs / { if (!firstdoc) printf "@ "; firstdoc = 0 }

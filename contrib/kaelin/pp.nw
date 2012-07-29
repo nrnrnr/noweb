@@ -1,0 +1,616 @@
+% For LaTeX input: noweave -x -delay filename.nw > filename.tex
+% For source code: noweb -t filename.nw
+\documentstyle[noweb,11pt]{article}
+\pagestyle{noweb}
+\noweboptions{longchunks,smallcode}
+
+\newcommand{\CEE}{{\sc C\spacefactor1000}}
+\newcommand{\CPP}{{\sc C\PP\spacefactor1000}}
+\newcommand{\ICON}{{\sc Icon\spacefactor1000}}
+\newcommand{\PP}{\kern.5pt\raisebox{.4ex}
+   {$\scriptscriptstyle+\kern-1pt+$}\kern.5pt}
+
+\begin{document}
+\title{Beyond the {\tt \symbol{"5C}tt} Font\\{\large A {\tt noweb} Extension}}
+\author{Kaelin L. Colclasure \\ {\tt kaelin@bridge.com}}
+\date{Preliminary Draft}
+\maketitle
+
+\section{Introduction}
+This document contains two filters for {\tt noweave}, written in \ICON,
+which add basic pretty-printing for \CPP\ and \ICON\ code to {\tt noweb}'s
+repetoir of functionality.  The bulk of the code herein is derived from
+\cite{kostas}, and at least a nodding familiarity with that work is assumed
+by this documentation.  A working knowledge of \ICON\ is, of course, a must.
+Refer to \cite{griswold} as necessary.
+
+\subsection{Design philosophy}
+While I relish the idea of inflicting my own code formatting
+preferences on the unsuspecting masses, I was less enthusiastic
+towards the prospect of writing a scanner for each target language.
+Besides (I adeptly rationalized), so doing would violate one of the
+fundamental tenets of {\tt noweb}-- that the programmer maintain
+control over the formatting of code.
+
+Thus, this implementaion does not address indentation or line-breaking
+within code chunks.  Like its predecessor, it is limited bolding target
+language keywords, operator substitution and other such in-line markup
+generation.  However, even these restricted transformations can have a
+marked effect on the clarity of exposition of the source code.\footnote{This
+is particularly true for languages like Icon which have a plethora of
+multi-character operators.}
+
+\subsection{Why a new implementation?}
+While \cite{kostas} provides an easily-extensible implementation, it also
+has one unfortunate limitation-- the technique used to distinguish between
+operators and comment delimiters relies upon those categories consisting of
+disjoint character sets\footnote{More precisely, it relies upon the {\em
+start sets} of those two categories of tokens being disjoint.} in the target
+language.  While true for the target languages Kostas implemented, this
+assertion does not hold for a large class of commonly used languages.  The
+\CEE\ lagnuage, for instance, uses \verb|/*| \ldots \verb|*/| to bracket
+comments when both \verb|/| and \verb|*| are operators as well.
+
+While obviously a problem for me, since my first target language was \CPP,
+this could undoubtably have been redressed with relatively minor surgery to
+\cite{kostas}.  However, once I'd familiarized myself with Kostas' code, I
+felt compelled to add some additional tweaks and features of my own.  The
+principle enhancements provided are as follows:
+\begin{itemize}
+\item A more versatile scheme for handling token recognition.  This not only
+addresses the problem outlined above, but makes it possible to do target
+language dependent processing during scanning as well as during
+initialization.
+\item More robust handling of string constants.  Kostas did not deal with
+escaped embedded quoting characters at all.
+\item Pretty-printing of [[[[quoted]]]] code as well as code in {\tt noweb}
+chunks.
+\item Use of \ICON s conditional compilation facilities to allow all the code
+for different targets to reside in one file.\footnote{Well, {\em I} like it
+better this way\ldots}
+\end{itemize}
+Along the way, there have been some steps backwards as well:
+\begin{itemize}
+\item I make no provisions for multi-line comments at all.  I
+personally use them only for commenting out code regions, and in that
+context special treatment is undesirable.\footnote{This does not
+preclude other target language implementations based upon this work
+from using target language dependent code to deal with multi-line
+comments.}
+\item Font utilization has been restricted to the Computer Modern fonts
+provided with all implementations of \TeX\ (primarily because my
+site has only those fonts).
+\item Due to my ignorance of ``vanilla'' \TeX, the markup code generated
+is \LaTeX\ dependent (I was tempted to add this as an item to the list
+above, but decided to refrain from provoking any nasty EMail).
+\end{itemize}
+No doubt I have introduced some new bugs as well, but discovering those is
+left as an excercise for the reader.
+
+\section{Implementation}
+Like Kostas, I have split the implementation of each target filter into a
+common part and a target dependent part.  However, in contrast with
+\cite{kostas}, I have kept all the pieces together in one {\tt noweb} input
+file.  Readers interested only in adding a new target should read \S
+\ref{reqs} and then skim \S \ref{c} and \S \ref{icon} for complete examples.
+
+\subsection{Target requirements\label{reqs}}
+\paragraph{Minimal implementation:}
+Each target implementation must provide at least the following:\footnote{In
+point of fact, the list of keywords could be left null.  It merely provides
+a convenient way to populate the [[translation]] table with the
+language's reserved words, which will likely all receive the same markup
+treatment.  However, here again, Icon is an exception\ldots}
+\begin{itemize}
+\item A root chunk which generates the \ICON\ source file for the target
+language filter.
+\item A table containing all of the target languages ``interesting''
+character sequences and either their typographic translation {\em or an \ICON\
+procedure for deriving it}. 
+\item A list of keywords.
+\item A list of operators.  For our purposes here, comment-delimiting
+punctuation marks are considered operators.
+\end{itemize}
+Variables to hold the required table and lists exist at global scope.
+<<Global declarations>>=
+global translation                     # Table of typographic translations
+global keyword_list, operator_list     # List of keywords, operators
+@
+
+\paragraph{The [[translation]] table:} The table of typographic substitutions
+is built by the following code chunk during program initialization:
+<<Define the [[translation]] table>>=
+translation := table();
+<<Keywords>>
+<<Operators>>
+@
+
+\paragraph{Initial character sets:}
+The {\em start sets} for the two classes of tokens are defined globally in
+the following two chunks.  Note that [[op_chars]] is automatically derived
+from the list of operators already defined above.  However, some target
+languages will require adjustments to the definition of
+[[id_chars]].\footnote{Note that the Icon implementation does {\em not}
+add $\&$ to this list even though it prefixes some identifiers.  We treat
+it always as an operator instead.}
+<<Global declarations>>=
+global id_chars, op_chars
+@
+<<Define initial character sets>>=
+id_chars := &letters ++ &digits ++ '_'
+op_chars := ''
+every op := !operator_list do op_chars ++:= cset(op[1])
+@
+
+\paragraph{The [[begin_token]] character set:}
+The next two chunks globally define the {\em start set} for {\bf all}
+interesting tokens.  In general this will be \mbox{[[id_chars]] $\cup$
+[[op_chars]]}, but in some cases it may be desirable to add additional
+elements to this set.
+<<Global declarations>>=
+global begin_token
+@
+<<Define the [[begin_token]] character set>>=
+begin_token := id_chars ++ op_chars
+@
+
+\paragraph{Procedures:} 
+\ICON\ procedures referenced in the [[translation]] table must, of
+course, be defined by the target implementation.  When invoked, such a
+procedure will receive one argument-- the token which caused it to be
+invoked.
+
+Additionally, the [[TeXify]] procedure's [[case]] statement includes a
+target language dependent chunk which may be used to implement anything I've
+forgotten or neglected (like multi-line comments).  The \CEE/\CPP
+implementation provides a skeletal example of how this might be used to
+process \CEE preprocessor directives.\footnote{It takes the trouble to find
+them, but then merely writes them verbatim to the output with no special
+formatting.  This could have been more easily accomplished with a [[procedure]]
+entry in the [[translation]] table.}
+
+\subsection{Target independent code}
+
+\subsubsection{The [[main]] procedure}
+
+<<Procedure [[main]]>>=
+procedure main()
+   <<Define the [[translation]] table>>
+   <<Define initial character sets>>
+   <<Define the [[begin_token]] character set>>
+
+   <<Emit special \LaTeX\ definitions>>
+   <<Process each input line through the [[filter]] procedure>>
+   return
+end
+@
+<<Emit special \LaTeX\ definitions>>=
+write("@literal \\def\\begcom{\\begingroup\\rm" ||
+   "\\catcode`\\$=3\\catcode`\\^=7\\catcode`\\_=8{}}")
+write("@literal \\def\\endcom{\\endgroup}")
+@
+<<Process each input line through the [[filter]] procedure>>=
+while line := read() do
+   line ? (="@" & filter(tab(upto(' ') | 0), if =" " then tab(0) else &null))
+@
+
+\subsubsection{The [[filter]] procedure}
+
+<<Procedure [[filter]]>>=
+procedure filter(name, arg)
+static kind
+static whitespace
+static code_in_line
+   initial {
+      whitespace := ' \t'
+   }
+   case name of {
+      "begin": {
+         arg ? kind := tab(many(&letters))
+         copyline(name, arg)
+      }
+      "defn" | "literal" | "use": {
+         code_in_line := 1
+         copyline(name, arg)
+      }
+      "endquote": {
+         kind := "docs"
+         copyline(name, arg)
+      }
+      "nl": {
+         if \kind == "code" & /code_in_line then
+            write("@literal \\smallskip\\eatline")
+         copyline(name, arg)
+         code_in_line := &null
+      }
+      "quote": {
+         kind := "code"
+         copyline(name, arg)
+      }
+      "text": {
+         if \kind == "code" then {
+            if *(cset(arg) -- whitespace) > 0 then code_in_line := 1
+            TeXify(arg)
+         }
+         else copyline(name, arg)
+      }
+      default: copyline(name, arg)
+   }
+   return
+end
+@
+<<Procedure [[copyline]]>>=
+procedure copyline(name, arg)
+   return write("@", name, (" " || \arg) | "")
+end
+@
+
+\subsubsection{The [[TeXify]] procedure}
+
+<<Procedure [[TeXify]]>>=
+procedure TeXify(arg)
+   writes("@literal ")
+   arg ? {
+      while writes(preTeX(tab(upto(begin_token)))) do case &pos + 1 of {
+         <<Language-dependent \TeX ify chunk>>
+         any(id_chars):    <<Identifier or numeric constant>>
+         any(op_chars):    <<Operator>>
+         default:          stop("\n** Error at input pos ", &pos)
+      }
+      writes(preTeX(tab(0)))
+   }
+   write()
+   return rval
+end
+@
+<<Identifier or numeric constant>>=
+{
+   token := tab(many(id_chars))
+   <<Write [[token]] or its typographic translation>>
+}
+@
+<<Operator>>=
+{
+   token := tab(match(!operator_list) | &pos + 1)
+   <<Write [[token]] or its typographic translation>>
+}
+@
+<<Write [[token]] or its typographic translation>>=
+trans := translation[token]
+case type(trans) of {
+   "procedure":   writes(trans(token))
+   "null":        writes(preTeX(token))
+   default:       writes("\\mbox{" || trans || "}")
+}
+@
+<<Procedure [[preTeX]]>>=
+procedure preTeX(arg)
+static TeX, hex
+   initial {
+      TeX := '\\${}&#^_%'
+      hex := table();
+      hex["\\"] := "5C"; hex["$"] := "24"; hex["{"] := "7B"; hex["}"] := "7D"
+      hex["&"] := "26"; hex["#"] := "23"; hex["^"] := "5E"; hex["_"] := "5F"
+      hex["%"] := "25"
+   }
+   str := ""
+   every c := !arg do
+      str ||:= if *(cset(c) ** TeX) > 0 then "\\symbol{\"" || hex[c] || "}"
+         else c
+   return str
+end
+@
+
+\subsubsection{Target utility procedures}
+
+<<Procedure [[comment_eol]]>>=
+procedure comment_eol(arg)
+   return "\\begcom" || arg || tab(0) || "\\endcom"
+end
+@
+
+\paragraph{The [[quoted_c_string]] procedure:}
+This procedure matches a \CEE/\CPP-style 
+string constant which may contain embedded quotes escaped by a backslash
+(\verb|\|) character.  We want string constants to be typeset with
+\verb|\verb*| (ala {\tt CWEB}).  The result looks like
+\verb*|"a string constant"| which makes counting multiple embedded spaces
+{\em much} easier.
+<<Procedure [[quoted_c_string]]>>=
+procedure quoted_c_string(arg)
+local c, str
+   c := cset(arg)
+   str := tab(upto(c))
+   if \str then while str[-1] == "\\" & (*str < 2 | str[-2] ~== "\\") do
+      str ||:= tab(&pos + 1) || tab(upto(c))
+   else str := ""
+   str ||:= tab(&pos + 1) # Pick up closing quote
+   return "\\verb*\^K" || arg || str || "\^K"
+end
+@ Note the use of ASCII {\tt VT} control characters to bracket the
+\verb|\verb*| environment.  Any target implementation which utilizes this
+procedure must include [[write("@literal \\catcode`^^K=3")]] in the \LaTeX\
+special definitions chunk. This is a gross hack, but it's made necessary by
+the fact that a string literal could conceiveably contain {bf all} of the
+printable ASCII characters.  We therefore arbitrarily choose a control
+character which we deem unlikely to be found in a string
+literal.\footnote{Incidently, my original choice was NUL, but this proved
+problematic for {\tt vi} users because that editor stripped the NULs away
+when the {\tt .tex} file was edited by hand.}
+
+\subsection{\protect\CEE/\protect\CPP\ code markup\label{c}}
+
+<<cnw.icn>>=
+$define LANG_CPLUSPLUS
+<<Global declarations>>
+<<Procedure [[main]]>>
+<<Procedure [[filter]]>>
+<<Procedure [[copyline]]>>
+<<Procedure [[preTeX]]>>
+<<Procedure [[TeXify]]>>
+
+<<Procedure [[comment_eol]]>>
+<<Procedure [[quoted_c_string]]>>
+@
+<<Keywords>>=
+$ifdef LANG_CPLUSPLUS
+keyword_list := [
+   "asm","auto","break","case","catch","char","class","const",
+   "continue","default","delete","do","double","else","enum","extern",
+   "float","for","friend","goto","if","inline","int","long",
+   "new","operator","private","protected","public","register","return","short",
+   "signed","sizeof","static","struct","switch","template","this","throw",
+   "try","typedef","union","unsigned","virtual","void","volatile","while"
+]
+every key := !keyword_list do translation[key] := "{\\bf{}" || key || "}"
+$endif
+@
+<<Operators>>=
+$ifdef LANG_CPLUSPLUS
+operator_list := [
+   "<\<=",">>=","->","++","--","<\<",">>","<=",">=","==","!=","&&","||",
+   "*=","/=","%=","+=","-=","&=","^=","|=","()","[]","//","/*","*/",
+   "!","%","^","&","*","(",")","-","+","=","{","}","|","~","[","]","<",">",
+   "?","/","'","\""
+]
+translation["<\<="]	:= "\\protect\\OPASSIGN{\\ll}"
+translation[">>="] 	:= "\\protect\\OPASSIGN{\\gg}"
+translation["->"] 	:= "\^K\\rightharpoonup\^K"
+translation["++"] 	:= "\\protect\\PP"
+translation["--"] 	:= "\\protect\\MM"
+translation["<\<"] 	:= "\^K\\ll\^K"
+translation[">>"] 	:= "\^K\\gg\^K"
+translation["<="] 	:= "\^K\\leq\^K"
+translation[">="] 	:= "\^K\\geq\^K"
+translation["=="] 	:= "\^K\\equiv\^K"
+translation["!="] 	:= "\^K\\neq\^K"
+translation["&&"] 	:= "\^K\\wedge\^K"
+translation["||"] 	:= "\^K\\vee\^K"
+translation["*="] 	:= "\\protect\\OPASSIGN{\\ast}"
+translation["/="] 	:= "\\protect\\OPASSIGN{\\div}"
+translation["%="] 	:= "\\protect\\OPASSIGN{" || preTeX("%") || "}"
+translation["+="] 	:= "\\protect\\OPASSIGN{+}"
+translation["-="] 	:= "\\protect\\OPASSIGN{-}"
+translation["&="] 	:= "\\protect\\OPASSIGN{" || preTeX("&") || "}"
+translation["^="] 	:= "\\protect\\OPASSIGN{\\oplus}"
+translation["|="] 	:= "\\protect\\OPASSIGN{\\mid}"
+translation["()"] 	:= "\^K(\\;)\^K"
+translation["[]"] 	:= "\^K[\\;]\^K"
+translation["//"] 	:= comment_eol
+
+translation["!"]  	:= "\^K\\neg\^K"
+translation["%"]  	:= "\^K" || preTeX("%") || "\^K"
+translation["^"]  	:= "\^K\\oplus\^K"
+translation["&"]  	:= "\^K" || preTeX("&") || "\^K"
+translation["*"]  	:= "\^K\\ast\^K"
+translation["="]  	:= "\^K\\leftarrow\^K"
+translation["{"]  	:= "\\boldmath\^K\\{\^K"
+translation["}"]  	:= "\\boldmath\^K\\}\^K"
+translation["|"]  	:= "\^K\\mid\^K"
+translation["~"]  	:= "\^K\\sim\^K"
+translation["/"]  	:= "\^K\\div\^K"
+translation["'"]  	:= quoted_c_string
+translation["\""] 	:= quoted_c_string
+
+every op := !operator_list do /translation[op] := "\^K" || op || "\^K"
+$endif
+@
+<<Language-dependent \TeX ify chunk>>=
+$ifdef LANG_CPLUSPLUS
+any(cpp_mark): writes(preTeX(tab(0)))
+$endif
+@
+<<Global declarations>>=
+$ifdef LANG_CPLUSPLUS
+global cpp_mark
+$endif
+@
+<<Define initial character sets>>=
+$ifdef LANG_CPLUSPLUS
+cpp_mark := '#'
+$endif
+@
+<<Define the [[begin_token]] character set>>=
+$ifdef LANG_CPLUSPLUS
+begin_token ++:= cpp_mark
+$endif
+@
+<<Emit special \LaTeX\ definitions>>=
+$ifdef LANG_CPLUSPLUS
+write("@literal \\catcode`^^K=3")
+write("@literal \\newcommand{\\MM}{\\kern.5pt\\raisebox{.4ex}" ||
+   "{\^K\\scriptscriptstyle-\\kern-1pt-\^K}\\kern.5pt}")
+write("@literal \\newcommand{\\PP}{\\kern.5pt\\raisebox{.4ex}" ||
+   "{\^K\\scriptscriptstyle+\\kern-1pt+\^K}\\kern.5pt}")
+write("@literal \\newcommand{\\OPASSIGN}[1]{\\raisebox{-.4ex}" ||
+   "{\^K\\stackrel{\\scriptscriptstyle\\,#1}{\\leftarrow}\^K}}")
+$endif
+@
+
+\subsection{\protect\ICON\ code markup\label{icon}}
+
+<<inw.icn>>=
+$define LANG_ICON
+<<Global declarations>>
+<<Procedure [[main]]>>
+<<Procedure [[filter]]>>
+<<Procedure [[copyline]]>>
+<<Procedure [[preTeX]]>>
+<<Procedure [[TeXify]]>>
+
+<<Procedure [[comment_eol]]>>
+<<Procedure [[quoted_c_string]]>>
+<<\ICON\ [[prefixed_keyword_check]] procedure>>
+@
+<<Global declarations>>=
+$ifdef LANG_ICON
+global an_word_list, ss_word_list
+$endif
+@
+<<Keywords>>=
+$ifdef LANG_ICON
+keyword_list := [
+   "by","break","case","create","default","do","else","end",
+   "every","fail","global","if","initial","link","local","next",
+   "not","of","procedure","record","repeat","return","static","suspend",
+   "to","then","while","until"
+]
+an_word_list := [
+   "ascii","clock","collections","cset","current","date","dateline","digits",
+   "error","errornumber","errortext","errorvalue","errout","fail","features",
+   "file","host","input","lcase","letters","level","line","main","null",
+   "output","pos","random","regions","source","storage","subject","time",
+   "trace","ucase","version",
+# Added in Version 8.10
+   "allocated","e","phi","pi","progname",
+# Added by X interface
+   "col","control","interval","ldrag","lpress","lrelease","mdrag","meta",
+   "mpress","mrelease","resize","rdrag","row","rpress","rrelease","shift",
+   "window","x","y"
+]
+ss_word_list := [
+# Translator directives for Version 8.10
+   "define","else","endif","ifdef","ifndef","include","line","undef",
+]
+every key := !keyword_list do translation[key] := "{\\bf{}" || key || "}"
+$endif
+@
+
+<<Operators>>=
+$ifdef LANG_ICON
+operator_list := [
+   "#","~===:=","<\<=:=",">>=:=","~==:=","|||:=","===:=","~===","<=:=",
+   ">=:=","~=:=","++:=","--:=","**:=","||:=","<\<:=","==:=",">>:=",
+   "<\<=",">>=","~==","|||",":=:","<->","===","+:=","-:=","*:=","/:=","%:=",
+   "^:=","<:=","=:=",">:=","@:=","&:=","?:=","()","[]",
+   "<=",">=","~=","++","--","**","||","<\<","==",">>",":=","<-","{","}","|",
+   "+","-","?","~","=","!","@","^","*",".","/","\\","%","<","&","$","'","\""
+]
+
+translation["#"]        := comment_eol
+translation["~===:="]   := "\\protect\\OPASSIGN{\\not\\equiv}"
+translation["<\<=:="]   := "\\protect\\OPASSIGN{\\preceq}"
+translation[">>=:="]    := "\\protect\\OPASSIGN{\\succeq}"
+translation["~==:="]    := "\\protect\\OPASSIGN{\\not\\approx}"
+translation["|||:="]    := "\\protect\\LONGOPASSIGN{[\\:]\\Join}"
+translation["===:="]    := "\\protect\\OPASSIGN{\\equiv}"
+translation["~==="]     := "\^K\\not\\equiv\^K"
+translation["<=:="]     := "\\protect\\OPASSIGN{\\leq}"
+translation[">=:="]     := "\\protect\\OPASSIGN{\\geq}"
+translation["~=:="]     := "\\protect\\OPASSIGN{\\neq}"
+translation["++:="]     := "\\protect\\OPASSIGN{\\uplus}"
+translation["--:="]     := "\\protect\\OPASSIGN{\\ni}"
+translation["**:="]     := "\\protect\\OPASSIGN{\\in}"
+translation["||:="]     := "\\protect\\OPASSIGN{\\Join}"
+translation["<\<:="]    := "\\protect\\OPASSIGN{\\prec}"
+translation["==:="]     := "\\protect\\OPASSIGN{\\approx}"
+translation[">>:="]     := "\\protect\\OPASSIGN{\\succ}"
+
+translation["<\<="]     := "\^K\\preceq\^K"
+translation[">>="]      := "\^K\\succeq\^K"
+translation["~=="]      := "\^K\\not\\approx\^K"
+translation["|||"]      := "\\protect\\OPSTACK{[\\:]}{\\Join}"
+translation[":=:"]      := "\^K\\leftrightarrow\^K"
+translation["<->"]      := "\^K\\Leftrightarrow\^K"
+translation["==="]      := "\^K\\equiv\^K"
+translation["+:="]      := "\\protect\\OPASSIGN{+}"
+translation["-:="]      := "\\protect\\OPASSIGN{-}"
+translation["*:="]      := "\\protect\\OPASSIGN{\\ast}"
+translation["/:="]      := "\\protect\\OPASSIGN{\\div}"
+translation["%:="]      := "\\protect\\OPASSIGN{" || preTeX("%") || "}"
+translation["^:="]      := "\\protect\\OPASSIGN{\\uparrow}"
+translation["<:="]      := "\\protect\\OPASSIGN{<}"
+translation["=:="]      := "\\protect\\OPASSIGN{=}"
+translation[">:="]      := "\\protect\\OPASSIGN{>}"
+translation["@:="]      := "\\protect\\OPASSIGN{\\partial}"
+translation["&:="]      := "\\protect\\OPASSIGN{\\wedge}"
+translation["?:="]      := "\\protect\\OPASSIGN{\\wr}"
+translation["()"]       := "\^K(\\;)\^K"
+translation["[]"]       := "\^K[\\;]\^K"
+translation["<="]       := "\^K\\leq\^K"
+translation[">="]       := "\^K\\geq\^K"
+translation["~="]       := "\^K\\neq\^K"
+translation["++"]       := "\^K\\uplus\^K"
+translation["--"]       := "\^K\\ni\^K"
+translation["**"]       := "\^K\\in\^K"
+translation["||"]       := "\^K\\Join\^K"
+translation["<\<"]      := "\^K\\prec\^K"
+translation["=="]       := "\^K\\approx\^K"
+translation[">>"]       := "\^K\\succ\^K"
+translation[":="]       := "\^K\\leftarrow\^K"
+translation["<-"]       := "\^K\\Leftarrow\^K"
+translation["{"]        := "\\boldmath\^K\\{\^K"
+translation["}"]        := "\\boldmath\^K\\}\^K"
+translation["|"]        := "\^K\\vee\^K"
+translation["?"]        := "\^K\\wr\^K"
+translation["~"]        := "\^K\\ni\^K"
+translation["!"]        := "\^K\\forall\^K"
+translation["^"]        := "\^K\\uparrow\^K"
+translation["*"]        := "\^K\\ast\^K"
+translation["\\"]       := "\^K\\exists\^K"
+translation["%"]        := "\^K" || preTeX("%") || "\^K"
+translation["&"]        := prefixed_keyword_check
+translation["$"]        := prefixed_keyword_check
+translation["'"]        := quoted_c_string
+translation["\""]       := quoted_c_string
+
+every op := !operator_list do /translation[op] := "\^K" || op || "\^K"
+$endif
+@
+<<\ICON\ [[prefixed_keyword_check]] procedure>>=
+procedure prefixed_keyword_check(arg)
+local keyword_list, keyword, result
+   keyword_list := (arg == "&", an_word_list) | ss_word_list
+   keyword := tab(match(!keyword_list)) | &null
+   if \keyword then result := "{\\bf{}" || preTeX(arg) || keyword || "}"
+   else result := "\^K" || ((arg == "&", "\\wedge") | preTeX(arg)) || "\^K"
+   return result
+end
+@
+<<Emit special \LaTeX\ definitions>>=
+$ifdef LANG_ICON
+write("@literal \\catcode`^^K=3")
+write("@literal \\newcommand{\\LONGOPASSIGN}[1]{\\raisebox{-.4ex}" ||
+   "{\^K\\stackrel{\\scriptscriptstyle\\,#1}{\\longleftarrow}\^K}}")
+write("@literal \\newcommand{\\OPASSIGN}[1]{\\raisebox{-.4ex}" ||
+   "{\^K\\stackrel{\\scriptscriptstyle\\,#1}{\\leftarrow}\^K}}")
+write("@literal \\newcommand{\\OPSTACK}[2]{\\raisebox{-.4ex}" ||
+   "{\^K\\stackrel{\\scriptscriptstyle#1}{#2}\^K}}")
+$endif
+@
+
+\section{Chunks}
+\nowebchunks
+
+\begin{thebibliography}{Mmoo}
+\bibitem[Gris]{griswold}Ralph E. Griswold and Madge T. Griswold. {\em
+The Icon Programming Language}. Prentice-Hall, Englewood Cliffs, New
+Jersey, 1983.
+\bibitem[Oiko]{kostas}Kostas N. Oikonomou. {\em Extending Noweb With
+Some Typesetting}. Unpublished. Included in {\tt contrib} directory
+of the standard {\tt noweb} distribution.
+\end{thebibliography}
+\end{document}
+% Local Variables:
+% outline-regexp: "\\([\\\]\\(sub\\)*sec\\)\\|\\(<[^>]+>>=\\)"
+% End:

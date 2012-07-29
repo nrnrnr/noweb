@@ -1,0 +1,144 @@
+#! /bin/sh
+KEYGEN=/tmp/d2tex$$
+trap "rm -f $KEYGEN; exit 1" 1 2 3 15
+cat > $KEYGEN <<END_OF_FILE
+COMMENT#1
+ASSERT#1
+PROGRAM
+ENDPROGRAM
+USES
+ENDUSES
+MODULE
+ENDMODULE
+SPECIFICATION
+ENDSPECIFICATION
+IMPLEMENTATION
+ENDIMPLEMENTATION
+IMPORT
+ENDIMPORT
+TYPE
+ENDTYPE
+VAR
+ENDVAR
+CONST
+ENDCONST
+ARRAY
+RECORD
+ENDRECORD
+BEGIN
+IF
+ELSE
+ENDIF
+THEN
+SKIP
+WHILE
+ENDWHILE
+DO
+DDO
+ENDDO
+FORALL
+FOR
+ENDFOR
+ENDFORALL
+PARALLEL
+REPEAT
+UNTIL
+AND
+OR
+NOT
+CAT
+OF
+IN
+DIV
+MOD
+PROCEDURE
+ENDPROCEDURE
+FUNCTION
+ENDFUNCTION
+RETURNS
+INP
+OUTP
+INOUTP
+PRIVATE
+@@@
+END_OF_FILE
+
+nawk '
+BEGIN           { code=0 ; quoting=0 ; inside_comm=0 
+                  while ((getline kw < "'"$KEYGEN"'") >0)
+                    keywords[kw]++
+                }
+/^@begin code/  { 
+   printf "@literal \\begin{code}{%s}\\let\\maybehbox=\\hbox\n", substr($0, 13)
+   code=1; next
+}
+/^@end code/    { code=0 ; printf "@literal \\end{code}\n"; next}
+/^@quote$/      { quoting = 1 }
+/^@endquote$/   { quoting = 0 }
+/^@text /       { if (code) { print_code(substr($0, 7)) }
+                  else      { print }
+                  next
+                }
+{print}
+function print_code(line) {
+        temp = line; 
+        comm = "";
+        if (temp ~ /\/\*/) 
+	   { r = index(temp, "/*"); 
+             inside_comm = 1; comm = "\\COMMENT{" substr(temp, r+3);
+             if (comm ~ /\*\//) { inside_comm = 0; comm = comm "}"; temp = ""; }
+           }
+        if (temp ~ /\*\//)
+           { comm = temp "}"; temp = ""; inside_comm = 0; }
+
+        sub(/\*\//,"",comm);
+        sub(/\/\*.*/,"",temp);
+
+        if (temp != "" && inside_comm == 0)
+	{
+         temp = operators(temp);
+         temp = substitute_keywords(temp);
+         temp = mark_vars_types(temp);
+        }
+        line = temp comm;
+        print "@literal " line;
+}
+
+function substitute_keywords(s, kw) {
+  for (kw in keywords)
+    if (s ~ kw)
+     {
+	gsub("(^|[ \\t]+)" kw "($|[ \\t]+)", " \\" kw " ", s);   
+    	gsub("(^|[ \\t]+)" kw ";", " \\" kw ";", s);   
+    	gsub("(^|[ \\t]+)" kw "\\.", " \\" kw ".", s);   
+    	gsub("[(]" kw, "(\\" kw, s);
+	gsub("," kw, ",\\" kw, s);
+     }
+  return s
+}
+
+function mark_vars_types(s  ) {
+     gsub(/\\OF[ \t\n]*[a-zA-Z_]+/,"|&|", s);
+     gsub(/\\RETURN[ \t\n]*[a-zA-Z_]+/,"|&|", s);
+     gsub(/[a-zA-Z_]+[ \t\n]*=[ \t\n](\\RECORD|\\ARRAY)/,"|&|", s);
+     gsub(/[a-zA-Z_]+[ \t\n]*=[ \t\n]\\{/,"|&|",s);
+     gsub(/:[\t\n ]*[a-zA-Z_]+/, "|&|" ,s);
+     gsub(/[a-zA-Z_]+[ \\t\\n]*\(/,"|&|",s);
+     gsub(/\(\|/, "|(", s);
+     gsub(/\|:[ \t\n]*/, ":|", s);
+     gsub(/\|\\de[ \t\n]*/, "\\de |", s);
+     gsub(/\|\\RETURN[ \t\n]*/, "\\RETURN |", s);
+     gsub(/\=[\t\n ]*\\ARRAY\|/, "| = \\ARRAY", s);
+     gsub(/\=[\t\n ]*\\RECORD\|/, "| = \\RECORD", s);
+     gsub(/\=[\t\n ]*\\{\|/, "| = \\{", s);
+     return s
+}
+
+function operators(s ) {
+     gsub(/ >= /," \\ge ", s);
+     gsub(/ <= /, " \\le ", s);
+     gsub(/ != /, " \\not= ", s);
+     return s;
+}
+' $*
+rm -f $KEYGEN

@@ -1,0 +1,57 @@
+#!/usr/bin/perl -w
+
+# Noweb filter which attempt to add @language directives to root
+# chunks named on command-line.
+
+# Copyright (c) 2003 by Yann Dirson <ydirson@altern.org>
+
+# Distribute under the terms of the GNU General Public Licence,
+# version 2.
+
+# TODO: Currently only look at the 1st line of the chunk, expecting to
+# find a standard UN*X "#!" declaration.  Still has to look at file
+# names/suffixes as well.
+
+use strict;
+use File::Basename;
+
+my @roots = @ARGV;
+
+my %interpreters = (
+		    '[gn]awk' => 'awk',
+		    'perl[0-9.]*' => 'perl',
+		    'python[0-9.]*' => 'python',
+		    '(wish|tclsh)[0-9.]*' => 'tcl',
+		    '(|k|ba|z)sh' => 'sh',
+		   );
+
+while (<STDIN>) {
+  if (m/^\@defn (.*)$/ and grep (/^$1$/, @roots)) {
+    my $language;
+    my $defn = $_;
+
+    # FIXME: should lookup a filename-based hash first (or second ?)
+
+    # memorize all lines until we can guess the language
+    my @buffer;
+    while (defined($_ = <STDIN>) and not m/^\@text/) {
+      push @buffer, $_;
+    }
+    # we have found the 1st @text line in the file, go see if it's a hash-bang
+    if (m/^\@text #!\s*(\/\S+)/) {
+      my $interp = basename ($1);
+
+      # lookup in our knowledge base
+      foreach my $re (keys %interpreters) {
+        $language=$interpreters{$re} if $interp =~ m/^$re$/;
+      }
+      # default to interpreter's name (FIXME: ugly, should be optional)
+      $language = $interp unless defined $language;
+    }
+    #
+    print $defn;
+    print "\@language $language\n" if defined $language;
+    print @buffer;
+  }
+  print $_;
+}

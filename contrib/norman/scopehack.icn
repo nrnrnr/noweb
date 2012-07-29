@@ -1,0 +1,44 @@
+# scopehack; a replacement for totex but splitting output into multiple files
+
+global totex
+
+procedure main(args)
+  totex := "PATH=/usr/local/noweb/lib:/usr/lib/noweb:$PATH totex"  
+  every totex ||:= " '" || !args || "'"
+
+  lines := []
+  file 
+
+  while line := read() do {
+    line ? 
+      if ="@fatal" then exit(1)
+      else if ="@file " then
+        if =\file & pos(0) then # no change
+          &null
+        else {
+          flush(file, lines)
+          file := tab(0)
+	}
+    put(lines, line)
+  }
+  flush(file, lines)
+end
+
+procedure flush(file, lines)
+  if /file & *lines > 0 then
+    stop("First line is not @file")
+  else if *lines = 0 then
+    return
+  else {
+    outfile := suffex(file) || ".tex"
+    p := open(totex || " > " || outfile, "wp") | stop ("cannot run ", totex)
+    while write(p, get(lines))
+    close(p)
+    return
+  }
+end
+
+procedure suffex(s)
+  return reverse (reverse(s) ? {tab(upto('.')) & ="."; tab(0)})
+end
+   

@@ -200,7 +200,7 @@ This means get and put are just I/O.
 <<one-pass definitions>>=
 static char *get_stripped(void *in) {
   FILE *fp = (FILE *)in;
-  char *line = getline(fp);
+  char *line = getline_nw(fp);
   if (line) {
     int i = strlen(line) - 1;
     if (i >= 0 && line[i] == '\n') line[i] = 0;
@@ -235,7 +235,7 @@ main (int argc, char *argv[]) {
 @
 \subsection{Boilerplate}
 <<*>>=
-static char rcsid[] = "$Id: pretty.nw,v 1.18 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: pretty.nw,v 1.19 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,0 +1,27 @@
+#! /bin/sh
+#
+#     notangleall
+#
+#  -creates all required directories for the code chunks
+#  -tangles all root chunks (as noweb -t)
+#  -makes all scripts mared executable. The marking is done
+#   as follows:
+#   %unx chmod +x chunk_name
+#   <<chunk_name>>=
+#      ...
+#   @
+#  
+#   Can also be used for other UNIX commands that should be
+#   executed after the tangling.
+
+
+echo 'making required subdirs'
+noroots $1 | \
+  sed '/<<[^/]*>>/d ; s/<<\(.*\)\/[^\/]*>>/\1/' | \
+  sort | uniq | sed 's/\(.*\)/mkdir -p \1 ;/' | sh
+
+echo 'extracting code chunks'
+noweb -t $1
+ 
+echo 'making scripts executable'
+egrep '^%unix' $1 | sed 's/%unix //; s/.*/& ;/' | sh

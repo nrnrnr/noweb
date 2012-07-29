@@ -1,0 +1,198 @@
+% -*-lang : icon-*-
+
+\documentclass [11pt] {article}
+\usepackage {noweb}
+\usepackage {fullpage}
+\pagestyle {noweb}
+
+\title {Automatic \texttt{noweb} Indexing for OOT Identifiers}
+\author{Kostas N. Oikonomou \\ \textsf{ko@surya.ho.att.com}}
+
+\begin {document}
+\maketitle
+
+@ This code builds a [[noweb]] filter which produces automatic index entries for OOT
+identifiers.  It is used with the generic file [[icon/defns.nw]]. (The Makefile takes
+care of this.)\\
+\textsc{Note}: There are some good examples here of how someone used to programming
+in Turing can screw up in Icon. They have to do with assignment (Icon may succeed or
+fail), and with booleans.
+<<*>>=
+<<Finding OOT definitions>>
+<<Other routines needed by [[defns.nw]]>>
+@
+
+
+@
+\section {Finding OOT definitions}
+
+[[begin_decl]] is a set of reserved words that signal the beginning of a declaration.
+Ideally, after encountering a token in [[begin_decl]], we would find the identifier
+and write an index entry.  However, some declarations are tricky:
+\begin {enumerate}
+  \item {\ttb{}deferred procedure} P 
+  \item {\ttb{}const pervasive} k := 3
+  \item {\ttb{}external} \texttt{"}f\texttt{"} {\ttb{}function} F
+  \item {\ttb{}var} x, y, z : {\ttb{}real}
+  \item {\ttb{}import} a, b, {\ttb{}var} u \% No declarations here!
+  \item We normally don't index identifiers declared inside procedures or functions.
+    This can be changed, if desired, by making [[ie_list]] empty.  However, it is
+    also possible to invoke the filter with an argument \texttt{\itshape filename},
+    where \texttt{\itshape filename\/} contains subprogram names one per line.  Then
+    the local declarations in these subprograms {\em will\/} be indexed\footnote {For
+    this to work, invoke [[noweave]] as \texttt{noweave -autodefs "oot {\itshape
+    filename\/}" -filter oot.filter -index}}.
+\end {enumerate}
+Handling these cases makes life a bit more difficult.  We do it by setting up various
+categories of tokens (Icon lists).
+@
+
+
+<<Set up token categories>>=
+id_chars := &letters ++ &digits ++ '_'
+begin_decl := ["class", "const", "function", "module", "monitor", "procedure",
+  "process", "type", "var"]
+qualifier1 := ["deferred", "external", "forward"]  # Cases 1, 3
+qualifier2 := ["pervasive"]			   # Case 2
+ie_list := ["import", "export"]
+begin_subprogram := ["procedure", "function"]
+@
+
+@
+
+
+@
+<<Finding OOT definitions>>=
+procedure postpass(name, arg)
+  static kind, id_chars, begin_decl, qualifier1, qualifier2, ie_list,
+    begin_subprogram, in_ie_list, in_subprogram, sub_name
+  local token
+  initial {
+    <<Set up token categories>>
+    <<Initialize static variables>>
+  }
+  if name == "begin" then 
+    arg ? kind := tab(upto(' ')|0)
+  else
+  if name == "text" & kind == "code" then
+    arg ? {<<Go for the identifiers>>}
+  return
+end
+@
+
+@
+<<Initialize static variables>>=
+kind := "bogus"
+in_ie_list := &null
+in_subprogram := &null
+@
+
+@
+<<Go for the identifiers>>=
+tab(many(' '))
+token := tab(many(id_chars))  # May be null.
+if /in_ie_list & /in_subprogram then  # ``/'' is Turings' \textbf{not}.
+  case token of {
+    !ie_list : in_ie_list := "true"
+    !qualifier1 : {
+      <<If \textbf{external}, skip the quoted string>>
+      <<Find the identifiers and write index entries>>}
+    !begin_subprogram : <<Index [[sub_name]] and remember it>>
+    !begin_decl : {
+      tab(match(!qualifier2));  tab(many(' '))  # Case 2
+      <<Find the identifiers and write index entries>>}
+  }
+else {
+  <<Check for end of \textbf{import/export} list>>
+  <<Check for end of subprogram>>}
+@
+
+
+@ This is case 3.  A quoted string may or may not be there!
+<<If \textbf{external}, skip the quoted string>>=
+if token == "external" then {
+  tab(many(' '))
+  # Icon note: the next expression fails if one of the sub-expressions fails.
+  tab(match('"')) & tab(many(id_chars)) & tab(match('"'))
+  tab(many(' '))
+}
+@
+
+@ This is case 6.  [[sub_name]] is the subprogram's identifier.
+<<Index [[sub_name]] and remember it>>=
+{tab(many(' '))
+ sub_name := tab(many(id_chars))
+ writedefn(sub_name)  # Defined in \texttt{defns.nw}
+ # \texttt{sub\_name ~== !subs\_to\_index} doesn't work. Why does it work in \texttt{case}?
+ if not member(set(subs_to_index), sub_name) then in_subprogram:= "true"}
+@
+
+@ This is case 4.
+Multiple identifiers can occur only in \textbf{var} or \textbf{const} declarations.
+<<Find the identifiers and write index entries>>=
+repeat {
+  writedefn(tab(many(id_chars)))  # Defined in \texttt{defns.nw}
+  tab(many(' '))
+  if not tab(match(",")) then break
+  tab(many(' '))
+}
+@
+
+
+@ We assume that every line of a multi-line \textbf{import/export} lists ends with a
+comma, unless it is the last line.  So if [[in_ie_list]] is set, we check the last
+non-blank character of the line.  If it is not a ``,'' we set [[in_ie_list]] to null.
+Clearly, the Turing compiler will accept multi-line lists even though their lines do
+not end with a comma, so this method of detecting the end of the list is not
+foolproof.  It is, however, simple.
+<<Check for end of \textbf{import/export} list>>=
+# This is not Turing! \texttt{in\_list := trim(arg)[-1] == ","} is wrong!
+if \in_ie_list then 
+  if arg == "" | trim(arg)[-1] ~== "," then in_ie_list := &null
+@
+
+@
+<<Check for end of subprogram>>=
+if \in_subprogram then
+  if \token == "end" then
+    {tab(many(' ')); if tab(match(sub_name)) then in_subprogram := &null}
+@
+
+
+
+@
+\section {Procedures [[main]] and [[prepass]]}
+
+This is copied (modified) from [[icon/icondefs.nw]].
+<<Other routines needed by [[defns.nw]]>>=
+global subs_to_index
+procedure main(args)
+  local name, f
+  <<Initialize [[subs_to_index]]>>
+  go()
+end
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # Force newline.
+end
+@
+
+@
+<<Initialize [[subs_to_index]]>>=
+subs_to_index := []
+f := open(args[1], "r")
+if \f then {
+  every put(subs_to_index, !f)  # Neat! See p. 132 of the Icon book.
+  writes(&errout, "(Indexing subprograms")
+  every writes(&errout, " ", !subs_to_index)
+  write(&errout, ")")
+  close(f)
+}
+@
+
+
+
+%@
+%\section {Index}
+%\nowebindex
+
+\end {document}

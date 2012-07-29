@@ -15,7 +15,7 @@ details later.
 <<header>>=
 void emit_module_named (FILE *out, char *rootname, char *locformat);
 <<*>>=
-static char rcsid[] = "$Id: notangle.nw,v 2.24 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: notangle.nw,v 2.25 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 #define MAX_MODNAME 255
 @
@@ -62,19 +62,19 @@ void read_defs(FILE *in) {
     char *line = NULL;          /* buffer for input */
     Location loc;
 
-    while ((line = getline(in)) != NULL) {
+    while ((line = getline_nw(in)) != NULL) {
         if (is_keyword(line, "fatal")) exit(1);
         <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>
-        <<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>
+        <<repeat [[line = getline_nw(in);]] until EOF, [[@defn]], or [[@text]]>>
         insist(line,"defn","code chunk had no definition line");
         <<copy module name into [[modname]]>>
         warn_dots(modname);       /* names ending in ... aren't like web */
         modptr = insert(modname); /* find or add module in table */
 
-        line = getline(in);
+        line = getline_nw(in);
         insist(line,"nl","definition line not followed by newline");
         loc.lineno++;
-        line = getline(in);
+        line = getline_nw(in);
         while (line != NULL && !is_end(line,"code")) {
             if (is_keyword(line,"nl")) {
                 addnewline(modptr);
@@ -89,14 +89,14 @@ void read_defs(FILE *in) {
             <<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>
             } else if (!is_keyword(line, "index"))
                 <<complain of botched code chunk>>
-            line = getline(in);
+            line = getline_nw(in);
         }
         <<if [[line==NULL]] die of premature end of file>>
     }
 }
 @ 
-<<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>=
-do { line = getline(in);
+<<repeat [[line = getline_nw(in);]] until EOF, [[@defn]], or [[@text]]>>=
+do { line = getline_nw(in);
 } while (line != NULL && !is_keyword(line,"defn") && !is_keyword(line,"text"));
 @
 <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>=

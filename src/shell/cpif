@@ -25,7 +25,7 @@ for i
 do
 	cmp -s $new $i
 	case $op$? in
-	-eq0|-ne1|*2)	cp $new $i
+	-eq0|-ne1|*2)	cp $new $i || { rm -f $new; exit 1; }
 	esac
 done
 rm -f $new

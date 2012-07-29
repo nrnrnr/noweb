@@ -1,0 +1,362 @@
+\documentstyle[noweb]{article}
+\pagestyle{noweb}
+\begin{document}
+\section{Converting {\tt noweb} markup to {\tt HTML}}
+This copyright applies both to the {\tt noweb} source and to the
+generated shell script.
+Thanks to Bill Trost for getting me started with an early version.
+<<copyright notice>>=
+# Copyright 1994 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+
+<<tohtml>>=
+#!/bin/rc
+<<copyright notice>>
+# Do not try to understand this file!  Look at lib/tohtml.nw in the noweb sour
+e!
+
+delay=0
+raw=0
+localindex=0
+noindex=0
+for(i) {
+	switch($i) {
+	case -delay
+		delay=1
+	case -raw
+		raw=1
+	case -localindex
+		if(~ $noindex 0)
+			localindex=1
+	case -noindex
+		localindex=0
+		noindex=1
+	}
+}
+
+awk -f /sys/lib/noweb/tohtml.awk \
+	-v 'delay='$delay -v 'raw='$raw -v 'localindex='$localindex -v 'noindex
+'$noindex
+<<tohtml.awk>>=
+<<awk program for conversion to {\tt HTML}>>
+@
+The [[-raw]] option brackets HTML with [[\begin{rawhtml}]] and 
+[[\end{rawhtml}]]; the purpose is to embed HTML in a {\LaTeX} 
+document before converting the document with {\tt latex2html}.
+[[braw]] and [[eraw]] hold those delimiters (or else empty strings).
+<<awk program for conversion to {\tt HTML}>>=
+<<functions>>
+BEGIN { <<initialization>> }
+!doneraw { # do not do in BEGIN because not all awks assign variables yet
+   if (raw) { braw = "\\begin{rawhtml}"; eraw = "\\end{rawhtml}" }
+   else       braw = eraw = "" 
+   doneraw = 1
+}
+<<patterns>>
+END   { print "" }
+@ 
+[[ecode]] is the marker used at the end of the current code chunk.
+If there is no cross-reference stuff at the end, we just use [[</pre>]];
+otherwise we terminate whatever environment is used for the cross-reference st
+ff.
+<<patterns>>=
+/^@begin code / { code = 1; printf "%s<pre>", braw; ecode = "</pre>" }
+/^@end code /   { code = 0; previscode = 1; <<dump pending cross-reference inf
+>>
+                  printf "%s%s", ecode, eraw 
+                }
+@
+We want to try to avoid emitting paragraph elements when the
+preceding chunk is a code chunk, as tracked by [[previscode]].
+Also, if we do slip in a paragraph, we may use the {\LaTeX} style.
+<<patterns>>=
+/^@begin docs / { if (previscode) printf "%s", (raw ? "\\par" : "<p>") 
+                  previscode = text = 0
+                }
+@
+Sometimes it happens that a document-chunk anchor is put in a document chunk t
+at
+contains no text.  In that case, we put in a phony anchor at the end of the ch
+nk so 
+we won't lose the cross-reference.
+<<patterns>>=
+/^@end docs /   { if (lastxreflabel != "")
+                    printf "%s%s%s\n", braw, linklabel(lastxreflabel, "*"), er
+w
+                  lastxreflabel = ""
+                }
+@
+Normally, if there's a pending anchor, we put it on the first available text l
+ne.
+<<patterns>>=
+/^@text /       { line = substr($0, 7); text += length(line)
+                  if (code) {
+                    if (lastindexref != "" && line ~ /[^ \t]/) {
+                      printf "%s", linkto(lastindexref, line)
+                      lastindexref = ""
+                    } else {
+                      printf "%s", escapeSpecials(line)
+                    }
+                  } else if (quoting) {
+                    if (line ~ /[^ \t]/) {
+  		      printf "%s", linklabelto(lastxreflabel, lastindexref,
+		                               escapeSpecials(line))
+                      lastindexref = lastxreflabel = ""
+                    } else {
+                      printf "%s", escapeSpecials(line)
+                    }
+                  } else {
+                    if (lastxreflabel != "" && line ~ /[^ \t]/) {
+                      <<print docs anchor>>
+                      lastxreflabel = ""
+                    } else {
+                      printf "%s", line
+                    }
+                 }
+               }
+@
+We anchor on the first nonblank character of the line, unless that's
+a \TeX\ control sequence or an SGML tag.
+In that case we insert a {\tt*} to anchor to.
+None of this crap would be necessary if HTML could anchor to empty text.
+<<print docs anchor>>=
+match(line, /^[ \t]*/)
+blanks = substr(line, RSTART, RLENGTH)
+line = substr(line, RSTART+RLENGTH)
+if (line ~ /^[{}\\<&]/) {
+  char = "*"
+} else {
+  char = substr(line, 1, 1)
+  line = substr(line, 2)
+}
+printf "%s%s%s%s%s", braw, blanks, linklabel(lastxreflabel, char), eraw, line
+if (lastxreflabel != "") defns_above[lastxreflabel] = 1
+<<patterns>>=
+/^@nl$/   { print "" }
+/^@defn / { thischunk = name = substr($0, 7)
+            if (lastxreflabel != "") defns_above[lastxreflabel] = 1
+            writechunk(lastxreflabel, lastxrefref, "dfn", name, defns[name] "=
+)
+	    <<clear [[lastxref*]]>>
+            defns[name] = "+"
+          }
+<<initialization>>=
+defns[0] = 0
+defns_above[0] = 0
+<<patterns>>=
+/^@use / { writechunk(lastxreflabel, lastxrefref, "i", substr($0, 6), "") }
+@
+Writing a chunk involves creating an anchor for it.
+<<functions>>=
+function writechunk(label, ref, tag, name, suffix) {
+  printf "%s", 
+    linklabelto(label, ref, sgmlwrap(tag, "&lt;" convquotes(name) "&gt;" suffi
+))
+}
+@
+<<patterns>>= 
+/^@quote$/         { quoting = 1 ; printf "%s<code>",  braw }
+/^@endquote$/      { quoting = 0 ; printf "</code>%s", eraw }
+/^@file /          { filename = substr($0, 7); <<clear [[lastxref*]]>> }
+/^@literal /       { printf "%s", substr($0, 10) }
+/^@header html /   { <<write HTML header>> }
+/^@trailer html$/  { <<write HTML trailer>> }
+@
+<<write HTML header>>=
+printf "<html><head><title>%s</title></head><body>", substr($0, 14)
+
+<<write HTML trailer>>=
+print "</body></html>"
+@
+<<patterns>>=
+/^@xref label /    { lastxreflabel = substr($0, 13) }
+/^@xref ref /      { lastxrefref   = substr($0, 11) }
+/^@xref prevdef/   { pendingprev   = substr($0, 15) }
+/^@xref nextdef/   { pendingnext   = substr($0, 15) }
+/^@xref beginuses/ { useitems = "" }
+/^@xref useitem /  { useitems = useitems " " substr($0, 15) }
+/^@xref enduses/   { useitemstab[thischunk] = useitems }
+/^@xref notused /  { <<code-to-blockquote>>
+                      printf "This code is written to a file (or else not used
+.<p>"
+                   }
+<<initialization>>=
+useitemstab[0] = 0
+<<clear [[lastxref*]]>>=
+lastxreflabel = lastxrefref = ""
+<<dump pending cross-reference info>>=
+useitemscount = split(useitemstab[thischunk], a)
+if (pendingprev != "" || pendingnext != "" || useitemscount > 0) {
+  <<code-to-blockquote>>
+  <<write out uses with links>>
+  if (useitemscount > 0 && (pendingprev != "" || pendingnext != "")) 
+    printf "; "
+  p = useitemscount > 0 ? "previous" : "Previous"
+  n = useitemscount > 0 ? "next"     : "Next"
+  if (pendingprev != "")
+    if (pendingnext != "")
+      printf "%s and %s definitions", linkto(pendingprev, p), linkto(pendingne
+t, "next")
+    else
+      printf "%s definition", linkto(pendingprev, p)
+  else
+    if (pendingnext != "")
+      printf "%s definition", linkto(pendingnext, n)
+  pendingprev = pendingnext = ""
+  useitems = ""
+  print ".<p>"
+}
+<<write out uses with links>>=
+useprefix = "Used "
+for (j = 1; j <= useitemscount; j++) {
+  if (defns_above[a[j]] > 0)
+    usedir = "above"
+  else
+    usedir = "below"
+  printf "%s%s", useprefix, linkto(a[j], usedir (useitemscount > 1 ? " (" j ")
+ : ""))
+  useprefix = ", "
+}
+@
+The hack here is to put the supplementary information in a blockquote area
+after the code.
+<<code-to-blockquote>>=
+if (ecode == "</pre>") {
+  printf "</pre><blockquote>"
+  ecode = "</blockquote>"
+}
+@
+The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
+[[@xref enddefs]]; it uses the [[nextdef]] and [[prevdef]] links instead.
+<<patterns>>=
+/^@xref (begindefs|defitem|enddefs)/ { }
+/^@xref beginchunks$/ { printf "%s<ul>\n", braw }
+/^@xref chunkbegin /  { label = $3; name = substr($0, 19 + length(label))
+                        printf "<li>"; comma = ": "; count = 0
+                        writechunk("", label, "i", name, "")
+                      }
+/^@xref chunkuse /    { printf "%s%s", comma, linkto(substr($0, 16), "U" ++cou
+t)
+                        comma = ", "
+                      }
+/^@xref chunkdefn /   { printf "%s%s", comma, linkto(substr($0, 17), "D" ++cou
+t)
+                        comma = ", "
+                      }
+/^@xref chunkend$/    { print "" }
+/^@xref endchunks$/   { printf "</ul>%s\n", eraw }
+<<patterns>>=
+/^@index beginindex$/  { if (!noindex) { printf "%s<ul>\n", braw } }
+/^@index entrybegin /  { if (!noindex) { 
+                         label = $3; name = substr($0, 20 + length(label)) 
+                         printf "<li>"; comma = ": "; count = 0
+                         printf "%s", 
+                            linklabelto("NWI-" escapeSpecials(name), label, na
+e) 
+                         
+                       } }
+/^@index entryuse /    { if (!noindex) {
+                         printf "%s%s", comma, linkto(substr($0, 17), "U" ++co
+nt)
+                         comma = ", " 
+                       } }
+/^@index entrydefn /   { if (!noindex) {
+                           printf "%s%s", comma, linkto(substr($0, 18), "D" ++
+ount)
+                       	   comma = ", " 
+                       } }
+/^@index entryend$/    { if (!noindex) { print "" } }
+/^@index endindex$/    { if (!noindex) { printf "</ul>%s\n", eraw } }
+@
+The local identifier cross-reference doesn't show each use; it just shows
+the identifiers that are defined, with links to the full index.
+<<patterns>>=
+/^@index use/       { lastindexref = lastxrefref; lastxrefref = "" }
+/^@index defn/      { <<clear [[lastxref*]]>> }
+/^@index localdefn/ { <<clear [[lastxref*]]>> }
+/^@index nl/        { }  # do nothing -- destroys line numbering
+/^@index begindefs/ { if (localindex) {
+   <<code-to-blockquote>>; printf "Defines"; comma = " " 
+} }
+/^@index isused /   { }
+/^@index defitem /  { if (localindex) { 
+   arg = substr($0, 16) 
+   printf "%s%s", comma, 
+       linkto("NWI-" escapeSpecials(arg), sgmlwrap("code", escapeSpecials(arg)
+)
+   comma = ", "
+} }
+/^@index enddefs/   { if (localindex) { printf " (links are to index).<p>\n" }
+}
+/^@index (beginuses|isdefined|useitem|enduses)/ { }   # use local links
+@
+\subsection{Support functions}
+Here's all our anchor support goo.
+<<functions>>=
+function linklabelto(label, ref, contents, s) {
+  s = label != "" || ref != "" ? "<a" : ""
+  if (label != "") s = s " name=" image(label)
+  if (ref != "")   s = s " href=" image("#" ref)
+  s = s (label != "" || ref != "" ? ">" : "")
+  s = s contents
+  s = s (label != "" || ref != "" ? "</a>" : "")
+  return s
+}
+
+function linkto(ref, contents) {
+  return linklabelto("", ref, contents)
+}
+
+function linklabel(label, contents) {
+  return linklabelto(label, "", contents)
+}
+@
+Another support function is used for wrapping tags around text:
+<<functions>>=
+function sgmlwrap(tag, s) {
+  return "<" tag ">" s "</" tag ">"
+}
+<<functions>>=
+function image(s) {
+  gsub(/"/, "\\\"", s)
+  return "\"" s "\""
+}
+@
+Lucky for us, {\tt HTML} has few special characters.  Unlucky for us,
+we have to deal with each one seperately.  Nothing much to whine
+about, really.
+<<functions>>=
+function escapeSpecials (l) {
+  gsub(/&/, "\\&amp;", l)
+  gsub(/</, "\\&lt;", l)
+  gsub(/>/, "\\&gt;", l)
+  gsub(/"/, "\\&quot;", l)
+  return l
+}
+@
+A special function is used to implement {\tt noweb}'s quoting 
+convention within chunk names.
+<<functions>>=
+function convquotes(s, r, i, line) {
+  r = ""
+  while (i = index(s, "[[")) {
+    r = r substr(s, 1, i-1) "<code>"
+    s = substr(s, i+2)
+    if (i = match(s, "\\]\\]+")) {
+      line = substr(s, 1, i-1+RLENGTH-2)
+      # line = escapeSpecials(line)  # destroys internal markup --- do not cal
+
+      r = r line "</code>"
+      s = substr(s, i+RLENGTH)
+    } else {
+      r = r s "</code>"
+      s = ""
+    }
+  }
+  return r s
+}
+@
+\end{document}

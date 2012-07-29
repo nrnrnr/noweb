@@ -1,0 +1,60 @@
+# nwsrcfilter -- filter out irrelevant files, put .nw files first
+
+procedure main(args)
+  while line := read() do
+    if not (line[-1] == "~" | line == "." | find("/RCS", line) |
+            (line ? (tab(find("./binaries/")), move(1))) |
+            line[3] == line[-1] == "#" | line == "./nwsrcfilter") then 
+      line ? (="./" & save_file(tab(0)))
+  dump_files()
+end
+
+global root
+
+global files_in_input
+
+procedure save_file(name)
+  initial {root := table(); files_in_input := set()}
+  insert(files_in_input, name)
+  name ? do_save(root)
+  return
+end
+
+procedure do_save(root)
+  if key := tab(upto('/')) & tab(many('/')) then {
+    /root[key] := table()
+    do_save(root[key])
+  } else
+    /root[tab(0)] := table()
+end
+
+procedure dump_files(prefix, r)
+  /prefix := ""
+  /r := root
+  if *r = 0 then return
+  l := sort(r)
+  bubblenw(l)
+  every p := !l do
+    if *p[2] > 0 then {
+      dump_files(prefix || p[1] || "/", p[2])
+      if member(files_in_input, prefix || p[1]) then write(prefix, p[1])
+		# only dump directories if they were given explicitly
+    } else {
+      write(prefix, p[1])
+    }
+end
+
+procedure bubblenw(l)
+  lo := 1	# first non-nw
+  while l[lo][1][-3:0] == ".nw" do lo +:= 1
+  hi := lo +1	# first succeeding nw
+  while l[hi][1][-3:0] ~== ".nw" do hi +:= 1
+  while hi <= *l do {
+    i := hi
+    while i > lo do {l[i] :=: l[i-1]; i -:= 1}
+    lo +:= 1
+    hi +:= 1
+    while l[hi][1][-3:0] ~== ".nw" do hi +:= 1
+  }
+  return l
+end

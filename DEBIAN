@@ -1,0 +1,15 @@
+Anyone may modify noweb and create derived works, provided he or she
+retains this copyright notice, but the result may not be called
+noweb without my written consent.  I hereby provide my written
+consent to the Debian project to call their derived work 'noweb'.
+I do so under the assumption that Debian's modifications are
+normally intended to fix bugs, close security holes, and bring the
+software into compliance with Debian policy.  I have a great deal of
+trust in and respect for the Debian project, so I am in fact willing
+for the Debian project to make any modification they deem necessary
+and still call the result 'noweb'.  In particular, there is no need
+for the Debian project to consult me about any contemplated
+modification, either now or in the future.  I do reserve the right
+to revoke my consent in the unlikely event that, in my opinion,
+future Debian modifications will have made it misleading to call the
+package 'noweb'.

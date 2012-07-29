@@ -1,0 +1,86 @@
+#!/bin/sh
+# exec gs -sDEVICE=djet500 -sOutputFile=- -q -dNOPAUSE "$@"
+
+device=pbm
+case $0 in
+  *pbm) device=pbm ;;
+  *ppm) device=ppm ;;
+esac
+
+border=10
+leftborder=$border
+rightborder=$border
+upperborder=$border
+lowerborder=$border
+translate=yes
+showpage=showpage
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    -border) border="$2"
+             leftborder=$border
+             rightborder=$border
+             upperborder=$border
+	     lowerborder=$border
+	     shift ;; 
+    -upper)  upperborder="$2" ; shift ;;
+    -lower)  lowerborder="$2" ; shift ;;
+    -left)  leftborder="$2" ; shift ;;
+    -right)  rightborder="$2" ; shift ;;
+    -notrans) translate=  ;;
+    -showpage) showpage=showpage ;;
+    -noshowpage) showpage= ;;
+    -*) echo "Unknown option $1" 1>&2 ; exit 1;;
+    *) break ;;
+  esac
+  shift
+done
+
+tmp=/tmp/pstopbm$$
+tmpa=$tmp.a
+if [ $# -eq 0 ]; then cat > $tmp; else cat "$@" > $tmp; fi
+
+if echo "$@" | fgrep .eps > /dev/null; then
+  echo showpage >> $tmp
+fi
+
+set foo `psbb $tmp`
+shift
+
+if [ -n "$translate" -a $# -eq 4 ]; then
+  
+  llx="$1" lly="$2" urx="$3" ury="$4"
+  llx=`expr $llx - $leftborder`
+  lly=`expr $lly - $lowerborder`
+  urx=`expr $urx + $rightborder`
+  ury=`expr $ury + $upperborder`
+  width=`expr $urx - $llx`
+  height=`expr $ury - $lly`
+  
+  awk '{print}
+  /^%%EndComments/ { printf "%d neg %d neg translate\n", '"$llx, $lly"' }
+  ' $tmp > $tmpa
+  echo "$showpage" |
+  gs -q -g"${width}x$height" -sDEVICE=$device -sOutputFile=- -dNOPAUSE $tmpa -
+else
+  echo "$showpage" |
+  gs -q -sDEVICE=$device -sOutputFile=- -dNOPAUSE $tmp -
+fi
+  
+# rm -f $tmp $tmpa
+
+exit 0
+
+#### old version
+
+
+
+if [ $# -eq 0 ]; then
+  tmp=/tmp/pstopbm$$
+  cat > $tmp
+  gs -q -sDEVICE=$device -sOutputFile=- -dNOPAUSE -dMAGSTEP=1.0 $tmp
+else
+  gs -q -sDEVICE=$device -sOutputFile=- -dNOPAUSE -dMAGSTEP=1.0 "$@"
+fi
+rm -rf $tmp
+

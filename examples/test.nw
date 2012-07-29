@@ -1,12 +1,17 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 <<*>>=
-one <<two>> <<three>>
+one <<two>> <<three>>	# uses two and three
+@ %def one
 <<two>>=
 first of two
 second of two
 third of two
+@ %def fish fowl duck
+@ %def two
 <<three>>=
 first of three
  second of three
   third of three
+@ %def three
+

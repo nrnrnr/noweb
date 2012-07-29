@@ -1,0 +1,15 @@
+#!/bin/sh
+
+SCRIPT="$1"; shift
+INTERP=`sed -ne '
+   s!/bin/sh!/bin/sh -s!;
+   1s/^%!//p
+   ' "$SCRIPT"`
+
+case "$INTERP" in
+   '')
+      echo 'No interpreter line (%!) found!' >&2
+      exit 1
+      ;;
+   *) notangle "$SCRIPT" | exec $INTERP - "$@" ;;
+esac

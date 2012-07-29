@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Copyright 1993 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+LIB=|LIBDIR|
+case $1 in 
+  -auto|-autodefs) 
+    newfilter="$LIB/autodefs.$2" ; shift ; shift
+    $LIB/markup $* | $newfilter | sed -n 's/^@index defn //p'
+    ;;
+  -showauto|-showautodefs)
+    foundautodefs=
+    for i in $LIB/autodefs.*; do
+      if [ -r $i ]; then
+        echo "This `basename $0` supports -autodefs $i" | 
+                            sed "s@$LIB/autodefs\.@@" 1>&2
+        foundautodefs=$i
+      fi
+    done
+    if [ -z "$foundautodefs" ]; then
+      echo "This `basename $0` does not support -autodefs"
+    fi
+    ;;
+  *)
+    $LIB/markup $* | sed -n 's/^@index defn //p'
+    ;;
+esac
+exit $?

@@ -1,0 +1,63 @@
+<<noweb>>=
+#!/bin/rc
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+
+rfork en
+bind -b /sys/lib/noweb/bin/$objtype /bin
+bind -b /sys/lib/noweb/bin/rc /bin
+
+markup=markup
+mntopt=-L
+status=0
+tex=1
+output=1
+
+break=no
+while(! ~ $#* 0 && ~ $break no) {
+	switch($1) {
+	case -to -ot
+		tex=''
+		output=''
+		shift
+	case -t
+		tex=''
+		shift
+	case -o
+		output=''
+		shift
+	case -L*
+		mntopt=$1
+		shift
+	case -markup
+		markup=$2
+		shift 
+		shift
+	case -*
+		echo unrecognized option $1 >[1=2]
+		exit usage
+	case *
+		break=yes
+	}
+}
+
+for(source) {
+	if(test -n $output) {
+		eval $markup' -t '$source' | mnt -t8 '$mntopt' -all' || status=
+
+	}
+	if(test -n $tex) {
+		texname=`{echo $source | sed '/\./s/\.[^.]*$//'}
+		texname=$texname.tex
+		eval $markup' '$source | finduses -noquote | noidx -delay |
+		awk '{print}
+			/^@defn [^ ]*$/ { print "@literal \\let\\nwnotused=\\nw
+utput{}" }' |
+    		totex -delay | cpif $texname || status=1
+	}
+}
+
+exit $status

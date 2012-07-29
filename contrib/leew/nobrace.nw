@@ -1,0 +1,321 @@
+%
+% to tangle:
+%		notangle -t4 -L nobrace.nw > nobrace.icn
+% to weave:
+%		noweave -t4 -delay -autodefs icon -index nobrace.nw > nobrace.tex
+% to create the manpage:
+%		notangle -Rnobrace.1 nobrace.nw > nobrace.1
+%
+\documentclass{article}
+
+\usepackage{noweb,multicol}
+\noweboptions{longchunks}	% noweave -option longchunks would be
+							% better, but won't work with -delay, and
+							% we need stuff before \begin{document}
+
+% show spaces in string constants
+\global\let\xsetup=\setupcode
+\bgroup
+	\catcode`\"=\active\gdef\setupcode{\xsetup
+	\catcode`\"=\active\def"##1"{\char`\"\xxx{##1}\char`\"}}%
+\egroup
+\bgroup
+	\catcode`\ =\active\gdef\xxx#1{{\catcode`\ =\active\chardef ='40#1}}%
+\egroup
+
+\def\noweb/{\texttt{noweb}}
+\def\nobrace/{\texttt{nobrace}}
+\def\notangle/{\texttt{notangle}}
+\def\noweave/{\texttt{noweave}}
+
+\title {A Filter For Matching Braces in \noweb/ Programs%
+	\thanks{Copyright \copyright~1996 by Lee Wittenberg.
+		Although this software is freely distributable, it is not in
+		the public domain.  It is provided ``as is'' and without any
+		express or implied warranties, including, without limitation,
+		the implied warranties of merchantability and fitness for a
+		particular purpose.}}
+\author {Lee Wittenberg\\\tt leew@pilot.njin.net}
+
+\pagestyle{noweb}
+\begin{document}
+\maketitle
+@ \iffalse
+%
+% We don't want a troff man page woven by TeX, do we?
+%
+<<nobrace.1>>=
+.TH NOBRACE 1 "local 4/9/96"
+.SH NAME
+nobrace \- check noweb chunks for brace mismatches
+.SH SYNOPSIS
+.B nobrace
+[ brace-pair ... ]
+.SH DESCRIPTION
+.I nobrace
+is a filter designed to work with
+.I notangle(1)
+or
+.I noweave(1)
+to ensure that the braces in each code chunk are balanced. 
+.I nobrace
+generates warning messages on the standard error stream for each 
+chunk with unbalanced braces.
+
+If no brace pairs are specified on the command line, 
+.I nobrace
+will check parentheses, square brackets, and curly braces.  
+.SH BUGS
+.I nobrace
+is naive about braces in string constants, comments, etc.
+.PP
+No provision is made for multiple character braces, so C-style
+comments cannot be checked (nor can Algol-like \fBbegin\fP's and
+\fBend\fP's).
+.PP
+This manual page would be better if its author knew more about troff
+and the -man macros.
+.SH SEE ALSO
+.I notangle(1), noweave(1)
+.SH AUTHOR
+Lee Wittenberg.  Internet address: \fBleew@pilot.njin.net\fP
+@ \fi
+@
+\section{Introduction}
+Many literate programming authorities
+consider it good practice for each code chunk definition to be syntactically
+and semantically complete in itself, with each chunk use representing
+a complete entity (statement, expression, etc.).  To be complete, the
+braces in a chunk must be balanced.  This web provides a
+\noweb/ filter that warns the user about mismatched braces in chunks.
+@
+\section{The Program}
+The main program reads and echoes each
+line of the standard input (so it will be invisible in the pipeline),
+processing only relevant markup lines.
+<<*>>=
+procedure main(args)
+	<<Initialization>>
+	while inputline := read() do {
+		write(inputline)
+		inputline ? {
+			<<Process relevant markup lines>>
+			{}		# for final else
+		}
+	}
+end
+@
+Each command-line
+argument is taken to be a pair of braces, the open brace first.  We
+construct two tables, [[pair]], and [[delta]], which are used to keep
+the brace balancing straight and separate (we don't want `[[{]]'
+matching `[[)]]').  We use the [[braces]] cset for scanning the text
+lines in code chunks.
+
+If no command line arguments are specified, we assume `\verb"() [] {}"'.
+<<Initialization>>=
+pair   := table("")
+delta  := table(0)
+braces := ''
+if *args = 0 then
+	args := ["()", "[]", "{}"]
+every p := !args do {
+	braces ++:= p
+	every pair[!p] := p
+	delta[p[1]] := +1
+	delta[p[2]] := -1
+}
+@ %def pair delta braces
+@
+\section{Relevant Markup}
+Our \emph{raison d'\^etre} is to match braces in code chunks.
+Each [[@text]] line in a code chunk is scanned for braces, which we
+attempt to balance.
+<<Process relevant markup lines>>=
+if ="@text " then {
+	if \code then {
+		line := tab(0)
+		every p := upto(braces, line) do {
+			b := line[p]
+			<<Balance brace [[b]] at [[p]]>>
+		}
+	}
+} else
+@
+Whenever we enter a code chunk, we need to set our [[code]] flag,
+<<Process relevant markup lines>>=
+if ="@begin code " then {
+	code := 1
+} else
+@ \noindent
+and reset it whenever we leave.  Whenever a code chunk ends (thus
+ending a definition), we also need to check for any remaining umatched
+braces in that chunk.
+<<Process relevant markup lines>>=
+if ="@end code " then {
+	code := &null
+	<<Check for unmatched braces>>
+} else
+@
+All webs start with a text chunk, not code.
+<<Initialization>>=
+code := &null
+@ %def code 
+@
+The variables [[curr_chunkname]], [[curr_filename]], and [[curr_line]]
+help keep track of where mismatches are found.
+@ \noindent
+We initialize them to ``safe'' values, just in case.
+<<Initialization>>=
+curr_line := 1
+curr_filename := "Standard Input"
+curr_chunkname := "***Unknown Chunk***"
+@ %def curr_filename curr_line curr_chunkname
+@
+Newlines simply increase the [[curr_line]] count.
+<<Process relevant markup lines>>=
+if ="@nl" & pos(0) then {
+	curr_line +:= 1
+} else
+@
+Whenever we get a new file name, we make note of it.
+<<Process relevant markup lines>>=
+if ="@file " then {
+	curr_filename := tab(0)
+	curr_line := 1
+} else
+@
+The [[@line]] directive can be used to adjust the current line
+number in a source file.  We hear and obey.
+<<Process relevant markup lines>>=
+if ="@line " then {
+	curr_line := integer(tab(0))
+} else
+@
+New chunk definitions give us a new [[curr_chunkname]].
+``[[<<Check for unmatched braces>>]]''
+is here because it is not illegal for a single code chunk to have more
+than one definition.  None of the standard tools produce anything like
+that, but we allow for this (remote) possibility in the interests of
+defensive programming.
+<<Process relevant markup lines>>=
+if ="@defn " then {
+	<<Check for unmatched braces>>
+	curr_chunkname := tab(0)
+} else 
+@
+\section{Dealing With Braces}
+Whenever we see an opening brace, we push its location
+on the appropriate stack,
+and when we see a closing brace, we pop the 
+corresponding opening brace's location
+(we use [[pull]] instead of [[pop]] to keep the list sorted; we use
+list concatenation instead of [[put]] because of Icon's table
+initialization semantics).  
+
+If there is no opening brace to pop,
+we've found a mismatched closing brace.
+We add each line containing a brace to the [[error_line]] table
+because it may be needed for a warning message.
+<<Balance brace [[b]] at [[p]]>>=
+if delta[b] > 0 then {
+#	put(bstack[pair[b]], loc(curr_line, p))
+	bstack[pair[b]] |||:= [loc(curr_line, p)]
+} else {
+	pull(bstack[pair[b]]) |
+		{<<Note brace error at [[curr_line]], [[p]]>>}
+}
+error_line[curr_line] := line
+@
+A brace's location is a line number and a column position in that
+line.
+<<*>>=
+record loc(line,col)
+@
+We keep all brace errors in a sorted list, [[error_list]].
+<<Note brace error at [[curr_line]], [[p]]>>=
+put(error_list, loc(curr_line, p))
+@
+The brace stacks are initially empty, as is the error list.
+<<Initialization>>=
+bstack := table([])
+error_list := []
+error_line := table("")
+@ %def bstack error_list error_line
+@
+If either the error list or any of the brace stacks are not empty, we
+have mismatched braces
+<<Check for unmatched braces>>=
+if (*error_list | *!bstack) ~= 0 then {
+	<<Generate warning messages>>
+}
+@
+We merge [[error_list]] with all the brace stacks to create a single
+(sorted) list of mismatched brace locations.  We write a single
+warning message for the chunk, followed by all the lines with
+mismatched braces.  When we're finished, we clear the error list and
+the brace stacks for the next chunk definition.
+<<Generate warning messages>>=
+every error_list := merge(!bstack, error_list)
+write(&errout, "Warning: Mismatched braces in @<<",
+			   curr_chunkname, ">>",
+			   if curr_filename ~== ""
+				   then " (" || curr_filename || ")"
+				   else "",
+			   ":")
+<<Display all relevant lines with mismatched braces marked>>
+error_list := []
+bstack := table([])
+@
+For each line represented in the error list, we print the line with a
+marker line under it.  We use the `\verb"^"' character to mark the
+position of each mismatched brace.  Each line is prefixed with its
+line number.
+<<Display all relevant lines with mismatched braces marked>>=
+lineno := 0;
+every e := !error_list do {
+	if e.line ~= lineno then {
+		if lineno ~=0 then
+			write(&errout, marker)
+		lineno := e.line
+		write(&errout, right(e.line || ":  ", 10),
+					   error_line[e.line])
+		marker := repl(" ", 10)
+	}
+	marker := left(marker, e.col+10-1) || "^"
+}
+write(&errout, marker)
+@
+The [[merge]] procedure merges two sorted lists of [[loc]]'s.  We plow
+through both lists more or less in parallel, adding the earliest
+brace location to the result list.  When [[a]] is exhausted,
+the remaining elements of [[b]] are concatenated to the result.  Thus,
+the longer list should always be passed as the second parameter if
+possible.
+<<*>>=
+procedure merge(a, b)
+	local i, j, result
+	result := []
+	i := j := 1
+	while a[i] do {
+		if a[i].line > b[j].line |
+		  (a[i].line = b[j].line & a[i].col > b[j].col) then {
+			put(result, b[j])
+			j +:= 1
+		} else {
+			put(result, a[i])
+			i +:= 1
+		}
+	}
+	return result ||| b[j:0]
+end
+@
+\appendix
+\section{Chunk Index}
+\nowebchunks
+\section{Identifier Index}
+\begin{multicols}{2}
+\nowebindex
+\end{multicols}
+@
+\end{document}

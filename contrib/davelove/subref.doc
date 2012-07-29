@@ -1,0 +1,235 @@
+%<*x>     ^^A -*-latex-*-
+% [Standard D. Carlisle boilerplate.]
+% This file may be used without modification as a style (.sty) file.
+%
+% If you have Mittelbach's doc.sty, this file may be formatted with a
+% command like:
+%                latex subref.sty
+%
+% If you have the Mittelbach/Duchier/Braams docstrip utility, you may
+% produce a faster loading .sty file.
+% Rename this file to: subref.doc
+% Then run this file through *plain* TeX:
+%                tex subref.doc
+% This should produce the file subref.sty.
+% If you do not have plain TeX on your system, you can trick LaTeX into
+% doing the work as follows:
+%                latex \def\fmtname{plain} \input subref.doc
+% Note that you may need to quote the arguments here to stop your
+% operating system treating the \ characters incorrectly.
+%
+%                latex subref.doc
+% Will produce a typeset version of the documentation, as above.
+%
+% [Although this is a fairly trivial style, it is for a literate
+% programming task, so it better be written literately, i.e. with the
+% `doc' option.]
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\plain{plain}\ifx\fmtname\plain\csname fi\endcsname
+     \def\batchfile{subref.doc}
+     \input docstrip
+     \preamble
+
+     Copyright D.Love, SERC Daresbury Laboratory, 1993
+     The `doc' version of this style is re-distributable and usable
+     under conditions of the GNU copyleft, but please mark any changes,
+     list them here and report any major enhancements to the author.
+     Do not distribute the stripped version of this file.
+
+     \endpreamble
+     \generateFile{subref.sty}{t}{\from{subref.doc}{}}
+     \endinput
+\fi
+%
+\ifcat a\noexpand @\let\next\relax\else\def\next{%
+  \documentstyle[doc%,a4
+  ,subref]{article}\MakePercentIgnore}\fi\next
+%
+%\def\eatmodule<#1>{}\eatmodule
+%</x>
+% \def\fileversion{1.0} 
+% \def\filedate{7/7/93}
+% \def\docdate {7/7/93}
+% \CheckSum{113}
+%% \CharacterTable
+%%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%%   Digits        \0\1\2\3\4\5\6\7\8\9
+%%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%%   Dollar        \$     Percent       \%     Ampersand     \&
+%%   Acute accent  \'     Left paren    \(     Right paren   \)
+%%   Asterisk      \*     Plus          \+     Comma         \,
+%%   Minus         \-     Point         \.     Solidus       \/
+%%   Colon         \:     Semicolon     \;     Less than     \<
+%%   Equals        \=     Greater than  \>     Question mark \?
+%%   Commercial at \@     Left bracket  \[     Backslash     \\
+%%   Right bracket \]     Circumflex    \^     Underscore    \_
+%%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%%   Right brace   \}     Tilde         \~}
+%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% \textwidth=355pt   ^^A Allow macrocode text with 72 columns.
+% \CodelineIndex     ^^A Code lines numbered.
+% \DisableCrossrefs  ^^A No Cross references.
+% \MakeShortVerb{\"} ^^A "\foo" works like \verb+\foo+
+%
+% \title{{\tt subref.sty}:\\Counting references on pages\thanks{This
+% file has version number \fileversion{} dated \filedate{}.  The
+% documentation was last revised on \docdate.}}
+% \author{Dave Love}
+% \date{}
+% \begin{document}
+% \maketitle
+% \begin{abstract}
+% \noindent This \LaTeX{} style option
+% provides a mechanism for defining `page
+% sub-references' using "\sublabel{foo}" referenced with
+% "\subpageref{foo}".  Sub-references will be numbered like these real
+% examples: \subpageref{ref:foo}, \subpageref{ref:bar},
+% \subpageref{ref:baz}\sublabel{ref:foo}\sublabel{ref:bar}\sublabel{ref:baz}
+% etc.\ unless there is only one on the page, in which case the letter
+% will be dropped like this: \subpageref{ref:fred}.
+% \end{abstract}
+%
+% \subsection*{Usage}
+%
+% For use in "noweb", Norman Ramsey requires:\DescribeMacro{\subpageref}
+% \begin{quote}
+% What's wanted is a latex macro "\subpageref{quux}" that produces
+% either a page number (for a page containing only one definition) or
+% a page number followed by a, b, c, etc\dots
+% \end{quote}
+% To be able to use "\subpageref" we must define the label with
+% "\sublabel"\DescribeMacro{\sublabel}, used like label.  (Using
+% "\ref" \DescribeMacro{\ref} with a label defined by "\sublabel" will
+% produce the sub-reference number, by the way, and "\pageref"
+% \DescribeMacro{\pageref} works as expected.)  Note that
+% "\subpageref" is robust and "\ref" and "\pageref" are defined to be
+% robust also, as they will be in future \LaTeX{} releases.
+% Incidentally, these expand to the relevant text plus "\null"---you
+% might want to strip this off, e.g.\ for sorting lists.
+%
+% \StopEventually
+% 
+% \subsection*{Code}
+%
+% There are various ways we could attack this task (which is made
+% non-trivial by the well-known asynchrony of (La)\TeX's output
+% routine).  There are various ways we might tackle the problem, but
+% they all must depend on hacks in the ".aux" file or a similar one.
+% Joachim Schrod's "fnpag.sty" does the same sort of thing differently
+% to this \LaTeX-specific approach.  See "latex.tex" for enlightenment
+% on the cross-referencing mechanism and the \LaTeX{} internals used
+% below.
+% \begin{macro}{\subpageref}
+% The "\subpageref" macro first does a normal "\pageref".  If the
+% reference is actually defined, it then goes on to check whether the
+% control sequence "2on"\meta{page referenced} is defined and sets the
+% "\ref" value to get "a" etc.\ if so.  The magic, of course, is in
+% defining the "2on" bit appropriately.
+%    \begin{macrocode}
+\newcommand{\subpageref}[1]{%
+  \pageref{#1}%
+  \@ifundefined{r@#1}%
+    {}%
+    {\@ifundefined{2on\@pageref{#1}}%
+      {}%
+      {\ref{#1}}}}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\@pageref}
+% This is like "\pageref", but expands to "\relax" without a warning
+% if the reference is undefined.
+%    \begin{macrocode}
+\def\@pageref#1{\expandafter\expandafter\expandafter
+                \@cdr\csname r@#1\endcsname\@nil}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\sublabel}
+% This is like the usual "\label" command, except that it writes
+% "\newsublabel" onto the ".aux" file rather than "\newlabel".
+%    \begin{macrocode}
+\newcommand{\sublabel}[1]{%
+  \@bsphack\if@filesw {\let\thepage\relax
+   \def\protect{\noexpand\noexpand\noexpand}%
+   \edef\@tempa{\write\@auxout{\string
+      \newsublabel{#1}{{}{\thepage}}}}%
+   \expandafter}\@tempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\fi\@esphack}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\newsublabel}
+% This is the macro that does the important work.  It is called with the
+% same sort of arguments as "\newlabel": the first argument is the
+% label name and the second is "{"\meta{ref value}"}{"\meta{page
+% number}"}".  (Note that the only definition here which needs to be
+% global is the one which is, and that "\global" is redefined by
+% "\enddocument", which will bite you if you use it\dots.)
+% 
+% First we extract the page number into "\this@page".
+%    \begin{macrocode}
+\newcommand{\newsublabel}[2]{%
+  \edef\this@page{\@cdr#2\@nil}%
+%    \end{macrocode}
+% Then we see whether it's greater than the value of "\last@page"
+% which was stashed away by the last "\newsublabel" (or is zero if
+% this is the first one).  If the page has changed, we reset the
+% counter "\sub@page" telling us how many sub-labels there have been
+% on the page.
+%    \begin{macrocode}
+  \ifnum\this@page>\last@page
+    \sub@page=0\relax
+  \fi
+  \last@page=\this@page
+  \advance\sub@page by 1
+%    \end{macrocode}
+% If we've had at least two on the page, we define the "2on"\meta{page
+% no.} macro to indicate the fact.
+%    \begin{macrocode}
+  \ifnum\sub@page=2
+    \global\@namedef{2on\this@page}{}%
+  \fi
+%    \end{macrocode}
+% Then we write a normal "\newlabel" with the sub-reference as the
+% normal reference value in the second argument.
+%    \begin{macrocode}
+  \edef\@tempa{\noexpand\newlabel{#1}%
+    {{\@alph{\number\sub@page}}{\this@page}}}%
+  \@tempa}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\last@page}
+% \begin{macro}{\sub@page}
+% We need to define these counters.  "\last@page" could be a
+% suitably-initialised macro instead.
+%    \begin{macrocode}
+\newcount\last@page
+\newcount\sub@page
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\pageref}
+% \begin{macro}{\ref}
+% Let's use Rainer's new expandable definitions of "\ref" and
+% "\pageref" to minimise the risk of nasty surprises.
+%    \begin{macrocode}
+%% RmS 92/08/14: made \ref and \pageref robust
+\def\ref#1{\@ifundefined{r@#1}{{\reset@font\bf ??}\@warning
+   {Reference `#1' on page \thepage \space
+    undefined}}{\expandafter\expandafter\expandafter
+                \@car\csname r@#1\endcsname
+                \@nil\null}}
+\def\pageref#1{\@ifundefined{r@#1}{{\reset@font\bf ??}\@warning
+   {Reference `#1' on page \thepage \space
+    undefined}}{\expandafter\expandafter\expandafter
+                \@cdr\csname r@#1\endcsname
+                \@nil\null}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}\sublabel{ref:fred}
+% \Finale
+% \end{document}
+%
+\endinput

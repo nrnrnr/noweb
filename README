@@ -1,0 +1,239 @@
+This is version 2.12 of ``noweb'', a simple, extensible literate-
+programming tool.  noweb is available by anonymous ftp from
+ftp.eecs.harvard.edu:pub/nr/noweb and by HTTP from
+http://www.eecs.harvard.edu/nr/noweb/dist.  The ftp site is mirrored
+by the Comprehensive TeX Archive Network, in directory web/noweb.
+The home page at http://www.eecs.harvard.edu/~nr/noweb contains much
+helpful information.
+
+To build noweb, change to the `src' directory and follow the
+instructions in the file INSTALL.  (Debian users can simply install
+the 'nowebm' package.)
+
+
+WHAT'S NEW IN VERSION 2.12
+
+Version 2.12 contains a number of enhancements to the sl2h program and
+l2h filter, which convert from LaTeX to HTML.  They now deal with
+\suspend and \resume from \usepackage{mdwlist}, and they also convert
+some TeX ligatures to HTML entities, most notably the -- and ---
+ligatures.  Thanks to Christian Lynbeck, 2.12 also has new Emacs Lisp
+code that better supports font-lock.  Other than that, 2.12 fixes a
+number of bugs, the most notable of which is that the emacs noweb-mode
+command is now compatible with emacs desktop-read and desktop-save.
+
+
+INTRODUCTION --- WHAT IS NOWEB, ANYWAY?
+
+noweb is designed to meet the needs of literate programmers while
+remaining as simple as possible.  Its primary advantages are
+simplicity, extensibility, and language-independence.  noweb uses 5
+control sequences to WEB's 27.  The noweb manual is only 3 pages; an
+additional page explains how to customize its LaTeX output.  noweb
+works ``out of the box'' with any programming language, and supports
+TeX, latex, and HTML back ends.  A back end to support full hypertext
+or indexing takes about 250 lines; a simpler one can be written in 40
+lines of awk.  Noweb does not prettyprint natively, but supports
+prettyprinting through such third-party filters as pretzel and dpp.
+
+noweb has been distributed free of charge for fifteen years, and it is
+one of the world's most widely used literate-programming tools.  It
+has been used for hundreds of thousands of lines of code in such
+languages as awk, C, C++, Haskell, Icon, Lua, Modula-3, Objective
+Caml, PAL, perl, Promela, and Standard ML.
+
+If you already know you want to use noweb, you need only install it
+and read the manual page.  If you're just curious about noweb, read
+the paper that appeared in the September 1994 issue of IEEE Software.
+(If you can't get Software, send me a postcard and I'll send you a
+reprint.)  A nice, brief tutorial appeared in the October 1997 issue
+of Linux Journal (but beware that chunk syntax is <<name>> and not <<name>).
+
+If you're brand new to literate programming, check out the FAQ for the
+USENET newsgroup comp.programming.literate.   There are also some
+resources available through the noweb home page:
+   http://www.eecs.harvard.edu/~nr/noweb
+
+
+WHAT YOU GET IN THIS DISTRIBUTION
+
+This distribution contains the following directories:
+  binaries	Pre-built distributions containing binaries and documentation
+  contrib	software contributed by noweb users 
+  examples	sample noweb filters and programs in different languages
+  src		Source code and documentation (including FAQ) for noweb
+Where appropriate, these directories have README files of their own.
+BINARY DISTRIBUTIONS MAY NOT ALWAYS BE UP-TO-DATE, especially DOS
+distributions.
+  
+
+EXTENSIBILITY
+
+noweb provides extensibility by using the Unix toolkit philosophy.
+The ``noweb,'' ``notangle,'' and ``noweave'' commands are built from
+pieces, which are then assembled in pipelines using shell scripts.
+The pieces include:
+
+  markup	convert noweb file from human syntax to tool syntax
+  unmarkup	inverse of markup
+  totex		convert from tool syntax to TeX/latex markup
+  tohtml	convert from tool syntax to HTML markup
+  nt		`tangle' the tool form of the noweb file
+  mnt		discover roots, then act like nt
+  noidx		insert indexing and cross-reference information
+  finduses	finds uses of identifiers
+
+These pieces are combined by the scripts in the src/shell directory to
+provide more than just weaving and tangling:
+
+  noweb		analog of nuweb
+  notangle	analog of TANGLE
+  noweave	analog of WEAVE
+  nountangle	tangle, but keep interleaved documentation in comments
+  noroots	print names of all root chunks in a noweb file
+  nocount	count number of lines of code and documentation.
+  nodefs	extract defined identifiers for noweave -indexfrom
+  noindex	build an external index for multi-file documents
+
+
+WEAVING --- A TAR PIT
+
+The worst aspect of literate programming is the enormous amount of
+time wasted wrangling over what ``woven'' output should look like.
+Although noweb does no prettyprinting, it is not entirely immune---
+several people have complained about noweave's output or have sent me
+changes that add more options to noweave.  I resisted for years, but
+with version 2.5 I finally succumbed.  I let the number of options to
+noweave double, and I have provided for too many options and hooks for
+customizing the latex output.  I won't let it happen again.
+
+noweb doesn't try to be all things to all programmers, but it is very
+easy to change.  If you don't like noweave's formatting, you can read
+tex/support.nw to learn how to customize it; look for the words
+``style hook.''  (Reading noweb.sty directly is not recommended.)  For
+simple formatting, it might be easier to throw away noweave and make
+your own.  To help you get started, the shell directory contains
+noweave.simple, a simplified version of noweave that Dave Hanson
+created for use with C programs (it can't handle code with @ signs).
+The Noweb Hacker's Guide (xdoc/guide.tex) explains the intermediate
+language that noweb uses to represent literate programs.
+
+The intermediate language makes it possible to extend noweave with a
+language-dependent prettyprinter, as shown by contributions of an Icon
+prettyprinter by Kostas Oikonomou and a guarded-command prettyprinter
+by Conrado Martinez-Parra.  (I haven't written a prettyprinter myself
+because my experience with Spider left me thinking that prettyprinting
+is far more trouble than it's worth.)  Further contributions of
+prettyprinters are welcome.
+
+noweb comes with two cross-referencers for use with noweave.  The
+standard one is written in Icon, because Icon offers excellent
+functionality and performance.  Because Icon is not available on all
+platforms, I profide an alternative, but inferior cross-referencer
+written in awk.  See the INSTALL file for details.
+
+Cross-referencing makes formatting even more of a tar pit; the
+cross-referencer itself takes about 300 lines, and extensive LaTeX
+support is also required.  I haven't made the attempt to write
+cross-reference code for plain TeX.  Anyone who has ideas for reducing
+the number of options or for other ways to restore sanity to the
+situation is urged to write to nr@eecs.harvard.edu.
+
+
+INDEX AND IDENTIFIER CROSS-REFERENCE
+
+Noweb creates identifier cross-references so that you can click on an
+identifier and jump to its definition (if you're using printed LaTeX
+output, a footnote gives you the page number of the definition).  
+To noweb, any string of nonwhite characters can be an identifier.  
+A human being or a language-dependent tool must mark definitions of
+identifiers; noweb finds the uses using a language-independent
+algorithm.  The algorithm relies on an idea taken from the lexical
+conventions of Standard ML.  Characters are divided into three
+classes: alphanumerics, symbols, and delimiters.  If an identifier
+begins with an alphanumeric, it must be delimited on the left by a
+symbol or a delimiter.  If it begins with a symbol, it must be
+delimited on the left by an alphanumeric or a delimiter.  If it begins
+with a delimiter, there are no restrictions on the character
+immediately to the left.  Similar rules apply on the right-hand side.
+The default classifications are chosen to make sense for commonly used
+programming languages, so that noweb will not recognize `zip' when it
+sees `zippy', or `++' when it sees `++:='.  This trick works
+surprisingly well, but it does not prevent noweb from spotting
+identifiers in comments or string literals.
+
+The basic assumption in noweb is that a language-dependent filter will
+identify definitions automatically.  Filters for Icon, TeX, and yacc
+all take about 30 lines of Icon code and are included in the noweb
+distribution; if you write a filter of your own, you can put it in the
+$LIB directory with a name like `autodefs.pascal'.  Try `noweave
+-showautodefs' for a complete list of such filters. 
+
+If the automatic filter does not work well for you, or if there is no
+filter available for your language, I recommend that you mark
+definitions using backticks (`) in your source code, and use
+`-filter btdefn' with both noweave and notangle.
+
+noweave -index works well for short programs, but nodefs, noindex, and
+noweave -indexfrom are there for large multi-file programs.  See the
+noindex man page for details.
+
+
+NOTES
+
+  src/xdoc/techrep.* contains an early, almost unrecognizable version
+  of a paper describing noweb that appeared in IEEE Software in
+  September, 1994.  You are probably better off writing me for a
+  reprint of the Software paper.  (Send a postcard!)
+
+  The Noweb Hacker's Guide, which appears in src/xdoc/guide.*,
+  documents the representation of noweb files that is used by the
+  noweb tools, in case you want to write any tools of your own.
+  Simple tools (e.g. count the number of lines of interleaved
+  documentation) are trivial.  If you write any tools, or you want
+  tools written (e.g. prettyprinters, index generators), let me know.
+
+  The icon directory contains Icon versions of most pipeline
+  stages.  If you want to adapt noweb to work with a text processor
+  other than TeX or latex, they might provide a better starting point.
+  Perhaps the whole system should have been written in Icon from the
+  beginning, but I'm not going to do it over.  Icon is available by
+  anonymous ftp from cs.arizona.edu.
+
+  Phil Bewig has adapted noweb to troff, and as soon as we get the
+  portability bugs ironed out, I'll include that code in the noweb
+  distribution.
+
+  
+  Thanks to Preston Briggs for the Aho-Corasick recognizer, and for
+		helpful discussions.
+  Thanks to Dave Hanson for cpif.
+  Thanks to Dave Love for LaTeX wizardry.
+  Thanks to Joseph Reynolds for prodding me to fix [[...]].
+  Thanks to Bill Trost for the original HTML back end.
+  Thanks to Philip Miller and Lee Wittenberg for DOS binaries.
+  Thanks to Paolo Ciccone for the Win32 binaries.
+  Thanks to Hubert Chan for picking up Debian distribution.
+
+Send comments or questions to nr@eecs.harvard.edu.  
+
+I enjoy hearing from noweb users; if you have enjoyed noweb, why not
+send me a local postcard for my collection?  My address is:
+
+  Norman Ramsey
+  Department of Computer Science
+  Tufts University
+  161 College Avenue
+  Medford, MA 02155
+               USA
+
+
+COPYRIGHT
+
+Noweb is copyright 1989-2008 by Norman Ramsey.  All rights reserved.
+
+You may use and distribute noweb for any purpose, for free.  You may
+modify noweb and create derived works, provided you retain the
+copyright notice, but the result may not be called noweb without my
+written consent.  You may not sell noweb itself, but you may do
+anything you like with programs created with noweb.

@@ -1,0 +1,1637 @@
+\title{Transparent on-the-fly data compression {\tt COS595}}
+\author{Matthias Blume\\
+Dept.\ of Computer Science, Princeton University,\\
+Princeton, NJ 08544}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+
+The C library on UNIX provides functions for calling the operating
+system.
+Replacing those functions can provide a different program functionality
+without the need to make changes to the program text.
+
+Replacing the functions [[open]], [[creat]], [[close]], [[read]] and
+[[write]] along with a couple of other routines will change the file
+system interface.
+Since on today's computer systems most information are stored with a
+high redundancy, it seems to be useful to apply data compression
+algorithms to them.
+If the compression and uncompression is done by the file system
+interface itself, then it will become transparent to the programs
+using it.
+
+Although a truly general solution can only be done in the file system
+itself, it is nevertheless possible to approximate this to a high
+degree within the C library.
+I will show a sample implementation, which does this.
+
+\section{System call substitutes}
+
+Since I am going to replace the functions [[open]], [[read]],
+[[write]] etc. by my own versions, I will not be able to use them to do
+actual input and output.
+Therefore it is necessary to write new versions of the original C
+library function.
+The only things to change are the {\em names} of those routines.
+
+The following program text gives the implementation for MIPS-based
+machines.
+By using the {\em m4} macro processor, which is available on
+most UNIX systems, I take advantage of the fact, that the sequences of
+instructions needed for any of the functions follow a
+common pattern.
+
+<<mips-asm.m>>=
+# include <sys/syscall.h>
+# include <regdef.h>
+
+	.text
+
+	.globl _cerror
+
+define(sc,`
+	.globl _sys_$1
+	.ent _sys_$1
+_sys_$1:
+	li	v0, SYS_$1
+	syscall
+	beq	a3, zero, 9f
+	j	_cerror
+9:$2
+	j	ra
+	.end')
+
+sc(open)
+sc(creat)
+sc(close)
+sc(read)
+sc(write)
+sc(dup)
+sc(lseek)
+sc(pipe,`	sw	v0, 0 (a0)
+	sw	v1, 4 (a0)')
+@
+The Second argument of the [[sc]] macro is necessary to implement the
+[[pipe]] system call, because it has to store two file descriptors
+into locations given as the argument of the call.
+
+@
+\section{Overall structure}
+
+My new versions of the file system interface functions are implemented
+in the file [[compress.c]].
+The structure of the file can be described as follows:
+
+<<compress.c>>=
+<<include files>>
+<<constant definitions>>
+<<type definitions>>
+<<external prototypes>>
+<<static prototypes>>
+<<static definitions>>
+<<initialization>>
+<<write compressed>>
+<<read compressed>>
+<<other io-substitutes>>
+<<replaced system calls>>
+@
+The necessary system header files are:
+
+<<include files>>=
+# include <stdlib.h>
+# include <stdio.h>
+# include <string.h>
+# include <assert.h>
+# include <fcntl.h>
+# include <errno.h>
+@
+
+\section{Replacing system calls}
+
+In this implementation I will give substitutes for the following
+functions:
+\begin{itemize}
+\item
+[[creat]] - creates a new file or truncates it to 0 bytes; opens for
+writing
+\item
+[[open]] - opens an existing file for reading or writing
+\item
+[[close]] - releases the association between a file descriptor and the
+corresponding file
+\item
+[[read]] - reads a number of bytes from an open file into a given buffer
+\item
+[[write]] - writes a number of bytes from a given buffer to an open file
+\item
+[[dup]] - duplicates a file descriptor
+\item
+[[lseek]] - provides random access to arbitrary positions within an
+open file (if supported)
+\item
+[[tell]] - this is not a true system call and could be simulated by
+[[lseek]]; it returns the current position in the file
+\item
+[[pipe]] - opens an inter-process communication channel known as a
+{\em pipe}; returns two file descriptors, one for reading from the
+pipe, one for writing into the pipe
+\end{itemize}
+
+The real file system interface will be driven by the external
+functions:
+<<external prototypes>>=
+extern _sys_open (const char *, int);
+extern _sys_creat (const char *, int);
+extern int _sys_close (int);
+extern int _sys_read (int, char *, int);
+extern int _sys_write (int, const char *, int);
+extern int _sys_dup (int fd);
+extern long _sys_lseek (int fd, long offset, int whence);
+extern int _sys_pipe (int [2]);
+@
+and the replaced system call functions are:
+<<replaced system calls>>=
+<<replaced creat>>
+<<replaced open>>
+<<replaced close>>
+<<replaced read>>
+<<replaced write>>
+<<replaced dup>>
+<<replaced tell>>
+<<replaced lseek>>
+<<replaced pipe>>
+@
+Data compression and uncompression will be done by the Lempel-Ziv
+algorithm.
+It is necessary to maintain several independent compression- or
+un\-com\-pres\-sion-``engines'', because there can be many files open.
+There is no fixed relationship between the number of characters read
+from or written to the real file system and the number of characters
+seen by the program.
+This means, both compression and uncompression must be able to stop
+``in the middle of the operation''.
+All the relevant variables, which constitute the ``state'' of the
+``engine'' have to be saved in a data structure, which in turn has to
+be associated with the file descriptor.
+
+The existence of the [[dup]] system call introduces some further requirements
+on the implementation.
+Basically this means, that the same ``engine'' can be associated with
+more than one file descriptor.
+
+Currently I restrict myself to at most [[MAXFILES]] open files.
+This can easily be changed by using [[getdtablesize]] to find out the
+maximum number of open files allowed by the operating system.
+
+<<constant definitions>>=
+# define MAXFILES 256
+@
+The states of ``engines'' are stored in structures of type [[struct cfd]].
+
+<<type definitions>>=
+typedef struct cfd *cfd;
+
+struct cfd {
+  struct methods *methods;
+  int nbits;
+  int shared;
+  <<other cfd members>>
+};
+@
+One crucial idea to deal with the complexity of the problem is to
+adopt some ``object-oriented'' techniques.
+I use the member [[methods]] to point to a collection of function
+pointers.
+Depending on whether a file is read or written, compressed or plain, I
+need different algorithms to access the file.
+Using the table of [[methods]] allows to do this without complicated
+{\em if-then-else} chains all over the place.
+
+<<type definitions>>=
+struct methods {
+  int (* read) (int, unsigned char *, int);
+  int (* write) (int, unsigned char *, int);
+  int (* close) (int);
+  long (* seek) (int, long, int);
+};
+@
+There will be a global file table [[filetab]], indexed by file
+descriptors, which contains pointers to structures of type [[struct cfd]].
+The contents of this table at a given position depends on the mode of
+operation used with the file descriptor under question.
+Possible modes are:
+\begin{itemize}
+\item
+the file is a plain file (no compression or uncompression)
+\item
+the file is written using compression
+\item
+the file is read using uncompression
+\item
+the file is opened for reading, but it is still unclear, whether it is
+compressed or not
+\item
+the file is opened for reading; the ``engine'' found, that the file is
+not compressed by reading the first few characters of the file;
+the program has not asked yet for all of those pre-read characters
+\item
+the file is unknown to the interface module---this usually happens, if
+the file descriptor is inherited from a parent process (e.g. the
+shell)
+\end{itemize}
+
+Descriptors for plain files and unknown file descriptors are
+passed directly to the real system calls.
+Therefore, these two modes are represented the same: by a [[NULL]]
+pointer in the corresponding position of the file table.
+
+We need two different method tables for reading or writing in
+compressed mode.
+A third table is necessary to deal with the remaining modes of operation.
+A compressed file is recognized by the first three characters in the
+file, which are known as the [[compress_prefix]].
+
+<<static definitions>>=
+<<file table>>
+<<method tables>>
+<<compress prefix>>
+@
+
+<<compress prefix>>=
+static unsigned char compress_prefix [] = { 0x1f, 0x9d, 0x10 };
+@
+
+<<file table>>=
+static cfd filetab [MAXFILES] = { NULL, };
+@
+The three collections of methods are:
+
+<<method tables>>=
+<<write-compressed table>>
+<<read-compressed table>>
+<<initial read table>>
+@
+For writing:
+
+<<write-compressed table>>=
+static struct methods cw_m = {
+  refuse_io,
+  write_compressed,
+  close_compressed_write,
+  refuse_seek,
+};
+@
+For reading:
+
+<<read-compressed table>>=
+static struct methods cr_m = {
+  read_compressed,
+  refuse_io,
+  close_compressed_read,
+  refuse_seek,
+};
+@
+For deciding, whether to read a compressed or a plain file:
+
+<<initial read table>>=
+static struct methods ir_m = {
+  read_prefix,
+  refuse_io,
+  close_prefix_read,
+  prefix_seek,
+};
+@
+To define the above tables, I need the following prototype definitions:
+
+<<static prototypes>>=
+static int read_compressed (int fd, unsigned char *buf, int n);
+static int read_prefix (int fd, unsigned char *buf, int n);
+static int write_compressed (int fd, unsigned char *buf, int n);
+static int refuse_io (int fd, unsigned char *buf, int n);
+
+static int close_compressed_read (int fd);
+static int close_prefix_read (int fd);
+static int close_compressed_write (int fd);
+
+static long refuse_seek (int fd, long offset, int whence);
+static long prefix_seek (int fd, long offset, int whence);
+@
+In order not to confuse other programs started by a combination of
+[[fork]] and [[exec]], I always use the real system call along with
+the replaced one.
+Therefore, the indices into [[filetab]] are real file descriptors
+provided by the operating system.
+
+[[creat]] always sets the mode of operation to ``write with
+compression'' by using the methods [[cw_m]].
+
+As a general rule, I set the member [[nbits]] to zero when opening a
+file.
+This signals, that the data structures have not been fully initialized yet.
+
+The member [[shared]] counts the number of [[filetab]] entries, which
+point to the same data structure.
+The routines for closing a file will use this to determine,
+whether the last connection to the file will be closed.
+Only in this case I can perform cleanup operations like freeing the
+data structures associated with the file.
+
+<<replaced creat>>=
+int creat (const char *path, int mode)
+{
+  int fd;
+
+  init ();
+
+  fd = _sys_creat (path, mode);
+
+  if (fd < 0 || fd > MAXFILES ||
+      (filetab [fd] = malloc (sizeof (struct cfd))) == NULL)
+    return fd;
+
+  filetab [fd]->nbits = 0;
+  filetab [fd]->methods = &cw_m;
+
+  filetab [fd]->shared = 1;
+
+  return fd;
+}
+@
+Opening a file for writing using [[open]] assumes, that the file
+already exists.
+Therefore it is not useful to write with compression, because the
+compressed data will interfere with what has already been in the file.
+As a consequence I leave the entry in [[filetab]] unchanged.
+
+It turns out, that new versions of the C library don't use [[creat]],
+but call [[open]] with some additional flags and parameters as
+specified by [[POSIX]].
+This means, that I have to simulate the desired behavior by calling
+[[creat]] from within [[open]] if necessary.
+
+Opening a file for reading is the most complex case.
+At some time I need to read the first few characters of the file to
+decide, whether the file is compressed or not.
+The most natural place to do this seems to be the [[open]] routine.
+Unfortunately, this would violate the semantics of [[open]].
+(Imagine opening a terminal file for reading!)
+The decision has to be delayed until the first call to [[read]] will
+be executed.
+[[open]] sets the mode of operation to ``unclear, whether to use
+decompression'' by using the method table [[ir_m]].
+
+<<replaced open>>=
+int open (const char *path, int how, int mode)
+{
+  int fd;
+
+  if (how == (O_WRONLY | O_CREAT | O_TRUNC))
+    return creat (path, mode);
+
+  init ();
+
+  fd = _sys_open (path, how);
+  if (fd < 0 || fd > MAXFILES || how != 0)
+    return fd;
+
+  if ((filetab [fd] = malloc (sizeof (struct cfd))) == NULL)
+    return fd;
+
+  filetab [fd]->nbits = 0;
+  filetab [fd]->methods = &ir_m;
+  filetab [fd]->shared = 1;
+
+  return fd;
+}
+@
+Most of the remaining substitutes for system call functions follow a
+common pattern:
+\begin{itemize}
+\item
+look, if the file descriptor points to non-[[NULL]] in [[filetab]]
+\item
+if not, then simply use the original system call
+\item
+otherwise call the appropriate function from the methods table
+\end{itemize}
+
+<<replaced close>>=
+int close (int fd)
+{
+  return (fd < 0  || fd > MAXFILES || filetab [fd] == NULL)
+    ? _sys_close (fd)
+    : (* filetab [fd]->methods->close) (fd);
+}
+@
+
+<<replaced read>>=
+int read (int fd, char *buf, int n)
+{
+  return (fd < 0  || fd > MAXFILES || filetab [fd] == NULL)
+    ? _sys_read (fd, buf, n)
+    : (* filetab [fd]->methods->read) (fd, (unsigned char *) buf, n);
+}
+@
+
+<<replaced write>>=
+int write (int fd, const char *buf, int n)
+{
+  return (fd < 0  || fd > MAXFILES || filetab [fd] == NULL)
+    ? _sys_write (fd, buf, n)
+    : (* filetab [fd]->methods->write) (fd, (unsigned char *) buf, n);
+}
+@
+[[dup]] simply copies, what is in [[filetab]] at a given place to
+another place.
+The [[cfd]]-member [[shared]] must be incremented.
+
+<<replaced dup>>=
+int dup (int fd)
+{
+  int res = _sys_dup (fd);
+
+  if (fd < 0  || fd > MAXFILES || filetab [fd] == NULL)
+    return res;
+  assert (res < MAXFILES);
+  assert (filetab [res] == NULL);
+  filetab [res] = filetab [fd];
+  filetab [res]->shared++;
+  return res;
+}
+@
+[[lseek]], again, follows the general pattern.
+There is one minor variation:  if the arguments indicate, that no
+actual repositioning is asked for, [[tell]] gets called.
+
+<<replaced lseek>>=
+long lseek (int fd, long offset, int whence)
+{
+  if (offset == 0 && whence == 1)
+    return tell (fd);
+  return (fd < 0 || fd > MAXFILES || filetab [fd] == NULL)
+    ? _sys_lseek (fd, offset, whence)
+    : (* filetab [fd]->methods->seek) (fd, offset, whence);
+}
+@
+[[tell]] is not a real system call.
+I simulate it using [[lseek]] if necessary.
+For files in compressed mode I keep track of the file position myself.
+Note, that [[filepos]] is not initialized until the first [[read]] from
+or [[write]] to the file has been executed.
+
+<<other cfd members>>=
+long filepos;
+@
+
+<<replaced tell>>=
+long tell (int fd)
+{
+  return (fd < 0 || fd > MAXFILES || filetab [fd] == NULL)
+    ? _sys_lseek (fd, 0L, 1)
+    : (filetab [fd]->nbits < MINBITS)
+      ? 0
+      : filetab [fd]->filepos;
+}
+@
+Since [[pipe]] creates two file descriptors, I have to deal with two
+entries in [[filetab]].
+Writing to the pipe will be performed in compressed mode.
+This seems to imply, that reading has to use compressed mode as well,
+but this is not the case.
+The most common case of using pipes is in the context of [[fork]] and
+[[exec]].
+It is very likely, that the pipe will be written by another program,
+and I have to check, whether this program uses compression or not.
+
+<<replaced pipe>>=
+int pipe (int fd [2])
+{
+  cfd p0, p1;
+
+  init ();
+
+  if (_sys_pipe (fd) < 0)
+    return -1;
+
+  if (fd [0] > MAXFILES || fd [1] > MAXFILES)
+    return 0;
+  p0 = malloc (sizeof (struct cfd));
+  if (p0 == NULL)
+    return 0;
+  p1 = malloc (sizeof (struct cfd));
+  if (p1 == NULL) {
+    free (p0);
+    return 0;
+  }
+
+  p0->nbits = p1->nbits = 0;
+  p0->methods = &ir_m;
+  p1->methods = &cw_m;
+  p0->shared = p1->shared = 1;
+
+  filetab [fd [0]] = p0;
+  filetab [fd [1]] = p1;
+
+  return 0;
+}
+@
+
+\section{Initialization}
+
+The library function [[atexit]] provides a way to register a function,
+which will be called, when the program exits (i.e. when it calls [[exit]]).
+I use this to register a function, which closes all the open files
+found in [[filetab]].
+
+As you might have noticed, [[init]] will be called from any of the
+functions, which create non-[[NULL]] entries in [[filetab]]. 
+
+<<initialization>>=
+static void cleanup (void)
+{
+  int i;
+
+  for (i = 0; i < MAXFILES; i++)
+    if (filetab [i] != NULL)
+      (* filetab [i]->methods->close) (i);
+}
+@
+The registration of [[cleanup]] will be done exactly once.
+
+<<initialization>>=
+static void init (void)
+{
+  static int initialized = 0;
+
+  if (initialized == 0) {
+    atexit (cleanup);
+    initialized = 1;
+  }
+}
+@
+
+\section{Compression}
+
+Compression employs the adaptive Lempel-Ziv algorithm.
+Tables are constructed as data are written.
+Every sequence of characters ever seen by the algorithm (which uses a
+greedy heuristic to construct these sequences) is associated with a
+unique code.
+The [[cfd]]-member [[nextcode]] always holds the next available code
+to be associated with the next sequence.
+Because the algorithm  writes data, which are not always aligned to
+byte-boundaries, I have to use a buffer, the size of which is a
+multiple of the current code size [[nbits]] and a multiple of eight.
+Since the maximum code size is sixteen, a buffer of at most 16 bytes
+is required.
+
+<<constant definitions>>=
+# define TABSIZE 8192
+# define MAXBITS 16
+# define MINBITS 9
+# define FIRSTCODE 256
+@
+
+I use [[struct cfd]] for both compress and uncompress.
+Some of the members in [[struct cfd]] are only used for either
+compression or uncompression, and not for both.
+In order to save some space, these members are placed into a union.
+
+<<other cfd members>>=
+unsigned long nextcode;
+unsigned char buf [MAXBITS];
+int bitpos;
+union {
+  struct {
+    <<compress-only members>>
+  } c;
+  struct {
+    <<uncompress-only members>>
+  } d;
+} u;
+@
+[[lastcode]] holds the code of the character sequence seen so far.
+[[codes]] is a hashtable, which is used to describe the mapping of
+strings to codes.
+
+<<compress-only members>>=
+struct centry **codes;
+unsigned long lastcode;
+@
+The hashtable used by this algorithm has fixed size and uses chaining
+to deal with collisions.
+The data structure for the chaining is described by:
+
+<<type definitions>>=
+struct centry {
+  unsigned short w;
+  unsigned char c;
+  unsigned short code;
+  struct centry *next;
+};
+@
+Here, [[w]] is the code for the string without the last character,
+[[c]] is the last character, [[code]] is the code for this sequence
+and [[next]] holds the next entry of the chain.
+
+<<write compressed>>=
+<<hashtable management>>
+<<writing bits>>
+<<writing character arrays>>
+<<finish writing>>
+@
+This is the hashtable management:
+
+<<hashtable management>>=
+<<hash function>>
+<<hashtable lookup>>
+@
+
+<<hash function>>=
+# define hash(x,y) (((x)<<8|(y))%TABSIZE)
+@
+There is not very much to say about hashtable lookup.
+The only important thing to note is, that I use a ``move-to-front''
+heuristic to speed things up.
+
+<<hashtable lookup>>=
+static struct centry *lookup (cfd fd, unsigned char c)
+{
+  unsigned lc = fd->u.c.lastcode;
+  struct centry **start =
+    &fd->u.c.codes [hash(lc, c)];
+  struct centry **cur = start;
+  struct centry *tmp;
+
+  while (*cur != NULL && ((*cur)->w != lc || (*cur)->c != c))
+    cur = & (*cur)->next;
+  if (*cur == NULL)
+    return NULL;
+  else {
+    tmp = *cur;
+    *cur = tmp->next;
+    tmp->next = *start;
+    *start = tmp;
+    return tmp;
+  }
+}
+@
+In order to write a number of bits it is necessary to use the [[buf]]
+member of the [[cfd]] structure, because I cannot write fractions of a
+byte.
+It is just a matter of shifting and masking bits correctly...
+
+I give the description of [[invmask]] here, although it is used only
+later for reading bits.
+
+<<writing bits>>=
+# define mask(x,n) ((x) & (~(~0 << (n))))
+# define invmask(x,n) ((x) & (~0 << (n)))
+@
+
+<<writing bits>>=
+static int output (cfd fd, int ifd)
+{
+  unsigned char *byte = fd->buf + fd->bitpos / 8;
+  int bit = fd->bitpos % 8;
+  unsigned code = fd->u.c.lastcode;
+
+  *byte = mask (*byte, bit) | code << bit;
+  byte++;
+  code >>= 8 - bit;
+  if (fd->nbits + bit > 16) {
+    *byte++ = code;
+    code >>= 8;
+  }
+  *byte = code;
+  fd->bitpos += fd->nbits;
+  if (fd->bitpos == 8 * fd->nbits) {
+    if (_sys_write (ifd, (char *) fd->buf, fd->nbits) < 0)
+      return -1;
+    fd->bitpos = 0;
+  }
+  return fd->bitpos;
+}
+@
+To be able to write arbitrary arrays of characters I need to suspend
+compression not after a certain amount of characters {\em written}, but
+after any amount of characters {\em seen}.
+This means, that character sequences, which are collapsed into one
+code, may extend across multiple calls to [[write]].
+
+[[write]] checks first, whether this is the very first call to
+[[write]] for this file and initializes the data structures.
+Remember, that [[creat]] and [[pipe]] set [[nbits]] to zero to
+indicate this situation.
+
+After using all possible codes no further entries to the hashtable are
+made---[[write]] has to live with what is in the table.
+
+<<writing character arrays>>=
+static int write_compressed (int ifd, unsigned char *buf, int n)
+{
+  cfd fd = filetab [ifd];
+  int i, h;
+  struct centry *tmp;
+  unsigned char c;
+
+  if (n == 0)
+    return 0;
+
+  <<write initialization>>
+
+  while (i-- > 0) {
+    c = *buf++;
+
+    if ((tmp = lookup (fd, c)) == NULL) {
+
+      <<output code for prefix>>
+      <<add code to table if necessary>>
+
+      fd->nextcode++;
+      fd->u.c.lastcode = c;
+
+    } else
+      fd->u.c.lastcode = tmp->code;
+  }
+
+  fd->filepos += n;
+
+  return n;
+}
+@
+A value of zero in [[nbits]] indicates, that the data structures have to be
+initialized.
+
+<<write initialization>>=
+if (fd->nbits == 0) {
+  if (_sys_write (ifd, (char *) compress_prefix,
+		  sizeof (compress_prefix)) < 0)
+    return -1;
+  fd->nbits = MINBITS;
+  fd->nextcode = FIRSTCODE;
+  fd->bitpos = 0;
+  fd->u.c.codes = malloc (TABSIZE * sizeof (struct centry *));
+  if (fd->u.c.codes == NULL) {
+    errno = ENOMEM;
+    return -1;
+  }
+  for (i = 0; i < TABSIZE; i++)
+    fd->u.c.codes [i] = NULL;
+  fd->filepos = 0;
+  fd->u.c.lastcode = *buf++;
+  i = n - 1;
+} else
+  i = n;
+@
+<<output code for prefix>>=
+if (output (fd, ifd) < 0)
+  return -1;
+@
+As long as not all the possible codes have been used, codes for new
+sequences have to be introduces.
+
+<<add code to table if necessary>>=
+if (fd->nextcode < (1L << MAXBITS)) {
+  if ((tmp = malloc (sizeof (struct centry))) == NULL) {
+    errno = ENOMEM;
+    return -1;
+  }
+  tmp->w = fd->u.c.lastcode;
+  tmp->c = c;
+  tmp->code = fd->nextcode;
+
+  if (fd->nextcode == (1L << fd->nbits)) {
+    if (fd->bitpos > 0) {
+      if (_sys_write (ifd, (char *) fd->buf, fd->nbits) < 0)
+	return -1;
+      fd->bitpos = 0;
+    }
+    fd->nbits++;
+  }
+
+  h = hash (fd->u.c.lastcode, c);
+  tmp->next = fd->u.c.codes [h];
+  fd->u.c.codes [h] = tmp;
+}
+@
+
+An important thing to note, is that I cannot simply close a file using
+the operating system call.
+It may be the case (in fact, it is always the case) that there is
+still some accumulated code in [[lastcode]] that wants to be written
+out.
+I have to make sure, that I only really close the file, if the last
+reference to this file is going to be abandoned.
+
+Unlike during a switch from [[nbits]] to [[nbits]]+1, where I always
+flush the {\em entire} buffer [[buf]] (up to [[nbits]] bytes), I write
+only those parts of [[buf]] which really contain written bits when
+closing the file.
+This provides the necessary information about the end of the file to
+the uncompression algorithm.
+
+<<finish writing>>=
+static int close_compressed_write (int ifd)
+{
+  cfd fd = filetab [ifd];
+  int res, i;
+  struct centry *run, *next;
+
+  if (--fd->shared == 0 && fd->nbits > 0) {
+    for (i = 0; i < TABSIZE; i++)
+      if ((run = fd->u.c.codes [i]) != NULL)
+	do {
+	  next = run->next;
+	  free (run);
+	  run = next;
+	} while (run != NULL);
+    free (fd->u.c.codes);
+    if (output (fd, ifd) < 0)
+      return -1;
+    if (fd->bitpos > 0 &&
+	_sys_write (ifd,
+		    (char *) fd->buf,
+		    (fd->bitpos + 7) / 8)
+	< 0)
+      return -1;
+  }
+  res = _sys_close (ifd);
+  if (fd->shared == 0)
+    free (fd);
+  filetab [ifd] = NULL;
+  return res;
+}
+@
+
+\section{Uncompression}
+
+The algorithm to uncompress compressed files looks a little bit more
+complicated.
+First, I need a stack (described by the members [[stack]],
+[[stacktop]] and [[stacksize]]) to reverse the sequence of characters,
+which I obtain from a code.
+The stack is realized as a rubber-band array, which is automatically
+expanded when necessary.
+Furthermore, [[buflen]] keeps track of the number of characters, which have
+actually been read from the file system---fewer characters than
+[[nbits]] indicate the end of the file.
+[[oldcode]] holds the last code that has been read and [[finchar]] is the
+final character produced from the last code.
+This is necessary to deal correctly with the {\em
+``AwAwA''}-phenomenon, where a code can be read, which is not in the
+table yet.
+
+The ``hashtable'' [[htab]] is a rubber-band array which contains for
+each code the associated prefix (i.e. the code for the string without
+the last character) together with that last character.
+Since entries are made in a sequential order, it is not
+necessary to use a hash function.
+The entry for a code {\em k} is at position {\em k-256}, because the
+first codes 0-255 stand for themselves and don't need to be stored
+into the table.
+
+Here are the missing members of [[struct cfd]]:
+
+<<uncompress-only members>>=
+long tabsize;
+struct { unsigned w; unsigned char c; } *htab;
+unsigned stacksize;
+unsigned stacktop;
+unsigned char *stack;
+int buflen;
+unsigned short oldcode;
+unsigned char finchar;
+@
+Uncompression is split into the following tasks:
+
+<<read compressed>>=
+<<stack management>>
+<<reading bits>>
+<<reading the first few bytes>>
+<<reading compressed files>>
+<<finish reading>>
+@
+The stack management maintains a rubber band array.
+The array can only expand, therefore ``popping'' items from the stack
+can be ``in-lined''.
+[[push]] is more complicated and gets its own function:
+
+<<constant definitions>>=
+# define STACKGROWTH 64
+@
+
+<<stack management>>=
+static int push (cfd fd, unsigned char c)
+{
+  if (fd->u.d.stacktop >= fd->u.d.stacksize) {
+    fd->u.d.stacksize += STACKGROWTH;
+    if ((fd->u.d.stack =
+	 realloc (fd->u.d.stack, fd->u.d.stacksize))
+	 == NULL) {
+      errno = ENOMEM;
+      return -1;
+    }
+  }
+  fd->u.d.stack [fd->u.d.stacktop++] = c;
+  return 0;
+}
+@
+Reading the bits into the buffer is a little bit more trickier than
+writing.
+Consider a pipe:  If the pipe contains fewer characters than required,
+then only those bytes are delivered.
+The system call blocks for empty pipes only.
+Therefore [[refill_buffer]] repeats the call to [[_sys_read]] until
+either the buffer is completely filled or [[_sys_read]] signals
+end-of-file or an error condition.
+
+<<reading bits>>=
+static int refill_buffer (cfd fd, int ifd)
+{
+  int n, r;
+
+  n = 0;
+  r = 0;
+  while (n < fd->nbits &&
+	 (r = _sys_read (ifd,
+			 (char *) (fd->buf + n),
+			 fd->nbits - n))
+	 > 0)
+    n += r;
+  if (r < 0)
+    return -1;
+  fd->u.d.buflen = 8 * n;
+  fd->bitpos = 0;
+  return 0;
+} 
+@
+The [[input]]-function is very much like [[output]], except that it
+has to return an end-of-file condition when the end of the file has
+been reached.
+I use -1 to signal the end of the file and -2 to signal an error.
+[[buflen]] is used to describe, what is really in the buffer (the
+number of bits).
+
+<<reading bits>>=
+static int input (cfd fd, int ifd)
+{
+  unsigned char *byte;
+  int bit;
+  unsigned code;
+
+  if (fd->bitpos + fd->nbits > fd->u.d.buflen) {
+    if (refill_buffer (fd, ifd))
+      return -2;
+    if (fd->u.d.buflen == 0)
+      return -1;
+  }
+  byte = fd->buf + fd->bitpos / 8;
+  bit = fd->bitpos % 8;
+  code = invmask (*byte, bit) >> bit;
+  byte++;
+  bit = 8 - bit;
+  if (fd->nbits - bit >= 8) {
+    code |= *byte++ << bit;
+    bit += 8;
+  }
+  code |= mask (*byte, fd->nbits - bit) << bit;
+  fd->bitpos += fd->nbits;
+
+  return code;
+}
+@
+There is still the problem, that [[read]] has to check first, whether
+the contents of the file is compressed or not.
+If [[read]] detects, that the file is not compressed, than it has to
+arrange for {\em all} file descriptors associated with the file, that
+it is read using the plain operating system call.
+This is done using the function [[mark_uncompressed]].
+
+<<reading the first few bytes>>=
+static void mark_uncompressed (cfd fd)
+{
+  int i;
+
+  for (i = 0; i < MAXFILES; i++)
+    if (filetab [i] == fd)
+      filetab [i] = NULL;
+  free (fd);
+}
+@
+The first attempt to read a file will be used to check, whether the
+file is compressed.
+To do this, I try to read the first three characters in the file and
+compare them with [[compress_prefix]].
+If I don't get three characters or if those characters do not coincide
+with [[compress_prefix]], then the file is considered to be not
+compressed.
+Otherwise I simply change the method table to be [[cr_m]] and call
+[[read_compressed]].
+
+In the case that the file is not compressed, the characters read are
+part of the data and have to be placed into the buffer, which is the
+argument to read.
+After doing so, the file has to be marked being uncompressed.
+If [[read]] has asked for more than three characters, then
+[[_sys_read]] will try to get those.
+
+Difficulties arise, if [[read]] had asked for fewer characters than
+received by the first [[_sys_read]].
+These characters have to be kept for further calls to [[read]].
+(To reset the file pointer to the beginning might be impossible,
+because the file can be a terminal device or a pipe.)
+I set [[nbits]] to 1 to indicate, that the file has already proven to
+be in uncompressed state.
+In this case [[read_prefix]] fetches the characters from the buffer
+instead of reading them from the file system.
+When all the characters are ``eaten up'' I mark the file as being
+uncompressed.
+
+<<reading the first few bytes>>=
+static int read_prefix (int ifd, unsigned char *buf, int n)
+{
+  cfd fd = filetab [ifd];
+  int l;
+
+  if (n == 0)
+    return 0;
+
+  if (fd->nbits == 0) {
+    if ((l = _sys_read (ifd,
+			(char *) fd->buf,
+			sizeof compress_prefix))
+	< 0)
+      return -1;
+    if (l == sizeof (compress_prefix) &&
+	memcmp (fd->buf,
+		compress_prefix,
+		sizeof compress_prefix)
+	== 0) {
+      fd->methods = &cr_m;
+      return read_compressed (ifd, buf, n);
+    }
+    fd->nbits = 1;
+    fd->filepos = 0;
+    fd->bitpos = l;
+  }
+
+  if (n < fd->bitpos - fd->filepos) {
+    memcpy (buf, fd->buf + fd->filepos, n);
+    fd->filepos += n;
+    return n;
+  }
+
+  memcpy (buf, fd->buf + fd->filepos, fd->bitpos - fd->filepos);
+  if (n > fd->bitpos - fd->filepos) {
+    l = _sys_read (ifd, (char *) (buf + fd->bitpos - fd->filepos),
+		   n - (fd->bitpos - fd->filepos));
+    if (l < 0)
+      l = 0;
+    n = l + fd->bitpos - fd->filepos;
+  }
+
+  mark_uncompressed (fd);
+
+  return n;
+}
+@
+This is the code for reading compressed files.
+Note, that the function initialized all the relevant data structures
+if [[nbits]] equals zero.
+Later it reads codes, constructs the corresponding character strings using the
+stack and places those characters into the buffer.
+Usually there will remain some characters, which have to be kept until
+the next call to [[read]].
+The table of codes is again constructed as the algorithm goes.
+The uncompress algorithm lags always one step behind, so it may
+happen, that a code is not yet in the table.
+In this case, the sequence of characters can be reconstructed using
+[[finchar]] and [[oldcode]].
+
+<<reading compressed files>>=
+static int read_compressed (int ifd, unsigned char *buf, int n)
+{
+  cfd fd = filetab [ifd];
+  int i = n;
+  unsigned incode, c;
+  int cin;
+
+  <<read initialization>>
+
+  for (;;) {
+    <<empty the stack>>
+    <<return or read next code>>
+
+    c = incode = cin;
+
+    <<special AwAwA case handling>>
+    <<analyse code and put bytes onto stack>>
+    <<enter code to table htab>>
+
+    fd->u.d.oldcode = incode;
+  }
+}
+@
+The first time [[read]] gets called for a compressed file, the following code
+will be executed:
+
+<<read initialization>>=
+if (fd->nbits == 0) {
+  if (n == 0)
+    return 0;
+
+  fd->nbits = MINBITS;
+  fd->nextcode = FIRSTCODE;
+  fd->bitpos = 8 * MINBITS;
+  fd->filepos = 0;
+  fd->u.d.tabsize = TABSIZE;
+  if ((fd->u.d.htab =
+       malloc (TABSIZE * sizeof (*fd->u.d.htab)))
+      == NULL) {
+    errno = ENOMEM;
+    return -1;
+  }
+  fd->u.d.stacksize = STACKGROWTH;
+  fd->u.d.stacktop = 0;
+  if ((fd->u.d.stack = malloc (STACKGROWTH)) == NULL) {
+    errno = ENOMEM;
+    return -1;
+  }
+  fd->u.d.buflen = 8 * MINBITS;
+  cin = input (fd, ifd);
+  if (cin < 0)
+    return cin == -1 ? 0 : -1;
+  *buf++ = cin;
+  --i;
+  fd->u.d.oldcode = cin;
+  fd->u.d.finchar = cin;
+}
+@
+First, [[read]] has to empty the stack:
+
+<<empty the stack>>=
+while (fd->u.d.stacktop > 0 && i > 0) {
+  *buf++ = fd->u.d.stack [--fd->u.d.stacktop];
+  --i;
+}
+@
+Then it can try to get another code, if necessary:
+
+<<return or read next code>>=
+if (i == 0 || (cin = input (fd, ifd)) == -1) {
+  fd->filepos += n - i;
+  return n - i;
+}
+    
+if (cin < -1)
+  return -1;
+@
+It may happen, that a code is not in the table yet.
+[[oldcode]] and [[finchar]] contain enough information to deduce, what has to
+be in the table:
+
+<<special AwAwA case handling>>=
+if (c >= fd->nextcode) {
+  if (c > fd->nextcode) {
+    errno = EIO;
+    return -1;
+  }
+  if (push (fd, fd->u.d.finchar))
+    return -1;
+  c = fd->u.d.oldcode;
+}
+@
+A code is analyzed from right to left.
+Therefore, I need to use the stack to reverse the order of the characters:
+
+<<analyse code and put bytes onto stack>>=
+while (c >= FIRSTCODE) {
+  if (push (fd, fd->u.d.htab [c - FIRSTCODE].c))
+    return -1;
+  c = fd->u.d.htab [c - FIRSTCODE].w;
+}
+fd->u.d.finchar = c;
+if (push (fd, c))
+  return -1;
+@
+Unless all possible codes are already used, I have to insert the a new code
+into the table.
+
+<<enter code to table htab>>=
+if (fd->nextcode < (1L << MAXBITS)) {
+  if (fd->nextcode - FIRSTCODE >= fd->u.d.tabsize) {
+    fd->u.d.tabsize += TABSIZE;
+    if ((fd->u.d.htab =
+	 realloc (fd->u.d.htab,
+		  fd->u.d.tabsize * sizeof (*fd->u.d.htab)))
+	== NULL) {
+      errno = ENOMEM;
+      return -1;
+    }
+  }
+  fd->u.d.htab [fd->nextcode - FIRSTCODE].c = c;
+  fd->u.d.htab [fd->nextcode - FIRSTCODE].w = fd->u.d.oldcode;
+
+  if (fd->nextcode == (1L << fd->nbits) - 1 &&
+      fd->nbits < MAXBITS) {
+    fd->nbits++;
+    if (refill_buffer (fd, ifd))
+      return -1;
+  }
+
+  fd->nextcode++;
+}
+@
+
+Closing a file, which has been read from is not as difficult as
+closing a file which has been written to, because no buffers have to
+be flushed.
+Nevertheless, it has to take care of freeing the data structures.
+I have two different routines for closing, one for [[cr_m]], the other
+for [[ir_m]].
+
+<<finish reading>>=
+static int close_compressed_read (int ifd)
+{
+  cfd fd = filetab [ifd];
+
+  if (--fd->shared == 0) {
+    if (fd->nbits > 0) {
+      free (fd->u.d.htab);
+      free (fd->u.d.stack);
+    }
+    free (fd);
+  }
+  filetab [ifd] = NULL;
+  return _sys_close (ifd);
+}
+@
+
+<<finish reading>>=
+static int close_prefix_read (int ifd)
+{
+  cfd fd = filetab [ifd];
+
+  if (--fd->shared == 0)
+    free (fd);
+  filetab [ifd] = NULL;
+  return _sys_close (ifd);
+}
+@
+
+\section{Miscellaneous IO-substitutes}
+
+Reading from a file, that has been opened for writing or vice versa is
+not allowed.
+
+<<other io-substitutes>>=
+static int refuse_io (int fd, unsigned char *buf, int n)
+{
+  errno = EINVAL;
+  return -1;
+}
+@
+As far as [[lseek]] is concerned, a compressed file (regardless
+whether read or written) behaves like a pipe, i.e. [[lseek]] returns -1.
+
+<<other io-substitutes>>=
+static long refuse_seek (int fd, long offset, int whence)
+{
+  errno = ESPIPE;
+  return -1;
+}
+@
+An attempt to [[lseek]] a file, that is opened for reading and has not
+(yet) proven to contain compressed data, will force to treat the file
+as a plain file.
+
+<<other io-substitutes>>=
+static long prefix_seek (int ifd, long offset, int whence)
+{
+  cfd fd = filetab [ifd];
+
+  mark_uncompressed (fd);
+  return _sys_lseek (ifd, offset, whence);
+}
+@
+
+\section{Examples}
+
+The remainder of the text gives a collection of sample code, which
+provides some evidence, that the implementation is correct.
+
+I start with a simple copy program.
+The program takes one or two command line arguments the first of
+which is the input file, while the second names the output file and
+defaults to the standard output.
+
+The most interesting property of this program is, that is can be used
+both as a substitute for [[compress]] and as a replacement for
+[[uncompress]].
+Further, it will also work on plain files.
+Consider:
+\begin{itemize}
+\item
+{\tt t plain-input compressed-output}
+\item
+{\tt t compressed-input compressed-output}
+\item
+{\tt t plain-input >plain-output}
+\item
+{\tt t compressed-input >plain-output}
+\end{itemize}
+
+<<t.c>>=
+# include <stdio.h>
+# include <errno.h>
+# include <string.h>
+
+int main (int argc, char **argv)
+{
+  FILE *in, *out;
+  int c;
+
+  if (argc != 3 && argc != 2) {
+    fprintf (stderr, "Usage: %s infile [ outfile ]\n", argv [0]);
+    exit (1);
+  }
+
+  if ((in = fopen (argv [1], "r")) == NULL) {
+    fprintf (stderr, "Cannot open file %s for reading: %s\n",
+	     argv [1], strerror (errno));
+    exit (1);
+  }
+  if (argc == 2)
+    out = stdout;
+  else if ((out = fopen (argv [2], "w")) == NULL) {
+    fprintf (stderr, "Cannot open file %s for writing: %s\n",
+	     argv [2], strerror (errno));
+    exit (1);
+  }
+
+  while ((c = getc (in)) != EOF)
+    putc (c, out);
+
+  fclose (in);
+  fclose (out);
+
+  return 0;
+}
+@
+The next example does the same thing while not using the
+standard library.
+Instead, it calls [[open]], [[read]] etc. directly.
+
+<<v.c>>=
+# include <stdio.h>
+# include <errno.h>
+# include <string.h>
+
+int main (int argc, char **argv)
+{
+  int ifd, ofd;
+  int n;
+  char buf [4096];
+
+  if (argc != 3 && argc != 2) {
+    fprintf (stderr, "Usage: %s infile [ outfile ]\n", argv [0]);
+    exit (1);
+  }
+
+  if ((ifd = open (argv [1], 0)) < 0) {
+    fprintf (stderr, "Cannot open file %s for reading: %s\n",
+	     argv [1], strerror (errno));
+    exit (1);
+  }
+  if (argc == 2)
+    ofd = 1;
+  else if ((ofd = creat (argv [2], 0666)) < 0) {
+    fprintf (stderr, "Cannot open file %s for writing: %s\n",
+	     argv [2], strerror (errno));
+    exit (1);
+  }
+
+  while ((n = read (ifd, buf, 512)) > 0)
+    write (ofd, buf, n);
+
+  close (ifd);
+  close (ofd);
+
+  return 0;
+}
+@
+The next example uses [[dup]] and performs interleaved writes to both
+file descriptors.
+Of course, this isn't necessary, but it shows, that [[dup]] works as
+expected.
+
+<<u.c>>=
+# include <stdio.h>
+# include <errno.h>
+# include <string.h>
+
+int main (int argc, char **argv)
+{
+  int ifd, oofd, dofd;
+  int n;
+  char buf [512];
+
+  if (argc != 3 && argc != 2) {
+    fprintf (stderr, "Usage: %s infile [ outfile ]\n", argv [0]);
+    exit (1);
+  }
+
+  if ((ifd = open (argv [1], 0)) < 0) {
+    fprintf (stderr, "Cannot open file %s for reading: %s\n",
+	     argv [1], strerror (errno));
+    exit (1);
+  }
+  if (argc == 2)
+    oofd = 1;
+  else if ((oofd = creat (argv [2], 0666)) < 0) {
+    fprintf (stderr, "Cannot open file %s for writing: %s\n",
+	     argv [2], strerror (errno));
+    exit (1);
+  }
+
+  dofd = dup (oofd);
+
+  while ((n = read (ifd, buf, 512)) > 0)
+    write (oofd, buf, n / 2),
+    write (dofd, buf + n / 2, n - n / 2);
+
+  close (ifd);
+  close (oofd);
+  close (dofd);
+
+  return 0;
+}
+@
+The following program is the most complex example.
+It shows the use of pipes in the framework of [[fork]] and [[exec]].
+By two times executing [[fork]] I create a sequential arrangement of
+three processes, which are connected by two pipes.
+Pipe [[p1]] connects the {\em child} with the {\em parent}, while [[p2]]
+provides a channel from the {\em grandchild} to the {\em child}.
+
+The {\em child} starts another program by calling either [[execl]] or
+[[execvp]], depending on what command line arguments are given.
+The idea is to pipe compressed data to a {\em filter} and read it
+back.
+Simple ``filters'' like [[cat]] or [[tee]] don't change the data.
+Therefore, the {\em parent} should see, what the {\em grandchild}
+wrote in this case.
+It is worth trying to put {\tt uncompress~-C} into the place of the filter.
+(The behavior should not change, because [[read]] automatically
+detects, that the data in [[p1]] are not in compressed format.)
+
+Note, that all calls to [[fork]] and [[exec]] have to be executed {\em
+before any actual input or output takes place}.
+
+<<w.c>>=
+# include <stdio.h>
+# include <assert.h>
+# include <errno.h>
+# include <string.h>
+
+# define check(x) \
+	((x)<0?(fprintf(stderr,"%s(%d): (%s) < 0 (%s)\n", \
+			__FILE__, __LINE__, #x, strerror(errno)), \
+		exit(1)):0)
+
+int main (int argc, char **argv)
+{
+  char buf [512];
+  int n;
+  int p1 [2], p2 [2];
+  int f;
+
+  check (pipe (p1));
+
+  check (f = fork ());
+  if (f > 0) {
+    check (close (p1 [1]));
+    while (check (n = read (p1 [0], buf, 512)), n > 0)
+      check (write (1, buf, n));
+    putc ('\n', stderr);
+    check (close (p1 [0]));
+    check (wait (NULL));
+    exit (0);
+  } else {
+    check (close (1));
+    check (dup (p1 [1]));
+    check (close (p1 [0]));
+    check (close (p1 [1]));
+
+    check (pipe (p2));
+
+    check (f = fork ());
+
+    if (f > 0) {
+      check (close (p2 [1]));
+      check (close (0));
+      check (dup (p2 [0]));
+      check (close (p2 [0]));
+
+      if (argc == 1)
+	check (execl ("/bin/cat", "cat", NULL));
+      else
+	check (execvp (argv [1], argv + 1));
+    } else {
+      check (close (p2 [0]));
+      while (check (n = read (0, buf, 512)), n > 0)
+	check (write (p2 [1], buf, n));
+      check (close (p2 [1]));
+      exit (0);
+    }
+  }
+}
+@
+A small program shows the use of pipes through the [[popen]]-interface:
+
+<<x.c>>=
+# include <stdio.h>
+
+# include <assert.h>
+
+int main (int argc, char **argv)
+{
+  FILE *fp;
+  int c;
+
+  assert (argc == 2);
+  fp = popen (argv [1], "r");
+  assert (fp != NULL);
+  while ((c = getc (fp)) != EOF)
+    putchar (c);
+  pclose (fp);
+  return 0;
+}
+@
+A final test case makes sure, that [[read_prefix]] works correctly,
+even in the case, that the number of characters asked for is less than
+the length of the [[compress_prefix]].
+The program always reads only one character at a time.
+Try to use it with a plain file and remember, how [[read]] is implemented.
+
+<<y.c>>=
+# include <assert.h>
+
+int main (int argc, char **argv)
+{
+  char c;
+  int fd;
+
+  assert (argc == 2);
+  fd = open (argv [1], 0);
+  assert (fd >= 0);
+  while (read (fd, &c, 1) == 1)
+    write (1, &c, 1);
+  close (fd);
+  return 0;
+}
+@
+
+\section{Conclusions}
+
+The examples in the previous section show, that the new file system
+interface really hides the details of data compression, thereby
+providing this service in a fashion transparent to the programs that
+use it.
+However, everything works only as long as a single program has
+complete control over an open file.
+In a multi-tasking environment like UNIX, this is generally not true.
+This puts some severe constraints onto the usage of the new interface.
+The implementation presented in this paper assumes, that files opened
+for writing by [[open]] are not compressed.
+What, if the data in that file actually {\em are} compressed?
+
+Recently, there are some efforts made to integrate data compression with
+file system implementations themselves.
+Only here one has the opportunity to know about {\em every} access to a file,
+and things can be synchronized properly.
+
+Nevertheless, the given program text can be useful in many
+circumstances.
+I, for instance, tried to integrate it with [[VSCM]], which is my
+implementation of {\em Scheme}.
+Memory dumps written by [[VSCM]] are less than half as big as before,
+and everything still works fine.
+Probably, the fact that files containing symbolic expressions are
+written in compressed mode as well is a little bit surprising and annoying.
+(This leads to the demand for a switch to turn off compression, but
+this would expose details of the implementation, which is what I
+wanted to avoid in the first place.)
+
+\section{Indexes}
+
+\subsection{Code Chunks}
+\nowebchunks
+
+\subsection{Identifiers}
+\nowebindex

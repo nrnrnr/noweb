@@ -1,0 +1,93 @@
+<<nountangle>>=
+#!/bin/rc
+#
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+
+# set -x
+rfork en
+bind -b /sys/lib/noweb/bin/$objtype /bin
+bind -b /sys/lib/noweb/bin/rc /bin
+
+markup=markup
+opt=''
+arg=''
+filters=''
+width=72
+subst='gsub("\\*/", "* /", s)'
+format='/* %%-%ds */'
+
+while(! ~ $#* 0) {
+	switch($1) {
+	case -ml -m3 
+		format='(* %%-%ds *)'
+        subst='gsub("\\*\\)", "* )", s) gsub("\\(\\*", "( *", s)'
+	case -awk -icn -icon
+		format='# %%-%ds' ; subst=' '
+	case -lisp -scm
+		format=';;; %%-%ds' ; subst=' '
+	case -c++
+		format='// %%-%ds' ;           subst=' ' 
+	case -c
+		format='/* %%-%ds */'          subst='gsub("\\*/", "* /", s)'
+	case -pascal
+		format='{ %%-%ds }' ;          subst='gsub("[{}]", "-", s)'
+	case -f77
+        		format='C %%-%ds' ;            subst=' ' ;;
+	case -f90
+        		format='! %%-%ds' ;            subst=' ' ;;
+	case -tex
+        		format='%%%% %%-%ds' ;         subst=' ' ;;
+	case -L*
+		# deliberately ignore requests for #line
+        case -w[0-9][0-9]*;    width=`{echo $1 | sed 's/^-w//'} ;;
+	case -filter; filters=' | '$filters' '$2 ; shift ;;
+	case -markup; markup=$2; shift ;;
+	case -;  arg=$arg' '$1;;
+        case -*; opt=$opt' '$1 ;;
+        case *;  arg=$arg' '$1 ;;
+        }
+	shift
+}
+
+eval $markup^' '^$arg^' '^$filters |
+awk 'BEGIN { line = 0; capture = 0; format=sprintf("'$format'",'$width') }
+
+function comment(s) {
+    '$subst'
+    return sprintf(format,s)
+}
+
+function grab(s) {
+  if (capture==0) print
+  else holding[line] = holding[line] s
+}
+   
+/^@end doc/ { capture = 0; holding[++line] = "" ; next }
+/^@begin doc/ { capture = 1; next }
+
+/^@text /     { grab(substr($0,7)); next}
+/^@quote$/    { grab("[[") ; next}
+/^@endquote$/ { grab("]]") ; next}
+
+/^@nl$/ { if (capture !=0 ) {
+            holding[++line] = ""
+          } else if (defn_pending != 0) {
+	    print "@nl"
+            for (i=0; i<=line && holding[i] ~ /^ *$/; i++) i=i
+            for (; i<=line; i++) printf "@text %s\n@nl\n", comment(holding[i])
+            line = 0; holding[0] = ""
+            defn_pending = 0
+          } else print
+          next  
+        }
+
+/^@defn / { holding[line] = holding[line] "<"substr($0,7)">=" # (line should b
+ blank)
+            print ; defn_pending = 1 ; next }
+{ print }' |
+eval nt^' '^$opt
+

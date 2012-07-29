@@ -1,0 +1,76 @@
+#!/usr/bin/perl -w
+
+# Noweb filter to propagate @language directive from a chunk to used
+# chunks.  Assumes that root chunks already have a @language directive
+# (see guesslang filter).  Takes no argument.
+
+# Copyright (c) 2003 by Yann Dirson <ydirson@altern.org>
+
+# Distribute under the terms of the GNU General Public Licence,
+# version 2.
+
+use strict;
+
+my (%chunklangs, %chunkchildren);
+
+# FIXME: we could bufferize as needed, if we want to grow more complex
+my @data = <STDIN>;
+
+# register the chunk hierarchy
+{
+  my $thischunk = undef;
+  foreach (@data) {
+    if (m/^\@end code/) {	# this one first to limit to code chunks
+      $thischunk = undef;
+    } elsif (m/^\@use (.*)$/) {
+      push @{$chunkchildren{$thischunk}}, $1 if defined $thischunk;
+    } elsif (m/^\@defn (.*)$/) {
+      $thischunk = $1;
+    } elsif (m/^\@language (.*)$/) {
+      die "\@language without a \@defn: $_" unless defined $thischunk;
+      $chunklangs{$thischunk} = $1;
+    }
+  }
+}
+
+# propagate to argument's children
+sub propagate {
+  my ($thischunk) = @_;
+  if (defined $chunklangs{$thischunk}) {
+    foreach my $child (@{$chunkchildren{$thischunk}}) {
+      if (defined $chunklangs{$child}) {
+	if ($chunklangs{$child} eq $chunklangs{$thischunk}) {
+	  print STDERR "Notice: chunk used more than once: \`$child'\n";
+	} else {
+	  die "Chunk cannot inherits languages \`$chunklangs{$child}' and " .
+	    "\`$chunklangs{$thischunk}': \`$child'\n";
+	}
+      } else {
+	$chunklangs{$child} = $chunklangs{$thischunk};
+      }
+
+      # recurse
+      propagate($child);
+    }
+  } else {
+    print STDERR "Warning: could not infer language for \`$thischunk'\n";
+  }
+}
+
+# propagate from all known chunks
+foreach my $chunk (keys %chunklangs) {
+  propagate($chunk);
+}
+
+# output
+foreach (@data) {
+  if (m/^\@defn (.*)$/) {
+    print $_;
+    print "\@language $chunklangs{$1}\n" if (defined $chunklangs{$1})
+  } elsif (m/^\@language /) {
+    # Do not output twice. Since we already asserted consistency we can
+    # simply ignore this one.
+  } else {
+    print $_;
+  }
+}

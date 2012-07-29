@@ -1,0 +1,68 @@
+# This file defines translations into \TeX\ code for some of the most common Mathematica
+# keywords. Not all of them, because there are too many.
+# It also defines translations for special tokens, such as <=.
+
+
+# Initialize the translation table to contain nulls.
+translation := table()
+
+# Keywords.
+translation["Abort"] := "{\\ttb{}Abort}"
+translation["And"] := "{\\ttb{}And}"
+translation["Append"] := "{\\ttb{}Append}"
+translation["AppendTo"] := "{\\ttb{}AppendTo}"
+translation["Apply"] := "{\\ttb{}Apply}"
+translation["Array"] := "{\\ttb{}Array}"
+translation["Assert"] := "{\\ttb{}Assert}"  # This is mine.
+translation["Begin"] := "{\\ttb{}Begin}"
+translation["BeginPackage"] := "{\\ttb{}BeginPackage}"
+translation["Block"] := "{\\ttb{}Block}"
+translation["Break"] := "{\\ttb{}Break}"
+translation["Chop"] := "{\\ttb{}Chop}"
+translation["Continue"] := "{\\ttb{}Continue}"
+translation["Do"] := "{\\ttb{}Do}"
+translation["End"] := "{\\ttb{}End}"
+translation["EndPackage"] := "{\\ttb{}EndPackage}"
+# My addition:
+translation["ExitWhen"] := "{\\ttb{}ExitWhen}"
+translation["False"] := "{\\ttb{}False}"
+translation["For"] := "{\\ttb{}For}"
+translation["Function"] := "{\\ttb{}Function}"
+translation["If"] := "{\\ttb{}If}"
+translation["Join"] := "{\\ttb{}Join}"
+translation["Length"] := "{\\ttb{}Length}"
+# My addition:
+translation["Loop"] := "{\\ttb{}Loop}"
+translation["Map"] := "{\\ttb{}Map}"
+translation["Module"] := "{\\ttb{}Module}"
+translation["Needs"] := "{\\ttb{}Needs}"
+translation["Not"] := "{\\ttb{}Not}"
+translation["Part"] := "{\\ttb{}Part}"
+translation["Prepend"] := "{\\ttb{}Prepend}"
+translation["Print"] := "{\\ttb{}Print}"
+translation["Return"] := "{\\ttb{}Return}"
+translation["Scan"] := "{\\ttb{}Scan}"
+translation["Switch"] := "{\\ttb{}Switch}"
+translation["Table"] := "{\\ttb{}Table}"
+translation["Take"] := "{\\ttb{}Take}"
+translation["True"] := "{\\ttb{}True}"
+translation["Union"] := "{\\ttb{}Union}"
+translation["Which"] := "{\\ttb{}Which}"
+translation["While"] := "{\\ttb{}While}"
+
+
+# Translations for operators, etc.
+translation["{"] := "\\{"
+translation["}"] := "\\}"
+translation["<"] := "\\(<\\)"
+translation[">"] := "\\(>\\)"
+translation["!="] := "\\(\\neq\\)"
+translation["=="] := "\\(\\equiv\\)"
+translation["<="] := "\\(\\le\\)"
+translation[">="] := "\\(\\ge\\)"
+translation["->"] := "\\(\\rightarrow\\)"
+translation["&&"] := "\\(\\land\\)"
+translation["||"] := "\\(\\lor\\)"
+translation["**"] := "\\(\\otimes\\)"
+translation["<>"] := "\\(\\bowtie\\)"
+

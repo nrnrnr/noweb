@@ -1,0 +1,59 @@
+File list for noweb/contrib/avs
+This is not in Noweb 2.7a but it has been proposed to be in the contrib dir
+Thus these files are from ftp.daimi.aau.dk:/pub/empl/avs/avs386_noweb27a.tar.gz
+
+Although the target is Dos I use .tar.gz format instead of .arj or .zip because
+anyhow you need DJGPP (which has gzip) and MKS (which has tar) to use this. For
+your convenience just in case (i.e. you only have MKS yet and will be using
+my instructions to get DJGPP) I supply the file
+ftp.daimi.aau.dk:/pub/empl/avs/gzip386.exe' (you should rename it to gzip.exe)
+
+           CHANGE THIS:
+myenv.ksh --> edit this file for your environment (Korn shell script)
+
+           DOCUMENTATION:
+readme --> brief description
+email --> my contact info
+norman1.txt --> mail sent to Norman Ramsey describing this Dos HOWTO
+filelist.txt --> this file
+howto386.txt --> documentation/troubleshooting/explanation/Dos recipe
+ftpsites.txt --> where to get additional software that might be required
+
+           ADDITIONAL DOCUMENTATION:
+icon.1 -->  NROFF processed man file for Icon (because we are using it)
+jrtex12a.avs --> excellent J. Refling's PC386 LaTeX2e HOWTO annotated by me
+mks42bug.0d --> text file with my personal list of MKS 4.2 bugs
+report1.bug --> bug report for noweb 2.7a
+
+           BUILD & INSTALL SCRIPTS (used by myenv.ksh):
+mksfixes.ksh --> fix noweb.ksh and cpif.ksh for the MKS Toolkit 4.2
+generate.ksh --> generates 'automate.bat' (the build/install script)
+nwicon.bat --> Make Icon code (the '\\\\' hack)
+nw_c.bat --> Patch DJGPP bug & Make C code & avoid out of memory errors
+nwinst.ksh --> install Noweb (just to separate install from build)
+make_ico.awk --> patches noweb/src/icon/makefile for Ms-Dos
+make_src.awk --> patches noweb/src/makefile for Ms-Dos
+make_xdo.awk --> patches noweb/src/xdoc/makefile for Ms-Dos
+make_lib.awk --> patches noweb/src/lib/makefile for Ms-Dos
+
+      2      17     122    email
+     59     353    2735    filelist.txt
+     63     412    2978    ftpsites.txt
+    114     687    4883    generate.ksh
+    254    2270   13918    howto386.txt
+    330    1243   10462    icon.1
+   1054    5692   43470    jrtex12a.avs
+     50     297    1694    make_ico.awk
+     12      80     498    make_lib.awk
+     72     509    2832    make_src.awk
+     14     104     593    make_xdo.awk
+    128    1219    7347    mks42bug.0d
+     14     110     714    mksfixes.ksh
+     38     321    1923    myenv.ksh
+    136    1409    8168    norman1.txt
+     62     288    2077    nw_c.bat
+     43     201    1411    nwicon.bat
+      9      33     253    nwinst.ksh
+     39     302    1807    readme
+     97     796    4554    report1.bug
+   2590   16343  112439    total

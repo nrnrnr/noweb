@@ -1,0 +1,23 @@
+ttroots
+=======
+
+-Allows underscores in root chunks that are written to disk.
+-All root chunks are printed out in the LaTeX document as 
+ upright verbatim names.
+
+
+notangleall
+===========
+
+-creates all required directories for the code chunks
+-tangles all root chunks (as noweb -t)
+-makes all scripts mared executable. The marking is done
+ as follows:
+ %unx chmod +x chunk_name
+ <<chunk_name>>=
+    ...
+ @
+
+ Can also be used for other UNIX commands that should be
+ executed after the tangling.
+

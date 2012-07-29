@@ -1,0 +1,2 @@
+#!/bin/csh
+markup $1.nw | mm2mx63 -n -i -m  | mx2tex31 -i -n $1 -s

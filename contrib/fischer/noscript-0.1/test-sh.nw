@@ -1,0 +1,10 @@
+%!/bin/sh
+
+@ This is a test script which displays the ability of my new noweb-script to
+actually execute a script which is embedded in a noweb styled file.
+
+<<*>>=
+echo "Hello Bourne World!"
+echo "Args: $*"
+
+@ And that should do it.

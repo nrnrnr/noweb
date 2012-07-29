@@ -1,0 +1,134 @@
+\ifx\NwInDeXLoaded\undefined\relax\else\endinput\fi
+\def\NwInDeXLoaded{}
+\ifx\moddef\undefined\input nwmac \fi
+
+% last minute panic comments
+
+% font for cross references
+\font\foot=cmr8
+
+% \init re-initialises stuff for each pass
+\def\initnwindex{\global\pageno=1\global\subpageref=97}
+\let\init=\initnwindex
+
+% macros to place information in the left margin
+% from The TeXBook
+\def\strutdepth{\dp\strutbox}
+\def\marginalnote#1{\strut\vadjust{\kern-\strutdepth\specialstar{#1}}}
+\def\specialstar#1{\vtop to \strutdepth{
+   \baselineskip\strutdepth
+   \vss\llap{#1\quad}\null}}
+
+% redefine moddef to take an argument (this section's code)
+\def\moddef#1{\vskip3pt\leavevmode\marginalnote{{\bf#1}}\kern-\codemargin \LA}
+
+% make the contents file immediately open
+\immediate\openout\cont=\contentsfile
+\immediate\write\cont{\string\catcode`\string\@=11}% a hack to make contents
+                                 % take stuff in plain.tex
+
+% redefine \nwendcode to provide the \aftercode hook
+\def\nwendcode{\aftercode{}\endgroup}
+
+% \subpageref is the letter part of the code
+\newcount\subpageref \subpageref=97
+
+% an entry in an index (AFAIK this is unused)
+\def\index#1#2{\line{\hskip.5in{\vbox{{\ignorespaces#1}\hskip4pt #2.}\hss}}}
+
+% advance the \subpageref, going to 'A' if 'z' was the last one
+\def\nextref{\global\advance\subpageref by 1\ifnum\subpageref=123\subpageref=65\fi}
+
+% \xp expands to #1 if #1 is defined or \relax if it is not
+\def\xp#1{\ifx#1\undefined\relax\else#1\fi}
+
+% AFAIK this is unused
+\let\ag=\aftergroup
+
+% \xref is called each time a code is defined - sort of a hook
+\def\xref#1{}
+
+% \defined is a defined macro!
+\def\defined{}
+
+% AFAIK this is unused
+\def\killpage{\setbox0=\box255\deadcycles=0 \global\subpageref=97\global\advance\pageno by 1}
+
+% a big macro for the end of a pass
+\def\passfin{%
+  \ifx\passtwo\defined
+    \write\cont{}% ensure that the contents file isn't empty after pass2
+    \closeout\cont
+    \vfil\eject\pageno=-1 % new page causes contents to be really closed
+    \topofcontents\readcontents\botofcontents
+  \else
+    \vfill\supereject
+  \fi
+}
+
+% define a reference on pass one only
+\def\makeref#1{\ifx\passtwo\undefined
+  \edef\next{\gdef\csname#1\endcsname{\folio\char\the\subpageref}}
+  \next\xref{\csname#1\endcsname}\nextref\fi}
+
+% list macros from appendix D, The TeXBook
+\toksdef\ta=0 \toksdef\tb=2 %
+\long\def\leftappenditem#1\to#2{\ta={\\{#1}}\tb=\expandafter{#2}%
+  \edef#2{\the\ta\the\tb}}
+
+\def\lop#1\to#2{\expandafter\lopoff#1\lopoff#1#2}
+
+\long\def\lopoff\\#1#2\lopoff#3#4{\def#4{#1}\def#3{#2}}
+
+\def\cardinality#1\to#2{#2=0 \long\def\\##1{\global\advance#2 by 1}#1}
+\def\list{}
+\def\ulist{}
+\newcount\listlength
+
+% write out a nicely formatted list
+\def\writeoutlist#1#2#3{\cardinality#1\to\listlength
+\def\\##1{\advance\listlength by -1\relax##1\ifnum\listlength>1 #2%
+\else\ifnum\listlength=1 #3\fi\fi}#1}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \prettylist{list}{one}{many}{between}{end}
+% 1 -> {one}E1
+% 2 -> {many}E1{end}E2
+% 3 -> {many}E1{between}E2{end}E3
+% etc.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\prettylist#1#2#3#4#5{%
+\cardinality#1\to\listlength\ifnum\listlength>1 #3\else#2\fi
+\writeoutlist{#1}{#4}{#5}}
+
+\def\writeplain#1{\prettylist#1{}{}{,\thinspace{}}{,\thinspace{}}}
+\def\writelist#1{\prettylist#1{}{}{,\thinspace{}}{ and }}
+\def\writesections#1{\prettylist#1{section }{sections }{,\thinspace }{\ and }}
+
+\def\usage#1{This code is used in \writesections#1.}
+\def\defs#1{\cardinality#1\to\listlength\ifnum\listlength>1{%
+{\lop#1\to\hello This definition is continued in \writesections#1.}}
+\fi}
+
+\def\first#1{\ifx\list\defined\else\ {{\lop#1\to\hello \hello}}\fi}
+\def\thiscode#1{\ifx#1\defined Root module (never referenced in this document)%
+\else\usage#1\fi}
+
+% \thiscode and \writeplain can't take direct lists as parameters, so
+% fake it with these two
+\def\xtc#1{\def\list{#1}\thiscode\list}
+\def\xwp#1{\def\list{#1}\writeplain\list}
+
+% hooks for cross-references
+\def\inmodname{\ifx\list\defined\else\thinspace{\foot\first\list}\fi}
+\def\beforecode{}
+\def\aftercode{\vbox{\kern3pt\hbox{{\foot\defs\list}}\kern-2pt\hbox{{\foot\thiscode\ulist}}\kern3pt}}
+
+% \printindex - check for file existing before \input'ing it
+\newwrite\filecheck
+\def\printindex#1{\openin\filecheck=\jobname.#1
+\ifeof\filecheck\message{[#1 file missing]}{\tt noweb} has no index `#1'\else
+\closein\filecheck\input \jobname.#1
+\fi
+}

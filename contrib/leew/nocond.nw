@@ -1,0 +1,375 @@
+%
+% $Header: d:/noweb/work/RCS/nocond.nw%v 1.4 1995/07/29 17:14:49 LEEW Exp LEEW $
+% $Workfile$
+%
+% to tangle the sed script
+%		notangle -t4 -R"sed script" nocond.nw > nocond
+% to tangle the shell script:
+%		notangle -t4 -R"shell script" nocond.nw > nocond
+% to tangle the awk program
+%		notangle -t4 -Rnocond.awk nocond.nw > nocond.awk
+%	(use -filter "nocond MKS AWKC" if necessary)
+% to weave:
+%		noweave -t4 -delay -x nocond.nw > nocond.tex
+%
+\documentstyle[noweb,twoside]{article}
+\noweboptions{longchunks}
+\let\nwnotused=\nwoutput
+\oddsidemargin=63pt		% standard LaTeX margins don't work well for 2-sided webs
+\evensidemargin=63pt
+
+\ifx\LaTeXe\undefined\def\LaTeXe{\LaTeX2e}\fi	% for old installations
+\def\noweb/{{\tt noweb}}
+\def\nocond/{{\tt nocond}}
+\def\notangle/{{\tt notangle}}
+\def\noweave/{{\tt noweave}}
+
+\title {A Filter For Conditional Tangling in \noweb/%
+	\thanks{Copyright \copyright~1994, 1995 by Lee Wittenberg.
+		Although this software is freely distributable, it is not in
+		the public domain.  It is provided ``as is'' and without any
+		express or implied warranties, including, without limitation,
+		the implied warranties of merchantability and fitness for a
+		particular purpose.}}
+\author {Lee Wittenberg\\\tt leew@pilot.njin.net}
+
+%\input{nocondmac.tex}
+\bgroup
+\catcode`\@=11
+\global\let\nc@LA=\LA
+\gdef\nocondmark#1)){\/{\bf[\negthinspace[#1]\negthinspace]}}%
+\global\let\nc@notused=\nwnotused
+\global\let\nc@output=\nwoutput
+\gdef\nc@rootchunk#1{\nwcodecomment{\nocondrootnote}%
+	\global\let\nwnotused=\nc@notused
+	\global\let\nwoutput=\nc@output
+}%
+\gdef\nocondrootnote{Conditional definition.}%
+% for noweb 2.6 (bug, since fixed?)
+\global\@namedef{r@???}{{0}{\nocondxref}}
+% for noweb 2.5:
+\global\@namedef{r@nw@notdef}{{0}{\nocondxref}}
+\gdef\nocondxref{(conditional)}
+\global\let\nc@nwixlog=\nwixlogsorted
+\gdef\nwixlogsorted#1#2{
+\ifx#1c%
+	\immediate\write\@auxout{\string\bgroup\string\catcode`\string\(=\string\active}
+\fi
+	\nc@nwixlog{#1}{#2}
+\ifx#1c%
+	\immediate\write\@auxout{\string\egroup}
+\fi}%
+\catcode`\(=\active
+\gdef\LA{\nc@LA
+	\catcode`\(=\active
+	\def(##1{\ifx##1(\global\let\nwnotused=\nc@rootchunk
+					 \global\let\nwoutput=\nc@rootchunk
+					 \nocondmark
+		\else\char`\(##1\fi}%
+}%
+\egroup
+\pagestyle{noweb}
+\begin{document}
+\maketitle
+@ \iffalse
+%
+% We don't want a troff man page woven by TeX, do we?
+%
+<<nocond.1>>=
+.TH NOCOND 1 "local 8/1/94"
+.SH NAME
+nocond \- provide noweb with conditional tangling
+.SH SYNOPSIS
+.B nocond
+version
+.br
+\fBawk -f nocond.awk\fP version
+.SH DESCRIPTION
+.I nocond
+is a filter designed to work with
+.I notangle(1)
+to provide it with a simple
+conditional capability.  Chunk definitions may be
+marked as conditional by including a version name
+wrapped in double parentheses as part of the chunk name.
+.PP
+.I nocond
+concatenates its command line arguments
+(with a single space between each argument) to form
+a version name, and removes matching conditional marks
+from chunk definition names so
+.I notangle(1)
+will include the chunks as part of the appropriate
+definition.
+.PP
+.I nocond
+also provides a file of TeX macros, \fInocondmac.tex\fP, which
+will nicely typeset conditional chunk names.
+.SH EXAMPLE
+Suppose that a Pascal web (\fIpgm.nw\fP) uses the chunk
+.IP
+\fB@<<\fPOpen the output file\fB@>>\fP
+.PP
+The author can provide multiple definitions of this chunk:
+.IP
+\fB@<<\fPOpen the output file ((UCSD Pascal))\fB@>>=\fP
+.nf
+REWRITE(outfile, 'XYZ.DAT');
+\fB@<<\fPOpen the output file ((Turbo Pascal))\fB@>>=\fP
+ASSIGN(outfile, 'XYZ.DAT');
+REWRITE(outfile);
+.fi
+.PP
+To tangle the UCSD Pascal version, the command line
+.IP
+notangle -filter "nocond UCSD Pascal" pgm.nw > pgm.pas
+.PP
+will suffice.  The Turbo Pascal version can be tangled
+similarly.
+.SH SEE ALSO
+.I notangle(1)
+.SH AUTHOR
+Lee Wittenberg.  Internet address: \fBleew@pilot.njin.net\fP
+@ \fi
+@
+\section{Introduction}
+This program is a very simple filter that provides \notangle/
+with a simple conditional capability.  It should be
+written in {\tt sed}, but non-Unix versions
+of that venerable utility are not as readily available as they
+should be, so we are using Awk instead (however, see
+section~\ref{sed script}).
+
+\section{The Awk Program}
+The Awk program simply passes all its input lines to the
+standard output.  However, when it encounters a chunk
+definition name, it first removes any conditional marks that
+match the version specified on the command line.
+<<nocond.awk>>=
+<<Version control info>>
+BEGIN{
+	<<System-dependent initialization>>
+	<<Initialization>>
+}
+<<Remove desired conditional marks from any chunk definition names>>
+{print}
+<<Version control info>>
+@
+Chunk definition names are prefixed with the markup code
+`\verb*"@defn "', and [[gsub]] is just made for this kind of
+work.
+<<Remove desired conditional marks from any chunk definition names>>=
+/^@defn /  { gsub(pattern, "", $0) }
+@
+We want to remove marks surrounded by `\verb"(("' and
+`\verb"))"'.  We need the backslashes in the pattern so
+Awk doesn't treat the parentheses as grouping symbols.
+<<Initialization>>=
+<<Use [[ARGV]] to determine the [[version]] desired>>
+pattern = " *\(\(" version "\)\)"
+@
+Some command processors are not very friendly about dealing
+with command line arguments containing spaces, so rather than
+require the version name to be supplied as a single argument,
+we treat all the arguments as a single, multi\-word one (with
+single spaces between the words). We then set [[ARGC]] to~1 to
+prevent Awk from trying to re-use the arguments as filenames.
+<<Use [[ARGV]] to determine the [[version]] desired>>=
+version = ARGV[1]
+for (i = 2; i < ARGC; i++) {
+	version = version " " ARGV[i]
+}
+ARGC = 1
+@
+\subsection{System Dependencies}
+The MKS Awk compiler tends to get confused about command line
+arguments, even though the interpreter has no problems.  The
+following kludge seems to take care of it (don't ask):
+<<System-dependent initialization ((MKS AWKC))>>=
+ARGV[1]
+@
+It's likely that other system-dependencies will arise as
+\nocond/ is tried with other versions of Awk.  A bit
+depressing, but that's what the tool was designed for, and it's
+kind of nice to use it to implement itself.  Since every Awk
+won't require special initialization, we provide a null chunk
+to avoid ``undefined chunk'' complaints from \notangle/.
+<<System-dependent initialization>>=
+@
+\section{The Shell Script}
+Unix users can use the following shell script as a \notangle/
+filter:
+<<shell script>>=
+nawk '<<nocond.awk>>'
+@
+\section{A {\tt sed} Script}
+\label{sed script}.
+{\sc Gnu} Awk, running under Linux, doesn't seem amenable to any
+patches that will make the above Awk program work correctly (the
+[[gsub]] function seems to be a sore spot in many Awk implementations).
+A {\tt sed} script, therefore, seems to be a necessity.  The following
+does the trick.
+<<sed script>>=
+<<Version control info>>
+sed "/^@defn/s/ *(($*))//"
+@
+\section{Weaving a Conditional Web}
+Some people think the double parentheses don't look very
+good in woven output, and that the version name should stand
+out a bit from the chunk name.  We provide the macro file
+\verb"nocondmac.tex" for those with such beliefs.  These macros
+should be usable both in plain \TeX\ and \LaTeX, but have only
+been tested with the latter.  They seem to work okay in \LaTeXe{}
+(in both native and compatibility modes), as well.
+
+We simply redefine the meaning of \noweb/'s [[\LA]] macro to
+make `\verb"("' an active character that typesets stuff in
+{\tt ((~$\ldots$~))} nicely and leaves other parentheses alone.
+As long as [[\LA]] exists and contains a \verb"\bgroup" this
+ought to work.
+<<nocondmac.tex>>=
+\bgroup
+\catcode`\@=11
+\global\let\nc@LA=\LA
+<<Useful macros>>
+<<Make `[[(]]' active>>
+\gdef\LA{\nc@LA
+	<<Make `[[(]]' active>>
+	\def(##1{\ifx##1(<<Adjust root chunk footnote>>\nocondmark
+		\else\char`\(##1\fi}%
+}%
+\egroup
+<<Make `[[(]]' active>>=
+\catcode`\(=\active
+@
+The real work will be done by [[\nocondmark]].  This is the
+only macro that should be changed if you want to adjust the way
+conditionals are typeset.
+<<Useful macros>>=
+\gdef\nocondmark#1)){\/{\bf[\negthinspace[#1]\negthinspace]}}%
+@
+In \LaTeX\ webs,
+the cross-reference footnotes for root chunks are generated by
+[[\nwnotused]] or [[\nwoutput]], depending on whether the woven
+output was generated with the \notangle/ or \noweb/ command.
+We note the original definitions, but change them to
+print `Conditional definition.' when a chunk name includes
+{\tt ((~$\ldots$~))}.
+<<Useful macros>>=
+\ifx\nwnotused\undefined\else
+	\global\let\nc@notused=\nwnotused
+\fi
+\ifx\nwoutput\undefined\else
+	\global\let\nc@output=\nwoutput
+\fi
+<<Adjust root chunk footnote>>=
+\ifx\nc@rootchunk\undefined\else
+\global\let\nwnotused=\nc@rootchunk
+\global\let\nwoutput=\nc@rootchunk
+\fi
+@
+The macro [[\nc@rootchunk]] is defined so that it resets
+[[\nwnotused]] and [[\nwoutput]] when it's finished, so that
+real root chunks will have the proper footnote.  We use
+[[\nocondrootnote]] so that the conditional footnote can
+easily be customized.
+<<Useful macros>>=
+\ifx\nwnotused\undefined\else
+	\ifx\nwoutput\undefined\else
+		\gdef\nc@rootchunk#1{\nwcodecomment{\nocondrootnote}%
+			\global\let\nwnotused=\nc@notused
+			\global\let\nwoutput=\nc@output
+		}%
+		\gdef\nocondrootnote{Conditional definition.}%
+\fi\fi
+@
+In a web with conditional definitions, chunks that appear to be
+undefined are actually conditionally defined, so we change the
+`never defined' message to a more meaningful `conditional'.
+<<Useful macros>>=
+\ifx\documentstyle\undefined\else	% LaTeX only
+% noweb 2.5:
+\global\@namedef{r@nw@notdef}{{0}{\nocondxref}}
+% noweb 2.6: (bug, since fixed?)
+\global\@namedef{r@???}{{0}{\nocondxref}}
+\gdef\nocondxref{(conditional)}
+\fi
+@
+The chunk index is a bit of a problem because \TeX\ assigns
+catcodes when a token is first read, but the chunk index is
+read in as part of the \verb".aux" file, when `\verb"("' is not
+an active character.  We fix [[\nwixlogsorted]] so it will
+change the catcode of `\verb"("' temporarily for chunk index
+info in the \verb".aux" file.
+<<Useful macros>>=
+\ifx\nwixlogsorted\undefined\else
+	\global\let\nc@nwixlog=\nwixlogsorted
+	\gdef\nwixlogsorted#1#2{
+		\ifx#1c
+			\immediate\write\@auxout{\string\bgroup
+				\string\catcode`\string\(=\string\active}%
+		\fi
+		\nc@nwixlog{#1}{#2}
+		\ifx#1c
+			\immediate\write\@auxout{\string\egroup}%
+		\fi
+	}%
+\fi
+@
+On the other hand, all we need do for
+[[\nowebchunks@external]] is to set the catcode.  Note
+that the \verb"externalindex" option must be set {\em after\/}
+executing \verb"\input nocondmac.tex" for things to work
+properly.
+<<Useful macros>>=
+\ifx\nowebchunks@external\undefined\else
+	\global\let\nc@chunks@external=\nowebchunks@external
+	\gdef\nowebchunks@external{%
+		\bgroup
+		<<Make `[[(]]' active>>
+		\nc@chunks@external
+		\egroup
+	}%
+\fi
+@
+\appendix
+\section {Language and Version Control Tools}
+This puts revision information in the program so we can make
+sure things don't get ``out of sync.''
+<<Version control info>>=
+# $Header: d:/noweb/work/RCS/nocond.nw%v 1.4 1995/07/29 17:14:49 LEEW Exp LEEW $
+@
+\section {Chunk Index}
+\nowebchunks
+%\twocolumn[\section{Identifier Index}]		% no point, really, for this web
+%\nowebindex
+@
+\end{document}
+% $Log: nocond.nw%v $
+% Revision 1.4  1995/07/29  17:14:49  LEEW
+% Added sed script; minor cosmetic changes
+%
+% Revision 1.3  1994/09/11  18:06:26  LEEW
+% Fixed macros for noweb 2.6c
+%
+% Revision 1.2  1994/08/05  20:46:48  LEEW
+% Added macros to typeset chunk index correctly.
+%
+% Revision 1.1  1994/08/01  14:05:33  LEEW
+% Changed manpage to troff format.
+% Spiffed up nocondmac macros.
+% Removed non-standard macro packages.
+%
+% Revision 1.0  1994/06/20  17:47:55  LEEW
+% First public version.
+%
+% Revision 0.3  1994/06/20  17:31:49  LEEW
+% Added TeX macros
+%
+% Revision 0.2  1994/06/20  16:36:59  LEEW
+% Awk script complete
+%
+% Revision 0.1  1994/06/20  14:54:49  LEEW
+% Manpage only.
+%
+% $Header: d:/noweb/work/RCS/nocond.nw%v 1.4 1995/07/29 17:14:49 LEEW Exp LEEW $

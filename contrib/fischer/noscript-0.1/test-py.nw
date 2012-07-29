@@ -1,0 +1,23 @@
+%!/usr/bin/env python
+
+@ This is a test script which displays the ability of my new noweb-script to
+actually execute a script which is embedded in a noweb styled file.
+
+<<*>>=
+<<imports>>
+
+print "Hello Python World!"
+print "Args:", sys.argv[1:]
+for n in xrange( 0, 10 ):
+   <<Do something with numbers>>
+print
+
+@ And that should do it, now we just need to do something with the numbers:
+
+<<Do something with numbers>>=
+print n,
+
+@ Oh yeah, I need to import [[sys]] as well
+
+<<imports>>=
+import sys

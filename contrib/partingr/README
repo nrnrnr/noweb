@@ -1,0 +1,148 @@
+This is plain TeX indexing and cross-reference support for noweb.
+
+total 38
+-rwxr-x---  1 partingr      959 Aug  2 14:10 TeXthings
+-rwxr-x---  1 partingr     5544 Aug  2 14:19 addscore.nw
+-rwxr-xr-x  1 partingr     4672 Aug  2 13:35 mm2mx63
+-rwxr-xr-x  1 partingr     5033 Aug  2 13:35 mm2mx64
+-rwxr-xr-x  1 partingr     5180 Aug  2 13:35 mm2mx65
+-rwxr-xr-x  1 partingr     1445 Aug  2 13:37 mm2tex
+-rwxr-xr-x  1 partingr     4109 Aug  2 13:35 mx2tex31
+-rwxr-xr-x  1 partingr     4055 Aug  2 13:35 nwindex.tex
+-rwxr-x---  1 partingr       67 Aug  2 14:14 nwnweave
+-rwxr-xr-x  1 partingr       35 Aug  2 13:35 nwtangle
+-rwxr-xr-x  1 partingr       64 Aug  2 13:35 nwweave
+-rwxr-xr-x  1 partingr      524 Aug  2 13:58 xpand
+
+This is what each file does/is:
+
+TeXthings	perl 'header' file. needs to be somewhere
+		perl will find it when it executes mm2mx63
+		or mx2tex31 or mm2tex.
+
+mm2mx63		version 6.3 of mm2mx. converts mm files
+		(those created by markup) into mx files
+		(which is my modified markup file).
+		sectionref macros are aaa,aab,aac,aad
+		reads from STDIN and outputs to STDOUT
+		see below for cli options.
+
+mm2mx64		version 6.4 of mm2mx. virtually the same
+		as mm2mx63, but the sectionref macros that
+		get created have different names. default
+		is za,zc,zd etc. (I have lots of 2 character
+		macros for TeX so I don't use this so much,
+		but it might be useful...)
+
+mm2mx65		same as mm2mx63, but converts @<name@> in
+		documentation chunks into a @use reference
+		so you get the reference style in the
+		documentation, if you see what I mean.
+		EG. "see @<main@>" will become
+		"see <main 1a>" if main is defined in 1a
+		(with the proper typesetting for the module
+		name of course).
+
+mx2tex31	converts mx files into TeX. see below for
+		cli options.
+
+mm2tex		weaver for normal markup files. tends to be
+		faster than awk because perl semi-compiles
+		it's programs before execution.
+
+nwindex.tex	TeX macros for indexing.
+
+nwnweave	shell script to weave a file with certain
+		cli options.
+
+nwweave		shell script to weave a file with certain
+		cli options.
+
+xpand		expands ...>> references in markup files.
+		!only *after* a full name has been seen!
+
+CLI OPTIONS:
+
+mm2mx63		-i	create an identifier index from @ %def lines
+		-m	create a module index
+		-n	case insensitive module name matching
+			(nb all module names come out in lower case)
+
+mx2tex31	-i	create the indexes (from the mx file)
+		-n name	set the name of the output files. input is
+			from STDIN, output is to name.tex and
+			name.texnique.
+		-s	hack for 'only first definition gets the full
+				list of defining chunks'.
+			(look at output to see the difference)
+		-f name	takes the markup file from name.markup and
+			outputs to name.tex and name.texnique
+		-h	help message
+		-q	no output to terminal at all
+
+NWINDEX.MAC
+
+When mx2tex31 creates a TeX file, it inserts 'hooks' into the code
+so that the chunk references can be printed out according to the
+user's preferences.
+
+For all the hooks, \list contains a list of the defining chunks
+of the named chunk and \ulist contains a list of the chunks the
+named chunk is used in.
+(These lists are from Appendix D of The TeXBook. Items are
+seperated by \\ and contained in braces, so a list containing 1,2,3
+would be defined as \def\list{\\{1}\\{2}\\{3}}
+
+For a chunk defined in 1a and 1b, and used in 1c
+\list={\\{1a}\\{1b}}
+\ulist={\\{1c}}
+
+3 hooks are provided...
+
+\inmodname is called just before the right-angle of the chunk name
+\beforecode is called just after the chunk name (and angles) have
+            been set
+\aftercode is called just before \nwendcode{}
+
+The default definitions:
+\inmodname = put the *first* defining chunk xref  in chunk names
+\beforecode = empty
+\aftercode = 'This definition is continued in section...' if the name
+                is defined in more than one chunk and
+             'This code is used in section...'
+
+[look at the output to see what happens]
+This gives output like the LaTeX cross-referencing (and like CWEB).
+
+There are macros in nwindex.tex for printing out lists neatly
+(ie with commas and 'and' at the end) and for putting
+'section' or 'sections' at the front of the list.
+
+[if you need more info, either email me or wait for the documentation
+ which should be finished this week]
+
+INDEXES
+
+if asked to, mx2tex31 creates two files: name.ids and name.mods
+ids - identifier index
+mods - module index
+
+It *doesn't* include these by default in the TeX file. you have
+to ask for them by putting \printindex{ids} or \printindex{mods}
+
+you have to ask for them because (IMHO) indexes aren't vitally
+important while a program is being developed or for small
+programs.
+
+the indexes are created in seperate files to allow other tools
+to create them independently of mx2tex31. for example, a
+c program could create name.ids by parsing the code chunks
+for identifiers etc. (like CWEB/WEB do) which would be a
+better way of indexing than @ %def lines...
+
+
+BTW I apologise for this documentation. I haven't had a
+chance to get a proper version written yet.
+
+Do people want a TeXinfo version of the documentation or
+just plain TeX file?

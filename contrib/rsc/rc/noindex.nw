@@ -1,0 +1,194 @@
+This program is similar to [[makeindex]] in that it grovels through [[.aux]] 
+files looking for index information, which it writes to a [[.nwi]] file.
+It's used when [[noweave -indexfrom]] is used on many files separately;
+it combines the separate indices into a single, correctly sorted index.
+That index file is read by [[\nowebindex*]].
+<<noindex>>=
+#!/bin/rc
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+
+if(! ~ $#* 1) {
+	echo 'Usage: '^`{basename $0}^' file[.tex]' >[1=2]
+	exit usage
+}
+
+awk -f /sys/lib/noweb/noindex.awk >[1=2]
+
+<<noindex.awk>>=
+BEGIN { infile="'"$1"'"
+              <<main code>> 
+              exit
+}
+<<functions>>
+<<main code>>=
+if (infile ~ /\.tex$/) {
+    infile = substr(infile, 1, length(infile)-4) ".aux"
+} else if (infile !~ /\.aux$/) {
+    infile = infile ".aux"
+}
+idx[0] = ""
+delete idx[0]
+gobble(infile)
+alphasort(idx)
+outname = substr(infile, 1, length(infile)-4) ".nwi"
+last = ""
+for (i = 0; i < count; i++) {
+  out = stripcount(sorted[i])
+  if (last != out) {
+    print out > outname
+    last = out
+#    <show sort key [[i]]>
+  }
+}
+<<show sort key [[i]]>>=
+key = sortkeys[i]
+sub(/^\n+/, "", key)
+sub(/\n.*$/, "", key)
+print "% " key > outname
+<<functions>>=
+function gobble(name, infile, rc, tag) {
+  for (rc = (getline line < name); rc > 0; rc = (getline line < name)) {
+    if (line ~ /^\\@input{[^}]*}$/)
+        gobble(substr(line, 9, length(line)-9))
+    else if (line ~ /^\\nwixadds{/) {
+        count++
+        tag = "000000" count
+        tag = substr(tag, length(tag)-6+1)
+        idx[count] = tag " " substr(line, 11)
+    }
+  }
+  if (rc < 0) print "No file " name "."
+  else close(name)
+  return
+}
+<<functions>>=
+function stripcount(s) {
+  sub(/^[0-9]+/, "", s)
+  sub(/ +/, "", s)
+  return "\\nwixaddsx{" s
+}
+<<functions>>=
+function alphasort(a, x, n) {
+  n = 0
+  for (x in a) 
+    n = insertitem(a[x], n)
+  finish_sorting(n)
+  return n
+}
+function insertitem(x, n, i, tmp) {
+  sorted[n] = x
+  sortkeys[n] = sortkey(x)
+  return n+1
+}
+<<functions>>=
+function finish_sorting(n) {
+  firstwork = nextwork = 0
+  addquick(0, n)
+  while(nextwork > firstwork)
+    qsort()
+}
+<<functions>>=
+function addquick(l, r) {
+  workq[nextwork++] = l
+  workq[nextwork++] = r
+}
+<<get [[l]] and [[r]] out of work queue>>=
+l = workq[firstwork]
+delete workq[firstwork]
+firstwork++
+r = workq[firstwork]
+delete workq[firstwork]
+firstwork++
+<<functions>>=
+function qsort(l, r,    mid, i, last) {
+  <<get [[l]] and [[r]] out of work queue>>
+  if (r - l < 10) 
+    isort(l, r)
+  else {
+    mid = l + int((r - l) * rand())
+    swap(l, mid)
+    last = l
+    for (i = l+1; i < r; i++)
+       if (sortkeys[i] <  sortkeys[l] ||
+           sortkeys[i] == sortkeys[l] && sorted[i] < sorted[l])
+	      swap(++last, i)
+    swap(l, last)
+    addquick(l, last)
+    addquick(last+1, r)    
+  }
+}
+<<functions>>=
+function isort(l, r,    n) {
+  for (n = l + 1; n < r; n++)
+    for (i = n; i > l && (sortkeys[i] <  sortkeys[i-1] ||
+                          sortkeys[i] == sortkeys[i-1] && sorted[i] < sorted[i
+1]); i--)
+      swap(i, i-1)
+}
+<<functions>>=
+function swap(i, j, tmp) {
+    tmp = sortkeys [i]; sortkeys [i] = sortkeys [j]; sortkeys [j] = tmp
+    tmp = sorted[i]; sorted[i] = sorted[j]; sorted[j] = tmp
+}
+<<functions>>=
+function sortkey(s, count) {
+  match(s, /^[0-9]+/)
+  count = substr(s, RSTART, RLENGTH)
+  sub(/^[0-9]+ */, "", s)
+  if (s ~ /c}/) {
+      return firstkey(substr(s, 3)) "\n" count
+  } else if (s ~ /i}/) {
+      return firstkey(substr(s, 3)) "\n" count
+  } else {
+      print "sortkey handed non-chunk and non-index: " s
+      exit 1
+  }
+}
+<<functions>>=
+function firstkey(s, r, openbrace) {
+  if (s !~ /^{{/) {
+     <<complain about format and exit>>
+  }
+  sub (/^{{/, "", s)
+  gsub(/\\([a-zA-Z]+|.) */, "", s)	# kill control sequences
+  openbrace = 1
+  r = ""
+  while (openbrace > 0)
+    if (match(s, /^[^{}]*/) <= 0) 
+      openbrace--
+    else {
+      r = r substr(s, RSTART, RLENGTH)
+      c = substr(s, RSTART+RLENGTH, 1)
+      s = substr(s, RSTART+RLENGTH+1)
+      if (c == "}") openbrace--
+      else openbrace++
+      if (openbrace > 0) r = r c
+    }
+  return alphabet(r) "\n" r
+}
+<<complain about format and exit>>=
+print "key \"" substr(s, 1, 6) "...\" is ill-formatted"
+exit 1
+<<functions>>=
+function alphabet(s, r) {
+  r = ""
+  while (match(s, /[a-zA-Z \t]/) > 0) {
+    s = substr(s, RSTART)
+    c = substr(s, 1, 1)
+    if (c == " " || c == "\t") {
+      r = r " "
+      sub(/^[ \t]+/, "", s)
+    } else {
+      match(s, /^[a-zA-Z]+/)
+      r = r substr(s, RSTART, RLENGTH)
+      s = substr(s, RSTART+RLENGTH)
+    }
+  }
+  sub(/^ +/, "", r)
+  return r
+}
+@
+\section{Index}
+\nowebindex

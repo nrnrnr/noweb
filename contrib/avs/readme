@@ -1,0 +1,39 @@
+version 0.3 (30-May-95)
+
+How to install noweb 2.7a in a PC386 or above running Dos if you have Mortice
+Kern Systems' MKS Toolkit 4.2 for Dos. The rest of the software can be obtained
+by ftp (GNU DJGPP, Icon binaries, LaTeX2e, GhostScript). Complete details on
+how to get and install everything are provided
+
+   a) Look at filelist.txt, and if you need something look at ftpsites.txt
+   b) To install noweb if you are lucky you just have to edit 'myenv.ksh' and
+      to run it, e.g. from the Ms-Dos command.com prompt do:
+	cd noweb\contrib\avs
+	edit myenv.ksh
+	sh -c ./myenv.ksh
+	automate
+   c) Test the installation by doing (from the Korn shell prompt):
+	cd noweb/src/tex
+	noweb support.nw
+	latex support
+	latex support
+	latex support
+	v support
+		(assuming your dvi viewer is a batch file called v.bat)
+	dvips -o support.ps support
+   d) See if you have the same problem as I do. If section 2.2 is missing 
+      from page 7, chunk 9b from page 9 and chunk 28b from page 28 then
+      you also have that problem that some code/doc chunks come out as white
+      space. The current fix is to add a newline at the start/end of the chunk
+      to make a paragraph. See report1.bug
+   e) Further technical details on howto386.txt
+
+If using this recipe you still run into trouble contact me. As a last resort
+I'm willing to supply you by anonymous ftp with everything you need to run 
+noweb 2.7a (except the MKS toolkit which is commercial software, i.e. I can 
+supply binaries for LaTeX2e, Icon 9.0 and Noweb 2.7 that fit in 4 * 1.44 MB 
+floppies)
+
+My recipe has only been tested in my machine (which is heavily loaded, dozens 
+of TSR's and has recent versions of most software). I will appreciate receiving
+comments that allow it to run smoothly in other environments

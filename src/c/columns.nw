@@ -15,7 +15,7 @@ extern int limitcolumn (char *s, int startcolumn);
 extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
 <<*>>=
-static char rcsid[] = "$Id: columns.nw,v 2.23 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: columns.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include "columns.h"

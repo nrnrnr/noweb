@@ -1,0 +1,312 @@
+\section{Converting {\tt noweb} markup to {\TeX} markup}
+The copyright applies both to the {\tt noweb} source and to the
+generated shell script.
+<<copyright notice>>=
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+
+<<totex>>=
+#!/bin/rc
+<<copyright notice>>
+# Don't try to understand this file!  Look at lib/totex.nw in the noweb source
+
+delay=0
+noindex=0
+for(i) {
+	switch($i) {
+	case -delay
+		delay=1
+	case -noindex
+		noindex=1
+	case *
+		echo 'This can''t happen -- '$i' passed to totex' >[1=2]
+		exit cannothappen
+	}
+}
+<<invoke awk program using file>>
+@
+On a forgiving system, we make the awk program an argument:
+<<invoke awk program using parameter>>=
+awk '<<awk program for conversion to {\TeX}>>' -v 'delay='$delay -v 'noindex='
+noindex
+@
+On an ugly system, we have to put it in a file.
+<<invoke awk program using file>>=
+awk -f /sys/lib/noweb/totex.awk -v 'delay='$delay -v 'noindex='$noindex
+<<totex.awk>>=
+<<awk program for conversion to {\TeX}>>
+@ 
+The markup carefully adds no newlines not already present in the input,
+so that the line numbers of the {\TeX} file will be the same as the
+numbers of the corresponding {\tt noweb} file.
+The variables are:
+\begin{description}
+\item[\tt code] Nonzero if converting a code chunk.
+\item[\tt quoting] Nonzero if quoting code in documentation.
+\item[\tt text] Number of characters written since start of
+		documentation chunk.
+\end{description}
+[[text]] is used to write [[\par]] if a newline appears at the
+beginning of a documentation chunk without any intervening text.
+This subtle trick preserves new-paragraph semantics without requiring
+the insertion of a blank line that would throw off the line count.
+<<awk program for conversion to {\TeX}>>=
+BEGIN		   { code=0 ; quoting=0 ; text=1; <<initialization>> }
+/^@begin code/     { code=1 ; printf "\\nwbegincode{%s}", substr($0, 13) }
+/^@end code/       { code=0 ; printf "\\nwendcode{}"; lastdefnlabel = "" }
+<<special patterns for document chunk 0>>
+/^@begin docs/ 	   { text=0 ; printf "\\nwbegindocs{%s}", substr($0, 13
+ }
+/^@end docs/       {          printf "\\nwenddocs{}" }
+/^@text /          { line = substr($0, 7) ; text += length - 6
+                     if (code)         printf "%s", escape_brace_bslash(line) 
+                     else if (quoting) printf "%s", TeXliteral(line)
+                     else              printf "%s", line
+                   }
+/^@nl$/            { if (!code) {<<print [[\nwdocspar]] if no text>>}
+                     if (quoting) printf "\\nwnewline"
+                     printf "\n" 
+                   }
+/^@defn /          { name = substr($0, 7); <<defn of [[name]], with cross-refe
+ence>> }
+/^@use /           { printf "\\LA{}%s%s\\RA{}", 
+                         convquotes(substr($0, 6)), <<optional ref tag>> 
+                   }
+/^@quote$/         { quoting = 1 ; printf "{\\tt{}" }
+/^@endquote$/      { quoting = 0 ; printf "}" }
+/^@file /          { filename = substr($0, 7); <<clear [[lastxref*]]>>
+                     if (!delay) printf "\\nwfilename{%s}", filename 
+                   }
+/^@literal /       { printf "%s", substr($0, 10) }
+/^@header latex /  { <<write {\LaTeX} header>> }
+/^@header tex /    { printf "\\input nwmac " }
+/^@trailer latex$/ { print "\\end{document}" }
+/^@trailer tex$/   { print "\\bye" }
+<<xref patterns>>
+<<index patterns>>
+END		   { printf "\n" }
+<<functions>>
+@
+<<print [[\nwdocspar]] if no text>>=
+if (text==0) printf "\\nwdocspar"
+text=1
+@
+Delaying markup is handled by special patterns for the first document chunk.
+Because several {\tt noweb} files can be marked up at once, there can be
+several document chunks numbered 0.
+The later ones are given no special treatment by the simple expedient of
+turning [[delay]] off after the first one.
+<<special patterns for document chunk 0>>=
+/^@begin docs 0$/ { if (delay) next }
+/^@end docs 0$/   { if (delay) { 
+                      printf "\\nwfilename{%s}", filename; delay=0; next
+                    } }
+@
+<<defn of [[name]], with cross-reference>>=
+if (lastxreflabel != "") {
+  printf "\\sublabel{%s}", lastxreflabel
+  printf "\\nwmargintag{%s}", label2tag(lastxreflabel)
+}
+printf "\\moddef{%s%s}\\%sendmoddef", convquotes(name), <<optional ref tag>>, 
+efns[name]
+lastdefnlabel = lastxreflabel
+<<clear [[lastxref*]]>>
+defns[name] = "plus"
+<<optional ref tag>>=
+(lastxrefref != "" ? ("~" label2tag(lastxrefref)) : "")
+<<functions>>=
+function label2tag(label) {
+  return "{\\nwtagstyle{}\\subpageref{" label "}}"
+}
+<<initialization>>=
+defns[0] = 0
+@ 
+<<write {\LaTeX} header>>=
+printf "\\documentclass{article}\\usepackage{noweb}\\pagestyle{noweb}\\nowebop
+ions{%s}%s",
+       substr($0, 15),  "\\begin{document}"
+@
+\subsection{Cross-reference and index support}
+<<xref patterns>>=
+/^@xref label /     { lastxreflabel = substr($0, 13) }
+/^@xref ref /       { lastxrefref   = substr($0, 11) }
+/^@xref begindefs$/ { printf "\\nwalsodefined{" }
+/^@xref defitem /   { printf "\\\\{%s}", substr($0, 15) }
+/^@xref enddefs$/   { printf "}" }
+/^@xref beginuses$/ { printf "\\nwused{" }
+/^@xref useitem /   { printf "\\\\{%s}", substr($0, 15) }
+/^@xref enduses$/   { printf "}" }
+/^@xref notused /   { printf "\\nwnotused{%s}", TeXliteral(substr($0, 15)) }
+/^@xref nextdef /   { } 
+/^@xref prevdef /   { } 
+<<clear [[lastxref*]]>>=
+lastxreflabel = lastxrefref = ""
+<<index patterns>>=
+/^@index nl$/               { print (code ? "\\eatline" : "%") }
+/^@index defn / {
+         if (!noindex) { arg = substr($0, 13); <<handle index defn of [[arg]]>
+ } }
+/^@index localdefn / {
+         if (!noindex) { arg = substr($0, 18); <<handle index defn of [[arg]]>
+ } }
+/^@index use /  {
+         if (!noindex) { arg = substr($0, 12); <<handle index use of [[arg]]>>
+} }
+@
+Nothing is involved in handling definitions and uses unless there are cross-re
+erence
+labels pending.
+An index definition or use has its own [[@xref label]] only if it's in documen
+ation;
+if it's in code, we use the anchor label of the definition.
+(You don't have to know that to understand what happens here, but I thought yo
+
+might like to.)
+<<handle index defn of [[arg]]>>=
+if (lastxreflabel != "") printf "\\nosublabel{%s}", lastxreflabel
+if (lastxrefref != "")
+  printf "\\nwindexdefn{%s}{%s}{%s}", TeXliteral(arg), indexlabel(arg), lastxr
+fref
+<<clear [[lastxref*]]>>
+@
+The {\LaTeX} back end ignores uses in code; they get bundled up by a previous 
+ilter
+(the cross-referencer) and handled elsewhere.
+<<handle index use of [[arg]]>>=
+if (!code) {
+  if (lastxreflabel != "") printf "\\protect\\nosublabel{%s}", lastxreflabel
+  if (lastxrefref != "")
+    printf "\\protect\\nwindexuse{%s}{%s}{%s}", 
+                TeXliteral(arg), indexlabel(arg), lastxrefref
+}
+<<clear [[lastxref*]]>>
+@
+Here's the local identifier cross-reference that appears at the end of a code 
+hunk.
+We guard everything with \LA{}SI\RA, as before.
+<<index patterns>>=
+/^@index begindefs$/ { if (!noindex) { printf "\\nwidentdefs{" } }
+/^@index isused /    { if (!noindex) { } } # handled by latex
+/^@index defitem /   { if (!noindex) { i = substr($0,16); <<write [[i]] with [
+\\]]>> } }
+/^@index enddefs$/   { if (!noindex) { printf "}" } }
+/^@index beginuses$/ { if (!noindex) { printf "\\nwidentuses{"; ucount = 0 } }
+/^@index isdefined / { if (!noindex) { } } # latex finds the definitions
+/^@index useitem /   { if (!noindex) { i = substr($0, 16); <<write [[i]] with 
+[\\]]>> 
+                                   ulist[ucount++] = i
+                                 } }
+/^@index enduses$/   { if (!noindex) { printf "}"; <<write [[ulist]]>> } }
+<<initialization>>=
+ulist[0] = 0
+<<write [[i]] with [[\\]]>>=
+printf "\\\\{{%s}{%s}}", TeXliteral(i), indexlabel(i)
+<<write [[ulist]]>>=
+if (lastdefnlabel != "") {
+  for (j = 0; j < ucount; j++)
+    printf "\\nwindexuse{%s}{%s}{%s}", 
+		TeXliteral(ulist[j]), indexlabel(ulist[j]), lastdefnlabel
+}
+@
+\subsubsection{The list of chunks and the index}
+The treatments of the list of chunks and the index are similar.
+Both use [[\nwixlogsorted]], which writes magic goo into the {\tt .aux} file.
+The real cross-referencing is done by the underlying {\LaTeX} code.
+<<xref patterns>>=
+/^@xref beginchunks$/             { }
+/^@xref chunkbegin /              { label = $3; name = substr($0, 19 + length(
+abel)) 
+                                    printf "\\nwixlogsorted{c}{{%s}{%s}{",
+                                      convquotes(name), label
+				  }
+/^@xref chunkuse /                { printf "\\nwixu{%s}", substr($0, 16) }
+/^@xref chunkdefn /               { printf "\\nwixd{%s}", substr($0, 17) }
+/^@xref chunkend$/                { print "}}%" }
+/^@xref endchunks$/               { }
+<<index patterns>>=
+/^@index beginindex$/ { if (!noindex) { } }
+/^@index entrybegin / { if (!noindex) { label = $3; name = substr($0, 20 + len
+th(label)) 
+                                    printf "\\nwixlogsorted{i}{{%s}{%s}}%%\n",
+
+                                      TeXliteral(name), indexlabel(name)
+                                  } }
+/^@index entryuse /   { if (!noindex) { } } # handled by latex
+/^@index entrydefn /  { if (!noindex) { } } # handled by latex
+/^@index entryend$/   { if (!noindex) { } }
+/^@index endindex$/   { if (!noindex) { } }
+
+@
+\subsection{Miscellany}
+I first insert a newline before the special characters, then change the 
+newline to a backslash.  I can't do the backslash directly because
+[[\&]] means a literal ampersand.
+<<functions>>=
+function escape_brace_bslash(line) {
+  gsub(/[\\{}]/, "\n&", line)
+  gsub(/\n/, "\\", line)
+  return line
+}
+@
+A special function is used to implement {\tt noweb}'s quoting 
+convention within chunk names.
+<<functions>>=
+function convquotes(s, r, i) {
+  r = ""
+  while (i = index(s, "[[")) {
+    r = r substr(s, 1, i-1) "\\code{}"
+    s = substr(s, i+2)
+    if (i = match(s, "\\]\\]+")) {
+      r = r TeXliteral(substr(s, 1, i-1+RLENGTH-2)) "\\edoc{}"
+      s = substr(s, i+RLENGTH)
+    } else {
+      r = r s "\\edoc{}"
+      s = ""
+    }
+  }
+  return r s
+}
+<<functions>>=
+function indexlabel(ident, l) {
+  l = ident
+  gsub(/:/,  ":col", l)		# must be first  (colon)
+  gsub(/ /,  ":sp",  l)      # space
+  gsub(/#/,  ":has", l)     # hash
+  gsub(/\$/, ":do",  l)      # dollar
+  gsub(/%/,  ":pe",  l)      # percent
+  gsub(/&/,  ":am",  l)      # ampersand
+  gsub(/,/,  ":com", l)     # commad
+  gsub(/\\/, ":bs",  l)      # backslash
+  gsub(/\^/, ":hat", l)     # hat
+  gsub(/_/,  ":un",  l)      # underscore
+  gsub(/{/,  ":lb",  l)      # left brace
+  gsub(/}/,  ":rb",  l)      # right brace
+  gsub(/~/,  ":ti",  l)      # tilde
+  return l
+}
+@ %def indexlabel
+@
+Because latex2e uses [[`]] as an active character, I have to use 
+decimal character codes for the specials.
+<<functions>>=
+function TeXliteral(arg) {
+  gsub(/\\/, "<\\char92>",  arg)
+  gsub(/}/,  "<\\char125}", arg)
+  gsub(/{/,  "{\\char123}", arg)
+  gsub(/<\\char/, "{\\char", arg)
+  gsub(/{\\char92>/, "{\\char92}", arg)
+  gsub(/\$/, "{\\char36}",  arg)
+  gsub(/&/,  "{\\char38}",  arg)
+  gsub(/#/,  "{\\char35}",  arg)
+  gsub(/\^/, "{\\char94}",  arg)
+  gsub(/_/,  "{\\char95}",  arg)
+  gsub(/%/,  "{\\char37}",  arg)
+  gsub(/~/,  "{\\char126}", arg)
+  gsub(/ /,  "\\ ",         arg)
+  return arg
+}
+@ %def TeXliteral
+

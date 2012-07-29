@@ -1,0 +1,165 @@
+\documentstyle[noweb,algoritmos]{article}
+\input{keywords}
+\title{Hospital General}
+\author{Conrado Mart\'{\i}nez-Parra}
+\pagestyle{plain}
+\begin{document}
+\maketitle
+
+@ The problem.
+
+
+An hospital has $np$ floors ($1\le np\le |MAX_PISOS|$),  
+the $i$-th floor has $nh_i$ rooms
+($1\le nh_i\le |MAX_HAB|$) and the $j$-th room of the $i$-th floor 
+has $nll_{i,j}$ beds ($1\le nll_{i,j}\le |MAX_LLITS|$). The number of
+beds that are occupied by patients in the $j$-th room of the $i$-th
+floor in a given moment is denoted by $oc_{i,j}$. 
+
+\smallskip
+
+The patients are distributed in the hospital according to one of the
+following three cathegories: {\tt child}, {\tt men}, {\tt women}.
+All the patients in a given room must belong to the same cathegory.
+
+Consider the following type definitions:
+<<definicio de tipus>>=
+TYPE operation_class = { ingress, dismin, null };
+     cathegory       = { child, women, men };
+     
+     id_llit         = RECORD
+                          pis, hab, llit : integer;
+/* any bed can be identified by a tuple 
+(floor number, room number, bed number) */
+                       ENDRECORD;
+      
+     operation       = RECORD
+                          class : operation_class;
+                          cat_ingress_patient : categhory;
+/* used only in ingress operations */
+                          vacant_bed : id_llit;
+/* used only for dismin operations */
+                       ENDRECORD;
+
+ENDTYPE
+@
+
+
+@ The solution.
+<<definicio de tipus>>=
+TYPE hospital = RECORD
+                   nr_pisos : integer;
+                   pisos    : ARRAY [1..MAX_PISOS] OF pis;
+                   /* com que el tipus 'taula [...] de pis' es
+                      totalment accesori, no ho definim per separat; fem el
+                      mateix en la definicio del tipus 'pis'  */	      
+                ENDRECORD;
+      pis = RECORD
+              nr_habitacions : integer;
+              habs           : ARRAY [1..MAX_HABIT] OF pis;
+            ENDRECORD;
+
+ENDTYPE
+
+@
+Pel que fa a cadascuna de les habitacions, ens caldr\`a saber: 1)
+quants llits hi ha; 2) quants llits estan ocupats; 3) la categoria
+dels pacients (buida, si no n'hi ha cap); 4) l'estat de cadascun dels
+llits. Nom\'es ens caldr\`a saber la categoria d'un pacient, ja que
+tots els pacients dins una habitaci\'o tenen la mateixa categoria.
+Aix\'{\i}  doncs, proposem la seg\"uent definici\'o:
+
+<<inicialitzar hospital>>=
+PROCEDURE inicialitzar(OUTP H : hospital)
+VAR i,j,k : enter
+ENDVAR
+
+   llegir(H.nr_pisos);
+
+   /* hem obtingut el nombre de pisos del hospital */
+
+   i:= 1;
+
+   WHILE i <= H.nr_pisos DO
+ 
+      llegir(H.pisos[i].nr_nabitacions);
+      i:= i + 1
+
+   ENDWHILE;
+
+   /* hem obtingut el nombre d'habitacions per a cada pis */
+
+   i:= 1; 
+
+   WHILE i <= H.nr_pisos DO
+
+      j:= 1;
+      WHILE j <= H.pisos[i].nr_habitacions DO
+
+         llegir(H.pisos[i].habs[j].nr_llits;
+         /* hem obtingut el nombre de llits per a cada habitacio */ 
+         H.pisos[i].habs[j].nr_ocupats:= 0;
+         H.pisos[i].habs[j].cat_pacients:= buida;
+
+         k:= 1;
+         WHILE k <= H.pisos[i].habs[j].nr_llits DO
+
+            H.pisos[i].habs[j].ocupat[k]:= false;
+            k:= k + 1
+
+         ENDWHILE;
+
+         /* hem fet les definicions que indiquen que l'habitacio es
+            buida */
+         j:= j + 1
+
+      ENDWHILE;
+
+      i:= i + 1
+
+   ENDWHILE
+
+ENDPROCEDURE
+@
+
+<<*>>=
+PROGRAM Hospital
+
+<<definicio de tipus>>
+
+VAR op : operacio;
+    H  : hospital;
+ENDVAR
+
+  inicialitzar_hospital(H);
+
+  llegir_operacio(op);
+
+  WHILE op.classe != nul DO
+ 
+    tractar_operacio(op,H);
+     llegir_operacio(op)
+
+  ENDWHILE
+
+ENDPROGRAM.
+
+@
+
+<<tractar l'operacio en curs $op$, modificant l'estat de l'hospital $H$>>=
+PROCEDURE tractar_operacio(INP op : operacio; INOUTP H : hospital)
+VAR ll_asgn: id_llit;
+ENDVAR
+
+   IF op.classe = ingres THEN ingres(op,cat_pacient_ingressat, H, ll_asgn);
+			      escriure("Ingres:",ll_asgn.pis,ll_asgn.hab,
+                                                 ll_asgn.llit);
+
+   ELSE   op.classe = baixa THEN donar_baixa(op.llit_abandonat,H);
+
+   ENDIF
+
+ENDPROCEDURE;
+
+@
+\end{document}

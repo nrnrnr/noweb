@@ -4,17 +4,17 @@
 \section{Utility functions}
 
 \subsection{Line-oriented input}
-[[getline]] is reads in the next line, no matter
+[[getline_nw]] is reads in the next line, no matter
 how long it is, expanding tabs.
 I allocate more and more space for the line, until I've
 read a whole line or until I run out of space, whichever comes first.
 The buffer grows in size exponentially, so the cost in overhead is roughly the logarithm
 of the length of the longest line.
 @
-[[getline]] reuses the same internal buffers over and over, so subsequent
+[[getline_nw]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-static char rcsid[] = "$Id: getline.nw,v 2.23 2008/10/04 20:53:51 nr Exp nr $";
+static char rcsid[] = "$Id: getline.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 #define START_SIZE 128                  /* initial buffer size */
 
@@ -34,9 +34,11 @@ static int buf_size = START_SIZE;       /* size of both buffers if non-NULL */
 char *getline_expand (FILE *fp);
   /* grab a line in buffer, return new buffer or NULL for eof
      tabs in line are expanded according to tabsize */
-char *getline (FILE *fp);
+char *getline_nw (FILE *fp);
   /* grab a line in the buffer, return a new buffer or NULL for eof
      no expansion of tabs */
+@ N.B. In 2008, [[getline]] became part of a POSIX standard,
+so Noweb's version (which is 20 years old) is now [[getline_nw]].
 @
 <<C functions>>=
 void new_buffers(void) {
@@ -44,7 +46,7 @@ void new_buffers(void) {
     checkptr(buf2 = (char *) realloc(buf2, buf_size));
 }
 <<C functions>>=
-char *getline (FILE *fp) {
+char *getline_nw (FILE *fp) {
 
     <<if [[buf1==NULL]], allocate initial buffers>>
     
@@ -65,7 +67,7 @@ char *getline_expand (FILE *fp) {
     char *s, *t;
     int width;
 
-    if (getline(fp)==NULL) return NULL;
+    if (getline_nw(fp)==NULL) return NULL;
     <<if [[columnwidth(buf1) > buf_size - 1]], allocate new buffers>>
     s = buf1; t = buf2; width=0;
     while (*s)

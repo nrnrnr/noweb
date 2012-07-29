@@ -1,0 +1,17 @@
+The "custom-code" script is a simple noweb filter that allows for some
+very simple typesetting of code chunks.  It simply inserts a 
+
+	\bgroup\nwcustomcode ... \egroup
+
+wrapper around everything in code chunks and quoted code.  The user
+simply defines the \nwcustomcode macro to typeset the code
+appropriately.  This is primarily useful for programming languages like
+Neliac (and, perhaps, APL), which use specialized character sets (and
+don't look quite right when rendered in ``standard'' ASCII characters.
+
+The "example.nw" file demonstrates "custom-code" in action.  Simply
+
+	noweave -t4 -delay -index example.nw -filter custom-code >example.tex
+
+and run the result through LaTeX for a sample of the same code both
+with and without the custom typesetting.

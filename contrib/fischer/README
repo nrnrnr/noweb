@@ -1,0 +1,40 @@
+Date: Wed, 23 Feb 2011 23:02:00 -0500
+From: Greyson Fischer <greyson@foosoft.us>
+To: nr@cs.tufts.edu
+Subject: noweb + interpreter line = noscript
+
+
+Dear Norman,
+
+I have been a literate programmer for a few years now. Although I must 
+limit my use of it most of the time due to corporate pressure, it comes 
+in extremely handy for particularly new or challenging tasks. Of course 
+I use noweb for many of my literate programs, preferring it over even 
+cweb for C and C++ (sure, 'int' isn't bold, but at least it's indented 
+the way I like to read).
+
+I found myself repeating a pattern when it came to writing in 
+interpreted languages; specifically those that use a shebang to specify 
+their interpreter. I write the literate script, tangle it, and then copy 
+the result off to be used.  The problem with this approach comes when I 
+want, or need, to edit the script again later. Although I know it came 
+from noweb (usually because of the complete lack of comments) I couldn't 
+always track down the original source in a timely manner, leading me to 
+make changes to the derived script, rather than the source.
+
+So, I came up with a simple fix. noscript tangles a document on the fly 
+(assuming the first line has %!) and executes it inline with the 
+specified interpreter.
+
+To use it, take a noweb document (for example: myscript.nw) which 
+tangles <<*>> into, for example, a shell script.  Add a "%!/bin/sh" at 
+the top of the file. Run 'noscript myscript.nw'. Done, the script has 
+been executed.
+
+I've attached my version 0.1 in case your interested (along with some 
+trivial test documents). It's made it quite a bit easier for me to keep 
+the document and the script together. Perhaps you, or one of your users, 
+might find it of use.
+
+Cheers,
+Greyson Fischer

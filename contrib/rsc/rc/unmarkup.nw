@@ -1,0 +1,53 @@
+<<unmarkup>>=
+#!/bin/rc
+#
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file /sys/src/cmd/noweb/COPYRIGHT for more information.
+#
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-labs.com
+#
+
+awk '
+BEGIN {
+  rcsid = "$Id: unmarkup,v 1.5 1999/02/16 21:11:54 nr Exp nr $"
+  rcsname = "$Name: v2_9a $"
+}
+/^@begin docs 0$/ { next }
+/^@begin docs / { printf "@ " }
+/^@begin code / { code = 1 }
+/^@end [cd]o[dc][es] / { 
+		code = 0
+		if (dangling_text) printf "\n"
+		dangling_text = 0
+                printf "%s", deflines
+                if (defline != "") printf "%s\n", defline
+                deflines = "" ; defline = ""
+               }
+/^@defn / { printf "@<<%s>>=", substr($0,7) }
+/^@text $/ {next}
+/^@text / { 
+  gsub("@<<", "@@<<");
+  gsub("@>>", "@@>>");
+  if (!(code || quoting)) {
+    gsub(/\[\[/, "@[[");
+    gsub(/\]\]/, "@]]");
+  }
+  printf "%s", substr($0,7) 
+  dangling_text = 1
+}
+/^@quote$/    { printf("[["); dangling_text = 1; quoting = 1 }
+/^@endquote$/ { printf("]]"); dangling_text = 1; quoting = 0 }
+/^@nl$/       { printf "\n"; dangling_text = 0}
+
+/^@index defn / {
+     if (defline == "") defline = "@ %def"
+     defline = defline " " substr($0, 13)
+}
+/^@index nl$/ {
+     deflines = deflines defline "\n"
+     defline = ""
+}
+/^@use / { printf "@<<%s>>", substr($0,6)
+           dangling_text = 1
+         }' $* | sed 's/^@ $/@/'

@@ -1,0 +1,46 @@
+WHAT'S NEW:
+
+1) Indexing: the pretty-printers now fix up some of the deficiencies of noweb's
+indexing mechanism.
+
+"finduses" generates spurious references to identifiers when it sees a string
+matching an identifier inside a comment or string literal.  For example, try
+
+	noweave -autodefs c -index t.nw  > t.tex
+	latex t
+	latex t
+
+on the file
+
+<<Section A>>=
+int num;
+<<Section B>>=
+/* num is the number ... */
+<<Section C>>=
+printf("num is the number of things\n");
+@
+\nowebindex
+
+noweave (finduses) will generate a reference to num in each of sections B and C.
+
+Now try 
+
+	noweave -autodefs c -filter C.filter -index t.nw  > t.tex
+	latex t
+	latex t
+
+(NOTE: -filter first, -index next!)
+You get a pretty-printed version without these references.  All pretty-printer
+filters suppress these spurious references.
+
+
+2) A bug in pretty-printing operators has been fixed.  For example, if ``=='' is
+meant to be typeset as ``\equiv'', say, but ``==='' is supposed to be left alone, the
+old version would typeset ``==='' as ``\equiv=''.
+
+
+3) For those who know about OOT: the autodefs.oot now does not index identifiers
+declared in subprograms.  This reduces clutter.  However, it has the capability to
+index such identifiers selectively if the user supplies an argument to the filter,
+the name of a file listing subprogram names one per line.  (See ootdefs.nw for
+details.)

@@ -4,8 +4,8 @@
 <<notangle>>=
 #!/bin/sh
 <<copyright notice>>
-# $Id$
-# $Name$
+# $Id: notangle.nw,v 1.2 1997/09/13 20:29:56 nr Exp $
+# $Name:  $
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= markopt= filters=
 while [ $# -gt 0 ]; do

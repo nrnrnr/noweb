@@ -1,0 +1,79 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+\section{Using file modification dates}
+
+\date{October 31, 1996}
+
+This \texttt{noweb} filter 
+sets the date to the modification date of the file being woven.
+It relies on the convention that 
+\begin{quote}
+\verb+\date{+\emph{mumble}\verb+}+
+\end{quote}
+appears on a line by itself.  \emph{Mumble} stands for any string.
+The filter replaces \emph{Mumble} with the modifcation date and time
+of the file as announced by \verb+@file+.
+
+The filter uses POSIX functions, and it uses the \texttt{noweb} input
+stuff, so it has to be linked with 
+\texttt{getline.o} \texttt{columns.o}, and \texttt{errors.o} from the
+\texttt{noweb} distribution.
+<<moddate.c*>>=
+<<includes>>
+<<local procs>>
+main() {
+  char *s;
+  char *file = NULL;
+  while (s = getline(stdin)) 
+    if (match("@file ", s)) {
+      printf("%s", s);
+      file = get_file_name(s);
+    } else if (matches_date(s) && file != NULL) 
+      print_modification_time(file);
+    else
+      printf("%s", s);
+}
+@ 
+Matching ideas are stolen from Icon.
+<<local procs>>=
+match(char *pattern, char *s) {
+  return !strncmp(pattern, s, strlen(pattern));
+}
+<<local procs>>=
+matches_date(char *s) {
+  return match("@text \\date{", s) && s[strlen(s)-2] == '}';
+}
+@ 
+Allocate space for a file name and strip the trailing newline.
+<<local procs>>=
+char *get_file_name(char *s) {
+  char *p = (char *)malloc(strlen(s));  /* wastes some characters */
+  assert(p);
+  strcpy(p, s + strlen("@file "));
+  p[strlen(p)-1] = 0;  /* trim newline */
+  return p;
+}
+@ 
+To get a nicer format for the time, I would replace the call to
+[[asctime]] with something else.
+<<local procs>>=  
+void print_modification_time(char *file) {
+  struct stat buf;
+  int n = stat(file, &buf);
+  char *time;
+  if (n) {fprintf(stderr, "could not stat %s\n", file); exit(1); }
+  time = asctime(localtime(&buf.st_mtime));
+  if (time[strlen(time)-1] == '\n') 
+    time[strlen(time)-1] = 0;
+  printf("@text \\date{%s}\\def\\today{%s}\n", time, time);
+}
+@ 
+<<includes>>=
+#include <time.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <stdio.h>
+#include "getline.h"
+

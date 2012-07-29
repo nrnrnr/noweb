@@ -1,0 +1,56 @@
+#!/bin/rc
+
+rfork en
+
+LIB=/sys/lib/noweb
+
+bind -b /sys/lib/noweb/bin/$objtype /bin
+bind -b /sys/lib/noweb/bin/rc /bin
+
+files=()
+for(i) {
+	switch($i) {
+	case -*
+		;
+	case *
+		files=($files $i)
+	}
+}
+
+markup $files | awk '
+BEGIN		{ code=0 
+		  print "\\documentstyle{article}"
+		  print "\\newcommand{\\fragment}[1]{{\\sl$\\langle$#1\\/$\\ran
+le$}}"
+		  print "\\begin{document}"
+                }
+END		{ if (code) print "\\end{trivlist}" 
+		  print "\\end{document}"
+		}
+/^@quote$/	{ printf "\\verb@"}
+/^@endquote$/	{ printf "@" }
+/^@begin code/	{ if (!code) print "\\begin{trivlist}\\raggedright\\obeylines\\
+eftskip=2em\\small\\item[]%"; code=1 }
+/^@end code/	{ }
+/^@begin docs/	{ if (code) print "\\end{trivlist}"; code=0 }
+/^@end docs/	{ }
+/^@defn /	{ gsub(/\[\[/, "\\verb@"); gsub(/]]/, "@")
+		name = substr($0,7)
+		printf "\\hspace{-2em}"
+		printf "\\fragment{%s}", name
+		defs[name] += 1
+		if (defs[name] > 1)
+			printf "$+\\!\\!\\equiv$"
+		else
+			printf "$\\equiv$"
+		printf "\\index{\\fragment{%s}}", name
+		}
+/^@use /	{ gsub(/\[\[/, "\\verb@"); gsub(/]]/, "@")
+		name = substr($0,6)
+		printf "\\fragment{%s}", name
+		printf "\\index{\\fragment{%s}}", name
+		}
+/^@literal /	{ printf "%s", substr($0, 10) }
+/^@nl$/		{ print ""}
+/^@text /	{ if (code) printf "\\verb@%s@", substr($0,7)
+		  else printf "%s", substr($0,7) }'

@@ -1,0 +1,183 @@
+\def\musecs{$\mu$secs}
+\itemwidth=.25in
+@
+\section{Archery Database: {\tt AddScore}}
+This perl script adds a score (or scores) to the archery database.
+It provides only a basic user interface.
+
+<<addscore>>=
+<<setup>>
+<<main program loop>>
+<<subroutines>>
+@
+
+\section{Setting up the database and script}
+Because much of the code is shared between this family of scripts,
+some of the code is in subroutine files. We [[require]] these.
+
+<<setup>>=
+require "custom" || die "can't open custom routines library";
+require "archsubs" || die "can't open subroutines library";
+@ %def &readrounds &init
+
+Early versions of this script allowed you to abort an entry by not
+typing anything at a prompt. However this became cumbersome when only
+the third prompt would let you do this. So we now trap [[SIGINT]]
+and point it to the same abort routine.
+
+<<setup>>=
+$SIG{'INT'}='abort';
+@ %def $SIG
+
+We need know what date it is today (for the default database and
+date) so we get this from the operating system via the [[gmtime()]]
+call.
+
+<<setup>>=
+$start=time;
+($ts,$tmi,$th,$tmd,$tmo,$ty,@junk)=gmtime($start);
+@ %def $start $ts $tmi $th $tmd $tmo $ty @junk | $start gmtime()
+
+Now we read in the rounds database, and open the relevant dbm file for
+the archery database. [[&init]] handles the command line options that
+relate to the person and year that are asked for. 
+
+<<setup>>=
+&readrounds;
+do &init;
+@ %def | &readrounds &init
+\section{The main body of the program}
+The main part of the program justs loops asking the user for
+a score to be entered and then prompting for another loop.
+
+Unfortunately, we still treat dates as strings (due to problems in the
+conversion of dates to \musecs\ and back) so all this data cannot
+be accessed by date order.
+
+\subsection{Outline of main loop}
+<<main...>>=
+while(1)
+{
+  <<date entry and validation>>
+  <<round entry and validation>>
+  <<score entry and validation>>
+  <<create and store dbm entry>>
+  <<prompt user for another go>>
+}
+@
+
+We close the dbm database explicitly here, just to be on the safe side.
+<<main...>>=
+dbmclose(scores);
+@
+\subsection{Entering the date}
+<<date...>>=
+  dateloop:
+  while(1)
+  {
+      print "Enter date ($tmd-$tmo-$year) - ";
+      $date=scalar(<STDIN>);
+      chop $date;
+      $date=join('-',$tmd,$tmo) unless $date;
+      if($date=~/(\d{1,2})-(\d{1,2})/)
+      {
+          $dt_ntrd=1;
+          $dindex=sprintf("%02d:%02d:%04d",$1,$2,$year);
+          $usecs=&retime($1,$2,$year);
+
+          ($xts,$xtmi,$xth,$xtmd,$xtmo,$xty,@junk)=gmtime($usecs);
+          printf "%02d-%02d-%04d\n",$xtmd,$xtmo,$xty;
+
+          last dateloop;
+      }
+      else { print "invalid date\n"; }
+  }    
+@ %def dateloop: $date $dt_ntrd $dindex $usecs $xts $xtmi $xth $xtmd $xtmo $xty @junk | STDIN &retime() gmtime()
+\subsection{Entering the round}
+<<round...>>=
+  $round=&getround;
+  ($rtype,@rdists)=split(/,/,@rounds{$round});
+  $mult=($rtype='y'?9:10);
+@ %def $round @rdists $mult | $rtype @rounds{} &getround
+\subsection{Entering the score}
+<<score...>>=
+  until(defined($sc_ntrd))
+  {
+      print 'Enter scores (100,100,100) - ';
+      $sclist=scalar(<STDIN>);
+      chop $sclist;
+      &abort unless $sclist;
+      @rscores=split(/,/,$sclist);
+      if(2*$#rscores==$#rdists-1) {$sc_ntrd=1;}
+      else { print "wrong number of scores\n"; }
+      for($i=0;$i<=$#rscores;$i++)
+      {
+          $ms=@rdists[2*$i]*$mult;
+          if(@rscores[$i]>$ms)
+          { printf "invalid: %d>possible ($ms)\n",@rscores[$i];
+            $sc_ntrd=$undefined;
+          }
+      }
+  }
+@ %def $sclist @rscores $ms $sc_ntrd | STDIN $mult @rdists $undefined
+\subsection{Storing the data}
+The dbm entries are created in a fairly naive fashion at the moment.
+The round name and scores are turned into a CSV string. Future versions
+will almost certainly use templates and packing to reduce the amount
+of information that is stored.
+
+<<create...>>=
+  $entry=join(',',$round,@rscores);
+  @scores{$dindex}=$entry;
+@ %def $entry @scores | $round @rscores $dindex
+\subsection{Prompt the user}
+Now we prompt the user to see if they want to enter another score.
+The default answer (ie just pressing [[RETURN]]) is yes on the
+assumption that more than one score will be entered at a time. It
+will be changed so that a score entered with today's date will
+change the default to no on the assumption that the rest of the
+database is up to date.
+
+<<prompt...>>=
+  $loopagain=&yesno("Another score",'y');
+  last unless $loopagain;
+  undef $sc_ntrd;
+@ %def $loopagain | &yesno() $sc_ntrd
+\section{Subroutines}
+\subsection{[[retime]]}
+This subroutine is supposed to convert a date in dd-mm-yyyy form into
+the number of \musecs\ since 1-1-1970, but it sometimes gets it
+mysteriously wrong, so we don't use it for indexing yet.
+
+<<Subroutines>>=
+sub retime
+{ local($d,$m,$y)=@_;
+  local($wm,$md,$yd);
+
+  $wm=$m-3;
+  if($wm<0) { $wm+=12; $y--; }		# modified month number
+  $md=int(30.6*$wm+.5);			# month day
+  $yd=int(365.25*($y-1970)+$md+$d)+60;	# actual day number
+  86400*$yd;
+}
+@ %def $d $m $y $wm $md $yd
+\section{Things to do}
+\itemize
+\item
+The way the rounds are stored and accessed needs to be changed.
+`Compiling' the rounds into a more compact form would save space,
+and possibly make things a little faster.
+
+\item
+A better user interface would also be a good idea. Possibly making
+the program run under a different screen mode for larger text.
+
+\item
+Adding a confirm just before the data is inserted into the dbm database.
+
+\enditemize
+
+\chapter{Variables}
+\printindex{ids}
+\chapter{Modules}
+\printindex{mods}

@@ -1,0 +1,14 @@
+This directory contains noweb programs (written in Icon) that extend the basic noweb
+with some pretty-printing capabilities.  By this we don't mean formatting, but just
+printing keywords in bold, comments in roman, mathematical operators using special
+symbols, etc.  The pretty-printers work as noweb filters.
+
+There are 4 pretty-printers here, all generated from the same file, pp.nw.  The
+pretty-printers are for C/C++, Icon, Turing (OOT), and Mathematica.  pp.nw contains
+full documentation, and is written in a way that adding another language should be
+easy.  (Let me know if you find it isn't so.)
+
+The pretty-printers work only with LaTeX2e, and you must have the cmttb10 font.
+
+There are also filters that write noweb index entries (autodefs) for Turing and
+Mathematica.

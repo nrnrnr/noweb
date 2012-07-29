@@ -1,0 +1,21 @@
+Correct-refs:
+============
+
+A set of awk scripts and to correct the internal anchors and links
+produced by noweave -latex+html followed by latex2html. 
+
+This is necessary because the design of the html back-ends for
+noweave assume that the resulting HTML file will be the single
+document produced by latex2html -split 0 but this is not such
+a good idea if the document is large (e.g. the nuweb example).
+By default latex2html will split documents into nodes at
+section boundaries --- but if the document contains links,
+the names have to be changed from "#name" to "noden.html#name".
+
+The full documentation is contained in correct-refs.nw. Comments
+to 
+
+Chris P. Jobling, University of Wales, Swansea
+C.P.Jobling@Swansea.ac.uk
+
+

@@ -1,0 +1,10 @@
+<<emptydefn>>=
+#!/bin/rc
+#
+# notangle filter that makes the definition of an empty chunk @<<>>= 
+# stand for a continuation of the previous chunk definition.
+
+awk 'BEGIN { lastdefn = "@defn " }
+/^@defn $/ { print lastdefn; next }
+/^@defn /  { lastdefn = $0 }
+{ print }' $*

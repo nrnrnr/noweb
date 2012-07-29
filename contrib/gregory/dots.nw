@@ -1,0 +1,154 @@
+\section*{Resolving trailing dots\ldots}
+Gregory Tucker-Kellogg\\
+gtk@walsh.med.harvard.edu
+\subsection*{Introduction}
+
+Unlike \verb|WEB|, \verb|noweb| does not allow the use of trailing
+dots in chunk (section) names. \verb|Dots| corrects for this.  It is
+similar but not identical to \verb|disambiguate|, an \verb|Icon|
+program to accomplish the same task.  \verb|Dots| is written in
+\verb|perl|.
+
+Before it does much else, \verb|noweb| creates a markup description of
+a source file.  That markup description is passed along (in both
+\verb|noweave| and \verb|notangle|) to other programs in the pipeline
+(\verb|totex| for \verb|noweave| and \verb|nt| for \verb|notangle|). 
+\verb|Dots| intervenes after the markup stage as a filter.  The chunk
+name references are passed in the form described in Ramsey's paper,
+i.e.,
+\begin{quote}
+\leavevmode\rlap{\begin{tabular}{ll}
+\tt @defn {\rm\it name}&The code chunk named {\rm\it name} is being defined\\
+\tt @use {\rm\it name}&A reference to code chunk named {\rm\it name}\\
+\end{tabular}}
+\end{quote}
+If trailing dots are used in a chunk name, they will be passed along
+at the markup stage verbatim without any attempt at resolution.
+That's where \verb|dots| comes in.
+
+We require two passes over the noweb code as passed through
+\verb|markup|.  The first pass picks out all of the unambigious chunk
+names and stores them in associative arrays.  In between the passes,
+we expand the ambigious names and do some simple error checking.  The
+second pass does a simple replace on incomplete names and writes
+output to the next stage of the pipeline.
+
+The choices for handling the input stream seems to be between sucking
+the whole markup into memory at once (as \verb|disambiguate| does) or storing
+the markup as a temporary file between the passes.  The second is
+slower but will not break as the file gets bigger.  We'll choose the
+first for now.
+
+\subsection*{Program outline}
+<<*>>=
+#!/usr/local/bin/perl
+while (<>) { 	# the first pass takes the input from STDIN
+	<<create lists of identifiers>>
+}
+<<resolve ambiguities in identifier names>>
+<<printout while replacing those with trailing dots>>
+@
+
+\subsection*{Representation}
+
+What's the best structure for the list of chunk names?  It could just be a
+normal array, except we would have to check if a given name is already
+defined before adding it too the list. We could make an associative
+array, except we really don't have a key to associate.  On the other
+hand, we could make a single associative array of names with
+associations ``complete''  and ``incomplete'' depending on the
+presence of dots.  This would require no checking on predefinitions,
+and a key sorted list brings up each full chunk name as the {\em next}
+member of the list for which [[$completion{$identifier}=$complete]].  
+
+<<create lists of identifiers>>=
+if (/^@(defn|use)\s(.*)$/) { # we've found a name of some sort
+  if (($truncated = $2) =~ s/\.\.\.$//) { # this one ends in dots.
+	$completion{$truncated} ="incomplete";
+	$truncations{$.-1} = $truncated;
+	$usage_type{$.-1} = $1;
+	}
+  else {$completion{$2} ="complete";}
+  }
+  push(lines,$_);
+
+@ 
+
+\subsection*{Chunkname resolution}
+The associative array [[%completion]] contains all of the names. The
+associative array [[%truncation_table]] contains the line numbers of the
+names with trailing dots.  We can change the values of [[%completion]]
+from ``complete'' and ``incomplete'' to a number representing the
+index of the appropriate completion.  If there is more than one, we
+can print out a warning but still resolve on the closest name.
+
+<<resolve ambiguities in identifier names>>=
+@namelist = sort(keys(%completion));
+$j = $i = 0;
+while ($i < $#namelist) { #collect all the ambiguities in a row
+  while ($completion{$namelist[$j]} eq "incomplete") {
+     $ambiguity_found = 1;
+     $j = $i + 1; 
+  }	
+  <<check for remaining ambiguity>>  
+  foreach $name (@namelist[$i..$j]) { 
+        $completion{$name} = $namelist[$j];
+  }
+  $j=$i=$j + 1; 
+  undef($ambiguity_found);
+}
+@
+
+
+After we've gotten the expansions of abbreviated chunk names, we still
+might run into a problem.  First, if no correct expansion was
+established, we might just missassign the abbreviation.  The expansion
+might still be ambiguous if more than one complete expansion can give
+the same abbreviation.  The first case is a fatal error.  The second
+can be resolved by seeing if a complete chunkname immediately
+following the first completion is a solution.  If so, we take the
+first completion anyway but print a warning for the user.
+
+<<check for remaining ambiguity>>=
+if (defined $ambiguity_found) {
+   $suggested = $namelist[$j]; 
+   $nextchance =  $namelist[$j+1];
+   foreach $name (@namelist[$i..$j-1]) { 
+     if (substr($suggested,0,length($name)) ne $name) {
+         die "FATAL ERROR: can't resolve @<<$name...>>\n"
+     }
+   }
+   if ($completion{$nextchance} eq "complete") {
+     foreach $name (@namelist[$i..$j-1]) { 
+       if (substr($nextchance,0,length($name)) eq $name) {
+          print STDERR "WARNING--Ambiguous chunkname:\n";
+          print STDERR "\t<<${name}...@>> could be either\n";
+          print STDERR "\t<<$suggested@>> or\n\t<<$nextchance@>>\n";
+          print STDERR "I will use <<$suggested@>>\n"
+       }
+     }
+   }
+}
+@
+
+
+\subsection*{Printout}
+Finally, the [[%truncations]] and [[%usage_type]] arrays are put to
+work.  We use the line numbers (as [[keys()]]) to pull up the
+truncations, and then associate truncations with completed names.
+Since we found everything on the first pass we don't have to scan
+each line for a [[@defn]] or [[@use]] statement.  Note: this part of
+the program, analogous to {\em pass2} in \verb|disambiguate|, is
+different from \verb|disambiguiate|, which went through a search on
+the second pass.  If we decided to store the markup in a temporary
+file after the first pass to save memory, we would change this section
+for blockwise printout.  We still would not be forced to scan each
+line.
+
+<<printout while replacing those with trailing dots>>=
+foreach $trunc_line (sort(keys(%truncations))) {
+  $lines[$trunc_line] = 
+	"\@$usage_type{$trunc_line} $completion{$truncations{$trunc_line}}\n";
+}
+print @lines;
+@

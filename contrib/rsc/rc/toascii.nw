@@ -1,0 +1,279 @@
+[[Toascii]] is a [[noweb]] back end for formatting text as a plain ascii file.
+It was written by Phil Bewig (pbewig@netcom.com) on March 31, 1995, and
+contributed to Norman Ramsey's [[noweb]] literate programming system.
+@
+The main program is shown below.  Option [[-delay]] is processed, for
+compatibility with other back ends, but ignored; since the initial document
+chunk used with [[-delay]] normally contains only [[TeX]] formatting commands
+in limbo, and since those commands will be deleted before formatting, there is
+no need to handle [[-delay]].
+<<toascii>>=
+#!/bin/rc
+#
+# Based on shell script by Phil Bewig
+# Translated to rc by Russ Cox
+# bugs -> rsc@plan9.bell-lab.scom
+#
+delay=0
+noindex=0
+for(i) {
+	switch($i){
+	case -delay
+		delay=1
+	case -noindex
+		noindex=1
+	case *
+		echo 'cannot happen' >[1=2]
+		exit coredump
+	}
+}
+<<arrange temporary files>>
+<<invoke first pass using parameter>>
+<<invoke second pass using file>>
+exit $status
+@ %def delay noindex
+[[Toascii]] uses two temporary files, one for storing the text between passes
+and one for communicating the conversion of labels to tags.  The files are
+named here, and disposal of the file on exit from [[toascii]] is arranged.
+Also arranged here is a temporary file for storage of the awk program on an
+ugly system, as discussed below.
+<<arrange temporary files>>=
+awkfile=/tmp/awk$pid.tmp
+textfile=/tmp/text$pid.tmp
+tagsfile=/tmp/tags$pid.tmp
+@ %def textfile tagsfile awkfile
+The actual formatting of the text, code, and index entries is done by various
+unix text processing commands in pipelines.  There are four formatting pipes:
+tfmt, which formats text, cfmt, which formats code, xfmt, which formats index
+entries within the running text, and zfmt, which formats the lists of chunks
+and identifiers at the end of the text.  The formatters established below are
+only suggestions, and may be modified to suit local taste (and the presence of
+various text processing commands on the local machine!); in particular, [[c]]
+programmers may want to format code with cb or indent.  The sed patterns below
+insert four blank spaces at the beginning of the line.
+<<initialize formatters>>=
+tfmt"detex | fmt -l 79"
+cfmt="cat"
+xfmt="cat"
+zfmt="cat"
+@ %def tfmt cfmt xfmt zfmt
+Forgiving systems allow the awk program to be specified as a parameter to the
+awk interpreter; ugly systems require that it be placed in a temporary file.
+The chunks below implement both options.
+<<invoke first pass using parameter>>=
+awk '<<first pass>>' 
+<<invoke second pass using parameter>>=
+awk '<<second pass>>' -v 'noindex='$noindex $textfile
+<<toascii1.awk>>=
+<<first pass>>
+<<invoke first pass using file>>=
+awk -f toascii1.awk
+<<toascii2.awk>>=
+<<second pass>>
+<<invoke second pass using file>>=
+awk -f /sys/lib/noweb/toascii2.awk -v 'noindex='$noindex $textfile
+@
+The first pass is responsible for extracting [[label]]s and assigning them
+section numbers, which are used for cross-referencing in the second pass.  The
+first pass also removes from the input file those lines which are not used by
+the second pass.
+The environment is gotten from the associative array [[ENVIRON]].
+<<initialize environment>>=
+textfile=ENVIRON["textfile"]
+tagsfile=ENVIRON["tagsfile"] 
+<<first pass>>=
+BEGIN { <<initialize environment>> }
+/^@begin code/ { ++secno }
+/^@xref label/ { print $3, secno >tagsfile }
+/^@((begin|end) (docs|code))/ { print >textfile }
+/^@(text|nl|defn|use)/ { print >textfile }
+/^@xref (ref|notused)/ { print >textfile }
+/^@xref (begin|end)(defs|uses)/ { print >textfile }
+/^@xref (def|use)item/ { print >textfile}
+/^@xref ((begin|end)chunks)|(chunk(begin|use|defn|end))/ { print >textfile }
+/^@index (begin|end)(defs|uses)/ { print >textfile }
+/^@index (is(us|defin)ed)|((def|use)item)/ { print >textfile }
+/^@index ((begin|end)index)|(entry(begin|use|defn|end))/ { print >textfile }
+@
+The second pass performs formatting.  After looking up the temp file names and
+formatters in the environment and reading the [[tagsfile]] created in the firs
+
+pass, the second pass processes each input command in the body of the awk
+[[pattern-action]] processing loop.
+<<second pass>>=
+BEGIN {
+	<<initialize environment>>
+        <<initialize formatters>>
+	while (getline <tagsfile > 0)
+		tag[$1] = $2
+	close(tagsfile)
+}
+<<process [[noweb]] commands>>
+/^@fatal / { exit 1 }
+END   { 
+        close(out) 
+}
+<<functions>>
+@ %def tag
+The rest of the program consists of a series of awk [[pattern-action]]
+statements which each process a particular type of [[noweb]] pipeline command.
+They are discussed in related groups, and all collected in a single chunk.  We
+begin with the commands that process the text of the document and code chunks.
+The basic strategy is always write text to [[out]] and open and close various
+pipes as needed.  Variable [[code]] is true only within code chunks, and
+[[secno]] numbers the sections as they appear.  Function [[endcode()]] closes
+the code pipeline at the end of a code section or whenever the first indexing
+command appears.
+<<process [[noweb]] commands>>=
+/^@begin docs/ { out = tfmt }
+/^@end docs/   { close(out) }
+/^@begin code/ { out = cfmt; code = 1; ++secno }
+/^@end code/   { endcode(); close(out); printf "\n" }
+/^@text/       { printf "%s", substr($0, 7) | out }
+/^@nl/         { # printf "(->%s)", formatname(out) | out ; 
+                 printf "\n" | out }
+@ %def out secno code
+<<functions>>=
+function endcode() {
+	if (code == 1) {
+		code = 0
+		close(out)
+		out = xfmt
+		printf "\n" | out } }
+@ %def endcode
+Definitions and uses of code chunks are handled below.  Variable [[defn[name]]
+
+is set to a plus sign after a definition is printed, so that continuations of
+the definition are properly identified.  Variable [[lastxrefref]] is the tag
+associated with the most-recently-seen cross-reference label, and refers to th
+
+section number of the original definition of the code chunk.  Definition lines
+are printed directly, without passing through any of the formatters defined
+above.
+<<process [[noweb]] commands>>=
+/^@xref ref/ { lastxrefref = tag[substr($0, 11)] }
+/^@defn/     { name = convquote(substr($0, 7))
+               printf "\n### %d ### %s%s=",
+                   secno, chunkname(name, lastxrefref), defn[name]
+               defn[name] = "+" }
+/^@use/      { name = convquote(substr($0, 6))
+               printf "%s", chunkname(name, lastxrefref) | out }
+@ %def lastxref name defn
+There are three messages related to the definition and use of code chunks whic
+
+may appear in the output:  "This definition continued in ...", "This code used
+in ...", and "This code not used in this document."  These messages are printe
+
+by the following code.
+<<process [[noweb]] commands>>=
+/^@xref begindefs/      { endcode()
+                          printf "This definition continued in" | out }
+/^@xref beginuses/      { endcode()
+                          printf "This code used in" | out }
+/^@xref notused/        { endcode()
+                          print "This code not used in this document." | out }
+/^@xref (def|use)item/  { addlist(tag[$3]) }
+/^@xref end(defs|uses)/ { printlist() }
+@
+Processing of the [[noweb]] commands which produce the identifier definition
+message "Defines: ... used in ..." is performed by the following code.  The
+[[if]] in [[@index isused]] prevents index definitions from pointing to
+themselves.
+<<process [[noweb]] commands>>=
+$0 ~ /^@index begindefs/ && !noindex {
+	endcode()
+	print "Defines:" | out }
+
+$0 ~ /^@index isused/ && !noindex {
+	if (tag[$3] != lastxrefref) addlist(tag[$3]) }
+
+$0 ~ /^@index defitem/ && !noindex {
+	printf "    %s,", $3 | out
+	if (nlist == 0) printf " not used in this document.\n" | out
+	else { printf " used in" | out; printlist() } }
+@
+Processing of the [[noweb]] commands which produce the identifier usage messag
+
+"Uses ..." is performed by the following code.
+<<process [[noweb]] commands>>=
+$0 ~ /^@index beginuses/ && !noindex { endcode(); printf "Uses" | out }
+$0 ~ /^@index isdefined/ && !noindex { lastuse = tag[$3] }
+$0 ~ /^@index useitem/   && !noindex { addlist(sprintf("%s %s", $3, lastuse)) 
+
+$0 ~ /^@index enduses/   && !noindex { printlist() }
+@ %def lastuse
+The [[noweb]] commands which print the list of chunks at the end of the
+document are processed by the following code.
+<<process [[noweb]] commands>>=
+/^@xref beginchunks/ { close(out); out = zfmt
+                       print "List of code chunks\n" | out }
+/^@xref chunkbegin/  { name = convquote(substr($0, length($3) + 19))
+                       printf "%s\n", chunkname(name, tag[$3]) | out }
+/^@xref chunkuse/    { addlist(tag[$3]) }
+/^@xref chunkdefn/   { }
+/^@xref chunkend/    { if (nlist == 0)
+                           print "    Not used in this document." | out
+                       else { printf "   Used in" | out; printlist() } }
+/^@xref endchunks/   { }
+@
+The [[noweb]] commands which print the list of identifiers at the end of the
+document are processed by the following code.
+<<process [[noweb]] commands>>=
+$0 ~ /^@index beginindex/ && !noindex { print "\nList of identifiers (defini" 
+
+                                              "tion in parentheses)\n" | out }
+$0 ~ /^@index entrybegin/ && !noindex { name = substr($0, length($3 + 19))
+                                        lastdefn = tag[$3]
+                                        printf "%s:  ", $4 | out }
+$0 ~ /^@index entryuse/ && !noindex   { addlist(tag[$3]) }
+$0 ~ /^@index entrydefn/ && !noindex  { }
+$0 ~ /^@index entryend/ && !noindex   { for (i = 1; i <= nlist; i++)
+                                            if (list[i] == lastdefn)
+                                                sub(/.*/, "(&)", list[i])
+                                        if (nlist == 0)
+                                            print "Not used." | out
+                                        else printlist() }
+$0 ~ /^@index endindex/ && !noindex   { }
+@
+Several of the cross-reference and indexing commands use the [[addlist(s)]] an
+
+[[printlist()]] functions to manage the printing of lists of code sections and
+variable names:  [[addlist(s)]] adds string [[s]] to a queued [[list]] waiting
+to be printed and [[printlist()]] prints the [[list]], appropriately formatted
+with commas.  These two functions are described below.
+<<functions>>=
+function addlist(s,    i) {
+	for (i = 1; i <= nlist; i++)
+		if (s == list[i]) return
+	list[++nlist] = s }
+
+function printlist(    i) {
+	if (nlist == 1) printf " %s.\n", list[1] | out
+	else if (nlist == 2) printf " %s and %s.\n", list[1], list[2] | out
+	else {
+		for (i = 1; i < nlist; i++)
+			printf " %s,", list[i] | out
+		printf " and %s.\n", list[nlist] | out }
+	for (i in list) delete list[i]
+	nlist = 0 }
+@ %def list nlist addlist printlist
+Chunk names which appear in definitions and uses of chunks consist of text
+which may contain quoted code embedded between double square brackets.  Quoted
+code in text chunks are handled by the [[@quote ... @endquote]] mechanism, but
+quoted code in chunk names must be handled explicitly by the back end.  The
+function below does what is needed.
+<<functions>>=
+function convquote(s) { gsub(/\[\[|\]\]/, "", s); return s }
+@ %def convquote
+
+<<functions>>=
+function chunkname(name, number) {
+  if (number == 0)
+    return sprintf("<%s>", name)
+  else
+    return sprintf("<%s %d>", name, number)
+}
+@ %def chunkname
+@
+<nowebchunks>
+<nowebindex>
