@@ -557,6 +557,9 @@ Note the hooks\stylehook{} for pointer styles.
 \newcommand{\@nwusesondefline}[1]{{\nwtagstyle~~(\@pagenumsl{#1})}}
 \newcommand{\@nwstartdeflinemarkup}{\nobreak\hskip 1.5em plus 1fill\nobreak}
 \newcommand{\@nwenddeflinemarkup}{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
+<<nwmac.tex>>=
+\def\nwstartdeflinemarkup{\nobreak\hskip 1.5em plus 1fill\nobreak}
+\def\nwenddeflinemarkup{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
 @
 And here are the options we use to choose one, the other, or neither.
 <<noweb.sty>>=

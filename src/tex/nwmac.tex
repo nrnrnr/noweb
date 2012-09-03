@@ -2,6 +2,8 @@
 % DON'T read or edit this file!  Use ...noweb-source/tex/support.nw instead.
 {\obeyspaces\global\let =\ } % from texbook, p 381
 \def\nwdocspar{\par\semifilbreak}
+\def\nwstartdeflinemarkup{\nobreak\hskip 1.5em plus 1fill\nobreak}
+\def\nwenddeflinemarkup{\nobreak\hskip \nwdefspace minus\nwdefspace\nobreak}
 \catcode`\@=11
 % scale cmbx10 instead of using cmbx12 because {\LaTeX} does, so fonts exist
 \font\twlbf=cmbx10 scaled \magstep1
