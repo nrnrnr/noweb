@@ -188,8 +188,10 @@ I'll try to avoid such incompatible changes in the future.}%
 \def\nwenddocs{\par}
 \def\nwbegincode#1{\par\nobreak
   \begingroup\setupcode\newlines\parindent=0pt\parskip=0pt
-  \let\oendmoddef=\endmoddef \let\oplusendmoddef=\plusendmoddef
-  \def\endmoddef{\oendmoddef\par}\def\plusendmoddef{\oplusendmoddef\par}%
+  %\let\oendmoddef=\endmoddef \let\oplusendmoddef=\plusendmoddef
+  %\def\endmoddef{\oendmoddef\par}\def\plusendmoddef{\oplusendmoddef\par}%
+  \let\onwenddeflinemarkup=\nwenddeflinemarkup
+  \def\nwenddeflinemarkup{\onwenddeflinemarkup\par}%
   \hsize=\codehsize\noindent\bchack}
 \def\nwendcode{\endgroup}
 {\catcode`\^^M=\active % make CR an active character
