@@ -1,14 +1,16 @@
+*** PRERELEASE ***
+
 This is version 2.12 of ``noweb'', a simple, extensible literate-
 programming tool.  noweb is available by anonymous ftp from
 ftp.eecs.harvard.edu:pub/nr/noweb and by HTTP from
 http://www.eecs.harvard.edu/nr/noweb/dist.  The ftp site is mirrored
 by the Comprehensive TeX Archive Network, in directory web/noweb.
-The home page at http://www.eecs.harvard.edu/~nr/noweb contains much
+The home page at http://www.cs.tufts.edu/~nr/noweb contains much
 helpful information.
 
 To build noweb, change to the `src' directory and follow the
 instructions in the file INSTALL.  (Debian users can simply install
-the 'nowebm' package.)
+the 'noweb' package.)
 
 
 WHAT'S NEW IN VERSION 2.12
@@ -52,7 +54,7 @@ of Linux Journal (but beware that chunk syntax is <<name>> and not <<name>).
 If you're brand new to literate programming, check out the FAQ for the
 USENET newsgroup comp.programming.literate.   There are also some
 resources available through the noweb home page:
-   http://www.eecs.harvard.edu/~nr/noweb
+   http://www.cs.tufts.edu/~nr/noweb
 
 
 WHAT YOU GET IN THIS DISTRIBUTION
@@ -137,7 +139,7 @@ cross-referencer itself takes about 300 lines, and extensive LaTeX
 support is also required.  I haven't made the attempt to write
 cross-reference code for plain TeX.  Anyone who has ideas for reducing
 the number of options or for other ways to restore sanity to the
-situation is urged to write to nr@eecs.harvard.edu.
+situation is urged to write to nr@cs.tufts.edu.
 
 
 INDEX AND IDENTIFIER CROSS-REFERENCE
@@ -215,7 +217,7 @@ NOTES
   Thanks to Paolo Ciccone for the Win32 binaries.
   Thanks to Hubert Chan for picking up Debian distribution.
 
-Send comments or questions to nr@eecs.harvard.edu.  
+Send comments or questions to nr@cs.tufts.edu.  
 
 I enjoy hearing from noweb users; if you have enjoyed noweb, why not
 send me a local postcard for my collection?  My address is:
@@ -230,7 +232,7 @@ send me a local postcard for my collection?  My address is:
 
 COPYRIGHT
 
-Noweb is copyright 1989-2008 by Norman Ramsey.  All rights reserved.
+Noweb is copyright 1989-2012 by Norman Ramsey.  All rights reserved.
 
 You may use and distribute noweb for any purpose, for free.  You may
 modify noweb and create derived works, provided you retain the
