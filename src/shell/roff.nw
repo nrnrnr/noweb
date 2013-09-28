@@ -16,7 +16,7 @@ literate programming system.  Liam Quin ([[lee@sq.com]]) provided technical
 assistance with troff.
 Norman Ramsey made the code easier to port and made it conform with
 his idea of the noweb philosophy.
-Arnold Robbins ([[arnold@gnu.org]]) modified it for use with
+Arnold Robbins ([[arnold@skeeve.com]]) modified it for use with
 GNU troff (hopefully improving portability even more),
 improved the flexibility of the noroff script,
 and added extra explanation about the gory troff details.

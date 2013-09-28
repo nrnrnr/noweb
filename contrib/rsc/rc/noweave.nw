@@ -191,7 +191,7 @@ The result should be processed with
 Bug reports for 
 .B \-troff
 to Aharon Robbins
-.B <arnold@gnu.org>.
+.B <arnold@skeeve.com>.
 <<bogus noweave man page option table>>=
 .TP
 .B \-ascii

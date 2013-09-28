@@ -24,7 +24,7 @@ fix nountangle script to support multiple filters (Anon Sricharoenchai)
 noscript shell-script trick by Greyson Fischer (added to contrib)
 'getline' renamed (now part of POSIX standard) (Brad Larsen)
 added missing control sequences to nwmac.tex (Sergio Spina)
-
+Aharon Robbins is now <arnold@skeeve.com>
 
 
 CHANGES FOR VERSION 2.11b - released 12 Jun 2006
