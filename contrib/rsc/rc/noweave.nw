@@ -190,7 +190,7 @@ The result should be processed with
 .IR noroff (1).
 Bug reports for 
 .B \-troff
-to Aharon Robbins
+to Arnold Robbins
 .B <arnold@skeeve.com>.
 <<bogus noweave man page option table>>=
 .TP
