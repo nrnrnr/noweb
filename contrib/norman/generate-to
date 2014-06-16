@@ -1,0 +1,24 @@
+#!/usr/bin/env lua5.1
+
+-- Usage: $0 filename
+-- Reads from stdin and writes to filename, renumbering directives
+-- that say "generated code"
+
+assert(#arg == 1, 'Usage: $0 outfilename')
+local filename = assert(arg[1])
+
+local f = assert(io.open(filename, 'w'))
+
+local n = 0 -- how many lines have already been written to f
+local function rewrite()
+  return string.format('#line %d "%s"', n, filename)
+end
+for l in io.lines() do
+  n = n + 1
+  l = l:gsub('%#line%s+%d+%s*"generated code"', rewrite, 1)
+  f:write(l, '\n')
+end
+
+f:close()
+
+  
