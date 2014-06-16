@@ -3,3 +3,4 @@ moddate.nw	use file modification time as date (POSIX)
 numarkup	contains a substitute for markup that works with nuweb files
 pp		contains a very simple prettyprinter
 scopehack.icn   A hack for scoping files; see the FAQ
+generate-to     A hack for renumbering lines in tools like yacc
