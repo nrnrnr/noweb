@@ -10,7 +10,8 @@ helpful information.
 
 To build noweb, change to the `src' directory and follow the
 instructions in the file INSTALL.  (Debian users can simply install
-the 'noweb' package.)
+the 'noweb' package, and Windows users may find help from 
+http://www.jim-pettigrew.com/noweb/install.)
 
 
 WHAT'S NEW IN VERSION 2.12

@@ -1,7 +1,9 @@
 These installation instructions are for Unix systems.
 For Plan 9 systems, Russ Cox has kindly provided scripts in the contrib
 directory, but for installation instructions, you are on your own.
-If you use Microsoft Windows, you are even more on your own.
+If you use Microsoft Windows,  Jim Pettigrew has written installation
+instructions for Windows 7 at http://www.jim-pettigrew.com/noweb/install/.
+
 
 
 To build noweb:
