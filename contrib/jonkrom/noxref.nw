@@ -352,7 +352,7 @@ Definition page references are derived from the [[defns]] arrays, by
 splitting them into fields with the [[split]] function.  The first one
 should not be preceded by a ``,'' (comma character), but all subsequent
 numbers (if any) should have a comma in front of them.  Page references
-for the defintions are printed underlined. 
+for the definitions are printed underlined. 
 <<Print definition page numbers>>=
 n = split(defns[sortedNames[idx]], a)
 print "@literal { \\underline{\\pageref{" a[1] "}}}";

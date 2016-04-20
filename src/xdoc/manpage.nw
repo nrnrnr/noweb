@@ -263,7 +263,7 @@ can provide indexing and cross-reference information for chunks and for
 programming-language identifiers.
 Identifier definitions may be marked by hand using backticks (`); the 
 \fB-filter btdefn\fP option recognizes these markings.
-For some languages, defintioins may be found automatically using the 
+For some languages, definitions may be found automatically using the 
 \fB-autodefs\fP option.
 This section describes the indexing and cross-reference options;
 it might well be skipped on first reading.
