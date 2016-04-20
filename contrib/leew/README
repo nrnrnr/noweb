@@ -7,3 +7,6 @@ nocond is a slick noweb filter that supports conditional code in a
 nicer way than ugly old #ifdef's.
 
 nobrace looks for unbalanced braces in code chunks.
+
+pretty-comment uses LaTeX to typeset inline comments...
+and it's written in SNOBOL!
