@@ -26,7 +26,7 @@ noscript shell-script trick by Greyson Fischer (added to contrib)
 added missing control sequences to nwmac.tex (Sergio Spina)
 Aharon Robbins is now Arnold Robbins <arnold@skeeve.com>
 Point to Jim Pettigrew's installation instructions for Windows 7
-
+noroots needs "$@" not $* to deal with modern file names (Francky Leyn)
 
 CHANGES FOR VERSION 2.11b - released 12 Jun 2006
 Make noroff use -mm by default (Debian 218050)
