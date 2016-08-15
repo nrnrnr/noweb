@@ -6,7 +6,7 @@ LIB=|LIBDIR|
 case $1 in 
   -auto|-autodefs) 
     newfilter="$LIB/autodefs.$2" ; shift ; shift
-    $LIB/markup $* | $newfilter | sed -n 's/^@index defn //p'
+    $LIB/markup "$@" | $newfilter | sed -n 's/^@index defn //p'
     ;;
   -showauto|-showautodefs)
     foundautodefs=
@@ -22,7 +22,7 @@ case $1 in
     fi
     ;;
   *)
-    $LIB/markup $* | sed -n 's/^@index defn //p'
+    $LIB/markup "$@" | sed -n 's/^@index defn //p'
     ;;
 esac
 exit $?

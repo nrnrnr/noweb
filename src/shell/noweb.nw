@@ -18,7 +18,7 @@ if [ $# -eq 0 ]; then <<complain of no args and exit>>; fi
 
 for source do
   if [ -n "$output" ]; then 
-    PATH="$PATH:$LIB" $markup -t $source | $LIB/mnt -t8 "$mntopt" -all || status=1
+    PATH="$PATH:$LIB" $markup -t "$source" | $LIB/mnt -t8 "$mntopt" -all || status=1
   fi
   if [ -n "$tex" ]; then
     <<write {\TeX} output>> || status=1
@@ -51,9 +51,9 @@ When writing {\TeX} output, I call [[$markup]] a second time to expand tabs.
 % noxref 3.9u 1.0s
 % nawk   6.5u 0.2s
 <<write {\TeX} output>>=
-texname=`echo $source | sed '/\./s/\.[^.]*$//'`
+texname=`echo "$source" | sed '/\./s/\.[^.]*$//'`
 texname="$texname.tex"
-PATH="$PATH:$LIB" $markup $source | $LIB/finduses -noquote | $LIB/noidx -delay | 
+PATH="$PATH:$LIB" $markup "$source" | $LIB/finduses -noquote | $LIB/noidx -delay | 
 nawk '{print}
 /^@defn [^ ]*$/ { print "@literal \\let\\nwnotused=\\nwoutput{}" }' |
 $LIB/totex -delay | cpif $texname

@@ -140,5 +140,5 @@ function operators(s ) {
      gsub(/ != /, " \\not= ", s);
      return s;
 }
-' $*
+' "$@"
 rm -f $KEYGEN

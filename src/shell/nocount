@@ -2,7 +2,7 @@
 
 LIB=|LIBDIR|
 
-$LIB/markup $* | nawk '
+$LIB/markup "$@" | nawk '
 BEGIN { bogus = "this is total bogosity"; codecount[bogus] = -1; docscount[bogus] = -1 }
 /^@file / { thisfile = $2 ; files[thisfile] = 0 }
 /^@begin code/ { code = 1 }

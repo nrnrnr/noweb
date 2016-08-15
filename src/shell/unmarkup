@@ -31,4 +31,4 @@ END {
 /^@endquote$/ { printf("]]") }
 /^@nl$/       { printf "\n"}
 
-/^@use / { printf "<<%s>>", substr($0,6) }' $* | sed 's/^@ $/@/'
+/^@use / { printf "<<%s>>", substr($0,6) }' "$@" | sed 's/^@ $/@/'

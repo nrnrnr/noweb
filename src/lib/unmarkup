@@ -45,4 +45,4 @@ BEGIN {
 }
 /^@use / { printf "<<%s>>", substr($0,6)
            dangling_text = 1
-         }' $* | sed 's/^@ $/@/'
+         }' "$@" | sed 's/^@ $/@/'
