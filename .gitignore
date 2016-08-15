@@ -19,3 +19,4 @@ src/xdoc/*.7
 src/c/*.h
 src/c/*.c
 /src/c/markup.ps
+/nwsrcfilter
