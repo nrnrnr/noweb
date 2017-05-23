@@ -1,0 +1,180 @@
+#line 2 "cdefs.nw"
+global decls_ok
+procedure main(args)
+  decls_ok := !args == "-decl"
+  go()
+end
+#line 8 "cdefs.nw"
+global typespecs, storespecs, typequals, otherspecs, structlike
+procedure postpass(name, arg)
+  local tok, stat
+  static kind
+  initial {
+    kind := "bogus"
+    storespecs := set(["typedef", "extern", "static", "auto", "register"])
+    typespecs := set(["void", "char", "float", "short", "signed", 
+                      "int", "double", "long", "unsigned"])
+    typequals := set(["const", "volatile"])
+    otherspecs := storespecs ++ typequals
+    structlike := set(["struct", "union", "enum"])
+  }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : arg ? {
+        if kind ~== "code" then return
+        if any(' \t') then return
+        if (="#define", tab(many(' \t'))) then return wd(c_ident_token())
+        if find("dclproto") then return
+        if ="}" then {
+          if c_ident_token() == "while" then fail # don't get tripped by do { ... } while
+          
+#line 61 "cdefs.nw"
+while x := declarator() do {
+  wd(x, stat)
+  if c_token() == "," then &null else return
+}
+#line 31 "cdefs.nw"
+        } else {
+	  specifier_count := 0
+          stat := &null		# haven't seen static yet
+          seenType := &null
+          while (
+            (/decls_ok & c_ident_token() == "extern", return)         |
+            (member(typespecs, c_ident_token()), seenType := 1) | # swallow type
+            (member(otherspecs, tok := c_ident_token()), 
+                          stat := look_for_static(stat, tok)) | # swallow a specifier
+            (member(structlike, c_ident_token()),          # struct with optional tag
+             c_ident_token() | &null) |
+            (/seenType, any(&ucase, c_ident_token()), seenType := 1)
+         	                                        # assume a typedef'd type, skip
+          ) do
+            specifier_count +:= 1
+## write(&errout, "skipped ", specifier_count, " specifiers")
+          if f := scan_function() then
+            if /decls_ok & c_token() == (";"|",") then fail else {
+##		write(&errout, "function ", image(f), " followed by ", 
+##		      image(c_token()) | "<EOL>")
+              wd(f, stat)
+              return
+            }
+          if specifier_count > 0 then {
+#line 61 "cdefs.nw"
+while x := declarator() do {
+  wd(x, stat)
+  if c_token() == "," then &null else return
+}
+#line 54 "cdefs.nw"
+                                                          }
+       }
+     }
+  }
+  return
+end
+#line 66 "cdefs.nw"
+procedure wd(x, stat)
+  static reserved
+  initial reserved := set([
+        "asm", "auto", "break", "case", "char", "const", "continue",
+        "default", "double", "do", "else", "enum", "extern", "float", "for",
+        "goto", "if", "int", "long", "register", "return", "short",
+        "signed", "sizeof", "static", "struct", "switch", "typedef", "union",
+        "unsigned", "void", "volatile", "while"])
+  if member(reserved, x) then return
+  return writedefn(x, stat)
+end
+
+procedure prepass(name, arg)
+  return
+end
+
+procedure c_ident_token()
+  static alpha, alnum
+  initial { alpha := '_' ++ &letters; alnum := alpha ++ &digits }
+  tab(many(' \t'))
+  if any(alpha) then suspend tab(many(alnum))
+end
+
+procedure c_token()
+  static alpha, alnum
+  initial { alpha := '_' ++ &letters; alnum := alpha ++ &digits }
+  tab(many(' \t'))
+  if any(alpha) then suspend tab(many(alnum)) else suspend move(1)
+end
+
+procedure scan_function()
+  (f := c_ident_token(),
+#write(&errout, "  try function ", image(f)),
+   tab(many(' \t')) | &null,
+   any('('),
+   *tab(bal()) > 0 |
+      (="(", *tab(bal(',', '[{(', ')}]')) > 0, =",", optwhite(), pos(0)),
+#write(&errout, "  caught function trailing ", image(&subject[&pos:0])),
+   suspend f
+  )
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+
+procedure declarator()
+  while c_token() == "*" do 
+    while member(typequals, c_token())
+  (c_token() == "(", d := declarator(), c_token() == ")") |
+  (d := c_ident_token()) |
+  fail
+  while c_token() == ("[", "(") do
+    (tab(bal('])','[(',')]')), c_token())
+  return d
+end
+#line 123 "cdefs.nw"
+procedure look_for_static(stat, tok)
+  return (tok == "static") | stat
+end
+#line 127 "cdefs.nw"
+procedure rcsinfo () 
+  return "$Id: cdefs.nw,v 1.19 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+#line 1 "defns.nw"
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    if match("@fatal ", line) then exit(1)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 18 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 23 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 25 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 35 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

@@ -1,0 +1,325 @@
+#!/bin/sh
+delay=0 anchordist=0
+while [ $# -gt 0 ]; do
+  case $1 in
+    -delay) delay=1 ;;
+    -docanchor) anchordist="$2"; shift ;;
+    *) echo "This can't happen -- $1 passed to noidx" 1>&2 ; exit 1 ;;
+  esac
+  shift
+done
+nawk 'function insertafter(i, s, n) {
+        for(n = nextline++; n - 1 > i; n--) lines[n] = lines[n-1]
+        lines[n] = s
+      }
+      function slipin(s) {
+        lines[nextline++] = s
+      }
+      function newdefnlabel(arg, label) {
+        defcount[arg] = defcount[arg] + 1
+        label = "NW" curfile "-" uniqueid(arg) "-" alphacode(defcount[arg])
+        return label
+      }
+      function newdocslabel() {
+        newdocslabelcount++
+        return "NWD" alphacode(newdocslabelcount)
+      }
+      function addlabel(tbl, arg, label, marker) {
+        marker = " " label
+        if (!tailmatch(tbl[arg], marker)) 
+          tbl[arg] = tbl[arg] marker
+        return label
+      }
+      function tailmatch(string, tail, pos) {
+        pos = length(string) - length(tail) + 1
+        if (pos > 0 && substr(string, pos) == tail)
+          return 1
+        else
+          return 0
+      }
+      function addud(udlist, name, arg, label, s) {
+        s = " " name "{" label "}"
+        if (!tailmatch(udlist[arg], s))
+          udlist[arg] = udlist[arg] s
+      }
+      function listget(l, i, n, a) {
+        n = split(l, a)
+        return a[i]
+      }
+      function uniqueid(name, key) {
+        if (uidtable[name] == "") {
+          key = make_key(name)
+          # gsub(/[\]\[ \\{}`#%&~_^<>"-]/, "*", key)  # old
+          gsub(/[^a-zA-Z0-9!$()*+,.\/:;=?@|]/, "*", key)
+          keycounts[key] = keycounts[key] + 1
+          uidtable[name] = key 
+          if (keycounts[key] > 1)
+            uidtable[name] = uidtable[name] "." alphacode(keycounts[key])
+        }
+        return uidtable[name]
+      }
+      function make_key(name,   key, l) {
+         l = length(name)
+         sub(/^.*\//, "", name)
+         key = substr(name, 1, 3)
+         if (l >= 3) key = key alphacode(l)
+         return key
+      }
+      function lognowebchunks(l, j, n, x) {
+        if (loggednowebchunks > 0) return
+        loggednowebchunks = 1
+        delete allchunks[0]
+        n = alphasort(allchunks)
+        print "@xref beginchunks"
+        for (j = 0; j < n; j++) {
+          name = sorted[j]; delete sorted[j]
+          printf "@xref chunkbegin %s %s\n", 
+              (anchorlabel[name] != "" ? anchorlabel[name] : "nw@notdef"), name
+          m = split(chunkud[name], a)
+          for (k = 1; k <= m; k++) 
+            if (a[k] ~ /^use/) 
+              printf "@xref chunkuse %s\n", substr(a[k], 5, length(a[k])-5)
+            else if (a[k] ~ /^defn/) 
+              printf "@xref chunkdefn %s\n", substr(a[k], 6, length(a[k])-6)
+          print "@xref chunkend"
+        }
+        print "@xref endchunks"
+      }
+      function lognowebindex(l, j, n, x) {
+        if (loggednowebindex > 0) return
+        loggednowebindex = 1
+        delete allidents[0]
+        n = alphasort(allidents)
+        print "@index beginindex"
+        for (j = 0; j < n; j++) {
+          name = sorted[j]; delete sorted[j]
+          printf "@index entrybegin %s %s\n", 
+              (indexanchorlabel[name] != "" ? indexanchorlabel[name] : "nw@notdef"), name
+          m = split(indexud[name], a)
+          for (k = 1; k <= m; k++) 
+            if (a[k] ~ /^use/) 
+              printf "@index entryuse %s\n", substr(a[k], 5, length(a[k])-5)
+            else if (a[k] ~ /^defn/) 
+              printf "@index entrydefn %s\n", substr(a[k], 6, length(a[k])-6)
+          print "@index entryend"
+        }
+        print "@index endindex"
+      }
+      function alphasort(a, x, n) {
+        n = 0
+        for (x in a) 
+          n = insertitem(x, n)
+        return n
+      }
+      function insertitem(x, n, i, tmp) {
+        sorted[n] = x
+        sortkeys[n] = sortkey(x)
+        i = n
+        while (i > 0 && (sortkeys[i] <  sortkeys[i-1] ||
+                         sortkeys[i] == sortkeys[i-1] && sorted[i] < sorted[i-1])) {
+          tmp = sortkeys [i]; sortkeys [i] = sortkeys [i-1]; sortkeys [i-1] = tmp
+          tmp = sorted[i]; sorted[i] = sorted[i-1]; sorted[i-1] = tmp
+          i = i - 1
+        }
+        return n + 1
+      }
+      function sortkey(name, s) {
+        s = name
+        gsub(/[^a-zA-Z ]/, "", s)
+        return s
+      }
+      function alphacode(n) {
+        if (n < 0) 
+          return "-" alphacode(-n)
+        else if (n >= alphacodelen) 
+          return alphacode(n / alphacodelen) alphacode(n % alphacodelen)
+        else
+          return substr(alphacodes, n+1, 1)
+      }
+      BEGIN { curfile = "standard input?"
+              lastchunkbegin = "never any chunks?" ;
+              allchunks[0] = 0 ; allidents[0] = 0 ; indexlabels[0] = 0 
+              defanchors[0] = 0 ; uses[0] = 0 ; anchorlabel[0] = 0 ; indexanchorlabel[0] = 0
+              thesedefns[0] = 0; theseuses[0] = 0 ;
+              defcount[0] = 0 ;
+              udlist[0] = 0 ;
+              uidtable[0] = 0
+              keycounts[0] = 0 ;
+              sorted[0] = 0; sortkeys[0] = 0;
+              alphacodes = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+              alphacodelen = length(alphacodes) ; nextline = 0 }
+      /^@file /     { curfile = uniqueid(substr($0, 7)) }
+      /^@begin /    { lastchunkbegin = $0 }
+      /^@end docs / { if (anchordist > 0) { n = anchordist
+                                            lastanchorlabel = newdocslabel()
+                                            for(i = nextline - 1; i >= 0; i--) {
+                                              if (n == 0 || lines[i] ~ /^@begin docs /) {
+                                                insertafter(i, "@xref label " lastanchorlabel)
+                                                i = -1    # cause loop to terminate
+                                              } else if (lines[i] == "@nl") {
+                                                n--
+                                              }
+                                            }
+                                          } }
+      /^@end code / { lastanchorlabel = "" }
+      /^@defn /     { arg = substr($0, 7)
+                      allchunks[arg] = 1
+                      lastdefnlabel = newdefnlabel(arg)
+                      slipin("@xref label " lastdefnlabel)
+                      if (lastanchorlabel == "") lastanchorlabel = lastdefnlabel
+                      if (anchorlabel[arg] == "") anchorlabel[arg] = lastanchorlabel
+                      addlabel(defanchors, arg, lastanchorlabel)
+                      addud(chunkud, "defn", arg, lastanchorlabel)
+                      thisusecount = 0
+                    }
+      /^@use /      { if (lastchunkbegin ~ /^@begin code /) {
+                        arg = substr($0, 6)
+                        allchunks[arg] = 1
+                        slipin("@xref label " lastdefnlabel "-u" (++thisusecount))
+                        addlabel(uses, arg, lastanchorlabel)
+                        addud(chunkud, "use", arg, lastanchorlabel)
+                      }
+                    }
+      /^@index use /  { arg = substr($0, 12)
+                        allidents[arg] = 1
+                        if (lastanchorlabel != "") addud(indexud, "use", arg, lastanchorlabel)
+                      }
+      /^@index defn / { arg = substr($0, 13)
+                        allidents[arg] = 1
+                        if (lastanchorlabel != "") {
+                          l = lastanchorlabel
+                        } else {
+                          l = newdocslabel()
+                          slipin("@xref label " l)
+                        }
+                        addud(indexud, "defn", arg, l)
+                        if (indexanchorlabel[arg] == "") indexanchorlabel[arg] = l
+                        slipin("@xref ref "  l) # bug fix
+                      }
+      /^@index localdefn / { arg = substr($0, 18)
+                        allidents[arg] = 1
+                        if (lastanchorlabel != "") {
+                          l = lastanchorlabel
+                        } else {
+                          l = newdocslabel()
+                          slipin("@xref label " l)
+                        }
+                        addud(indexud, "defn", arg, l)
+                        if (indexanchorlabel[arg] == "") indexanchorlabel[arg] = l
+                        slipin("@xref ref "  l) # bug fix
+                      }
+      { lines[nextline] = $0; nextline++ }
+      END { 
+        for (i = 0; i < nextline; i ++) {
+          line = lines[i]
+          if (line ~ /^@begin /) {
+              if (delay && lastchunkbegin == line) { print "@nl"
+                                                     print "@nl"
+                                                     lognowebchunks()
+                                                     lognowebindex() 
+                                                   }
+              print line
+              for (x in thesedefns) delete thesedefns[x]
+              for (x in theseuses) delete theseuses[x]
+              thischunk = ""
+          } else if (line ~ /^@defn /) {
+              thischunk = substr(line, 7)
+              printf "@xref ref %s\n", anchorlabel[thischunk]
+              print line
+          } else if (line ~ /^@use /) {
+              arg = substr(line, 6)
+              printf "@xref ref %s\n", (anchorlabel[arg] == "" ? "nw@notdef" : anchorlabel[arg])
+              print line
+          } else if (line ~ /^@index defn /) {
+              arg = substr(line, 13)
+              thesedefns[arg] = 1
+              # no xref ref because of bug fix
+              # if (indexanchorlabel[arg] != "") 
+              #   printf "@xref ref %s\n", indexanchorlabel[arg]
+              print line
+          } else if (line ~ /^@index localdefn /) {
+              arg = substr(line, 18)
+              thesedefns[arg] = 1
+              # no xref ref because of bug fix
+              # if (indexanchorlabel[arg] != "") 
+              #   printf "@xref ref %s\n", indexanchorlabel[arg]
+              print line
+          } else if (line ~ /^@index use /) {
+              arg = substr(line, 12)
+              theseuses[arg] = 1
+              if (indexanchorlabel[arg] != "") 
+                printf "@xref ref %s\n", indexanchorlabel[arg]
+              print line
+          } else if (line ~ /^@end code/) {
+              defout[thischunk]++
+              for (x in thesedefns)
+                delete theseuses[x]
+              delete thesedefns[0]
+              n = alphasort(thesedefns)
+              if (n > 0) {
+                print "@index begindefs"
+                for (j = 0; j < n; j++) {
+                  m = split(indexud[sorted[j]], a)
+                  for (k = 1; k <= m; k++) 
+                    if (a[k] ~ /^use/) 
+                      printf "@index isused %s\n", substr(a[k], 5, length(a[k])-5)
+                  printf "@index defitem %s\n", sorted[j]
+                  delete sorted[j]
+                }
+                print "@index enddefs"
+              }
+              delete theseuses[0]
+              n = alphasort(theseuses)
+              if (n > 0) {
+                print "@index beginuses"
+                for (j = 0; j < n; j++) {
+                  m = split(indexud[sorted[j]], a)
+                  for (k = 1; k <= m; k++) 
+                    if (a[k] ~ /^defn/) 
+                      printf "@index isdefined %s\n", substr(a[k], 6, length(a[k])-6)
+                  printf "@index useitem %s\n", sorted[j]
+                  delete sorted[j]
+                }
+                print "@index enduses"
+              }
+              if (defout[thischunk] == 1) {if (defcount[thischunk] > 1) {
+                                             print "@xref begindefs"
+                                             n = split(defanchors[thischunk], a)
+                                             for (j = 2; j <= n; j++) printf "@xref defitem %s\n", a[j]
+                                             print "@xref enddefs"
+
+                                           }
+                                           if (uses[thischunk] != "") {
+                                             print "@xref beginuses"
+                                             n = split(uses[thischunk], a)
+                                             for (j = 1; j <= n; j++) printf "@xref useitem %s\n", a[j]
+                                             print "@xref enduses"
+                                           } else {
+                                             printf "@xref notused %s\n", thischunk
+                                           }}
+              if (defout[thischunk] > 1)
+                printf "@xref prevdef %s\n", listget(defanchors[thischunk], defout[thischunk]-1)
+              if (defout[thischunk] < defcount[thischunk])
+                printf "@xref nextdef %s\n", listget(defanchors[thischunk], defout[thischunk]+1)
+              print line
+          } else if (line ~ /^@text /) {
+              # grotesque hack to get indexes in HTML
+              if (thischunk == "") { # docs mode
+                arg = substr(line, 7)
+                if      (arg == "<nowebchunks>") lognowebchunks()
+                else if (arg == "<nowebindex>")  lognowebindex()
+                else print line
+              } else {
+                print line
+              }
+          } else {
+              print line
+          }
+          delete lines[i]
+        }
+        if (!delay) { print "@nl"
+                      print "@nl"
+                      lognowebchunks()
+                      lognowebindex() 
+                    }
+      }' delay=$delay anchordist=$anchordist

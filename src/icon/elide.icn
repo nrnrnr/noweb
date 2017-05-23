@@ -1,0 +1,71 @@
+#line 17 "elide.nw"
+procedure main(args)
+  elide := []
+  every put(elide, globpat(!args))
+  while line := read() do
+    if match("@begin code ", line) then 
+      {
+#line 35 "elide.nw"
+accum := [line]
+while line := read() & not match("@defn ", line) do
+  put(accum, line)
+line ? {
+  ="@defn " | fatal("This can't happen")
+  if globmatch(!elide) then {
+    while line := get(accum) | read() & not match("@end code ", line) do # drain
+      if line == "@nl" then write("@index nl")  # grotesque, but may keep lines right
+  } else
+    every write(!accum | line)
+}
+#line 22 "elide.nw"
+                                       }
+    else {
+      write(line)
+      if match("@fatal ", line) then exit(1)
+    }
+  return
+end
+#line 61 "elide.nw"
+procedure globpat(s)
+  static specials
+  initial specials := '?*\\'
+  l := []
+  s ?
+    while not pos(0) do
+      put(l, 
+        if not any(specials) then
+          tab(upto(specials)|0)
+        else case move(1) of {
+          "?" : &cset
+          "*" : &null
+          "\\" : move(1)
+        })
+  return l
+end
+#line 82 "elide.nw"
+procedure doglobmatch(pat, i)
+  local p
+  suspend if p := pat[i] then
+    case type(p) of {
+      "string" : =p
+      "cset"   : tab(any(p))
+      "null"   : tab(&pos to *&subject+1)
+    } || doglobmatch(pat, i+1)
+  else (pos(0), "")
+end
+#line 96 "elide.nw"
+procedure globmatch(pattern, s)
+  return if \s then s ? doglobmatch(pattern, 1)
+         else doglobmatch(pattern, 1)
+end
+#line 101 "elide.nw"
+procedure fatal(L[])
+  write!(["@fatal elide "] ||| L)
+  write!([&errout, "noweb error in elide: "] ||| L)
+  exit(1)
+end
+#line 107 "elide.nw"
+procedure rcsinfo () 
+  return "$Id: elide.nw,v 1.19 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

@@ -1,0 +1,465 @@
+#line 9 "noidx.nw"
+global lines		# all the input lines
+global delay		# non-null if markup should be delayed past the first chunk 
+global anchordist	# max distance before code chunk to place defining @xref label
+
+procedure main(args)
+  lines := []
+  
+#line 38 "noidx.nw"
+curfile := "standard input?"
+lastbeginarg := "never any chunks?"
+#line 50 "noidx.nw"
+every allchunks | allidents := set()
+every indexlabels | defanchors | uses | anchorlabel | indexanchorlabel := table()
+#line 284 "noidx.nw"
+every chunkud | indexud := table();
+#line 16 "noidx.nw"
+  delay := &null
+  
+#line 28 "noidx.nw"
+while case(a := get(args)) of {
+  "-delay"     : delay := 1
+  "-docanchor" : anchordist := integer(get(args))
+  default      : fatal("unknown argument ", image(a))
+}
+#line 18 "noidx.nw"
+  while put(lines, line := read()) do
+    apply(pass1, line)
+  every apply(pass2, !lines)
+  
+#line 340 "noidx.nw"
+(if /wrote_trailers then {
+   wrote_trailers := 1
+   write("@nl")
+   write("@nl")
+   lognowebchunks()
+   lognowebindex() 
+} else &null)
+#line 22 "noidx.nw"
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 35 "noidx.nw"
+global curfile		# unique id of the current @file
+global lastbeginarg	# identifies last chunk (for -delay)
+#line 47 "noidx.nw"
+global allchunks, allidents
+global indexlabels, defanchors, uses, anchorlabel, indexanchorlabel
+#line 57 "noidx.nw"
+procedure pass1(name, arg)
+  static lastdefnlabel, thisusecount, lastanchorlabel, nonblank, textnonblank
+  initial nonblank := ~' \t'
+  case name of {
+    "file"  : curfile := uniqueid(arg)
+    "begin" : { lastbeginarg := arg; textnonblank := &null }
+    "end"   : if match("docs ", arg) & \anchordist & \textnonblank then 
+                {
+#line 116 "noidx.nw"
+t := []; n := anchordist
+lastanchorlabel := newdocslabel()
+while lines[-1] ?
+  if n = 0 | ="@begin docs" then
+     { put(lines, "@xref label " || lastanchorlabel); lines |||:= t; break }
+  else 
+     { if ="@nl" & pos(0) then n -:= 1; push(t, pull(lines)) }
+#line 64 "noidx.nw"
+                                                       }
+              else 
+                lastanchorlabel := &null
+    "text"  : /textnonblank := upto(nonblank, arg)
+    "defn"  : {
+        insert(allchunks, arg)
+        slipin("@xref label " || (lastdefnlabel := newdefnlabel(arg)))
+        /lastanchorlabel := lastdefnlabel
+        /anchorlabel[arg] := lastanchorlabel
+        addlabel(defanchors, arg, lastanchorlabel)
+        addud(chunkud, "defn", arg, lastanchorlabel)
+        thisusecount := 0
+      }
+    "use"   : 
+        if match ("code ", lastbeginarg) then {
+          insert(allchunks, arg)
+          slipin("@xref label " || lastdefnlabel || "-u" || (thisusecount +:= 1))
+          addlabel(uses, arg, lastanchorlabel)
+          addud(chunkud, "use", arg, lastanchorlabel)
+        } else {
+          /textnonblank := upto(nonblank, arg)   # could appear in quoted code
+        }
+    "index" : {
+        
+#line 234 "noidx.nw"
+{ arg ? { name := tab(upto(' ')|0); arg := if =" " then tab(0) else &null } }
+#line 88 "noidx.nw"
+        case name of {
+            "use"  : { insert(allidents, arg)
+                       addud(indexud, "use", arg, \lastanchorlabel)
+                     }
+	    "defn" | "localdefn" : { 
+                       insert(allidents, arg)
+		       (l := \lastanchorlabel) | 
+			     slipin("@xref label " || (l := newdocslabel()))
+                       addud(indexud, "defn", arg, l)
+                       /indexanchorlabel[arg] := l
+                       slipin("@xref ref " || l)  # bug fix
+                     }
+        }
+      }
+    }
+  return
+end
+#line 127 "noidx.nw"
+procedure slipin(s)
+  local last
+  last := pull(lines)
+  every put(lines, s | last)
+  return s
+end
+#line 134 "noidx.nw"
+procedure pass2(name, arg)
+  static thesedefns, theseuses
+  static thischunk # null for docs chunk, arg of @defn for code chunk
+  static defout		# number of definitions emitted for each chunk
+  initial defout := table(0)
+  case name of {
+    "begin" : {
+       if \delay & lastbeginarg == arg then 
+#line 340 "noidx.nw"
+(if /wrote_trailers then {
+   wrote_trailers := 1
+   write("@nl")
+   write("@nl")
+   lognowebchunks()
+   lognowebindex() 
+} else &null)
+#line 142 "noidx.nw"
+       
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 143 "noidx.nw"
+       every thesedefns | theseuses := set()
+       thischunk := &null
+    }
+    "defn" : { thischunk := arg; 
+               write("@xref ref " || anchorlabel[arg])
+               
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 148 "noidx.nw"
+                                                       
+               
+#line 195 "noidx.nw"
+defout[thischunk] +:= 1
+write("@xref prevdef ", defanchors[thischunk][defout[thischunk] - 1]) # fail if first
+write("@xref nextdef ", defanchors[thischunk][defout[thischunk] + 1]) # faif if last
+if defout[thischunk] = 1 then {
+#line 221 "noidx.nw"
+if *defanchors[thischunk] > 1 then {
+  write("@xref begindefs")
+  every write("@xref defitem ", defanchors[thischunk][2 to *defanchors[thischunk]])
+  write("@xref enddefs")
+}
+if \uses[thischunk] then {
+  write("@xref beginuses")
+  every write("@xref useitem ", !uses[thischunk])
+  write("@xref enduses")
+} else 
+  write("@xref notused ", thischunk)
+#line 198 "noidx.nw"
+                                                                                      }
+#line 150 "noidx.nw"
+             }
+# must postpone index cross-reference to end of chunk because
+# the info is accumulated in [[thesdefns]] and [[theseuses]] on this pass
+    "end" :  { if match("code", arg) then {
+#line 200 "noidx.nw"
+theseuses --:= thesedefns
+if *thesedefns > 0 then {
+  write("@index begindefs")
+  every i := !alphasort(thesedefns) do {
+    every u := !\indexud[i] do u ? if ="use " then write("@index isused ", tab(0))
+    write("@index defitem ", i)
+  }
+  write("@index enddefs")
+}
+if *theseuses > 0 then {
+  l := alphasort(theseuses)
+  write("@index beginuses")
+  every i := !alphasort(theseuses) do {
+    every d := !\indexud[i] do d ? if ="defn " then write("@index isdefined ", tab(0))
+    write("@index useitem ", i)
+  }
+  write("@index enduses")
+}
+#  every write("@literal \\nwindexuse{", TeXliteral(ident := !l), "}",
+#                          "{", indexlabels[ident], "}{", thislabel, "}")
+#line 153 "noidx.nw"
+                                                                          }
+               
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 154 "noidx.nw"
+                                                       
+             }
+    "use"  : { write("@xref ref " || (\anchorlabel[arg] | "nw@notdef")) # was "???"
+               
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 157 "noidx.nw"
+                                                       
+             }
+    "index" : {
+       
+#line 234 "noidx.nw"
+{ arg ? { name := tab(upto(' ')|0); arg := if =" " then tab(0) else &null } }
+#line 161 "noidx.nw"
+       case name of {
+         "defn" | "localdefn" : { 
+                    insert(thesedefns, arg)
+                    # no xref ref because of bug fix
+		  }
+         "use"  : { insert(theseuses, arg)
+                    write("@xref ref ", \indexanchorlabel[arg])
+		  }
+       }
+       name := "index " || name
+       
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 172 "noidx.nw"
+    }
+    "text" : # grotesque hack! for chunks and index in HTML
+       if /thischunk then # docs mode
+         case arg of { 
+       	   "<nowebchunks>" : lognowebchunks()
+           "<nowebindex>"  : lognowebindex()
+           default : 
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 179 "noidx.nw"
+       	 }
+       else 
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 181 "noidx.nw"
+    "fatal" : { 
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 181 "noidx.nw"
+                                                       ; exit(1) }
+    "trailer" : { 
+#line 340 "noidx.nw"
+(if /wrote_trailers then {
+   wrote_trailers := 1
+   write("@nl")
+   write("@nl")
+   lognowebchunks()
+   lognowebindex() 
+} else &null)
+#line 183 "noidx.nw"
+                  
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 184 "noidx.nw"
+                }
+    default : 
+#line 236 "noidx.nw"
+write("@", name, (" " || \arg) | "")
+#line 186 "noidx.nw"
+  }
+  return
+end
+#line 238 "noidx.nw"
+procedure lualistimage(l)
+  p := "{ "
+  s := ""
+  every i := 1 to *l do {
+    s ||:= p || "[" || i || "] = " || image(l[i])
+    p := ", "
+  }
+  return s || " }"
+end
+#line 255 "noidx.nw"
+procedure newdefnlabel(arg)
+  static defcounts
+  initial defcounts := table(0)
+  /defanchors[arg] := []
+  k := curfile || "-" || uniqueid(arg)
+  defcounts[k] +:= 1
+  return "NW" || k || "-" || alphacode(defcounts[k])
+end
+#line 264 "noidx.nw"
+procedure newdocslabel()
+  static count
+  initial count := 0
+  return "NWD" || curfile || "-" || alphacode(count +:= 1)
+end
+#line 270 "noidx.nw"
+procedure addlabel(tbl, arg, label)
+  /tbl[arg] := []
+  if tbl[arg][-1] == label then &null
+  else put(tbl[arg], label)
+  return label
+end
+#line 277 "noidx.nw"
+global chunkud, indexud
+procedure addud(udlist, name, arg, label)
+  /udlist[arg] := []
+  s := name || " " || label
+  return udlist[arg][-1] == s | put(udlist[arg], s)
+end
+#line 289 "noidx.nw"
+procedure strip_extra_uses(udlista)
+  local old, new, item
+  old := copy(udlista)
+  new := []
+  while item := get(old) do
+    item ? 
+      if ="defn " then 
+        
+#line 305 "noidx.nw"
+{ new[-1] == item | put(new, item) }
+#line 297 "noidx.nw"
+      else if ="use " then 
+        if "defn " || tab(0) == !(old|new) then
+          &null # write(&errout, "Stripped extra ", item)
+        else
+          
+#line 305 "noidx.nw"
+{ new[-1] == item | put(new, item) }
+#line 302 "noidx.nw"
+  return new
+end
+#line 309 "noidx.nw"
+procedure uniqueid(name)
+  local key
+  static idtable, keycounts, badchars, badstars
+  initial { idtable := table() ; keycounts := table(0) 
+            badchars := ~ (&letters ++ &digits ++ '!$()*+,./:;=?@|')
+            badstars := repl("*", *badchars)
+          }
+
+  if not member(idtable, name) then {
+    # key := make_key(map(name, badchars, badstars)) # deprecated
+    key := alphacode(crc(name))
+    keycounts[key] +:= 1
+    idtable[name] := key 
+    if keycounts[key] > 1 then idtable[name] ||:= "." || alphacode(keycounts[key])
+  }
+  return idtable[name]
+end
+#line 330 "noidx.nw"
+procedure make_key(key, len)
+    static noslash
+    initial noslash := ~ '/'
+    key ? return make_key(3(tab(upto('/')), ="/", tab(many(noslash)), pos(0)), *key) |
+                 key[1+:3] || alphacode(\len | *key) |
+                 key || (alphacode(\len) | "")
+end
+#line 338 "noidx.nw"
+global wrote_trailers
+#line 350 "noidx.nw"
+procedure lognowebchunks(noheader)
+  static called
+  if \called then return
+  else called := 1
+
+  l := alphasort(allchunks)
+  write("@xref beginchunks")
+  while name := get(l) do {
+    write("@xref chunkbegin ", (\anchorlabel[name] | "nw@notdef"), " ", name)
+    every write("@xref chunk", !\chunkud[name])
+    write("@xref chunkend")
+  }
+  write("@xref endchunks")
+end
+#line 365 "noidx.nw"
+procedure lognowebindex()
+  static called
+  if \called then return
+  else called := 1
+
+  l := alphasort(allidents)
+  write("@index beginindex")
+  while name := get(l) do {
+    write("@index entrybegin ", (\indexanchorlabel[name] | "nw@notdef"), " ", name)
+    every write("@index entry", !strip_extra_uses(\indexud[name]))
+    write("@index entryend")
+  }
+  write("@index endindex")
+end
+#line 380 "noidx.nw"
+procedure alphasort(x)
+  t := table()
+  every s := !x do t[s] := sortkey(s)
+  t := sort(t, 2)
+  l := []
+  every put(l, (!t)[1])
+  return l
+end
+#line 405 "noidx.nw"
+procedure sortkey(s)
+  return map(s) || "\n" || s         # relies on \n sorting lower than other chars
+end
+#line 409 "noidx.nw"
+procedure alphacode(n)
+  static codes
+  initial codes := &digits || &letters
+  return if n < 0 then 
+           "-" || alphacode(-n)
+         else if n >= *codes then
+           alphacode(n / *codes) || alphacode(n % *codes)
+         else
+           codes[n+1]
+end
+#line 421 "noidx.nw"
+# /* 32-bit Cyclic Redundancy Code  implemented by A. Appel 1986  */
+#  
+#    this works only if POLY is a prime polynomial in the field
+#    of integers modulo 2, of order 32.  Since the representation of this
+#    won't fit in a 32-bit word, the high-order bit is implicit.
+#    IT MUST ALSO BE THE CASE that the coefficients of orders 31 down to 25
+#    are zero.  Fortunately, we have a candidate, from
+#         E. J. Watson, "Primitive Polynomials (Mod 2)", Math. Comp 16 (1962).
+#    It is:  x^32 + x^7 + x^5 + x^3 + x^2 + x^1 + x^0
+# 
+#    Now we reverse the bits to get:
+#         111101010000000000000000000000001  in binary  (but drop the last 1)
+#            f   5   0   0   0   0   0   0  in hex
+# */
+
+procedure crc_table() 
+  local POLY, sum
+  POLY := 16rf5000000
+  t := table()
+  every i := 0 to 255 do {
+    sum := 0
+    every j := 7 to 0 by -1 do
+      if iand(i, ishift(1, j)) ~= 0 then
+        sum := ixor(sum, ishift(POLY, -j))
+    t[i] := sum
+  }
+  return t
+end
+
+procedure crc(s)
+  local sum
+  static table
+  initial table := crc_table()
+  sum := 0
+  s ? while sum := ixor(ishift(sum, -8), table[iand(ixor(sum, ord(move(1))), 255)])
+  return sum
+end
+#line 460 "noidx.nw"
+procedure fatal(L[])
+  write!(["@fatal noidx "] ||| L)
+  write!([&errout, "noweb error in noidx: "] ||| L)
+  exit(1)
+end
+#line 466 "noidx.nw"
+procedure rcsinfo () 
+  return "$Id: noidx.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

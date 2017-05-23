@@ -1,0 +1,97 @@
+#line 2 "promeladefs.nw"
+global showlocal
+procedure rcsinfo () 
+  return "$Id: promeladefs.nw,v 1.17 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+procedure main(args)
+  showlocal := !args == "-local"
+  go()
+end
+#line 12 "promeladefs.nw"
+procedure postpass(name, arg)
+  static kind, mtype
+  initial { kind := "bogus" }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if \mtype then
+             mtype := write_mtypes()
+        else if (optwhite(), =("proctype "|"chan ")) then {
+            tab(many(' '))
+            writedefn(tab(upto(' ():;')))
+        } else if (optwhite(), ="mtype", optwhite(), ="{") then
+	    mtype := write_mtypes()
+  }
+  return
+end
+
+procedure write_mtypes()
+  static start, alnum
+  initial { start := &letters ++ '/,}'; alnum := &letters ++ &digits ++ '_' }
+  optwhite()
+  while any(start) do {
+    if ="/*" then tab(upto("*/") | 0)
+    else if ="," then &null
+    else if ="}" then return &null
+    else if any(alnum) then writedefn(tab(many(alnum)))
+    else if pos(0) then return 1
+    else if ="/" then return &null
+    else { write(&errout, "bad mtype ", tab(0)); return &null }
+    optwhite();
+  }
+  return if pos(0) then 1 else &null
+end
+    
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+
+
+#line 1 "defns.nw"
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    if match("@fatal ", line) then exit(1)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 18 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 23 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 25 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 35 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

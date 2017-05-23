@@ -1,0 +1,134 @@
+#!/bin/sh
+AWK=nawk
+delay=0 noindex=0
+for i do
+    case $i in
+        -delay)    delay=1   ;;
+        -noindex)  noindex=1 ;;
+        *) echo "This can't happen -- $i passed to toroff" 1>&2;
+           exit 1;;
+    esac
+done
+awkfile="/tmp/noweb$$.awk"
+trap 'rm -f $awkfile' 0 1 2 10 14 15
+cat > $awkfile << 'EOF'
+/^@begin docs 0$/ { if (delay) next }
+/^@end docs 0$/ { if (delay) { printf ".BEGINNINGOFDOCUMENT\n"; delay = 0; next } }
+/^@header m/ { if (!delay) { printf ".BEGINNINGOFDOCUMENT\n" } }
+/^@trailer/ { print ".ENDOFDOCUMENT" }
+/^@xref label/ { lastxreflabel = $3 }
+/^@xref ref/ { lastxrefref = tag(substr($0, 11)) }
+/^@begin docs/ { printf ".BEGINDOCCHUNK\n" }
+/^@end docs/ { printf ".ENDDOCCHUNK\n" }
+/^@begin code/ { code = 1; printf ".BEGINCODECHUNK\n" }
+/^@end code/ { code = 0; printf ".ENDCODECHUNK %s\n", lastdefnlabel }
+/^@text/ && code == 0 { s = substr($0, 7)
+                        if (text++) printf "\\&"
+                        printf "%s", substr($0, 7) }
+/^@nl/ && code != 1 { text = 0; printf "\n" }
+/^@text/ && code != 0 { s = substr($0, 7)
+                        gsub(/\\/, "\\e", s)
+                        printf "\\&%s\\c\n", s }
+/^@nl/ && code == 1 { printf ".NEWLINE\n" }
+/^@quote/ { code = 2; printf "\\c\n.BEGINQUOTEDCODE\n" }
+/^@endquote/ { code = 0; text++; printf ".ENDQUOTEDCODE\n" }
+/^@defn/ { name = convquote(substr($0, 7))
+           lastdefnlabel = lastxreflabel
+	   if (! (name in defn))
+	   	defn[name] = "\\(=="
+           printf ".DEFINITION %s \"%s\" %s %s\n",
+                  tag(lastdefnlabel), name, lastxrefref, defn[name]
+           defn[name] = "\\(pl\\(==" }
+/^@use/ { name = convquote(substr($0, 6))
+          printf "\\c\n"
+          printf ".USE \"%s\" %s\n", name, lastxrefref }
+/^@xref begindefs/     { if (code) { code = 0; printf ".STARTXREF\n" }; printf ".XREFDEFS\n" }
+/^@xref beginuses/     { if (code) { code = 0; printf ".STARTXREF\n" }; printf ".XREFUSES\n" }
+/^@xref notused/       { if (code) { code = 0; printf ".STARTXREF\n" }; printf ".XREFNOTUSED\n" }
+/^@xref (def|use)item/ { printf ".ADDLIST %s\n", tag($3) }
+/^@xref end(def|use)s/ { printf ".PRINTLIST\n"; code = 1 }
+/^@index begindefs/ && !noindex { if (code) { code = 0; printf ".STARTXREF\n" }; printf ".INDEXDEF\n" }
+/^@index isused/ && !noindex {
+    if (tag($3) != lastxrefref) printf ".ADDLIST %s\n", tag($3) }
+/^@index defitem/ && !noindex { printf ".DEFITEM %s\n.PRINTLIST\n", $3 }
+/^@index beginuses/ && !noindex { if (code) { code = 0; printf ".STARTXREF\n" }; printf ".INDEXUSE\n" }
+/^@index isdefined/ && !noindex { lastuse = tag($3) }
+/^@index useitem/   && !noindex {
+    printf ".ADDLIST \"\\*[BEGINCONVQUOTE]%s\\*[ENDCONVQUOTE] %s\"\n",
+            $3, lastuse }
+/^@index enduses/   && !noindex { printf ".PRINTLIST\n" }
+/^@xref beginchunks/ { printf ".tm ###BEGINCHUNKS###\n" }
+/^@xref chunkbegin/  { printf ".tm ###CHUNKBEGIN### %s\n",
+                           substr($0, length($3) + 19) }
+/^@xref chunkuse/    { printf ".tm ###CHUNKUSE### %s\n", $3 }
+/^@xref chunkdefn/   { printf ".tm ###CHUNKDEFN### %s\n", $3 }
+/^@xref chunkend/    { printf ".tm ###CHUNKEND###\n" }
+/^@xref endchunks/   { printf ".tm ###ENDCHUNKS###\n" }
+/^@index beginindex/ { printf ".tm ###BEGININDEX###\n" }
+/^@index entrybegin/ { printf ".tm ###ENTRYBEGIN### %s\n",
+                           substr($0, length($3) + 20) }
+/^@index entryuse/   { printf ".tm ###ENTRYUSE### %s\n", $3 }
+/^@index entrydefn/  { printf ".tm ###ENTRYDEFN### %s\n", $3 }
+/^@index entryend/   { printf ".tm ###ENTRYEND###\n" }
+/^@index endindex/   { printf ".tm ###ENDINDEX###\n" }
+function convquote(s,	out, front, mid, tail) {
+    gsub(/\[\[/, "\\*[BEGINCONVQUOTE]", s)
+    # gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s)
+    out = ""
+    mid = "\\*[ENDCONVQUOTE]"
+    while (match(s, /\]\]+/) != 0) {
+    	# RLENGTH is length of match, want to remove last two chars
+	# RSTART is where sequence of ]s begins
+	tail = substr(s, RSTART + RLENGTH)
+	if (RLENGTH == 2) # easy
+		front = substr(s, 1, RSTART - 1)
+	else
+		front = substr(s, 1, RSTART - 1 + RLENGTH - 2)
+	out = out front mid
+	s = tail
+    }
+    out = out s
+    return out }
+# my test program for the revised function - ADR
+# BEGIN { str = "abc[[foo[i]]]]]]]]junk"
+#	print str
+#	print convquote(str)
+#	str2 = "nothing here"
+#	print str2
+#	print convquote(str2)
+#	str3 = "abc[[foo[i]]]]]]]]junk[[bar[i]]more stuff[[baz]]"
+#	print str3
+#	print convquote(str3)
+# }
+function tag(s) { if (s in tags) return tags[s]; else return "???" }
+/^@file / {
+  if (tagsfile == "") {
+    tagsfile = substr($0, 7)
+    sub(".*/", "", tagsfile)
+    sub(/\.[^.]*$/, "", tagsfile)
+    tagsfile = tagsfile ".nwt"
+    while (getline <tagsfile > 0) {
+				      if      (sub(/^###TAG### /       , "")) tags[$1] = $2
+				      else if (sub(/^###BEGINCHUNKS###/, "")) printf ".de CLIST\n.CLISTBEGIN\n"
+				      else if (sub(/^###CHUNKBEGIN### /, "")) { name = convquote($0)
+				                                                chunkuse = chunkdefn = "" }
+				      else if (sub(/^###CHUNKUSE### /  , "")) chunkuse = chunkuse " " tag($0)
+				      else if (sub(/^###CHUNKDEFN### / , "")) chunkdefn = chunkdefn " " tag($0)
+				      else if (sub(/^###CHUNKEND###/   , ""))
+				         printf ".CITEM \"%s\" \"%s\" \"%s\"\n", name, chunkdefn, chunkuse
+				      else if (sub(/^###ENDCHUNKS###/  , "")) printf ".CLISTEND\n..\n"
+				      else if (sub(/^###BEGININDEX###/ , "")) printf ".de ILIST\n.ILISTBEGIN\n"
+				      else if (sub(/^###ENTRYBEGIN### /, "")) { name = convquote($0)
+				                                                entryuse = entrydefn = "" }
+				      else if (sub(/^###ENTRYUSE### /  , "")) entryuse = entryuse " " tag($0)
+				      else if (sub(/^###ENTRYDEFN### / , "")) entrydefn = entrydefn " " tag($0)
+				      else if (sub(/^###ENTRYEND###/   , "")) {
+				          for (i = 1; i <= split(entrydefn, entryarray); i++)
+				              sub(entryarray[i], "\\*[BEGINDEFN]&\\*[ENDDEFN]", entryuse)
+				          printf ".IITEM \"%s\" \"%s\"\n", name, entryuse }
+				      else if (sub(/^###ENDINDEX###/   , "")) printf ".ILISTEND\n..\n" 
+				  }
+  }
+}
+EOF
+$AWK -f $awkfile -v delay=$delay noindex=$noindex

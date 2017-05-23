@@ -1,0 +1,96 @@
+#!/bin/sh
+#
+# noroff -- run troff using tags file trick
+
+ROFF="groff"
+AWK=nawk
+macrodir=|LIBDIR|
+
+opts=
+
+if [ $# -eq 0 ]; then
+  echo "Usage: noroff [groff-arguments] files" 1>&2
+  exit 1
+fi
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+	-*)	opts="$opts $1"
+		shift
+		;;
+	*)	# end of options
+		break;
+		;;
+	esac
+done
+
+if [ "$opts" = "" ]
+then
+	# no options, default to -mm
+	# groff already defaults to -Tps
+	opts="-mm"
+fi
+# otherwise assume user passed in all the arguments they want
+
+base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
+tagsfile="$base.nwt"
+(echo ".so $macrodir/tmac.w"
+if [ -r "$tagsfile" ]; then 
+   cp $tagsfile /tmp/tags.$$
+   $AWK '{
+	     if      (sub(/^###TAG### /       , "")) tags[$1] = $2
+	     else if (sub(/^###BEGINCHUNKS###/, "")) printf ".de CLIST\n.CLISTBEGIN\n"
+	     else if (sub(/^###CHUNKBEGIN### /, "")) { name = convquote($0)
+	                                               chunkuse = chunkdefn = "" }
+	     else if (sub(/^###CHUNKUSE### /  , "")) chunkuse = chunkuse " " tag($0)
+	     else if (sub(/^###CHUNKDEFN### / , "")) chunkdefn = chunkdefn " " tag($0)
+	     else if (sub(/^###CHUNKEND###/   , ""))
+	        printf ".CITEM \"%s\" \"%s\" \"%s\"\n", name, chunkdefn, chunkuse
+	     else if (sub(/^###ENDCHUNKS###/  , "")) printf ".CLISTEND\n..\n"
+	     else if (sub(/^###BEGININDEX###/ , "")) printf ".de ILIST\n.ILISTBEGIN\n"
+	     else if (sub(/^###ENTRYBEGIN### /, "")) { name = convquote($0)
+	                                               entryuse = entrydefn = "" }
+	     else if (sub(/^###ENTRYUSE### /  , "")) entryuse = entryuse " " tag($0)
+	     else if (sub(/^###ENTRYDEFN### / , "")) entrydefn = entrydefn " " tag($0)
+	     else if (sub(/^###ENTRYEND###/   , "")) {
+	         for (i = 1; i <= split(entrydefn, entryarray); i++)
+	             sub(entryarray[i], "\\*[BEGINDEFN]&\\*[ENDDEFN]", entryuse)
+	         printf ".IITEM \"%s\" \"%s\"\n", name, entryuse }
+	     else if (sub(/^###ENDINDEX###/   , "")) printf ".ILISTEND\n..\n" 
+	 }
+         function convquote(s,	out, front, mid, tail) {
+	     gsub(/\[\[/, "\\*[BEGINCONVQUOTE]", s)
+	     # gsub(/\]\]/, "\\*[ENDCONVQUOTE]", s)
+	     out = ""
+	     mid = "\\*[ENDCONVQUOTE]"
+	     while (match(s, /\]\]+/) != 0) {
+	     	# RLENGTH is length of match, want to remove last two chars
+	 	# RSTART is where sequence of ]s begins
+	 	tail = substr(s, RSTART + RLENGTH)
+	 	if (RLENGTH == 2) # easy
+	 		front = substr(s, 1, RSTART - 1)
+	 	else
+	 		front = substr(s, 1, RSTART - 1 + RLENGTH - 2)
+	 	out = out front mid
+	 	s = tail
+	     }
+	     out = out s
+	     return out }
+	 # my test program for the revised function - ADR
+	 # BEGIN { str = "abc[[foo[i]]]]]]]]junk"
+	 #	print str
+	 #	print convquote(str)
+	 #	str2 = "nothing here"
+	 #	print str2
+	 #	print convquote(str2)
+	 #	str3 = "abc[[foo[i]]]]]]]]junk[[bar[i]]more stuff[[baz]]"
+	 #	print str3
+	 #	print convquote(str3)
+	 # }
+	 function tag(s) { if (s in tags) return tags[s]; else return "???" }' /tmp/tags.$$
+   rm -f /tmp/tags.$$
+ fi
+ cat "$@") |
+($ROFF $opts 2>$tagsfile)
+sed '/^###[A-Z][A-Z]*###/d' $tagsfile >&2
