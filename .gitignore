@@ -20,3 +20,17 @@ src/c/*.h
 src/c/*.c
 /src/c/markup.ps
 /nwsrcfilter
+/src/icon/autodefs.*
+/src/icon/disambiguate
+/src/icon/docs2comments
+/src/icon/elide
+/src/icon/htmltoc
+/src/icon/l2h
+/src/icon/noidx
+/src/icon/noindex
+/src/icon/pdcached
+/src/icon/pipedocs
+/src/icon/sl2h
+/src/icon/tohtml
+/src/icon/totex
+/src/icon/xchunks
