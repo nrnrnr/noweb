@@ -2850,11 +2850,14 @@ procedure convert_file(f)
 end
 
 procedure main(args)
+  local warn
+  warn := 1
   errstatus := 0
   every arg := !args do
     if arg[1] == "-" then
       case arg of {
         "-show-unknowns" : show_unknowns := 1
+        "-nowarn" : warn := &null
         "-html-quotes"   : html_quotes := 1
         "-" : { curfile := arg; convert_file(&input) }
         default : write(&errout, "Warning: unrecognized option ", arg)
@@ -2865,8 +2868,10 @@ procedure main(args)
       write(&errout, "Error: Can't open file ", arg)
   if /curfile then
     convert_file(&input)
-  warn_unknown(\unknown_set, "control sequences", "\\")
-  warn_unknown(\unknown_envs, "environments", "{", "}")
+  if \warn then {
+    warn_unknown(\unknown_set, "control sequences", "\\")
+    warn_unknown(\unknown_envs, "environments", "{", "}")
+  }
   exit(errstatus)
 end
 @ 
