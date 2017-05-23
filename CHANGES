@@ -1,4 +1,5 @@
 CHANGES FOR VERSION 2.12 - unreleased
+l2h and sl2h now support rules from booktabs package
 l2h and sl2h now deal with \suspend and \resume from package mdwlist
 l2h and sl2h now deal with \verbatiminput package verbatim
 note to FAQ about \usepackage[T1]{fontenc}
