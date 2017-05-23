@@ -47,23 +47,26 @@ To build noweb:
      using the vendor-supplied awk, you have a problem---see file HPUX
      for details.
 
-  3) Fasten your seat belt and type `make all install'.  If you want a
+  3) Type `make touch'.  This command updates timestamps so that noweb
+     does not try to build itself using noweb.
+
+  4) Fasten your seat belt and type `make all install'.  If you want a
      nonstandard noweave, you can use the WEAVE variable in the
      Makefile; for example, `make WEAVE=noweave.simple'.  In contrast
      with previous versions, the standard noweave should work with
      HPUX and SGI Irix.
 
-  4) If you want to install contributed software, you need the
+  5) If you want to install contributed software, you need the
      `contrib' hierarchy.  Get it, set the LIB variable in the
      Makefile, and type 'make all install'.  If you just want the
      nuweb parser, try
 	 (cd ../contrib/norman; make LIB=$LIB all install)
      where $LIB is the noweb LIB directory.
 
-  5) On some installations, (e.g., Unix teTeX), you may have to run
+  6) On some installations, (e.g., Unix teTeX), you may have to run
      texhash(1) before TeX or latex will see files added to TEXINPUTS.
 
-  6) You can clean up by typing `make clean'.  If you wish, you can
+  7) You can clean up by typing `make clean'.  If you wish, you can
      remove the pre-built sources by typing `make clobber', but then
      you will be unable to build noweb unless you already have noweb.
 
