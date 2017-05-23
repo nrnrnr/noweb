@@ -91,12 +91,11 @@ static void emitfile(char *modname);
 <<*>>=
 static void emitfile(char *modname) { 
   Module root = lookup(modname);
-  char *tempname = tempnam(".", 0);
-  FILE *fp;
+  char tempname[] = "nowebXXXXXX";
+  FILE *fp = tmpfile();
   char *lfmt, *filename;
   <<set [[lfmt]] and [[filename]] from [[modname]]>>
   <<complain and [[return]] if [[root == NULL]]>>
-  fp = fopen(tempname, "w");
   if (fp == NULL) errormsg(Fatal, "Can't open temporary file %s", tempname);
   <<expand [[root]] onto [[fp]] and close the file>>
   <<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>
@@ -175,14 +174,3 @@ if (root == NULL) {
             errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
      }
 @
-\subsubsection{Temporary files}
-Some operating systems provide a [[tempnam]] call that makes it possible to 
-create a temporary file in the current directory.  This makes [[mnt]] more 
-efficient by making [[rename]] efficient.  If your operating system
-provides [[tempnam]], define [[TEMPNAM]] for compilation.
-<<local prototypes>>=
-#ifdef TEMPNAM
-extern char *tempnam (const char *dir, const char *pfx);        /* temp file in dir */
-#else
-#define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
-#endif

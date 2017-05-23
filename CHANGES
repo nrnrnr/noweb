@@ -28,6 +28,7 @@ added missing control sequences to nwmac.tex (Sergio Spina)
 Aharon Robbins is now Arnold Robbins <arnold@skeeve.com>
 Point to Jim Pettigrew's installation instructions for Windows 7
 noweb & other 25 yo scripts now quote shell variables correctly (Francky Leyn)
+eliminated deprecated tmpnam() in favor of tmpfile(3)
 
 CHANGES FOR VERSION 2.11b - released 12 Jun 2006
 Make noroff use -mm by default (Debian 218050)
