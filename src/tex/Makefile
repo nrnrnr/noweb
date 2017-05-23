@@ -7,6 +7,8 @@ all: nwmac.tex noweb.sty
 source: nwmac.tex noweb.sty
 touch: nwmac.tex noweb.sty
 	touch nwmac.tex noweb.sty
+boot:
+	touch nwmac.tex noweb.sty
 
 checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)

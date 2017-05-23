@@ -14,6 +14,8 @@ all:	$(EXECS)
 sources: $(EXECS)
 touch: $(EXECS)
 	touch $(EXECS)
+boot:
+	touch $(EXECS)
 
 install: all
 	cp $(LIBEXECS) $(LIB)

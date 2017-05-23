@@ -25,6 +25,8 @@ checkin:
 source: toascii
 touch: toascii
 	touch toascii
+boot:
+	touch toascii
 
 toascii: toascii.nw
 	notangle -Rtoascii toascii.nw > toascii

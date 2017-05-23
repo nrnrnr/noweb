@@ -206,6 +206,8 @@ source: FAQ
 touch:
 	touch FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
+boot:
+	for i in c shell lib xdoc icon awk tex; do (cd $$i; make boot); done
 clean:
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clean); done
 	rm -f nwsrcfilter *~ */*~

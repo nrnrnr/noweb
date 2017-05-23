@@ -13,6 +13,8 @@ all:	$(SRCS)
 source: $(SRCS)
 touch:	$(SRCS)
 	touch $(SRCS)
+boot:
+	touch $(SRCS)
 
 checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)

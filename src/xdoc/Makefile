@@ -23,6 +23,8 @@ all: $(SRCS)
 source: $(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
+boot:
+	touch $(SRCS)
 
 www: $(WWW)/onepage.ps $(WWW)/guide.ps $(WWW)/guide.html
 

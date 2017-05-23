@@ -56,6 +56,8 @@ source:	$(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
 
+boot: ;	touch $(SRCS)
+
 clean: ;	rm -f nt markup mnt finduses fakepretty
 		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~ 
 		rm -f *.atac *.trace *.html

@@ -47,7 +47,7 @@ To build noweb:
      using the vendor-supplied awk, you have a problem---see file HPUX
      for details.
 
-  3) Type `make touch'.  This command updates timestamps so that noweb
+  3) Type `make boot'.  This command updates timestamps so that noweb
      does not try to build itself using noweb.
 
   4) Fasten your seat belt and type `make all install'.  If you want a

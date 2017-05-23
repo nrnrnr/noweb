@@ -31,6 +31,9 @@ source: $(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
 
+boot:
+	touch $(SRCS)
+
 install: $(EXECS)
 	cp $(LIBEXECS) $(LIB)
 	cp $(BINEXECS) $(BIN)
