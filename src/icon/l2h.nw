@@ -429,6 +429,9 @@ every cstab["multicolumn"|"multispan"] := Cmulticolumn
 cstab["span"] := Cspan
 cstab["noalign"] := Cnoalign
 cstab["hline"] := Chline
+cstab["toprule"] := Chline
+cstab["midrule"] := Chline
+cstab["bottomrule"] := Chline
 ignore("cline", "{")
 ignore("newcolumntype", "{{")
 @
