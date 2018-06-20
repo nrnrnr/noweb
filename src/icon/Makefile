@@ -14,7 +14,7 @@ EXECS=$(LIBEXECS) $(BINEXECS) $(LIBSPECIAL) pdcached
 SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
         yaccdefs.icn noindex.icn smldefs.icn tohtml.icn cdefs.icn elide.icn \
 	l2h.icn sl2h.icn pascaldefs.icn promeladefs.icn lrtldefs.icn asdldefs.icn \
-	mmixdefs.icn htmltoc.icn xchunks.icn docs2comments.icn
+	mmixdefs.icn htmltoc.icn xchunks.icn docs2comments.icn pipedocs.icn
 
 .SUFFIXES: .nw .icn .html .tex .dvi
 .nw.icn:
