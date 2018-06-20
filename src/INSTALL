@@ -36,9 +36,6 @@ To build noweb:
        - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH
      If you don't use emacs, just leave ELISP set to /dev/null.
 
-     If your system provides tempnam(3), noweb's indexing will be more
-     efficient if you add -DTEMPNAM to the flags given to the C compiler.
-
   2) If your modern awk is called something other than `nawk', run the
      `awkname' script to change all references to nawk.  For example,
      `awkname gawk'.  You need to do this even if you have chosen

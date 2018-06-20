@@ -59,5 +59,5 @@ mv c/finduses.new c/finduses.c
 :THEMAKE
 rem Use Ms-Dos style pathnames here, otherwise command.com chokes!
 @echo on
-%1 CC=gcc CFLAGS=-DTEMPNAM
+%1 CC=gcc
 :THEEND

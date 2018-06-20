@@ -6,4 +6,4 @@ then
    exit 1
 fi
 
-make CC="gcc" CFLAGS=-DTEMPNAM BIN=$1 LIB=$2 MAN=$3 TEXINPUTS=$4 LIBSRC=icon install
+make CC="gcc" BIN=$1 LIB=$2 MAN=$3 TEXINPUTS=$4 LIBSRC=icon install
