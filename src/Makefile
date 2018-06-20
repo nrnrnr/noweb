@@ -1,4 +1,4 @@
-# Copyright 1995-2008 by Norman Ramsey.  All rights reserved.
+# Copyright 1995-2018 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
@@ -188,7 +188,7 @@ uninstall-tex:
 	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
 
 install-elisp:
-	if [ "/dev/null" != "$ELISP" ]; then mkdir -p $(ELISP); fi
+	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:
