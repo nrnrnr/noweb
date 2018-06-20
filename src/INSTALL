@@ -27,13 +27,13 @@ To build noweb:
        LIB        a directory to store markup, nt, noxref, ...
        MAN        man pages will go in $MAN/man1
        TEXINPUTS  a directory TeX will look for nwmac.tex and noweb.sty
-       ELISP      a directory for noweb-mode.el, for emacs 19
+       ELISP      a directory for noweb-mode.el, for emacs 19 and up
      All of these files are *output* files, where noweb will place
      binaries and man pages that are customized for your installation.
      Therefore you should:
-       - make sure you have write permission to these directories.
-       - refrain from making them point into the noweb source distribution.
-       - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH.
+       - make sure you have permission to write to these directories
+       - refrain from making them point into the noweb source distribution
+       - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH
      If you don't use emacs, just leave ELISP set to /dev/null.
 
      If your system provides tempnam(3), noweb's indexing will be more
