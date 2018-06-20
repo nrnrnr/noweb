@@ -3,6 +3,7 @@ static char rcsid[] = "$Id: mnt.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
   { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,13 +16,13 @@ static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
 #include "columns.h"
 #include "strsave.h"
 
-#line 54 "mnt.nw"
+#line 55 "mnt.nw"
 void add_uses_to_usecounts(Module mp);
 void emit_if_unused_and_conforming(Module mp);
-#line 90 "mnt.nw"
+#line 91 "mnt.nw"
 static void emitfile(char *modname);
 
-#line 27 "mnt.nw"
+#line 28 "mnt.nw"
 #define Clocformat "#line %L \"%F\"%N"
 static char *locformat = Clocformat;
 
@@ -33,23 +34,23 @@ int main(int argc, char **argv) {
     progname = argv[0];
     finalstage = 1;
     
-#line 48 "mnt.nw"
+#line 49 "mnt.nw"
 read_defs(stdin);
 apply_each_module(remove_final_newline);
-#line 38 "mnt.nw"
+#line 39 "mnt.nw"
     for (i=1; i<argc; i++) 
       switch (*argv[i]) {
         case '-': 
-#line 155 "mnt.nw"
+#line 149 "mnt.nw"
     switch (*++argv[i]) {
         case 'a':
             if (strcmp(argv[i], "all"))
                 errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
             else {
-#line 51 "mnt.nw"
+#line 52 "mnt.nw"
 apply_each_module(add_uses_to_usecounts);
 apply_each_module(emit_if_unused_and_conforming);
-#line 159 "mnt.nw"
+#line 153 "mnt.nw"
                                                     }
             break;
         case 't': /* set tab size or turn off */
@@ -67,14 +68,14 @@ apply_each_module(emit_if_unused_and_conforming);
         default:
             errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
      }
-#line 40 "mnt.nw"
+#line 41 "mnt.nw"
                                                                    break;
         default:  emitfile(argv[i]);                               break;
       }
     nowebexit(NULL);
     return errorlevel;          /* slay warning */
 }
-#line 57 "mnt.nw"
+#line 58 "mnt.nw"
 void add_uses_to_usecounts(Module mp) {
     Module used;
     struct modpart *p;
@@ -85,7 +86,7 @@ void add_uses_to_usecounts(Module mp) {
                 used->usecount++;
         }
 }
-#line 73 "mnt.nw"
+#line 74 "mnt.nw"
 void emit_if_unused_and_conforming(Module mp) {
     char *index;
     if (mp->usecount == 0 && strpbrk(mp->name, " \n\t\v\r\f") == NULL) {
@@ -102,14 +103,13 @@ void emit_if_unused_and_conforming(Module mp) {
         }
     }
 }
-#line 92 "mnt.nw"
+#line 93 "mnt.nw"
 static void emitfile(char *modname) { 
   Module root = lookup(modname);
-  char tempname[] = "nowebXXXXXX";
   FILE *fp = tmpfile();
   char *lfmt, *filename;
   
-#line 111 "mnt.nw"
+#line 110 "mnt.nw"
 { int n = strlen(modname) - 1;
   if (n >= 0 && modname[n] == '*') {
     lfmt = locformat;
@@ -122,57 +122,50 @@ static void emitfile(char *modname) {
 }
 #line 98 "mnt.nw"
   
-#line 150 "mnt.nw"
+#line 144 "mnt.nw"
 if (root == NULL) {
   errormsg(Error, "Chunk <<%s>> is undefined", filename);
   return;
 }
 #line 99 "mnt.nw"
-  if (fp == NULL) errormsg(Fatal, "Can't open temporary file %s", tempname);
+  if (fp == NULL) errormsg(Fatal, "Calling tmpfile() failed");
   
-#line 122 "mnt.nw"
+#line 121 "mnt.nw"
 resetloc();
 (void) expand(root, 0, 0, 0, lfmt, fp);
 putc('\n', fp);
-fclose(fp);
 #line 101 "mnt.nw"
+  rewind(fp);
   
-#line 128 "mnt.nw"
-{ FILE *dest, *tmp;
-  dest = fopen(filename, "r");
+#line 126 "mnt.nw"
+{ FILE *dest = fopen(filename, "r");
   if (dest != NULL) {
     int x, y;
-    tmp = fopen(tempname, "r");
-    assert(tmp);
     do { 
-      x = getc(tmp);
+      x = getc(fp);
       y = getc(dest);
     } while (x == y && x != EOF);
-    fclose(tmp);
     fclose(dest);
     if (x == y) {
-      remove(tempname);
+      fclose(fp);
       return;
     }
   }
 }
-#line 102 "mnt.nw"
+#line 103 "mnt.nw"
   remove(filename);
-  if (rename(tempname, filename) != 0) { /* different file systems? (may have to copy) */
-    FILE *fp = fopen(filename, "w");
-    if (fp == NULL) {remove(tempname); 
-#line 147 "mnt.nw"
+  fclose(fp);
+  fp = fopen(filename, "w");
+  if (fp == NULL) {
+#line 141 "mnt.nw"
 errormsg(Error, "Can't open output file %s", filename);
 return;
-#line 105 "mnt.nw"
-                                                                                     }
-    
-#line 122 "mnt.nw"
+#line 106 "mnt.nw"
+                                                                 }
+  
+#line 121 "mnt.nw"
 resetloc();
 (void) expand(root, 0, 0, 0, lfmt, fp);
 putc('\n', fp);
-fclose(fp);
-#line 107 "mnt.nw"
-    remove(tempname);
-  }
+#line 108 "mnt.nw"
 }

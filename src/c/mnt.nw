@@ -10,6 +10,7 @@ static char rcsid[] = "$Id: mnt.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
   { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -91,21 +92,19 @@ static void emitfile(char *modname);
 <<*>>=
 static void emitfile(char *modname) { 
   Module root = lookup(modname);
-  char tempname[] = "nowebXXXXXX";
   FILE *fp = tmpfile();
   char *lfmt, *filename;
   <<set [[lfmt]] and [[filename]] from [[modname]]>>
   <<complain and [[return]] if [[root == NULL]]>>
-  if (fp == NULL) errormsg(Fatal, "Can't open temporary file %s", tempname);
-  <<expand [[root]] onto [[fp]] and close the file>>
-  <<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>
+  if (fp == NULL) errormsg(Fatal, "Calling tmpfile() failed");
+  <<expand [[root]] onto [[fp]]>>
+  rewind(fp);
+  <<if file [[filename]] has the same contents as [[fp]], close [[fp]] and [[return]]>>
   remove(filename);
-  if (rename(tempname, filename) != 0) { /* different file systems? (may have to copy) */
-    FILE *fp = fopen(filename, "w");
-    if (fp == NULL) {remove(tempname); <<complain about [[filename]] and [[return]]>>}
-    <<expand [[root]] onto [[fp]] and close the file>>
-    remove(tempname);
-  }
+  fclose(fp);
+  fp = fopen(filename, "w");
+  if (fp == NULL) {<<complain about [[filename]] and [[return]]>>}
+  <<expand [[root]] onto [[fp]]>>
 }
 <<set [[lfmt]] and [[filename]] from [[modname]]>>=
 { int n = strlen(modname) - 1;
@@ -118,27 +117,22 @@ static void emitfile(char *modname) {
     filename = modname;
   }
 }
-<<expand [[root]] onto [[fp]] and close the file>>=
+<<expand [[root]] onto [[fp]]>>=
 resetloc();
 (void) expand(root, 0, 0, 0, lfmt, fp);
 putc('\n', fp);
-fclose(fp);
 @
-<<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>=
-{ FILE *dest, *tmp;
-  dest = fopen(filename, "r");
+<<if file [[filename]] has the same contents as [[fp]], close [[fp]] and [[return]]>>=
+{ FILE *dest = fopen(filename, "r");
   if (dest != NULL) {
     int x, y;
-    tmp = fopen(tempname, "r");
-    assert(tmp);
     do { 
-      x = getc(tmp);
+      x = getc(fp);
       y = getc(dest);
     } while (x == y && x != EOF);
-    fclose(tmp);
     fclose(dest);
     if (x == y) {
-      remove(tempname);
+      fclose(fp);
       return;
     }
   }
