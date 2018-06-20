@@ -1,20 +1,24 @@
-*** PRERELEASE ***
-
 This is version 2.12 of ``noweb'', a simple, extensible literate-
-programming tool.  noweb is available by anonymous ftp from
-ftp.eecs.harvard.edu:pub/nr/noweb and by HTTP from
-http://www.eecs.harvard.edu/nr/noweb/dist.  The ftp site is mirrored
-by the Comprehensive TeX Archive Network, in directory web/noweb.
-The home page at http://www.cs.tufts.edu/~nr/noweb contains much
-helpful information.
+programming tool.  noweb is available from the Github repository
+https://github.com/nrnrnr/noweb, and it is mirrored by the
+Comprehensive TeX Archive Network.  Other helpful information can
+be found on noweb's home page at http://www.cs.tufts.edu/~nr/noweb.
 
-To build noweb, change to the `src' directory and follow the
-instructions in the file INSTALL.  (Debian users can simply install
-the 'noweb' package, and Windows users may find help from 
-http://www.jim-pettigrew.com/noweb/install.)
+The most convenient way to get noweb is to install it from a package;
+the procedure for building noweb from source dates from 1989, and it is
+both baroque and brittle.  If you must build noweb from source, change
+to the `src' directory and follow the instructions in the file INSTALL.
+(Windows users, look for http://www.jim-pettigrew.com/noweb/install.)
 
 
 WHAT'S NEW IN VERSION 2.12
+
+Version 2.12 has a dual license: in addition to noweb's original
+license, it is now licensed under the BSD 2-clause license.
+
+Version 2.12 nolonger defines a getline() function, which conflicted
+with a new POSIX standard.  And it no longer uses the deprecated
+tempnam(3). 
 
 Version 2.12 contains a number of enhancements to the sl2h program and
 l2h filter, which convert from LaTeX to HTML.  They now deal with
@@ -23,7 +27,7 @@ some TeX ligatures to HTML entities, most notably the -- and ---
 ligatures.  Thanks to Christian Lynbeck, 2.12 also has new Emacs Lisp
 code that better supports font-lock.  Other than that, 2.12 fixes a
 number of bugs, the most notable of which is that the emacs noweb-mode
-command is now compatible with emacs desktop-read and desktop-save.
+command is now compatible with Emacs 25 desktop-read and desktop-save.
 
 
 INTRODUCTION --- WHAT IS NOWEB, ANYWAY?
@@ -39,7 +43,7 @@ or indexing takes about 250 lines; a simpler one can be written in 40
 lines of awk.  Noweb does not prettyprint natively, but supports
 prettyprinting through such third-party filters as pretzel and dpp.
 
-noweb has been distributed free of charge for fifteen years, and it is
+noweb has been distributed free of charge for thirty years, and it is
 one of the world's most widely used literate-programming tools.  It
 has been used for hundreds of thousands of lines of code in such
 languages as awk, C, C++, Haskell, Icon, Lua, Modula-3, Objective
@@ -207,6 +211,10 @@ NOTES
   portability bugs ironed out, I'll include that code in the noweb
   distribution.
 
+  Noweb 3 is real, but the problem it was meant to solve has become a
+  non-issue.  Posted alpha versions will continue to be available, but
+  there are no plans for a real release.
+
   
   Thanks to Preston Briggs for the Aho-Corasick recognizer, and for
 		helpful discussions.
@@ -233,7 +241,7 @@ send me a local postcard for my collection?  My address is:
 
 COPYRIGHT
 
-Noweb is copyright 1989-2012 by Norman Ramsey.  All rights reserved.
+Noweb is copyright 1989-2018 by Norman Ramsey.  All rights reserved.
 
 You may use and distribute noweb for any purpose, for free.  You may
 modify noweb and create derived works, provided you retain the
