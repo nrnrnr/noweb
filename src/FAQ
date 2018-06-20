@@ -1,11 +1,11 @@
 Noweb Frequently Asked Questions
 
-  * Problems Building Noweb
-  * Indentation of code, especially FORTRAN
-  * Formatting the printed documentation
-  * Microsoft Madness
-  * Noweb and Emacs
-  * Other Questions
+  • Problems Building Noweb
+  • Indentation of code, especially FORTRAN
+  • Formatting the printed documentation
+  • Microsoft Madness
+  • Noweb and Emacs
+  • Other Questions
 
 Problems Building Noweb
 
@@ -328,7 +328,7 @@ Q. What about noweb 3?
     Noweb 3 is definitely an improvement over noweb 2, but for most people,
     it's not enough of an improvement for me to go to the trouble of making a
     real release. Noweb 3 was started in 1996(!) in response to situations that
-    no longer obtain, and by 2000 it was substantially complete?the last
+    no longer obtain, and by 2000 it was substantially complete—the last
     significant revisions being done when I was first drafting my textbook.
 
     Today performance is no longer an issue, and with Darwin and mingw/cygwin,
@@ -336,15 +336,24 @@ Q. What about noweb 3?
     sane person wants to use Lua 2.5. I believe that noweb 3 no longer fills a
     need.
 
+Q. Noweb's shell scripts seem to do dodgy things with files in /tmp. Why?
+
+    A. The short answer is that there is no portable version of mktemp(1) that
+    can be used as a shell command. Noweb's use of files like /tmp/totex$$.awk
+    is insecure, but portable. If you are packaging Noweb for reuse, do
+    consider replacing these filenames with calls to mktemp or tempfile or
+    whatever you have on your platform. For an idea of what's needed, consult
+    the patches included with the Debian source package.
+
 Q. I compiled and installed, and everything looks OK, but when I ran the
 examples, two things do not work.
 
-  * Noweave can not find definitions for 'C':
+  • Noweave can not find definitions for 'C':
 
     noweave -index -autodefs c compress.nw > compress.tex
     noweave: don't know how to find definitions for 'c'
 
-  * Noweave can't find l2h for the -filter.
+  • Noweave can't find l2h for the -filter.
 
     A. The awk library doesn't include all the filters that the Icon library
     includes. To get these extra features, you'll have to get Icon from the
@@ -473,10 +482,10 @@ Q. What is the origin of the ``no'' prefix in noweb ?
 
     A. I wrote noweb at a time when language-dependent webs were proliferating,
     e.g., adaweb, cweb, mweb, etc. So the "no" in noweb is a triple pun:
-      + A language-independent web, not limited to one programming language,
+      □ A language-independent web, not limited to one programming language,
         hence web for no particular language or `noweb'.
-      + A contraction of `Norman's web'
-      + The third part of the pun is not suitable for publication.
+      □ A contraction of `Norman's web'
+      □ The third part of the pun is not suitable for publication.
 
 Q. Norman, what made you choose Lua as the implementation language for Noweb 3,
 rather than, say, Python?

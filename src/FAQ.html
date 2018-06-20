@@ -464,6 +464,20 @@ What about noweb 3?
 
 
 <b>Q.</b>  
+Noweb's shell scripts seem to do dodgy things with files in
+<tt>/tmp</tt>. Why?
+
+<p><blockquote><b>A.</b> 
+The short answer is that there is no portable version of
+<tt>mktemp(1)</tt> that can be used as a shell command.
+Noweb's use of files like <tt>/tmp/totex$$.awk</tt> is insecure, but portable.
+If you are packaging Noweb for reuse, do consider replacing these
+filenames with calls to <tt>mktemp</tt> or <tt>tempfile</tt> or
+whatever you have on your platform.  For an idea of what's needed,
+consult the patches included with the Debian source package.
+</blockquote><p>
+
+<b>Q.</b>  
 I compiled
 and installed, and everything looks
 OK, but when I ran the examples, two things do not work.

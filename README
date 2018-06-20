@@ -16,7 +16,7 @@ WHAT'S NEW IN VERSION 2.12
 Version 2.12 has a dual license: in addition to noweb's original
 license, it is now licensed under the BSD 2-clause license.
 
-Version 2.12 nolonger defines a getline() function, which conflicted
+Version 2.12 no longer defines a getline() function, which conflicted
 with a new POSIX standard.  And it no longer uses the deprecated
 tempnam(3). 
 
@@ -207,14 +207,6 @@ NOTES
   beginning, but I'm not going to do it over.  Icon is available by
   anonymous ftp from cs.arizona.edu.
 
-  Phil Bewig has adapted noweb to troff, and as soon as we get the
-  portability bugs ironed out, I'll include that code in the noweb
-  distribution.
-
-  Noweb 3 is real, but the problem it was meant to solve has become a
-  non-issue.  Posted alpha versions will continue to be available, but
-  there are no plans for a real release.
-
   
   Thanks to Preston Briggs for the Aho-Corasick recognizer, and for
 		helpful discussions.
@@ -222,9 +214,10 @@ NOTES
   Thanks to Dave Love for LaTeX wizardry.
   Thanks to Joseph Reynolds for prodding me to fix [[...]].
   Thanks to Bill Trost for the original HTML back end.
+  Thanks to Phil Bewig for the troff support.
   Thanks to Philip Miller and Lee Wittenberg for DOS binaries.
   Thanks to Paolo Ciccone for the Win32 binaries.
-  Thanks to Hubert Chan for picking up Debian distribution.
+  Thanks to Hubert Chan for picking up the Debian distribution.
 
 Send comments or questions to nr@cs.tufts.edu.  
 
