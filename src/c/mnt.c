@@ -41,7 +41,7 @@ apply_each_module(remove_final_newline);
     for (i=1; i<argc; i++) 
       switch (*argv[i]) {
         case '-': 
-#line 149 "mnt.nw"
+#line 150 "mnt.nw"
     switch (*++argv[i]) {
         case 'a':
             if (strcmp(argv[i], "all"))
@@ -50,7 +50,7 @@ apply_each_module(remove_final_newline);
 #line 52 "mnt.nw"
 apply_each_module(add_uses_to_usecounts);
 apply_each_module(emit_if_unused_and_conforming);
-#line 153 "mnt.nw"
+#line 154 "mnt.nw"
                                                     }
             break;
         case 't': /* set tab size or turn off */
@@ -109,7 +109,7 @@ static void emitfile(char *modname) {
   FILE *fp = tmpfile();
   char *lfmt, *filename;
   
-#line 110 "mnt.nw"
+#line 111 "mnt.nw"
 { int n = strlen(modname) - 1;
   if (n >= 0 && modname[n] == '*') {
     lfmt = locformat;
@@ -122,7 +122,7 @@ static void emitfile(char *modname) {
 }
 #line 98 "mnt.nw"
   
-#line 144 "mnt.nw"
+#line 145 "mnt.nw"
 if (root == NULL) {
   errormsg(Error, "Chunk <<%s>> is undefined", filename);
   return;
@@ -130,14 +130,14 @@ if (root == NULL) {
 #line 99 "mnt.nw"
   if (fp == NULL) errormsg(Fatal, "Calling tmpfile() failed");
   
-#line 121 "mnt.nw"
+#line 122 "mnt.nw"
 resetloc();
 (void) expand(root, 0, 0, 0, lfmt, fp);
 putc('\n', fp);
 #line 101 "mnt.nw"
   rewind(fp);
   
-#line 126 "mnt.nw"
+#line 127 "mnt.nw"
 { FILE *dest = fopen(filename, "r");
   if (dest != NULL) {
     int x, y;
@@ -157,15 +157,16 @@ putc('\n', fp);
   fclose(fp);
   fp = fopen(filename, "w");
   if (fp == NULL) {
-#line 141 "mnt.nw"
+#line 142 "mnt.nw"
 errormsg(Error, "Can't open output file %s", filename);
 return;
 #line 106 "mnt.nw"
                                                                  }
   
-#line 121 "mnt.nw"
+#line 122 "mnt.nw"
 resetloc();
 (void) expand(root, 0, 0, 0, lfmt, fp);
 putc('\n', fp);
 #line 108 "mnt.nw"
+  fclose(fp);
 }
