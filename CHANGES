@@ -1,4 +1,4 @@
-CHANGES FOR VERSION 2.12 - unreleased
+CHANGES FOR VERSION 2.12
 l2h and sl2h now support rules from booktabs package
 l2h and sl2h now deal with \suspend and \resume from package mdwlist
 l2h and sl2h now deal with \verbatiminput package verbatim
@@ -29,6 +29,8 @@ Aharon Robbins is now Arnold Robbins <arnold@skeeve.com>
 Point to Jim Pettigrew's installation instructions for Windows 7
 noweb & other 25 yo scripts now quote shell variables correctly (Francky Leyn)
 eliminated deprecated tmpnam() in favor of tmpfile(3)
+Makefile now uses mkdir -p (to keep GNU Make from bleating)
+added BSD-2 license (H/T Jonas Stein, Gentoo project)
 
 CHANGES FOR VERSION 2.11b - released 12 Jun 2006
 Make noroff use -mm by default (Debian 218050)
