@@ -1,8 +1,9 @@
 This is version 2.12 of ``noweb'', a simple, extensible literate-
 programming tool.  noweb is available from the Github repository
 https://github.com/nrnrnr/noweb, and it is mirrored by the
-Comprehensive TeX Archive Network.  Other helpful information can
-be found on noweb's home page at http://www.cs.tufts.edu/~nr/noweb.
+Comprehensive TeX Archive Network.  It is distributed under the BSD-2
+open-souce license.  Other helpful information can be found on noweb's
+home page at http://www.cs.tufts.edu/~nr/noweb.
 
 The most convenient way to get noweb is to install it from a package;
 the procedure for building noweb from source dates from 1989, and it is
@@ -13,8 +14,8 @@ to the `src' directory and follow the instructions in the file INSTALL.
 
 WHAT'S NEW IN VERSION 2.12
 
-Version 2.12 has a dual license: in addition to noweb's original
-license, it is now licensed under the BSD 2-clause license.
+Version 2.12 now has a dual license: in addition to noweb's original
+license, it is licensed under the BSD 2-clause license.
 
 Version 2.12 no longer defines a getline() function, which conflicted
 with a new POSIX standard.  And it no longer uses the deprecated
