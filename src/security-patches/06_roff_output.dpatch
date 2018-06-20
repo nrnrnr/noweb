@@ -1,0 +1,48 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 06_roff_output.dpatch by  <nr@eecs.harvard.edu>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: fix temp things in code generated from roff.nw
+## DP: (needed to be moved *after* security update to source)
+
+@DPATCH@
+
+diff -ur noweb/src/shell/noroff noweb/src/shell/noroff
+--- noweb/src/shell/noroff	2004-09-13 13:45:46.601909792 +0100
++++ noweb/src/shell/noroff	2004-09-13 13:42:23.458792240 +0100
+@@ -35,9 +35,10 @@
+ 
+ base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
+ tagsfile="$base.nwt"
+ (echo ".so $macrodir/tmac.w"
+ if [ -r "$tagsfile" ]; then 
+-   cp $tagsfile /tmp/tags.$$
++   tagstemp=$(tempfile -p tags) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
++   cp $tagsfile $tagstemp
+    $AWK '{
+ 	     if      (sub(/^###TAG### /       , "")) tags[$1] = $2
+ 	     else if (sub(/^###BEGINCHUNKS###/, "")) printf ".de CLIST\n.CLISTBEGIN\n"
+@@ -88,8 +93,8 @@
+ 	 #	print str3
+ 	 #	print convquote(str3)
+ 	 # }
+-	 function tag(s) { if (s in tags) return tags[s]; else return "???" }' /tmp/tags.$$
+-   rm -f /tmp/tags.$$
++	 function tag(s) { if (s in tags) return tags[s]; else return "???" }' $tagstemp
++   rm -f $tagstemp
+  fi
+  cat "$@") |
+ ($ROFF $opts 2>$tagsfile)
+diff -ur noweb/src/shell/toroff noweb/src/shell/toroff
+--- noweb/src/shell/toroff	2002-07-17 23:50:08.000000000 +0100
++++ noweb/src/shell/toroff	2004-09-13 13:42:49.214876720 +0100
+@@ -9,7 +9,8 @@
+            exit 1;;
+     esac
+ done
+-awkfile="/tmp/noweb$$.awk"
++awkfile=$(tempfile -p noweb -s .awk) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
++
+ trap 'rm -f $awkfile' 0 1 2 10 14 15
+ cat > $awkfile << 'EOF'
+ /^@begin docs 0$/ { if (delay) next }

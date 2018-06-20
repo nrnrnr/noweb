@@ -1,0 +1,123 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 02_tmp_fix.dpatch by  <nr@eecs.harvard.edu>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: remove unacceptable uses of /tmp files
+
+@DPATCH@
+
+diff -ur noweb/contrib/conrado/d2tex noweb/contrib/conrado/d2tex
+--- noweb/contrib/conrado/d2tex	1993-10-27 17:37:11.000000000 +0000
++++ noweb/contrib/conrado/d2tex	2004-09-13 13:32:11.092886008 +0100
+@@ -1,5 +1,5 @@
+ #! /bin/sh
+-KEYGEN=/tmp/d2tex$$
++KEYGEN=$(tempfile -p d2tex)
+ trap "rm -f $KEYGEN; exit 1" 1 2 3 15
+ cat > $KEYGEN <<END_OF_FILE
+ COMMENT#1
+diff -ur noweb/contrib/jobling/correct-refs.nw noweb/contrib/jobling/correct-refs.nw
+--- noweb/contrib/jobling/correct-refs.nw	1995-05-24 19:12:48.000000000 +0100
++++ noweb/contrib/jobling/correct-refs.nw	2004-09-13 13:34:18.617499320 +0100
+@@ -332,11 +332,12 @@
+ echo Processing HTML nodes
+ foreach f (*.awk)
+    set root=$f:r
++   set tmpfile=`tempfile -s .html`
+    echo -n Processing $root.html
+-   gawk -f $f < $root.html >! /tmp/$root.html
++   gawk -f $f < $root.html >! $tmpfile
+    echo "..." Done
+    cp $root.html $root.html.bak
+-   cp /tmp/$root.html $root.html
++   cp $tmpfile $root.html
+ end
+ 
+ @
+diff -ur noweb/contrib/norman/htmlgif/pstopbm noweb/contrib/norman/htmlgif/pstopbm
+--- noweb/contrib/norman/htmlgif/pstopbm	1998-08-07 19:29:32.000000000 +0100
++++ noweb/contrib/norman/htmlgif/pstopbm	2004-09-13 13:33:06.465468096 +0100
+@@ -36,8 +36,8 @@
+   shift
+ done
+ 
+-tmp=/tmp/pstopbm$$
+-tmpa=$tmp.a
++tmp=$(tempfile -p pstopbm)
++tmpa=$(tempfile -p pstopbm -s .a)
+ if [ $# -eq 0 ]; then cat > $tmp; else cat "$@" > $tmp; fi
+ 
+ if echo "$@" | fgrep .eps > /dev/null; then
+@@ -76,7 +76,7 @@
+ 
+ 
+ if [ $# -eq 0 ]; then
+-  tmp=/tmp/pstopbm$$
++  tmp=$(tempfile -p pstopbm)
+   cat > $tmp
+   gs -q -sDEVICE=$device -sOutputFile=- -dNOPAUSE -dMAGSTEP=1.0 $tmp
+ else
+diff -ur noweb/src/awk/totex.nw noweb/src/awk/totex.nw
+--- noweb/src/awk/totex.nw	1996-05-31 20:04:15.000000000 +0100
++++ noweb/src/awk/totex.nw	2004-09-13 13:35:25.909269416 +0100
+@@ -24,7 +24,7 @@
+ @
+ On an ugly system, we have to put it in a file.
+ <<invoke awk program using file>>=
+-awkfile=/tmp/totex$$.awk
++awkfile=$(tempfile -p totex)
+ trap 'rm -f $awkfile; exit 1' 0 1 2 15	# clean up files
+ cat > $awkfile << 'EOF'
+ <<awk program for conversion to {\TeX}>>
+diff -ur noweb/src/awkname noweb/src/awkname
+--- noweb/src/awkname	2000-06-16 21:26:42.000000000 +0100
++++ noweb/src/awkname	2004-09-13 13:34:41.711988424 +0100
+@@ -5,7 +5,7 @@
+ esac
+ 
+ rc=0
+-new=/tmp/$$.new; old=/tmp/$$.old
++new=$(tempfile -p new); old=$(tempfile -p old)
+ 
+ for file in lib/emptydefn lib/unmarkup lib/toascii lib/btdefn \
+                         awk/noidx awk/totex awk/tohtml awk/noindex \
+diff -ur noweb/src/lib/toascii noweb/src/lib/toascii
+--- noweb/src/lib/toascii	2002-07-17 23:50:08.000000000 +0100
++++ noweb/src/lib/toascii	2004-09-13 13:35:51.058446160 +0100
+@@ -7,9 +7,9 @@
+                 *)      echo "This can't happen -- $i passed to toascii" 1>&2 ; exit 1 ;;
+         esac
+ done
+-awkfile="tmp/awk$$.tmp"
+-textfile="/tmp/text$$.tmp"
+-tagsfile="/tmp/tags$$.tmp"
++awkfile=$(tempfile -p awk -s .tmp)
++textfile=$(tempfile -p text -s .tmp)
++tagsfile=$(tempfile -p tags -s .tmp)
+ export awkfile textfile tagsfile
+ trap 'rm -f $awkfile $textfile $tagsfile' 0 1 2 10 14 15
+ nawk 'BEGIN { textfile=ENVIRON["textfile"]
+diff -ur noweb/src/shell/cpif noweb/src/shell/cpif
+--- noweb/src/shell/cpif	2004-09-13 13:45:46.601909792 +0100
++++ noweb/src/shell/cpif	2004-09-13 13:36:59.944973816 +0100
+@@ -17,7 +17,7 @@
+ 0)		echo 'Usage: '`basename $0`' [ -eq -ne ] file...' 1>&2; exit 2
+ esac
+ 
+-new=/tmp/$$
++new=$(tempfile)
+ trap 'rm -f $new; exit 1' 1 2 15	# clean up files
+ 
+ cat >$new
+diff -ur noweb/src/shell/nonu noweb/src/shell/nonu
+--- noweb/src/shell/nonu	1993-08-19 19:46:04.000000000 +0100
++++ noweb/src/shell/nonu	2004-09-13 13:37:22.126601696 +0100
+@@ -2,7 +2,7 @@
+ LIB=/usr/public/pkg/noweb/lib
+ # attempt to convert nuweb to noweb using sam
+ 
+-tmp=/tmp/nonu$$
++tmp=$(tempfile -p nonu)
+ trap '/bin/rm -f $tmp; exit 1' 1 2 15	# clean up files
+ cp $1 $tmp || exit 1
+ 
