@@ -58,7 +58,7 @@ uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
 	-rmdir $(BIN) $(LIB) 2>/dev/null || true
 
 install-shell:
-	-mkdir $(BIN) $(LIB) 2>/dev/null
+	mkdir -p $(BIN) $(LIB)
 	sed "s@|LIBDIR|@$(LIBNAME)@" shell/noweb > $(BIN)/noweb
 	chmod +x $(BIN)/noweb
 	sed "s@|LIBDIR|@$(LIBNAME)@" shell/notangle > $(BIN)/notangle
@@ -98,7 +98,7 @@ uninstall-shell:
 	rm -f $(LIB)/tmac.w
 
 install-code: install-shell
-	-mkdir $(BIN) $(LIB) 2>/dev/null
+	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses
 	cp c/nt c/markup c/mnt c/finduses $(LIB)
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install
@@ -109,7 +109,7 @@ uninstall-code: uninstall-shell
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
 	cd lib; make LIB=$(LIB) uninstall
 install-man:
-	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.1 > $(MANDIR)/nodefs.$(MANEXT)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.1 > $(MANDIR)/noroots.$(MANEXT)
@@ -143,7 +143,7 @@ uninstall-man:
 	rm -f $(MANDIR)/nountangle.$(MANEXT)
 	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
 install-gzipped-man:
-	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1  | gzip -9 > $(MANDIR)/cpif.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.1  | gzip -9 > $(MANDIR)/nodefs.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.1  | gzip -9 > $(MANDIR)/noroots.$(MANEXT).gz
@@ -162,7 +162,7 @@ install-gzipped-man:
 	(cd $(MANDIR); ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	-mkdir $(MAN) $(CATDIR) $(CAT7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(CATDIR) $(CAT7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.txt  | gzip > $(CATDIR)/cpif.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.txt  | gzip > $(CATDIR)/nodefs.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.txt  | gzip > $(CATDIR)/noroots.$(MANEXT).gz
@@ -180,7 +180,7 @@ install-preformat-man:
 	rm -f $(CATDIR)/nountangle.$(MANEXT).gz
 	(cd $(CATDIR); ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-tex:
-	-mkdir $(TEXINPUTS) 2>/dev/null
+	mkdir -p $(TEXINPUTS)
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
 	-texhash || echo "Program texhash not found or failed"
 
@@ -188,7 +188,7 @@ uninstall-tex:
 	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
 
 install-elisp:
-	-mkdir $(ELISP) 2>/dev/null
+	if [ "/dev/null" != "$ELISP" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:

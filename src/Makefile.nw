@@ -63,7 +63,7 @@ uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
 	-rmdir $(BIN) $(LIB) 2>/dev/null || true
 
 install-shell:
-	-mkdir $(BIN) $(LIB) 2>/dev/null
+	mkdir -p $(BIN) $(LIB)
 	<<shell binaries>>
 	cp shell/tmac.w $(LIB)
 
@@ -72,7 +72,7 @@ uninstall-shell:
 	rm -f $(LIB)/tmac.w
 
 install-code: install-shell
-	-mkdir $(BIN) $(LIB) 2>/dev/null
+	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses
 	cp c/nt c/markup c/mnt c/finduses $(LIB)
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install
@@ -106,7 +106,7 @@ do
 done
 <<*>>=
 install-man:
-	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	<<ordinary pages>>
 uninstall-man:
 	<<uninstall ordinary pages>>
@@ -116,12 +116,12 @@ Slackware no longer uses preformatted compressed pages, just
 compressed pages.
 <<*>>=
 install-gzipped-man:
-	-mkdir $(MAN) $(MANDIR) $(MAN7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	<<compressed pages>>
 <<*>>=
 install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	-mkdir $(MAN) $(CATDIR) $(CAT7DIR) 2>/dev/null
+	mkdir -p $(MAN) $(CATDIR) $(CAT7DIR)
 	<<preformatted compressed pages>>
 <<generate chunks>>=
 NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h htmltoc"
@@ -185,7 +185,7 @@ for i in $LINKPAGES; do
 done
 <<*>>=
 install-tex:
-	-mkdir $(TEXINPUTS) 2>/dev/null
+	mkdir -p $(TEXINPUTS)
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
 	-texhash || echo "Program texhash not found or failed"
 
@@ -193,7 +193,7 @@ uninstall-tex:
 	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
 
 install-elisp:
-	-mkdir $(ELISP) 2>/dev/null
+	if [ "/dev/null" != "$ELISP" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:
