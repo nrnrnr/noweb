@@ -1,8 +1,10 @@
-Noweb is copyright 1989-2000 by Norman Ramsey.  All rights reserved.
+Noweb is copyright 1989-2018 by Norman Ramsey.  All rights reserved.
 
 Noweb is protected by copyright.  It is not public-domain
 software or shareware, and it is not protected by a ``copyleft''
 agreement like the one used by the Free Software Foundation.
+It may be used and/or redistributed using *either* the terms
+stated here *or* by the 2-clause BSD license found in file LICENSE.
 
 Noweb is available free for any use in any field of endeavor.  You may
 redistribute noweb in whole or in part provided you acknowledge its
