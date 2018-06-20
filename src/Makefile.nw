@@ -193,7 +193,7 @@ uninstall-tex:
 	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
 
 install-elisp:
-	if [ "/dev/null" != "$ELISP" ]; then mkdir -p $(ELISP); fi
+	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:
