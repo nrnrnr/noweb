@@ -1,3 +1,7 @@
+NOTE: The information below is from May 30, 1995.  It is likely to be
+obsolete.  And to appease the maintainers of CTAN, references to ftp
+dot tex dot ac dot uk have been removed.
+----------------------------------------------------------------
 These are the anonymous ftp sites that I prefer (I am in Europe and these are
 the fastest sites for me)
 
@@ -5,10 +9,8 @@ Noweb 2.7a (only in this site in 29-May-95)
 ftp.shsu.edu:/pub/tex/web 
 
 Noweb 2.7 
-ftp.tex.ac.uk:/tex-archive/web 
-'get noweb.tar.gz' (on the fly compression of noweb dir, 1221834 bytes because
-it includes Dos and Linux binaries) or 'cd noweb' and get file by file (like
-this it's possible to skip the binaries dir)
+(No longer available.  Try https://github.com/nrnrnr/noweb, tag v2_7,
+or better yet, a version that is up to date.)
 
 How to build Noweb 2.7a for Dos + PC386 + MKS toolkit
 ftp.daimi.aau.dk:/pub/empl/avs/avs386_noweb27a.tar.gz
@@ -19,7 +21,7 @@ emTeX 386 3.1415 [3c-beta12], LaTeX2e (1-Dec-94 patch level 1), Dvips 5.54
 (several ftp sites must be used, see the file 'jrtex12a.avs')
 
 Chicago LaTeX package (required by noweb/src/xdoc/guide.tex)
-ftp.tex.ac.uk:/tex-archive/biblio/bibtex/contrib/chicago*.* 
+CTAN
 Assuming that you followed the instructions from the file 'jrtex12a.avs' put
 the 3 files (chicago.bst, chicago.sty, chicagoa.bst) in
 ?:/emtex/texinputs/local)

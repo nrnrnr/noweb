@@ -31,7 +31,7 @@ How to get latest
 ~~~~~~~~~~~~~~~~~
 This will be available at simtel mirrors such as wuarchive.wustl.edu
 and oak.oakland.edu in/or near the /pub/msdos/tex directory, and perhaps
-CTAN machines, like ftp.shsu.edu.   A similar file which describes an older
+CTAN machines.   A similar file which describes an older
 version of emtex installation (pre latex-2e) has basename jrhelp11.
 
 What is this
@@ -127,7 +127,7 @@ b.  use ftp to connect to a distribution machine, ftp.dante.de,
     has on-the-fly compression):
 
     ftp ftp.shsu.edu
-**** ftp.dante.de is too slow, ftp.tex.ac.uk is good (12 KB/s)
+**** ftp.dante.de is too slow
     cd /tex-archive/systems/msdos
     bin
     hash

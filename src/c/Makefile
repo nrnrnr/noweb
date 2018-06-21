@@ -21,8 +21,8 @@ FILES=markmain.nw markup.nw \
 SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
 	modules.h notangle.h recognize.h strsave.h \
 	columns.c errors.c getline.c finduses.c main.c markmain.c markup.c match.c \
-	mnt.c modtrees.c modules.c notangle.c readme.c recognize.c strsave.c \
-        markup.ps
+	mnt.c modtrees.c modules.c notangle.c nwmktemp.c readme.c recognize.c \
+	strsave.c markup.ps
 NAME='name of RCS version'
 
 NOTANGLE=notangle
@@ -38,10 +38,13 @@ CPIF=>
 		$(CC) $(CFLAGS) -c $*.c
 .nw.h: ;	$(NOTANGLE) -Rheader $*.nw $(CPIF) $*.h
 
-all:	nt markup mnt finduses
+all:	nt markup mnt finduses nwmktemp
 
 nt:	$(TANGLEOBJS)
 	$(CC) $(CFLAGS) -o nt $(TANGLEOBJS)
+
+nwmktemp: nwmktemp.o
+	$(CC) $(CFLAGS) -o nwmktemp nwmktemp.o
 
 finduses:	$(FINDUSESOBJS)
 	$(CC) $(CFLAGS) -o finduses $(FINDUSESOBJS)
@@ -103,6 +106,7 @@ mnt.o:          modules.h modtrees.h notangle.h errors.h columns.h strsave.h
 modtrees.o:     strsave.h modules.h modtrees.h errors.h 
 modules.o:      modules.h modtrees.h errors.h columns.h strsave.h 
 notangle.o:     strsave.h getline.h modules.h modtrees.h errors.h match.h notangle.h 
+nwmktemp.o:
 pretty.o:	getline.h match.h errors.h pretty.h strsave.h 
 readme.o:       
 recognize.o:    

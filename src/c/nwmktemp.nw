@@ -1,0 +1,54 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+% Copyright 2018 by Norman Ramsey.  All rights reserved.
+% See file COPYRIGHT for more information.
+
+\section{Temporary files}
+
+Noweb's shell scripts need a way to create a temporary file, securely.
+This program is a thin wrapper around [[mkstemp]].
+<<*>>=
+#define _POSIX_C_SOURCE 200809L
+
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+@ 
+Find a temporary directory.
+<<*>>=
+static const char *tmpdir(void) {
+    char *tmpdir = getenv("TMPDIR");
+    if (tmpdir && *tmpdir)
+        return tmpdir;
+    else
+        return "/tmp";
+}
+<<*>>=
+int main(int argc, char **argv) {
+    char template[] = "nwtemp.XXXXXXXXXX";
+    const char *tmp = tmpdir();
+    char *path = malloc(strlen(tmp) + strlen(template) + 3); /* slash, newline, \0 */
+    int fd;
+
+    assert(argc == 1);
+
+    assert(path);
+    strcpy(path, tmp);
+    path[strlen(tmp)] = '/';
+    strcpy(path+strlen(tmp)+1, template);
+
+    fd = mkstemp(path);
+    if (fd < 0) {
+        perror(argv[0]);
+        free(path);
+        return 1;
+    } else {
+        printf("%s\n", path);
+        free(path);
+        close(fd);
+        return 0;
+    }
+}
+@

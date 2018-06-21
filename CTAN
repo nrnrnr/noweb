@@ -1,0 +1,30 @@
+Administrative notes for CTAN upload:
+
+  - The distribution contains 7 .bbl files, which are there to enable
+    users to build documentation or examples.
+
+  - Directory src/security-patches ...
+
+  - The distribution contains many files with duplicate basenames,
+    e.g., noidx.nw, noindex.nw, noroots.nw, and so on.  These
+    different files have identical basenames because they provide
+    identical functionality on different platforms, or because they
+    provide documentation of that functionality.  For example,
+
+      src/awk/noindex.nw          Index building on Unix using Awk
+      src/icon/noindex.nw         Index building on Unix using Icon
+      contrib/rsc/rc/noindex.nw   Index building using the Plan 9 shell RC
+      xdoc/noindex.nw             Man page for index building
+      
+    None of these files is ever exposed to kpathsea or to TeX, so name
+    clashes should not be a problem.
+
+  - The distribution includes TeX source for two papers about Noweb: a
+    1991 technical report and a 1993 submission to IEEE Software.
+    Both .tex files refer to information that is no longer current,
+    including the obsolete FTP server ftp.tex.ac.uk.  Because the
+    intent of the distribution is to provide interested readers with
+    access to these documents as they were published, these references
+    will not be changed.
+
+
