@@ -99,8 +99,8 @@ uninstall-shell:
 
 install-code: install-shell
 	mkdir -p $(BIN) $(LIB)
-	strip c/nt c/markup c/mnt c/finduses
-	cp c/nt c/markup c/mnt c/finduses $(LIB)
+	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
+	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install
 	cd lib; make LIB=$(LIB) install
 
