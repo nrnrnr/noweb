@@ -36,8 +36,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-tmp=/tmp/pstopbm$$
-tmpa=$tmp.a
+tmp=$(mktemp)
+tmpa=$(mktemp --suffix=.a)
 if [ $# -eq 0 ]; then cat > $tmp; else cat "$@" > $tmp; fi
 
 if echo "$@" | fgrep .eps > /dev/null; then
@@ -76,7 +76,7 @@ exit 0
 
 
 if [ $# -eq 0 ]; then
-  tmp=/tmp/pstopbm$$
+  tmp=$(mktemp)
   cat > $tmp
   gs -q -sDEVICE=$device -sOutputFile=- -dNOPAUSE -dMAGSTEP=1.0 $tmp
 else

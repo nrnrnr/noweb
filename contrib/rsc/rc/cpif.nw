@@ -24,7 +24,7 @@ if(~ $1 -* || ~ $#* 0) {
 	exit usage
 }
 
-new=/tmp/noweb.$pid
+new=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
 
 # trap 'rm -f $new; exit 1' 1 2 15	# clean up files
 

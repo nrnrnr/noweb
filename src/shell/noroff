@@ -37,7 +37,8 @@ base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
 tagsfile="$base.nwt"
 (echo ".so $macrodir/tmac.w"
 if [ -r "$tagsfile" ]; then 
-   cp $tagsfile /tmp/tags.$$
+   tagstemp=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+   cp $tagsfile $tagstemp
    $AWK '{
 	     if      (sub(/^###TAG### /       , "")) tags[$1] = $2
 	     else if (sub(/^###BEGINCHUNKS###/, "")) printf ".de CLIST\n.CLISTBEGIN\n"
@@ -88,8 +89,8 @@ if [ -r "$tagsfile" ]; then
 	 #	print str3
 	 #	print convquote(str3)
 	 # }
-	 function tag(s) { if (s in tags) return tags[s]; else return "???" }' /tmp/tags.$$
-   rm -f /tmp/tags.$$
+	 function tag(s) { if (s in tags) return tags[s]; else return "???" }' $tagstemp
+   rm -f $tagstemp
  fi
  cat "$@") |
 ($ROFF $opts 2>$tagsfile)

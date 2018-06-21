@@ -6,6 +6,7 @@
 # * defaults to -ne
 
 PATH=/bin:/usr/bin
+LIB=|LIBDIR|
 
 # set -x
 op=-ne
@@ -17,7 +18,7 @@ case $# in
 0)		echo 'Usage: '`basename $0`' [ -eq -ne ] file...' 1>&2; exit 2
 esac
 
-new=/tmp/$$
+new=$($LIB/nwmktemp)
 trap 'rm -f $new; exit 1' 1 2 15	# clean up files
 
 cat >$new

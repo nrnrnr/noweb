@@ -2,7 +2,7 @@
 LIB=/usr/public/pkg/noweb/lib
 # attempt to convert nuweb to noweb using sam
 
-tmp=/tmp/nonu$$
+tmp=$($LIB/nwmktemp)
 trap '/bin/rm -f $tmp; exit 1' 1 2 15	# clean up files
 cp $1 $tmp || exit 1
 

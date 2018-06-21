@@ -38,9 +38,9 @@ named here, and disposal of the file on exit from [[toascii]] is arranged.
 Also arranged here is a temporary file for storage of the awk program on an
 ugly system, as discussed below.
 <<arrange temporary files>>=
-awkfile=/tmp/awk$pid.tmp
-textfile=/tmp/text$pid.tmp
-tagsfile=/tmp/tags$pid.tmp
+awkfile=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+textfile=$(mktemp ) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+tagsfile=$(mktemp ) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
 @ %def textfile tagsfile awkfile
 The actual formatting of the text, code, and index entries is done by various
 unix text processing commands in pipelines.  There are four formatting pipes:

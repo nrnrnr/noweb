@@ -1,5 +1,5 @@
 #! /bin/sh
-KEYGEN=/tmp/d2tex$$
+KEYGEN=$(mktemp)
 trap "rm -f $KEYGEN; exit 1" 1 2 3 15
 cat > $KEYGEN <<END_OF_FILE
 COMMENT#1

@@ -74,7 +74,7 @@ single quotes and double quotes, so neither can be used to protect the
 other, and quoting each quote is ugly.  The pragmatic solution is to
 copy the awk program into a temporary file, using a shell here-document.
 <<invoke awk program>>=
-export awkfile="/tmp/noweb$$.awk"
+export awkfile="$(LIB/nwmktemp)"
 trap 'rm -f $awkfile' 0 1 2 10 14 15
 cat > $awkfile << 'EOF'
 <<awk program>>

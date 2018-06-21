@@ -1,3 +1,4 @@
+#!/bin/sh
 
 case $# in
   1) ;;
@@ -5,7 +6,7 @@ case $# in
 esac
 
 rc=0
-new=/tmp/$$.new; old=/tmp/$$.old
+new=$(mktemp); old=$(mktemp)
 
 for file in lib/emptydefn lib/unmarkup lib/toascii lib/btdefn \
                         awk/noidx awk/totex awk/tohtml awk/noindex \

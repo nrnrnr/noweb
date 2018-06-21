@@ -44,6 +44,11 @@ To build noweb:
      using the vendor-supplied awk, you have a problem---see file HPUX
      for details.
 
+     Note: the `awkname' script relies on mktemp(1) to create
+     temporary files.  If your system lacks this program, you'll need
+     to substitute tempfile(1) or some other means of creating a
+     temporary file.
+
   3) Type `make boot'.  This command updates timestamps so that noweb
      does not try to build itself using noweb.
 

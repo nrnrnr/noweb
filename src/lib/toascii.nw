@@ -28,9 +28,9 @@ named here, and disposal of the file on exit from [[toascii]] is arranged.
 Also arranged here is a temporary file for storage of the awk program on an
 ugly system, as discussed below.
 <<arrange temporary files>>=
-awkfile="tmp/awk$$.tmp"
-textfile="/tmp/text$$.tmp"
-tagsfile="/tmp/tags$$.tmp"
+awkfile=$(mktemp)
+textfile=$(mktemp)
+tagsfile=$(mktemp)
 export awkfile textfile tagsfile
 trap 'rm -f $awkfile $textfile $tagsfile' 0 1 2 10 14 15
 @ %def textfile tagsfile awkfile

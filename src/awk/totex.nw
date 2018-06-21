@@ -6,6 +6,7 @@ generated shell script.
 # See file COPYRIGHT for more information.
 <<totex>>=
 #!/bin/sh
+LIB=|LIBDIR|
 <<copyright notice>>
 # Don't try to understand this file!  Look at lib/totex.nw in the noweb source!
 delay=0 noindex=0
@@ -24,7 +25,7 @@ nawk '<<awk program for conversion to {\TeX}>>' delay=$delay noindex=$noindex
 @
 On an ugly system, we have to put it in a file.
 <<invoke awk program using file>>=
-awkfile=/tmp/totex$$.awk
+awkfile=$($LIB/nwmktemp)
 trap 'rm -f $awkfile; exit 1' 0 1 2 15	# clean up files
 cat > $awkfile << 'EOF'
 <<awk program for conversion to {\TeX}>>
