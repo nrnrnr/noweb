@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
+LIB=|LIBDIR|
+# Copyright 1991-2018 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 # Don't try to understand this file!  Look at lib/totex.nw in the noweb source!
 delay=0 noindex=0

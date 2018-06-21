@@ -5,7 +5,9 @@ LIB=/dev/null  # must be overridden
 BIN=/dev/null  # must be overridden
 SHELL=/bin/sh
 
-LIBEXECS=totex noidx tohtml
+LIBEXECSBARE=noidx tohtml
+LIBEXECSDEP=totex
+LIBEXECS=$(LIBEXECSBARE) $(LIBEXECSDEP)
 BINEXECS=noindex 
 EXECS=$(BINEXECS) $(LIBEXECS)
 
@@ -18,7 +20,8 @@ boot:
 	touch $(EXECS)
 
 install: all
-	cp $(LIBEXECS) $(LIB)
+	cp $(LIBEXECSBARE) $(LIB)
+	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(LIB)/"$$i"; chmod +x $(LIB)/$$i; done
 	cp $(BINEXECS) $(BIN)
 
 uninstall:

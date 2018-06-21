@@ -2,7 +2,7 @@
 The copyright applies both to the {\tt noweb} source and to the
 generated shell script.
 <<copyright notice>>=
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# Copyright 1991-2018 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 <<totex>>=
 #!/bin/sh
