@@ -53,6 +53,7 @@ knowledgeable users can modify document formatting without changing
 the awk program.
 <<toroff>>=
 #!/bin/sh
+LIB=|LIBDIR|
 AWK=nawk
 <<process arguments>>
 <<invoke awk program>>
@@ -80,7 +81,7 @@ single quotes and double quotes, so neither can be used to protect the
 other, and quoting each quote is ugly.  The pragmatic solution is to
 copy the awk program into a temporary file, using a shell here-document.
 <<invoke awk program>>=
-awkfile=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+awkfile=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
 trap 'rm -f $awkfile' 0 1 2 10 14 15
 cat > $awkfile << 'EOF'
 <<awk program>>
@@ -632,6 +633,7 @@ The location of [[macrodir]] is likely to require customization.
 ROFF="groff"
 AWK=nawk
 macrodir=|LIBDIR|
+LIB=|LIBDIR|
 
 opts=
 
@@ -664,7 +666,7 @@ base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
 tagsfile="$base.nwt"
 (echo ".so $macrodir/tmac.w"
 if [ -r "$tagsfile" ]; then 
-   tagstemp=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+   tagstemp=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
    cp $tagsfile $tagstemp
    $AWK '<<action for [[tags]] line>>
          <<functions>>' $tagstemp

@@ -1,12 +1,13 @@
 #!/bin/sh
 
+LIB=|LIBDIR|
 opts="-nolist"
 
 case $1 in
   -[0-9]*) opts="$opts -width=`expr 0 - $1`" ; shift ;;
 esac
 
-html=`mktemp` ||  { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+html=$($LIB/nwmktemp) ||  { echo "$0: Cannot create temporary file" >&2; exit 1;  }
 trap 'rm -f $html; exit 1' 1 2 15	# clean up files
 
 awk '

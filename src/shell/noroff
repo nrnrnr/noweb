@@ -5,6 +5,7 @@
 ROFF="groff"
 AWK=nawk
 macrodir=|LIBDIR|
+LIB=|LIBDIR|
 
 opts=
 
@@ -37,7 +38,7 @@ base="`basename $1 | sed '/\./s/\.[^.]*$//'`"
 tagsfile="$base.nwt"
 (echo ".so $macrodir/tmac.w"
 if [ -r "$tagsfile" ]; then 
-   tagstemp=$(mktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
+   tagstemp=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" >&2; exit 1;  }
    cp $tagsfile $tagstemp
    $AWK '{
 	     if      (sub(/^###TAG### /       , "")) tags[$1] = $2
