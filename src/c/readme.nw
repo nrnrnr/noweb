@@ -59,5 +59,3 @@ Summer 91:  Version 2: second syntax for tools, added noroots.
 There's no distinction between errors and warnings.
 
 Also see the man page.
-<<*>>=
-/* This comment will satisfy CTAN that the derived file is not empty */

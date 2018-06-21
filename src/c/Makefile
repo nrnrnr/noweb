@@ -21,7 +21,7 @@ FILES=markmain.nw markup.nw \
 SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
 	modules.h notangle.h recognize.h strsave.h \
 	columns.c errors.c getline.c finduses.c main.c markmain.c markup.c match.c \
-	mnt.c modtrees.c modules.c notangle.c nwmktemp.c readme.c recognize.c \
+	mnt.c modtrees.c modules.c notangle.c nwmktemp.c recognize.c \
 	strsave.c markup.ps
 NAME='name of RCS version'
 
@@ -108,6 +108,5 @@ modules.o:      modules.h modtrees.h errors.h columns.h strsave.h
 notangle.o:     strsave.h getline.h modules.h modtrees.h errors.h match.h notangle.h 
 nwmktemp.o:
 pretty.o:	getline.h match.h errors.h pretty.h strsave.h 
-readme.o:       
 recognize.o:    
 strsave.o:      strsave.h errors.h 
