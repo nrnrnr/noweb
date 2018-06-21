@@ -49,6 +49,12 @@ tar:	clean source nwsrcfilter DATE emacscheck
 	(cd .. ; ln -s noweb-$(VERSION).tgz noweb.tgz)
 	chmod -w src/Makefile
 
+ctan:	clean source nwsrcfilter DATE emacscheck
+	chmod +w src/Makefile
+	(cd src; make boot)
+	zip ../noweb-$(VERSION).zip `find . ! -type d -not -name FAQ.old -not -name '.git*' -print | ./nwsrcfilter`
+	chmod -w src/Makefile
+
 emacscheck:
 	-echo "Checking to ensure distribution matches personal emacs mode" 1>&2
 	diff src/elisp/noweb-mode.el $(HOME)/emacs/noweb-mode.el
