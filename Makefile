@@ -53,8 +53,10 @@ ctan:	clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
 	(cd src; make boot)
 	rm -f ../noweb-$(VERSION)-ctan.zip
+	ln -s . noweb
 	zip ../noweb-$(VERSION)-ctan.zip `find ./* ! -type d -not -name FAQ.old -not -name '.git*' -print | ./nwsrcfilter | sed 's@^@noweb/@'`
 	chmod -w src/Makefile
+	rm -f noweb
 
 emacscheck:
 	-echo "Checking to ensure distribution matches personal emacs mode" 1>&2
