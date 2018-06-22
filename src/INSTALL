@@ -72,14 +72,6 @@ To build noweb:
      remove the pre-built sources by typing `make clobber', but then
      you will be unable to build noweb unless you already have noweb.
 
-  8) As distributed, noweb uses files in /tmp in ways that are
-     vulnerable to attack.  (I have not been able to find a portable
-     alternative.)  If you are repackaging noweb for distribution, you
-     will want to patch this code.  To see what to patch, consult the
-     files in the security-patches directory, which are from the
-     Debian project.  You will need to alter these patches to use
-     mktemp(1) or whatever else may be available on your platform.
-
 Instead of editing the Makefile, you can create a shell script that
 invokes make with the proper variables.  `nwmake' is an example of
 such a script; I use it to install noweb at Princeton using the Icon

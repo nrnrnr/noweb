@@ -3,8 +3,6 @@ Administrative notes for CTAN upload:
   - The distribution contains 7 .bbl files, which are there to enable
     users to build documentation or examples.
 
-  - Directory src/security-patches ...
-
   - The distribution contains many files with duplicate basenames,
     e.g., noidx.nw, noindex.nw, noroots.nw, and so on.  These
     different files have identical basenames because they provide

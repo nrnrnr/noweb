@@ -31,6 +31,7 @@ noweb & other 25 yo scripts now quote shell variables correctly (Francky Leyn)
 eliminated deprecated tmpnam() in favor of tmpfile(3)
 Makefile now uses mkdir -p (to keep GNU Make from bleating)
 added BSD-2 license (H/T Jonas Stein, Gentoo project)
+Scripts no longer use insecure names in /tmp/; instead using mktemp
 
 CHANGES FOR VERSION 2.11b - released 12 Jun 2006
 Make noroff use -mm by default (Debian 218050)
