@@ -8,7 +8,7 @@ local stringf = string.format
 local function runf(...) return os.execute(string.format(...)) end
 local function eprintf(...) return io.stderr:write(string.format(...)) end
 
-local backends = { 'toascii', 'tohtml', 'toroff', 'totex', 'unmarkup', 'nt' }
+local backends = { 'toascii', 'toroff', 'unmarkup', 'nt', 'tohtml', 'totex' }
 
 local filters = { 'noidx' }
 
