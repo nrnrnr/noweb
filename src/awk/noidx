@@ -265,6 +265,26 @@ nawk 'function insertafter(i, s, n) {
               thischunk = substr(line, 7)
               printf "@xref ref %s\n", anchorlabel[thischunk]
               print line
+              defout[thischunk]++
+              if (defout[thischunk] > 1)
+                printf "@xref prevdef %s\n", listget(defanchors[thischunk], defout[thischunk]-1)
+              if (defout[thischunk] < defcount[thischunk])
+                printf "@xref nextdef %s\n", listget(defanchors[thischunk], defout[thischunk]+1)
+              if (defout[thischunk] == 1) {if (defcount[thischunk] > 1) {
+                                             print "@xref begindefs"
+                                             n = split(defanchors[thischunk], a)
+                                             for (j = 2; j <= n; j++) printf "@xref defitem %s\n", a[j]
+                                             print "@xref enddefs"
+
+                                           }
+                                           if (uses[thischunk] != "") {
+                                             print "@xref beginuses"
+                                             n = split(uses[thischunk], a)
+                                             for (j = 1; j <= n; j++) printf "@xref useitem %s\n", a[j]
+                                             print "@xref enduses"
+                                           } else {
+                                             printf "@xref notused %s\n", thischunk
+                                           }}
           } else if (line ~ /^@use /) {
               arg = substr(line, 6)
               printf "@xref ref %s\n", (anchorlabel[arg] == "" ? "nw@notdef" : anchorlabel[arg])
@@ -290,7 +310,6 @@ nawk 'function insertafter(i, s, n) {
                 printf "@xref ref %s\n", indexanchorlabel[arg]
               print line
           } else if (line ~ /^@end code/) {
-              defout[thischunk]++
               for (x in thesedefns)
                 delete theseuses[x]
               delete thesedefns[0]
@@ -321,25 +340,6 @@ nawk 'function insertafter(i, s, n) {
                 }
                 print "@index enduses"
               }
-              if (defout[thischunk] == 1) {if (defcount[thischunk] > 1) {
-                                             print "@xref begindefs"
-                                             n = split(defanchors[thischunk], a)
-                                             for (j = 2; j <= n; j++) printf "@xref defitem %s\n", a[j]
-                                             print "@xref enddefs"
-
-                                           }
-                                           if (uses[thischunk] != "") {
-                                             print "@xref beginuses"
-                                             n = split(uses[thischunk], a)
-                                             for (j = 1; j <= n; j++) printf "@xref useitem %s\n", a[j]
-                                             print "@xref enduses"
-                                           } else {
-                                             printf "@xref notused %s\n", thischunk
-                                           }}
-              if (defout[thischunk] > 1)
-                printf "@xref prevdef %s\n", listget(defanchors[thischunk], defout[thischunk]-1)
-              if (defout[thischunk] < defcount[thischunk])
-                printf "@xref nextdef %s\n", listget(defanchors[thischunk], defout[thischunk]+1)
               print line
           } else if (line ~ /^@text /) {
               # grotesque hack to get indexes in HTML

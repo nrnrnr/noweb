@@ -133,6 +133,7 @@ if (line ~ /^@begin /) {
     thischunk = substr(line, 7)
     printf "@xref ref %s\n", anchorlabel[thischunk]
     print line
+    <<write chunk cross-reference>>
 } else if (line ~ /^@use /) {
     arg = substr(line, 6)
     printf "@xref ref %s\n", (anchorlabel[arg] == "" ? "nw@notdef" : anchorlabel[arg])
@@ -158,7 +159,7 @@ if (line ~ /^@begin /) {
       printf "@xref ref %s\n", indexanchorlabel[arg]
     print line
 } else if (line ~ /^@end code/) {
-    <<write cross-reference>>
+    <<write index cross-reference>>
     print line
 } else if (line ~ /^@text /) {
     # grotesque hack to get indexes in HTML
@@ -177,14 +178,13 @@ if (line ~ /^@begin /) {
 The case of the [[@index defn]] is the one case where we don't emit a
 reference, because the reference has to go in earlier.  See
 page~\pageref{multi-def-bug} for an explanation.
-<<write cross-reference>>=
+<<write chunk cross-reference>>=
 defout[thischunk]++
-<<write index cross-reference>>
-if (defout[thischunk] == 1) {<<write chunk cross-reference>>}
 if (defout[thischunk] > 1)
   printf "@xref prevdef %s\n", listget(defanchors[thischunk], defout[thischunk]-1)
 if (defout[thischunk] < defcount[thischunk])
   printf "@xref nextdef %s\n", listget(defanchors[thischunk], defout[thischunk]+1)
+if (defout[thischunk] == 1) {<<write use and def summary for chunk cross-reference>>}
 <<write index cross-reference>>=
 for (x in thesedefns)
   delete theseuses[x]
@@ -217,7 +217,7 @@ if (n > 0) {
   }
   print "@index enduses"
 }
-<<write chunk cross-reference>>=
+<<write use and def summary for chunk cross-reference>>=
 if (defcount[thischunk] > 1) {
   print "@xref begindefs"
   n = split(defanchors[thischunk], a)
