@@ -61,10 +61,16 @@ for _, p in ipairs(pipelines) do
     local oldout, o2 = outfiles(oldc)
     local newout, n2 = outfiles(newc)
 
-    if runf('diff -u %s %s', oldout, newout) ~= 0
-    or runf('diff -u %s %s', o2, n2) ~= 0
-    then
+    local rc  = runf('cmp -s %s %s', oldout, newout)
+    local rc2 = runf('cmp -s %s %s', o2, n2)
+    if rc ~= 0 or rc2 ~= 0 then
       eprintf('FAILED: %s\n        %s\n', oldc, newc)
+      if rc2 ~= 0 then
+        runf('colordiff -u %s %s | head -40', o2, n2)
+      end
+      if rc ~= 0 then
+        runf('colordiff -u %s %s | head -40', oldout, newout)
+      end
       os.exit(1)
     else
       os.remove(oldout)
