@@ -104,13 +104,12 @@ nawk 'function insertafter(i, s, n) {
       function make_key(name) {
         return alphacode(crc(name))
       }
-      function lognowebchunks(l, j, n, x, lastkey, thiskey, showkey) {
+      function lognowebchunks(l, j, n, x) {
         if (loggednowebchunks > 0) return
         loggednowebchunks = 1
         delete allchunks[0]
         n = alphasort(allchunks)
         print "@xref beginchunks"
-        lastkey = "placeholder sort key"
         for (j = 0; j < n; j++) {
           name = sorted[j]; delete sorted[j]
           printf "@xref chunkbegin %s %s\n", 
