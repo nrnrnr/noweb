@@ -6,24 +6,25 @@ This copyright applies both to the {\tt noweb} source and to the
 generated shell script.
 Thanks to Bill Trost for getting me started with an early version.
 <<copyright notice>>=
-# Copyright 1994 by Norman Ramsey.  All rights reserved.
+# Copyright 1994-2018 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 <<*>>=
 #!/bin/sh
 <<copyright notice>>
 # Do not try to understand this file!  Look at lib/tohtml.nw in the noweb source!
 
-delay=0 raw=0 localindex=0 noindex=0
+delay=0 raw=0 localindex=0 noindex=0 nocomment=0
 for i do
   case $i in
     -delay)      delay=1      ;;
     -raw)        raw=1        ;;
     -localindex) if [ $noindex -eq 0 ]; then localindex=1; fi;;
     -noindex)    localindex=0; noindex=1 ;;
+    -no-gen-comment) nocomment=1 ;;
   esac
 done
 nawk '<<awk program for conversion to {\tt HTML}>>' \
-   delay=$delay raw=$raw localindex=$localindex noindex=$noindex
+   delay=$delay raw=$raw localindex=$localindex noindex=$noindex nocomment=$nocomment
 @
 The [[-raw]] option brackets HTML with [[\begin{rawhtml}]] and 
 [[\end{rawhtml}]]; the purpose is to embed HTML in a {\LaTeX} 
@@ -31,11 +32,16 @@ document before converting the document with {\tt latex2html}.
 [[braw]] and [[eraw]] hold those delimiters (or else empty strings).
 <<awk program for conversion to {\tt HTML}>>=
 <<functions>>
-BEGIN { <<initialization>> }
+BEGIN { 
+  <<initialization>> 
+}
 !doneraw { # do not do in BEGIN because not all awks assign variables yet
    if (raw) { braw = "\\begin{rawhtml}"; eraw = "\\end{rawhtml}" }
    else       braw = eraw = "" 
    doneraw = 1
+   if (!nocomment) {
+     print braw "<!-- this file was generated automatically by noweave;" " better not edit it-->" eraw
+   }
 }
 <<patterns>>
 END   { print "" }

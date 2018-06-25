@@ -1,15 +1,16 @@
 #!/bin/sh
-# Copyright 1994 by Norman Ramsey.  All rights reserved.
+# Copyright 1994-2018 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 # Do not try to understand this file!  Look at lib/tohtml.nw in the noweb source!
 
-delay=0 raw=0 localindex=0 noindex=0
+delay=0 raw=0 localindex=0 noindex=0 nocomment=0
 for i do
   case $i in
     -delay)      delay=1      ;;
     -raw)        raw=1        ;;
     -localindex) if [ $noindex -eq 0 ]; then localindex=1; fi;;
     -noindex)    localindex=0; noindex=1 ;;
+    -no-gen-comment) nocomment=1 ;;
   esac
 done
 nawk 'function writechunk(label, ref, tag, name, suffix) {
@@ -64,13 +65,18 @@ nawk 'function writechunk(label, ref, tag, name, suffix) {
         }
         return r s
       }
-      BEGIN { defns[0] = 0
-              defns_above[0] = 0
-              useitemstab[0] = 0 }
+      BEGIN { 
+        defns[0] = 0
+        defns_above[0] = 0
+        useitemstab[0] = 0 
+      }
       !doneraw { # do not do in BEGIN because not all awks assign variables yet
          if (raw) { braw = "\\begin{rawhtml}"; eraw = "\\end{rawhtml}" }
          else       braw = eraw = "" 
          doneraw = 1
+         if (!nocomment) {
+           print braw "<!-- this file was generated automatically by noweave;" " better not edit it-->" eraw
+         }
       }
       /^@begin code / { code = 1; printf "%s<pre>", braw; ecode = "</pre>" }
       /^@end code /   { code = 0; previscode = 1; useitemscount = split(useitemstab[thischunk], a)
@@ -228,4 +234,4 @@ nawk 'function writechunk(label, ref, tag, name, suffix) {
       /^@index enddefs/   { if (localindex) { printf " (links are to index).<p>\n" } }
       /^@index (beginuses|isdefined|useitem|enduses)/ { }   # use local links
       END   { print "" }' \
-   delay=$delay raw=$raw localindex=$localindex noindex=$noindex
+   delay=$delay raw=$raw localindex=$localindex noindex=$noindex nocomment=$nocomment
