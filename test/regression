@@ -1,0 +1,65 @@
+#!/usr/bin/env lua5.1-courseware
+
+require 'osutil'
+
+local function runf(...) return os.execute(string.format(...)) end
+
+local backends = { 'toascii', 'tohtml', 'toroff', 'totex', 'unmarkup', 'nt' }
+
+local filters = { 'noidx' }
+
+local fields = (require 'flags').parser()
+  :string('old', '/usr/lib/noweb'):help('installation directory of old version')
+  :numarg(1)
+  :parse(arg)
+
+local newdir = assert(arg[1])
+
+local function outfile(command)
+  local tmp = os.capture 'mktemp'
+  assert(runf('%s > %s', command, tmp) == 0)
+  return tmp
+end
+
+local options = { nt = '-R*' }
+
+local pipelines = { }
+do
+  local function extend(c, i)
+    local n = i == nil and #pipelines or i < 0 and #pipelines + 1 + i or i
+    local next = stringf('%s | %s', pipelines[i], stringf('$L/%s %s', c, options[c] or ''))
+    table.insert(pipelines, next)
+  end
+
+  table.insert(pipelines, '$L/markup %s')
+  for _, f in ipairs(filters) do
+    extend(f)
+  end
+  for i = 1, #pipelines do
+    for _, b in ipairs(backends) do
+      extend(b, i)
+    end
+  end
+end
+  
+local sources = os.capture('echo $HOME/noweb/dist/src/c/*.nw')
+
+
+for _, p in ipairs(pipelines) do
+  for f in sources:gmatch '%S+' do
+    local oldc = stringf(p:gsub('%$L', fields.old), f)
+    local newc = stringf(p:gsub('%$L', newdir),     f)
+    local oldout = outfile(oldc)
+    local newout = outfile(newc)
+
+    if runf('diff -u %s %s', oldout, newout) ~= 0 then
+      os.exit(1)
+    else
+      os.remove(oldout)
+      os.remove(newout)
+    end
+    os.exit(0)
+  end
+end
+
+  
