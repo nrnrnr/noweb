@@ -15,6 +15,42 @@ nawk 'function insertafter(i, s, n) {
       function slipin(s) {
         lines[nextline++] = s
       }
+      function fill_charcode_table(i) {
+        if (charcode_table[64])
+          return
+        for (i = 0; i < 256; i++) {
+          charcode_table[sprintf("%c", i)] = i
+        }
+      }
+
+      function charcode(s, i) {
+        fill_charcode_table()
+        return charcode_table[substr(s, i, 1)]
+      }       
+      function fill_crc_table(POLY, sum, i, j) {
+        POLY = 245 * 4096 * 4096
+        if (crc_table[0]) {
+          return
+        }
+        for (i = 0; i < 256; i ++) {
+          sum = 0
+          for (j = 7; j >= 0; j -= 1) {
+            if (and(i, lshift(1, j)) != 0) {
+              sum = xor(sum, rshift(POLY, j))
+            }
+          }
+          crc_table[i] = sum
+        }
+      }
+
+      function crc(s, sum, i) {
+        fill_crc_table()
+        sum = 0
+        for (i = 1; i <= length(s); i++) {
+          sum = xor(rshift(sum, 8), crc_table[and(xor(sum, charcode(s, i)), 255)])
+        }
+        return sum
+      }
       function newdefnlabel(arg, label) {
         defcount[arg] = defcount[arg] + 1
         label = "NW" curfile "-" uniqueid(arg) "-" alphacode(defcount[arg])
@@ -58,12 +94,15 @@ nawk 'function insertafter(i, s, n) {
         }
         return uidtable[name]
       }
-      function make_key(name,   key, l) {
+      function old_make_key(name,   key, l) {
          l = length(name)
          sub(/^.*\//, "", name)
          key = substr(name, 1, 3)
          if (l >= 3) key = key alphacode(l)
          return key
+      }
+      function make_key(name) {
+        return alphacode(crc(name))
       }
       function lognowebchunks(l, j, n, x) {
         if (loggednowebchunks > 0) return
