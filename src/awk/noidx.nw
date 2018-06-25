@@ -442,12 +442,16 @@ function insertitem(x, n, i, tmp) {
 @ %def alphasort insertitem
 <<initialization>>=
 sorted[0] = 0; sortkeys[0] = 0;
-<<functions>>=
+<<old, evil code>>=
 function sortkey(name, s) {
   s = name
   gsub(/[^a-zA-Z ]/, "", s)
-  return s
+  return s "\n" name # relies on \n sorting lower than other characters
 }
+<<functions>>=
+function sortkey(s) {
+  return tolower(s) "\n" s   # relies on \n sorting lower than other characters
+}  
 @ %def sortkey
 <<functions>>=
 function alphacode(n) {
