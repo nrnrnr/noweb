@@ -336,15 +336,6 @@ Q. What about noweb 3?
     sane person wants to use Lua 2.5. I believe that noweb 3 no longer fills a
     need.
 
-Q. Noweb's shell scripts seem to do dodgy things with files in /tmp. Why?
-
-    A. The short answer is that there is no portable version of mktemp(1) that
-    can be used as a shell command. Noweb's use of files like /tmp/totex$$.awk
-    is insecure, but portable. If you are packaging Noweb for reuse, do
-    consider replacing these filenames with calls to mktemp or tempfile or
-    whatever you have on your platform. For an idea of what's needed, consult
-    the patches included with the Debian source package.
-
 Q. I compiled and installed, and everything looks OK, but when I ran the
 examples, two things do not work.
 
