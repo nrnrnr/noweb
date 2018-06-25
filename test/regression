@@ -6,6 +6,7 @@ local posix = require 'courseware-posix'
 
 local stringf = string.format
 local function runf(...) return os.execute(string.format(...)) end
+local function eprintf(...) return io.stderr:write(string.format(...)) end
 
 local backends = { 'toascii', 'tohtml', 'toroff', 'totex', 'unmarkup', 'nt' }
 
@@ -18,10 +19,11 @@ local fields = (require 'flags').parser()
 
 local newdir = assert(arg[1])
 
-local function outfile(command)
+local function outfiles(command)
   local tmp = os.capture 'mktemp'
-  assert(runf('%s > %s', command, tmp) == 0)
-  return tmp
+  local tmp2 = os.capture 'mktemp'
+  runf('%s > %s 2> %s', command, tmp, tmp2)
+  return tmp, tmp2
 end
 
 local options = { nt = '-R*' }
@@ -52,20 +54,22 @@ local sources = os.capture('echo $HOME/noweb/dist/src/c/*.nw')
 
 
 for _, p in ipairs(pipelines) do
+  eprintf('%s\n', p)
   for f in sources:gmatch '%S+' do
     local oldc = stringf(p:gsub('%$L', fields.old), f)
     local newc = stringf(p:gsub('%$L', newdir),     f)
-    local oldout = outfile(oldc)
-    local newout = outfile(newc)
+    local oldout, o2 = outfiles(oldc)
+    local newout, n2 = outfiles(newc)
 
-    if runf('diff -u %s %s', oldout, newout) ~= 0 then
+    if runf('diff -u %s %s', oldout, newout) ~= 0
+    or runf('diff -u %s %s', o2, n2) ~= 0
+    then
+      eprintf('FAILED: %s\n        %s\n', oldc, newc)
       os.exit(1)
     else
-      io.stderr:write '.'
       os.remove(oldout)
       os.remove(newout)
     end
-    os.exit(0)
   end
 end
 
