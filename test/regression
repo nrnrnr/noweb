@@ -94,6 +94,8 @@ for _, p in ipairs(pipelines) do
     else
       os.remove(oldout)
       os.remove(newout)
+      os.remove(o2)
+      os.remove(n2)
     end
   end
 end
