@@ -3,6 +3,8 @@
 procedure main(args)
   while line := read() do
     if not (line[-1] == "~" | line == "." | find("/RCS", line) |
+            match("./.git", line) | find("/.#", line) |
+            find("/.gitignore", line) |
             (line ? (tab(find("./binaries/")), move(1))) |
             line[3] == line[-1] == "#" | line == "./nwsrcfilter") then 
       line ? (="./" & save_file(tab(0)))
