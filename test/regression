@@ -20,8 +20,8 @@ local fields = (require 'flags').parser()
 local newdir = assert(arg[1])
 
 local function outfiles(command)
-  local tmp = os.capture 'mktemp'
-  local tmp2 = os.capture 'mktemp'
+  local tmp = os.capture 'mktemp --tmpdir nwregression.XXXXXX'
+  local tmp2 = os.capture 'mktemp --tmpdir nwregression.XXXXXX'
   runf('%s > %s 2> %s', command, tmp, tmp2)
   return tmp, tmp2
 end
@@ -52,6 +52,27 @@ end
   
 local sources = os.capture('echo $HOME/noweb/dist/src/c/*.nw')
 
+local warned = { }
+
+local function warn(s)
+  if not warned[s] then
+    warned[s] = true
+    io.stderr:write(s, '\n')
+  end
+end
+
+local function diffs_ok(cmd)
+  if cmd:find '%Wnoidx%W.*%Wtotex%W' then
+    warn 'totex known to be incompatible when used with toidx'
+    return true
+  elseif cmd:find '%Wtotex%W' then
+    warn 'totex known to be incompatible even when used alone'
+    return true
+  elseif cmd:find '%Wnoidx%W.*%Wtohtml%W' then
+    warn 'tohtml known to be incompatible when used with toidx'
+    return true
+  end
+end
 
 for _, p in ipairs(pipelines) do
   eprintf('%s\n', p)
@@ -63,14 +84,12 @@ for _, p in ipairs(pipelines) do
 
     local rc  = runf('cmp -s %s %s', oldout, newout)
     local rc2 = runf('cmp -s %s %s', o2, n2)
-    if rc ~= 0 or rc2 ~= 0 then
+    if rc2 ~= 0 then
       eprintf('FAILED: %s\n        %s\n', oldc, newc)
-      if rc2 ~= 0 then
-        runf('colordiff -u %s %s | head -40', o2, n2)
-      end
-      if rc ~= 0 then
-        runf('colordiff -u %s %s | head -40', oldout, newout)
-      end
+      runf('colordiff -u %s %s | head -40', o2, n2)
+      os.exit(1)
+    elseif rc ~= 0 and not diffs_ok(newc) then
+      runf('colordiff -u %s %s | head -40', oldout, newout)
       os.exit(1)
     else
       os.remove(oldout)
@@ -78,5 +97,3 @@ for _, p in ipairs(pipelines) do
     end
   end
 end
-
-  
