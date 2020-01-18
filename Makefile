@@ -13,15 +13,15 @@ all:
 	@echo "You have no business running 'make' here; please look at the README file"
 	@exit 1
 source:
-	for i in src; do (cd $$i && make source); done
+	for i in src; do (cd $$i && $(MAKE) source); done
 www:
-	for i in src/xdoc examples; do (cd $$i && make www); done
+	for i in src/xdoc examples; do (cd $$i && $(MAKE) www); done
 
 clean:
-	for i in src examples contrib; do (cd $$i && make clean); done
+	for i in src examples contrib; do (cd $$i && $(MAKE) clean); done
 	rm -f nwsrcfilter *~ */*~
 clobber: clean
-	for i in src examples contrib; do (cd $$i && make clobber); done
+	for i in src examples contrib; do (cd $$i && $(MAKE) clobber); done
 
 DATE:
 	(./echo -n "Version $(VERSION) of "; date) > DATE
@@ -53,7 +53,7 @@ tar:	clean source nwsrcfilter DATE emacscheck
 
 ctan:	clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
-	(cd src && make boot)
+	(cd src && $(MAKE) boot)
 	rm -f ../noweb-$(VERSION)-ctan.zip
 	find ./* ! -type d -not -name FAQ.old -not -name '.git*' -print | ./nwsrcfilter | sed 's@^@noweb/@' | ( ln -s . noweb; zip ../noweb-$(VERSION)-ctan.zip -@; rm -f noweb )
 	chmod -w src/Makefile
@@ -63,4 +63,4 @@ emacscheck:
 	diff src/elisp/noweb-mode.el $(HOME)/emacs/noweb-mode.el
 
 checkin:
-	(cd src && make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin)
+	(cd src && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin)

@@ -11,11 +11,11 @@ OBJS = main.o pass1.o latex.o input.o scraps.o names.o arena.o global.o
 
 all:
 	noweb -t numarkup.nw
-	make $(TARGET)
+	$(MAKE) $(TARGET)
 
 install:
 	noweb -t numarkup.nw
-	make $(TARGET)
+	$(MAKE) $(TARGET)
 	strip $(TARGET)
 	cp $(TARGET) $(LIB)
 

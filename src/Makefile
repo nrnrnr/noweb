@@ -41,9 +41,9 @@ LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
 all:
-	(cd c && make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all)
-	for i in shell lib xdoc tex; do (cd $$i && make all); done
-	(cd $(LIBSRC) && make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all)
+	(cd c && $(MAKE) "CC=$(CC)" "CFLAGS=$(CFLAGS)" all)
+	for i in shell lib xdoc tex; do (cd $$i && $(MAKE) all); done
+	(cd $(LIBSRC) && $(MAKE) "ICONT=$(ICONT)" "ICONC=$(ICONC)" all)
 
 FAQ: FAQ.html
 	sleep 1; html2ascii FAQ.html > FAQ
@@ -101,13 +101,13 @@ install-code: install-shell
 	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
 	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
-	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
-	(cd lib && make LIB=$(LIB) install)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
+	(cd lib && $(MAKE) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
 	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
-	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
-	(cd lib && make LIB=$(LIB) uninstall)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
 install-man:
 	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
@@ -194,26 +194,26 @@ install-elisp:
 uninstall-elisp:
 	rm -f $(ELISP)/noweb-mode.el || true
 checkin:
-	for i in lib tex xdoc; do (cd $$i && make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
+	for i in lib tex xdoc; do (cd $$i && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
 	for i in c icon awk; do (cd $$i && ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
 	(cd elisp && ci -l $(CINAME) $(CIMSG) *.el)
 	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README FAQ COPYRIGHT nwmake *.nw
 
 source: FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make CPIF=">" source); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" source); done
 	sleep 1
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) touch); done
 touch:
 	touch FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) touch); done
 boot:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make boot); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) boot); done
 clean:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make clean); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) clean); done
 	rm -f nwsrcfilter *~ */*~
 
 clobber: clean
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make clobber); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) clobber); done
 
 Makefile: Makefile.nw
 	chmod +w Makefile
