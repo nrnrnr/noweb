@@ -77,7 +77,7 @@ noroff.1: noroff.nw docdate.nw
 	notangle -t8 noroff.nw docdate.nw | $(DOVERSION) > noroff.1
 
 wc.tex: ../../examples/wc.nw
-	(cd ../../examples; noweave -n -index wc.nw) > wc.tex
+	(cd ../../examples && noweave -n -index wc.nw) > wc.tex
 
 techrep.dvi: techrep.tex wc.tex
 	latex '\scrollmode \input '"techrep"

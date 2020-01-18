@@ -41,9 +41,9 @@ LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
 all:
-	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all
-	for i in shell lib xdoc tex; do (cd $$i; make all); done
-	cd $(LIBSRC); make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all
+	(cd c && make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all)
+	for i in shell lib xdoc tex; do (cd $$i && make all); done
+	(cd $(LIBSRC) && make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all)
 
 FAQ: FAQ.html
 	sleep 1; html2ascii FAQ.html > FAQ
@@ -101,13 +101,13 @@ install-code: install-shell
 	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
 	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
-	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install
-	cd lib; make LIB=$(LIB) install
+	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
+	(cd lib && make LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
 	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
-	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
-	cd lib; make LIB=$(LIB) uninstall
+	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd lib && make LIB=$(LIB) uninstall)
 install-man:
 	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
@@ -123,9 +123,9 @@ install-man:
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebstyle.7 > $(MAN7DIR)/nowebstyle.$(MAN7EXT)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebfilters.7 > $(MAN7DIR)/nowebfilters.$(MAN7EXT)
 	rm -f $(MANDIR)/noweave.$(MANEXT)
-	(cd $(MANDIR); ln notangle.$(MANEXT) noweave.$(MANEXT))
+	(cd $(MANDIR) && ln notangle.$(MANEXT) noweave.$(MANEXT))
 	rm -f $(MANDIR)/nountangle.$(MANEXT)
-	(cd $(MANDIR); ln notangle.$(MANEXT) nountangle.$(MANEXT))
+	(cd $(MANDIR) && ln notangle.$(MANEXT) nountangle.$(MANEXT))
 uninstall-man:
 	rm -f $(MANDIR)/cpif.$(MANEXT)
 	rm -f $(MANDIR)/nodefs.$(MANEXT)
@@ -157,9 +157,9 @@ install-gzipped-man:
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebstyle.7  | gzip -9 > $(MAN7DIR)/nowebstyle.$(MAN7EXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebfilters.7  | gzip -9 > $(MAN7DIR)/nowebfilters.$(MAN7EXT).gz
 	rm -f $(MANDIR)/noweave.$(MANEXT).gz
-	(cd $(MANDIR); ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
+	(cd $(MANDIR) && ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
 	rm -f $(MANDIR)/nountangle.$(MANEXT).gz
-	(cd $(MANDIR); ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
+	(cd $(MANDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
 	mkdir -p $(MAN) $(CATDIR) $(CAT7DIR)
@@ -176,9 +176,9 @@ install-preformat-man:
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebstyle.txt  | gzip > $(CAT7DIR)/nowebstyle.$(MAN7EXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nowebfilters.txt  | gzip > $(CAT7DIR)/nowebfilters.$(MAN7EXT).gz
 	rm -f $(CATDIR)/noweave.$(MANEXT).gz
-	(cd $(CATDIR); ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
+	(cd $(CATDIR) && ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
 	rm -f $(CATDIR)/nountangle.$(MANEXT).gz
-	(cd $(CATDIR); ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
+	(cd $(CATDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-tex:
 	mkdir -p $(TEXINPUTS)
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
@@ -194,26 +194,26 @@ install-elisp:
 uninstall-elisp:
 	rm -f $(ELISP)/noweb-mode.el || true
 checkin:
-	for i in lib tex xdoc; do (cd $$i; make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
-	for i in c icon awk; do (cd $$i; ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
-	(cd elisp; ci -l $(CINAME) $(CIMSG) *.el)
+	for i in lib tex xdoc; do (cd $$i && make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
+	for i in c icon awk; do (cd $$i && ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
+	(cd elisp && ci -l $(CINAME) $(CIMSG) *.el)
 	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README FAQ COPYRIGHT nwmake *.nw
 
 source: FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make CPIF=">" source); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make CPIF=">" source); done
 	sleep 1
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make touch); done
 touch:
 	touch FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make touch); done
 boot:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make boot); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make boot); done
 clean:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clean); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make clean); done
 	rm -f nwsrcfilter *~ */*~
 
 clobber: clean
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clobber); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && make clobber); done
 
 Makefile: Makefile.nw
 	chmod +w Makefile
