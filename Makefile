@@ -41,7 +41,7 @@ nwsrcfilter: nwsrcfilter.icn
 tarnames: clean source nwsrcfilter DATE
 	find . -not -type d -not -name FAQ.old -print | ./nwsrcfilter
 
-tar:	clean source nwsrcfilter DATE emacscheck
+tar: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
 	rm -rf /tmp/noweb-$(VERSION)
 	mkdir /tmp/noweb-$(VERSION)
@@ -51,7 +51,7 @@ tar:	clean source nwsrcfilter DATE emacscheck
 	(cd .. ; ln -s noweb-$(VERSION).tgz noweb.tgz)
 	chmod -w src/Makefile
 
-ctan:	clean source nwsrcfilter DATE emacscheck
+ctan: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
 	(cd src; make boot)
 	rm -f ../noweb-$(VERSION)-ctan.zip

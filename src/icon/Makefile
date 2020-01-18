@@ -1,18 +1,18 @@
 SHELL=/bin/sh
-LIB=/dev/null		# to be overridden
-BIN=/dev/null		# to be overridden
+LIB=/dev/null  # to be overridden
+BIN=/dev/null  # to be overridden
 ICONC=iconc -p -L/usr/X11R6/lib     # override to icont if no iconc on your system
-ICONT=icont		# override to iconc if all filters should be compiled
-CPIF=| cpif		# change to ">" to insure all sources always made
+ICONT=icont    # override to iconc if all filters should be compiled
+CPIF=| cpif    # change to ">" to insure all sources always made
 
 LIBEXECS=totex disambiguate noidx tohtml elide l2h docs2comments \
-       autodefs.tex autodefs.icon autodefs.yacc autodefs.sml autodefs.pascal \
+	autodefs.tex autodefs.icon autodefs.yacc autodefs.sml autodefs.pascal \
 	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix xchunks pipedocs
 LIBSPECIAL=autodefs.cee
 BINEXECS=noindex sl2h htmltoc
 EXECS=$(LIBEXECS) $(BINEXECS) $(LIBSPECIAL) pdcached
 SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
-        yaccdefs.icn noindex.icn smldefs.icn tohtml.icn cdefs.icn elide.icn \
+	yaccdefs.icn noindex.icn smldefs.icn tohtml.icn cdefs.icn elide.icn \
 	l2h.icn sl2h.icn pascaldefs.icn promeladefs.icn lrtldefs.icn asdldefs.icn \
 	mmixdefs.icn htmltoc.icn xchunks.icn docs2comments.icn pipedocs.icn pdcached.icn
 
@@ -45,7 +45,7 @@ uninstall:
 	rm -f $(LIB)/autodefs.c
 
 clean:
-	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~  *.toc *.html *.u1 *.u2 
+	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~ *.toc *.html *.u1 *.u2
 	/bin/rm -f *.[ch] *.ps *.gz
 	/bin/rm -f $(EXECS)
 	/bin/rm -f sl2h

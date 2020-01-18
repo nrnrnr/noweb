@@ -1,4 +1,4 @@
-LIB=/dev/null	# override for installation
+LIB=/dev/null  # override for installation
 SHELL=/bin/sh
 all: noxref.krom
 	chmod +x noxref.krom

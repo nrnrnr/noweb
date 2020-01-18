@@ -1,7 +1,8 @@
-LIB=/dev/null	# to be overridden by install
+LIB=/dev/null  # to be overridden by install
 
 .SUFFIXES: .nw .icn
-.nw.icn: ;	notangle -L'#line %-1L "%F"%N' $*.nw | cpif $*.icn
+.nw.icn:
+	notangle -L'#line %-1L "%F"%N' $*.nw | cpif $*.icn
 
 all: d2tex
 source: d2tex
@@ -12,4 +13,4 @@ install:
 hospital.tex: hospital.nw d2tex
 	noweave -delay -filter ./d2tex hospital.nw > $@
 clean:
-	/bin/rm -f hospital.tex *.dvi *.aux *.log *.blg *.bbl *~ 
+	/bin/rm -f hospital.tex *.dvi *.aux *.log *.blg *.bbl *~

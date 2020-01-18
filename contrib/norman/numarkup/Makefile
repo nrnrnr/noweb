@@ -1,15 +1,17 @@
-LIB=/dev/null	# to be overridden
-CC = cc
-CFLAGS = -O
+LIB=/dev/null  # to be overridden
+CC=cc
+CFLAGS=-O
 
-TARGET = numarkup
-OBJS = main.o pass1.o latex.o input.o scraps.o names.o arena.o global.o
+TARGET=numarkup
+OBJS=main.o pass1.o latex.o input.o scraps.o names.o arena.o global.o
 
 .SUFFIXES: .nw
-.nw.c: ;	notangle -R"$@"'*' -L $< | cpif $@
-.nw.h: ;	notangle -R"$@" $< | cpif $@
+.nw.c:
+	notangle -R"$@"'*' -L $< | cpif $@
+.nw.h:
+	notangle -R"$@" $< | cpif $@
 
-all: 
+all:
 	noweb -t numarkup.nw
 	make $(TARGET)
 
@@ -34,4 +36,3 @@ numarkup.html: numarkup.nw
 
 numarkup.tex: numarkup.nw
 	noweb -o numarkup.nw
-

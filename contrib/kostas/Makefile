@@ -10,8 +10,8 @@ WEAVE=noweave -delay -filter icon.filter -index
 .SUFFIXES: .nw .icn .tex .dvi
 
 
-all: C.filter C++.filter icon.filter oot.filter math.filter\
-     autodefs.oot autodefs.math
+all: C.filter C++.filter icon.filter oot.filter math.filter \
+	autodefs.oot autodefs.math
 
 install:
 	mv *.filter $(LIB)
@@ -19,26 +19,26 @@ install:
 
 
 # TeX files.
-%.tex : %.nw
+%.tex: %.nw
 	$(WEAVE) $< > $@
 pp.tex: pp.nw
 	noweave -delay -autodefs icon -filter icon.filter -index pp.nw > pp.tex
-%.dvi : %.tex
+%.dvi: %.tex
 	latex $<
 # Don't delete the intermediate .tex file.
-.PRECIOUS : %.tex
+.PRECIOUS: %.tex
 
 
 # Icon files.
-C.icn: pp.nw  C_translation_table
+C.icn: pp.nw C_translation_table
 	$(TANGLE) -R"C" pp.nw > $@
-C++.icn: pp.nw  C++_translation_table
+C++.icn: pp.nw C++_translation_table
 	$(TANGLE) -R"C++" pp.nw > $@
-icon.icn: pp.nw  icon_translation_table
+icon.icn: pp.nw icon_translation_table
 	$(TANGLE) -R"Icon" pp.nw > $@
-oot.icn: pp.nw  oot_translation_table
+oot.icn: pp.nw oot_translation_table
 	$(TANGLE) -R"OOT" pp.nw > $@
-math.icn: pp.nw  math_translation_table 
+math.icn: pp.nw math_translation_table
 	$(TANGLE) -R"Mathematica" pp.nw > $@
 
 ootdefs.icn: ootdefs.nw
@@ -48,7 +48,7 @@ mathdefs.icn: mathdefs.nw
 
 
 # Executables: filters.
-%.filter : %.icn
+%.filter: %.icn
 	$(ICONC) -o $@ $<
 
 # Executables: autodefs.
@@ -70,6 +70,3 @@ rem := $(rem) $(nowebs:.nw=.toc)
 # Also remove the Icon files for the filters.
 clean:
 	-rm -f $(rem) C.icn C++.icn icon.icn oot.icn math.icn *.filter autodefs.*
-
-
-

@@ -4,14 +4,19 @@ NOTANGLE=nountangle -m3
 NOWEAVE=noweave
 
 .SUFFIXES: .i3 .m3 .nw .tex .dvi .html
-.nw.html: ;	$(NOWEAVE) -filter btdefn -index -html $*.nw > $*.html
-.nw.tex: ;	$(NOWEAVE) -index -filter btdefn $*.nw > $*.tex
-.nw.i3:	;	$(NOTANGLE) -Rinterface -L'<* LINE %L "%F" *>%N' $*.nw > $*.i3
-.nw.m3:	;	$(NOTANGLE) -L'<* LINE %L "%F" *>%N' $*.nw > $*.m3
-.tex.dvi: ;	latex '\scrollmode \input '"$*"; while grep -s 'Rerun to get cross-references right' $*.log; do latex '\scrollmode \input '"$*"; done
+.nw.html:
+	$(NOWEAVE) -filter btdefn -index -html $*.nw > $*.html
+.nw.tex:
+	$(NOWEAVE) -index -filter btdefn $*.nw > $*.tex
+.nw.i3:
+	$(NOTANGLE) -Rinterface -L'<* LINE %L "%F" *>%N' $*.nw > $*.i3
+.nw.m3:
+	$(NOTANGLE) -L'<* LINE %L "%F" *>%N' $*.nw > $*.m3
+.tex.dvi:
+	latex '\scrollmode \input '"$*"; while grep -s 'Rerun to get cross-references right' $*.log; do latex '\scrollmode \input '"$*"; done
 
 HTML=breakmodel.html compress.html dag.html graphs.html mipscoder.html primes.html \
-     scanner.html test.html tree.html wc.html wcni.html
+	scanner.html test.html tree.html wc.html wcni.html
 DVI=compress.dvi dag.dvi mipscoder.dvi scanner.dvi tree.dvi test.dvi wc.dvi
 
 

@@ -1,17 +1,21 @@
 WWW=$(HOME)/www/noweb
 SHELL=/bin/sh
 .SUFFIXES: .1 .7 .txt .ps
-.1.txt: ;	nroff -man $*.1 > $*.txt
-.1.ps: ;	psroff -t -man $*.1 > $*.ps
-.7.txt: ;	nroff -man $*.7 > $*.txt
-.7.ps: ;	psroff -t -man $*.7 > $*.ps
+.1.txt:
+	nroff -man $*.1 > $*.txt
+.1.ps:
+	psroff -t -man $*.1 > $*.ps
+.7.txt:
+	nroff -man $*.7 > $*.txt
+.7.ps:
+	psroff -t -man $*.7 > $*.ps
 
 MANPAGES=notangle.1   cpif.1   noweb.1   nodefs.1   noroots.1   noindex.1   \
-         nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1 htmltoc.1   \
-	 noroff.1
+	nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1   htmltoc.1   \
+	noroff.1
 TXTPAGES=notangle.txt cpif.txt noweb.txt nodefs.txt noroots.txt noindex.txt \
-         nowebstyle.txt nowebfilters.txt nuweb2noweb.txt sl2h.txt htmltoc.txt   \
-	 noroff.txt
+	nowebstyle.txt nowebfilters.txt nuweb2noweb.txt sl2h.txt htmltoc.txt \
+	noroff.txt
 SRCS=$(MANPAGES) $(TXTPAGES)
 
 NAME="name of version checked in"
@@ -104,7 +108,7 @@ guide.uu: guide.ps
 guide.html: guide.dvi
 	sl2h guide.tex | htmltoc > $@
 
-clean: ;	/bin/rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
+clean:
+	/bin/rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
 clobber: clean
 	rm -f *.1 *.7 *.txt
-

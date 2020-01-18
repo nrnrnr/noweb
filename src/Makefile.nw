@@ -32,9 +32,9 @@ TEXINPUTS=/usr/local/tex/inputs
 ELISP=/dev/null
 
 # change WEAVE if you want a different version of noweave to be installed
-WEAVE=noweave		
+WEAVE=noweave
 
-# Stop editing.	 No user-serviceable parts below.
+# Stop editing.  No user-serviceable parts below.
 SHELL=/bin/sh
 CINAME=
 CIMSG=
@@ -79,7 +79,7 @@ install-code: install-shell
 	cd lib; make LIB=$(LIB) install
 
 uninstall-code: uninstall-shell
-	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses 
+	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
 	cd lib; make LIB=$(LIB) uninstall
 @ I do the [[<<shell binaries>>]] before [[$(LIBSRC)]] so that the
@@ -111,7 +111,7 @@ install-man:
 uninstall-man:
 	<<uninstall ordinary pages>>
 	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
-@ 
+@
 Slackware no longer uses preformatted compressed pages, just
 compressed pages.
 <<*>>=
@@ -198,7 +198,7 @@ install-elisp:
 
 uninstall-elisp:
 	rm -f $(ELISP)/noweb-mode.el || true
-@ 
+@
 <<*>>=
 checkin:
 	for i in lib tex xdoc; do (cd $$i && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@); done

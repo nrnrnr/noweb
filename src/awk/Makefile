@@ -8,10 +8,10 @@ SHELL=/bin/sh
 LIBEXECSBARE=noidx tohtml
 LIBEXECSDEP=totex
 LIBEXECS=$(LIBEXECSBARE) $(LIBEXECSDEP)
-BINEXECS=noindex 
+BINEXECS=noindex
 EXECS=$(BINEXECS) $(LIBEXECS)
 
-all:	$(EXECS)
+all: $(EXECS)
 	chmod +x $(EXECS)
 sources: $(EXECS)
 touch: $(EXECS)
@@ -42,6 +42,7 @@ tohtml: tohtml.nw
 noindex: noindex.nw
 	notangle -R$@ noindex.nw > $@
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
 clobber: clean
 	rm -f totex noidx tohtml noindex

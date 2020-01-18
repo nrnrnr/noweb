@@ -9,9 +9,9 @@ RCSFILES=noweave.nw notangle.nw noweb.nw noroff.nw noroots nocount Makefile
 CINAME=
 CIMSG=
 
-all:	$(SRCS)
+all: $(SRCS)
 source: $(SRCS)
-touch:	$(SRCS)
+touch: $(SRCS)
 	touch $(SRCS)
 boot:
 	touch $(SRCS)
@@ -31,5 +31,7 @@ noweb: noweb.nw
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
-clobber: clean ;	rm -f $(SRCS)
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
+clobber: clean
+	rm -f $(SRCS)

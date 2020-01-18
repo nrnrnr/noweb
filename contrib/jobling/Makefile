@@ -1,9 +1,9 @@
-PROG = correct-refs
-DOCSRC = $(PROG).tex 
-PROGSRC = $(PROG).csh 
-SCRIPTS = list-anchors.awk awk-scripts.awk
+PROG=correct-refs
+DOCSRC=$(PROG).tex
+PROGSRC=$(PROG).csh
+SCRIPTS=list-anchors.awk awk-scripts.awk
 
-all:    correct-refs.tex correct-refs.csh all-scripts
+all: correct-refs.tex correct-refs.csh all-scripts
 
 correct-refs.tex: correct-refs.nw
 	noweave -delay -index $< > $@
@@ -24,7 +24,7 @@ install:
 tidy:
 	-rm *~ *% *.bak *.log *.blg
 
-clean:  tidy
+clean: tidy
 	-rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
 
 realclean: clean

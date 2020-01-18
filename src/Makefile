@@ -27,9 +27,9 @@ TEXINPUTS=/usr/local/tex/inputs
 ELISP=/dev/null
 
 # change WEAVE if you want a different version of noweave to be installed
-WEAVE=noweave		
+WEAVE=noweave
 
-# Stop editing.	 No user-serviceable parts below.
+# Stop editing.  No user-serviceable parts below.
 SHELL=/bin/sh
 CINAME=
 CIMSG=
@@ -105,7 +105,7 @@ install-code: install-shell
 	cd lib; make LIB=$(LIB) install
 
 uninstall-code: uninstall-shell
-	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses 
+	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
 	cd lib; make LIB=$(LIB) uninstall
 install-man:
