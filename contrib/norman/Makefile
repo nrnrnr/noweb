@@ -7,4 +7,3 @@ source: ;	for i in $(DIRS); do (cd $$i; make source); done
 clean: ;	for i in $(DIRS); do (cd $$i; make clean); done
 iconlib:	# cheap hack for slackmake
 	true
-

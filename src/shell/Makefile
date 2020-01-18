@@ -25,7 +25,7 @@ noweave: noweave.nw
 notangle: notangle.nw
 	notangle -Rnotangle notangle.nw > notangle
 
-noweb: noweb.nw 
+noweb: noweb.nw
 	notangle -Rnoweb noweb.nw > noweb
 
 noroff toroff tmac.w: roff.nw

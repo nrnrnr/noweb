@@ -45,7 +45,7 @@ uninstall:
 	rm -f $(LIB)/autodefs.c
 
 clean:
-	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~  *.toc *.html *.u1 *.u2 
+	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~  *.toc *.html *.u1 *.u2
 	/bin/rm -f *.[ch] *.ps *.gz
 	/bin/rm -f $(EXECS)
 	/bin/rm -f sl2h

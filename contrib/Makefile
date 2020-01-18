@@ -10,4 +10,3 @@ install: ;	for i in $(DIRS); do (cd $$i; make LIB=$(LIB) BIN=$(BIN) install); do
 source: ;	for i in $(DIRS); do (cd $$i; make source); done
 clean: ;	for i in $(DIRS); do (cd $$i; make clean); done
 clobber: clean
-

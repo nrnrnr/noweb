@@ -62,5 +62,3 @@ emacscheck:
 
 checkin:
 	(cd src; make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin)
-
-

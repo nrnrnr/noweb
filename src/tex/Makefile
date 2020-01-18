@@ -22,7 +22,7 @@ noweb.sty: support.nw
 support.tex: support.nw
 	noweave -delay -x support.nw > support.tex
 
-clean: 
+clean:
 	/bin/rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
 	/bin/rm -f support.tex
 clobber: clean

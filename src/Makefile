@@ -27,7 +27,7 @@ TEXINPUTS=/usr/local/tex/inputs
 ELISP=/dev/null
 
 # change WEAVE if you want a different version of noweave to be installed
-WEAVE=noweave		
+WEAVE=noweave
 
 # Stop editing.	 No user-serviceable parts below.
 SHELL=/bin/sh
@@ -40,8 +40,8 @@ CAT7DIR=$(MAN)/cat$(MAN7EXT)
 LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
-all: 
-	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all 
+all:
+	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all
 	for i in shell lib xdoc tex; do (cd $$i; make all); done
 	cd $(LIBSRC); make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all
 
@@ -105,7 +105,7 @@ install-code: install-shell
 	cd lib; make LIB=$(LIB) install
 
 uninstall-code: uninstall-shell
-	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses 
+	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
 	cd $(LIBSRC); make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall
 	cd lib; make LIB=$(LIB) uninstall
 install-man:

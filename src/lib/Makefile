@@ -17,7 +17,7 @@ install: all
 	sed 's@|LIBDIR|@$(LIB)@g' h2a > $(LIB)/h2a
 	chmod +x $(LIB)/pipedocs $(LIB)/toascii $(LIB)/h2a
 
-uninstall: 
+uninstall:
 	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(LIB)/$$i; done
 	rm -f $(LIB)/pipedocs
 

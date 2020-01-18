@@ -1,6 +1,6 @@
 PROG = correct-refs
-DOCSRC = $(PROG).tex 
-PROGSRC = $(PROG).csh 
+DOCSRC = $(PROG).tex
+PROGSRC = $(PROG).csh
 SCRIPTS = list-anchors.awk awk-scripts.awk
 
 all:    correct-refs.tex correct-refs.csh all-scripts

@@ -38,7 +38,7 @@ icon.icn: pp.nw  icon_translation_table
 	$(TANGLE) -R"Icon" pp.nw > $@
 oot.icn: pp.nw  oot_translation_table
 	$(TANGLE) -R"OOT" pp.nw > $@
-math.icn: pp.nw  math_translation_table 
+math.icn: pp.nw  math_translation_table
 	$(TANGLE) -R"Mathematica" pp.nw > $@
 
 ootdefs.icn: ootdefs.nw
@@ -70,6 +70,3 @@ rem := $(rem) $(nowebs:.nw=.toc)
 # Also remove the Icon files for the filters.
 clean:
 	-rm -f $(rem) C.icn C++.icn icon.icn oot.icn math.icn *.filter autodefs.*
-
-
-

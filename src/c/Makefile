@@ -16,7 +16,7 @@ MARKUPOBJS=markmain.o strsave.o markup.o errors.o getline.o columns.o
 FILES=markmain.nw markup.nw \
       main.nw notangle.nw match.nw mnt.nw modules.nw modtrees.nw \
       finduses.nw recognize.nw \
-      getline.nw columns.nw errors.nw strsave.nw 
+      getline.nw columns.nw errors.nw strsave.nw
 
 SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
 	modules.h notangle.h recognize.h strsave.h \
@@ -62,7 +62,7 @@ touch: $(SRCS)
 boot: ;	touch $(SRCS)
 
 clean: ;	rm -f nt markup mnt finduses fakepretty
-		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~ 
+		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~
 		rm -f *.atac *.trace *.html
 
 clobber:	clean
@@ -94,19 +94,19 @@ fakepretty: $(FPOBJS)
 	$(CC) $(CFLAGS) -o fakepretty $(FPOBJS)
 
 
-columns.o:       columns.h 
-errors.o:        errors.h 
-finduses.o:     errors.h match.h getline.h recognize.h 
-getline.o:      columns.h errors.h getline.h 
+columns.o:       columns.h
+errors.o:        errors.h
+finduses.o:     errors.h match.h getline.h recognize.h
+getline.o:      columns.h errors.h getline.h
 main.o:         notangle.h errors.h columns.h modules.h modtrees.h
-markmain.o:     errors.h markup.h getline.h columns.h 
-markup.o:       markup.h strsave.h errors.h 
-match.o:        match.h 
-mnt.o:          modules.h modtrees.h notangle.h errors.h columns.h strsave.h 
-modtrees.o:     strsave.h modules.h modtrees.h errors.h 
-modules.o:      modules.h modtrees.h errors.h columns.h strsave.h 
-notangle.o:     strsave.h getline.h modules.h modtrees.h errors.h match.h notangle.h 
+markmain.o:     errors.h markup.h getline.h columns.h
+markup.o:       markup.h strsave.h errors.h
+match.o:        match.h
+mnt.o:          modules.h modtrees.h notangle.h errors.h columns.h strsave.h
+modtrees.o:     strsave.h modules.h modtrees.h errors.h
+modules.o:      modules.h modtrees.h errors.h columns.h strsave.h
+notangle.o:     strsave.h getline.h modules.h modtrees.h errors.h match.h notangle.h
 nwmktemp.o:
-pretty.o:	getline.h match.h errors.h pretty.h strsave.h 
-recognize.o:    
-strsave.o:      strsave.h errors.h 
+pretty.o:	getline.h match.h errors.h pretty.h strsave.h
+recognize.o:
+strsave.o:      strsave.h errors.h

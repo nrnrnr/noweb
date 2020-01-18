@@ -107,4 +107,3 @@ guide.html: guide.dvi
 clean: ;	/bin/rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
 clobber: clean
 	rm -f *.1 *.7 *.txt
-
