@@ -45,15 +45,15 @@ tar: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
 	rm -rf /tmp/noweb-$(VERSION)
 	mkdir /tmp/noweb-$(VERSION)
-	tar cvf - `find . ! -type d -not -name FAQ.old -print | ./nwsrcfilter` | (cd /tmp/noweb-$(VERSION) ; tar xf - )
-	(cd /tmp; tar cf - noweb-$(VERSION) ) | gzip -v > ../noweb-$(VERSION).tgz
+	tar cvf - `find . ! -type d -not -name FAQ.old -print | ./nwsrcfilter` | (cd /tmp/noweb-$(VERSION) && tar xf - )
+	(cd /tmp && tar cf - noweb-$(VERSION) ) | gzip -v > ../noweb-$(VERSION).tgz
 	rm -f ../noweb.tgz
-	(cd .. ; ln -s noweb-$(VERSION).tgz noweb.tgz)
+	(cd .. && ln -s noweb-$(VERSION).tgz noweb.tgz)
 	chmod -w src/Makefile
 
 ctan: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
-	(cd src; make boot)
+	(cd src && make boot)
 	rm -f ../noweb-$(VERSION)-ctan.zip
 	find ./* ! -type d -not -name FAQ.old -not -name '.git*' -print | ./nwsrcfilter | sed 's@^@noweb/@' | ( ln -s . noweb; zip ../noweb-$(VERSION)-ctan.zip -@; rm -f noweb )
 	chmod -w src/Makefile
