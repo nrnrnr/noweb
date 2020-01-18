@@ -53,7 +53,7 @@ tar: clean source nwsrcfilter DATE emacscheck
 
 ctan: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
-	(cd src && make boot)
+	(cd src && $(MAKE) boot)
 	rm -f ../noweb-$(VERSION)-ctan.zip
 	find ./* ! -type d -not -name FAQ.old -not -name '.git*' -print | ./nwsrcfilter | sed 's@^@noweb/@' | ( ln -s . noweb; zip ../noweb-$(VERSION)-ctan.zip -@; rm -f noweb )
 	chmod -w src/Makefile

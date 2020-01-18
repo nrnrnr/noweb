@@ -101,13 +101,13 @@ install-code: install-shell
 	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
 	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
-	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
-	(cd lib && make LIB=$(LIB) install)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
+	(cd lib && $(MAKE) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
 	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
-	(cd $(LIBSRC) && make ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
-	(cd lib && make LIB=$(LIB) uninstall)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
 install-man:
 	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
@@ -202,7 +202,7 @@ checkin:
 source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 	sleep 1
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) touch); done
 touch:
 	touch FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
