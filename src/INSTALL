@@ -44,7 +44,7 @@ To build noweb:
        - make sure you have permission to write to these directories
        - refrain from making them point into the noweb source distribution
        - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH
-     If you don't use emacs, just leave ELISP set to /dev/null.
+     If you don't use emacs, just leave ELISP set to blank.
 
   2) If your modern awk is called something other than `nawk', run the
      `awkname' script to change all references to nawk.  For example,

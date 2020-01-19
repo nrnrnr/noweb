@@ -17,14 +17,14 @@ ICONT=icont
 # MANEXT is the extension for your commands' man pages (usually 1 or l)
 # MAN7EXT is the extension for the nowebstyle man page (usually 7)
 # TEXINPUTS is the directory for TeX macro files
-# ELISP is the directory for emacs lisp files, or /dev/null not to install
+# ELISP is the directory for emacs lisp files, or blank to not install
 BIN=/usr/local/noweb
 LIB=/usr/local/noweb/lib
 MAN=/usr/local/noweb/man
 MANEXT=1
 MAN7EXT=7
 TEXINPUTS=/usr/local/tex/inputs
-ELISP=/dev/null
+ELISP=
 
 # change WEAVE if you want a different version of noweave to be installed
 WEAVE=noweave
@@ -145,11 +145,10 @@ uninstall-tex:
 	for i in nwmac.tex noweb.sty; do rm -f $(DESTDIR)$(TEXINPUTS)/$$i; done
 
 install-elisp:
-	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(DESTDIR)$(ELISP); fi
-	cp elisp/noweb-mode.el $(DESTDIR)$(ELISP)
+	if [ -n "$(ELISP)" ]; then mkdir -p $(DESTDIR)$(ELISP); cp elisp/noweb-mode.el $(DESTDIR)$(ELISP); fi
 
 uninstall-elisp:
-	rm -f $(DESTDIR)$(ELISP)/noweb-mode.el || true
+	if [ -n "$(ELISP)" ]; then rm -f $(DESTDIR)$(ELISP)/noweb-mode.el; fi
 source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 	sleep 1
