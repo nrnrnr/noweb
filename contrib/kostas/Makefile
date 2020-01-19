@@ -22,7 +22,7 @@ install:
 %.tex : %.nw
 	$(WEAVE) $< > $@
 pp.tex: pp.nw
-	noweave -delay -autodefs icon -filter icon.filter -index pp.nw > pp.tex
+	noweave -delay -autodefs icon -filter icon.filter -index pp.nw > $@
 %.dvi : %.tex
 	latex $<
 # Don't delete the intermediate .tex file.
@@ -53,9 +53,9 @@ mathdefs.icn: mathdefs.nw
 
 # Executables: autodefs.
 autodefs.oot: ootdefs.icn
-	$(ICONC) -o autodefs.oot ootdefs.icn
+	$(ICONC) -o $@ ootdefs.icn
 autodefs.math: mathdefs.icn
-	$(ICONC) -o autodefs.math mathdefs.icn
+	$(ICONC) -o $@ mathdefs.icn
 
 
 # Cleaning: remove all files that can be recreated from noweb sources.

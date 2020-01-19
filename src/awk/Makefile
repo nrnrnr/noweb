@@ -31,16 +31,16 @@ uninstall:
 source: $(EXECS)
 
 totex: totex.nw
-	notangle -Rtotex totex.nw > totex
+	notangle -R$@ totex.nw > $@
 
 noidx: noidx.nw
-	notangle noidx.nw > noidx
+	notangle noidx.nw > $@
 
 tohtml: tohtml.nw
-	notangle tohtml.nw > tohtml
+	notangle tohtml.nw > $@
 
 noindex: noindex.nw
-	notangle -Rnoindex noindex.nw > noindex
+	notangle -R$@ noindex.nw > $@
 
 clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
 clobber: clean

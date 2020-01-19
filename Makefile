@@ -13,18 +13,18 @@ all:
 	@echo "You have no business running 'make' here; please look at the README file"
 	@exit 1
 source:
-	for i in src; do (cd $$i && $(MAKE) source); done
+	for i in src; do (cd $$i && $(MAKE) $@); done
 www:
-	for i in src/xdoc examples; do (cd $$i && $(MAKE) www); done
+	for i in src/xdoc examples; do (cd $$i && $(MAKE) $@); done
 
 clean:
-	for i in src examples contrib; do (cd $$i && $(MAKE) clean); done
+	for i in src examples contrib; do (cd $$i && $(MAKE) $@); done
 	rm -f nwsrcfilter *~ */*~
 clobber: clean
-	for i in src examples contrib; do (cd $$i && $(MAKE) clobber); done
+	for i in src examples contrib; do (cd $$i && $(MAKE) $@); done
 
 DATE:
-	(./echo -n "Version $(VERSION) of "; date) > DATE
+	(./echo -n "Version $(VERSION) of "; date) > $@
 
 versioncheck:
 	@if [ -z "$(UPPERVERSION)" ]; then echo "run 'make versioncheck' in the parent directory, not here" 1>&2; exit 1; fi
@@ -36,7 +36,7 @@ versioncheck:
 	@if fgrep -s "version $(VERSION)" src/xdoc/notangle.txt; then echo "Version $(VERSION) OK in src/xdoc/notangle.txt"; else echo "Version mismatch in src/xdoc/notangle.txt"; exit 1; fi
 
 nwsrcfilter: nwsrcfilter.icn
-	icont nwsrcfilter
+	icont $@
 
 tarnames: clean source nwsrcfilter DATE
 	find . -not -type d -not -name FAQ.old -print | ./nwsrcfilter
@@ -63,4 +63,4 @@ emacscheck:
 	diff src/elisp/noweb-mode.el $(HOME)/emacs/noweb-mode.el
 
 checkin:
-	(cd src && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin)
+	(cd src && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@)

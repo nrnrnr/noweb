@@ -41,43 +41,43 @@ $(WWW)/guide.html: guide.html
 	cp guide.html $(WWW)
 
 notangle.1: manpage.nw ../shell/noweave.nw docdate.nw
-	notangle -t8 -Rnotangle.1  manpage.nw ../shell/noweave.nw docdate.nw | $(DOVERSION) > notangle.1
+	notangle -t8 -R$@ manpage.nw ../shell/noweave.nw docdate.nw | $(DOVERSION) > $@
 
 nowebstyle.7: manpage.nw ../tex/support.nw docdate.nw
-	notangle -t8 -Rnowebstyle.7 manpage.nw ../tex/support.nw docdate.nw | $(DOVERSION) > nowebstyle.7
+	notangle -t8 -R$@ manpage.nw ../tex/support.nw docdate.nw | $(DOVERSION) > $@
 
 nowebfilters.7: nowebfilters.nw docdate.nw
-	notangle -t8 nowebfilters.nw docdate.nw | $(DOVERSION) > nowebfilters.7
+	notangle -t8 nowebfilters.nw docdate.nw | $(DOVERSION) > $@
 
 noweb.1: manpage.nw docdate.nw
-	notangle -t8 -Rnoweb.1 manpage.nw docdate.nw | $(DOVERSION) > noweb.1
+	notangle -t8 -R$@ manpage.nw docdate.nw | $(DOVERSION) > $@
 
 nodefs.1: nodefs.nw docdate.nw
-	notangle -t8 nodefs.nw docdate.nw | $(DOVERSION) > nodefs.1
+	notangle -t8 nodefs.nw docdate.nw | $(DOVERSION) > $@
 
 noroots.1: noroots.nw docdate.nw
-	notangle -t8 noroots.nw docdate.nw | $(DOVERSION) > noroots.1
+	notangle -t8 noroots.nw docdate.nw | $(DOVERSION) > $@
 
 noindex.1: noindex.nw docdate.nw
-	notangle -t8 noindex.nw docdate.nw | $(DOVERSION) > noindex.1
+	notangle -t8 noindex.nw docdate.nw | $(DOVERSION) > $@
 
 sl2h.1: sl2h.nw docdate.nw
-	notangle -t8 sl2h.nw docdate.nw | $(DOVERSION) > sl2h.1
+	notangle -t8 sl2h.nw docdate.nw | $(DOVERSION) > $@
 
 htmltoc.1: htmltoc.nw docdate.nw
-	notangle -t8 htmltoc.nw docdate.nw | $(DOVERSION) > htmltoc.1
+	notangle -t8 htmltoc.nw docdate.nw | $(DOVERSION) > $@
 
 cpif.1: manpage.nw docdate.nw
-	notangle -t8 -Rcpif.1  manpage.nw docdate.nw | $(DOVERSION) > cpif.1
+	notangle -t8 -R$@ manpage.nw docdate.nw | $(DOVERSION) > $@
 
 nuweb2noweb.1: manpage.nw docdate.nw
-	notangle -t8 -Rnuweb2noweb.1  manpage.nw docdate.nw | $(DOVERSION) > nuweb2noweb.1
+	notangle -t8 -R$@ manpage.nw docdate.nw | $(DOVERSION) > $@
 
 noroff.1: noroff.nw docdate.nw
-	notangle -t8 noroff.nw docdate.nw | $(DOVERSION) > noroff.1
+	notangle -t8 noroff.nw docdate.nw | $(DOVERSION) > $@
 
 wc.tex: ../../examples/wc.nw
-	(cd ../../examples && noweave -n -index wc.nw) > wc.tex
+	(cd ../../examples && noweave -n -index wc.nw) > $@
 
 techrep.dvi: techrep.tex wc.tex
 	latex '\scrollmode \input '"techrep"
@@ -88,21 +88,21 @@ onepage.dvi: onepage.tex
 	while grep -s 'Rerun to get cross-references right' onepage.log; do latex '\scrollmode \input '"onepage"; done
 
 onepage.ps: onepage.dvi
-	dvips -P cmz -o onepage.ps onepage
+	dvips -P cmz -o $@ onepage
 
 guide.dvi: guide.tex
 	latex '\scrollmode \input '"guide"
 	while grep -s 'Rerun to get cross-references right' guide.log; do latex '\scrollmode \input '"guide"; done
 
 guide.ps: guide.dvi
-	dvips -P cmz -o guide.ps guide
+	dvips -P cmz -o $@ guide
 
 guide.uu: guide.ps
 	gzip < guide.ps > guide.ps.gz
-	uuencode guide.ps.gz < guide.ps.gz > guide.uu
+	uuencode guide.ps.gz < guide.ps.gz > $@
 
 guide.html: guide.dvi
-	sl2h guide.tex | htmltoc > guide.html
+	sl2h guide.tex | htmltoc > $@
 
 clean: ;	/bin/rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
 clobber: clean

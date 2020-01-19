@@ -54,55 +54,55 @@ clobber: clean
 	/bin/rm -f *.icn
 
 texdefs.icn: texdefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' texdefs.nw defns.nw $(CPIF) texdefs.icn
+	notangle -L'#line %-1L "%F"%N' texdefs.nw defns.nw $(CPIF) $@
 icondefs.icn: icondefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' icondefs.nw defns.nw $(CPIF) icondefs.icn
+	notangle -L'#line %-1L "%F"%N' icondefs.nw defns.nw $(CPIF) $@
 yaccdefs.icn: yaccdefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' yaccdefs.nw defns.nw $(CPIF) yaccdefs.icn
+	notangle -L'#line %-1L "%F"%N' yaccdefs.nw defns.nw $(CPIF) $@
 smldefs.icn: smldefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' smldefs.nw defns.nw $(CPIF) smldefs.icn
+	notangle -L'#line %-1L "%F"%N' smldefs.nw defns.nw $(CPIF) $@
 cdefs.icn: cdefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' cdefs.nw defns.nw $(CPIF) cdefs.icn
+	notangle -L'#line %-1L "%F"%N' cdefs.nw defns.nw $(CPIF) $@
 pascaldefs.icn: pascaldefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' pascaldefs.nw defns.nw $(CPIF) pascaldefs.icn
+	notangle -L'#line %-1L "%F"%N' pascaldefs.nw defns.nw $(CPIF) $@
 promeladefs.icn: promeladefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' promeladefs.nw defns.nw $(CPIF) promeladefs.icn
+	notangle -L'#line %-1L "%F"%N' promeladefs.nw defns.nw $(CPIF) $@
 lrtldefs.icn: lrtldefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' lrtldefs.nw defns.nw $(CPIF) lrtldefs.icn
+	notangle -L'#line %-1L "%F"%N' lrtldefs.nw defns.nw $(CPIF) $@
 asdldefs.icn: asdldefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' asdldefs.nw defns.nw $(CPIF) asdldefs.icn
+	notangle -L'#line %-1L "%F"%N' asdldefs.nw defns.nw $(CPIF) $@
 mmixdefs.icn: mmixdefs.nw defns.nw
-	notangle -L'#line %-1L "%F"%N' mmixdefs.nw defns.nw $(CPIF) mmixdefs.icn
+	notangle -L'#line %-1L "%F"%N' mmixdefs.nw defns.nw $(CPIF) $@
 
 autodefs.tex: texdefs.icn
-	$(ICONT) -o autodefs.tex texdefs.icn
+	$(ICONT) -o $@ texdefs.icn
 
 autodefs.icon: icondefs.icn
-	$(ICONC) -o autodefs.icon icondefs.icn
+	$(ICONC) -o $@ icondefs.icn
 
 autodefs.yacc: yaccdefs.icn
-	$(ICONT) -o autodefs.yacc yaccdefs.icn
+	$(ICONT) -o $@ yaccdefs.icn
 
 autodefs.sml: smldefs.icn
-	$(ICONT) -o autodefs.sml smldefs.icn
+	$(ICONT) -o $@ smldefs.icn
 
 autodefs.cee: cdefs.icn
-	$(ICONT) -o autodefs.cee cdefs.icn
+	$(ICONT) -o $@ cdefs.icn
 
 autodefs.pascal: pascaldefs.icn
-	$(ICONT) -o autodefs.pascal pascaldefs.icn
+	$(ICONT) -o $@ pascaldefs.icn
 
 autodefs.promela: promeladefs.icn
-	$(ICONT) -o autodefs.promela promeladefs.icn
+	$(ICONT) -o $@ promeladefs.icn
 
 autodefs.lrtl: lrtldefs.icn
-	$(ICONT) -o autodefs.lrtl lrtldefs.icn
+	$(ICONT) -o $@ lrtldefs.icn
 
 autodefs.asdl: asdldefs.icn
-	$(ICONT) -o autodefs.asdl asdldefs.icn
+	$(ICONT) -o $@ asdldefs.icn
 
 autodefs.mmix: mmixdefs.icn
-	$(ICONT) -o autodefs.mmix mmixdefs.icn
+	$(ICONT) -o $@ mmixdefs.icn
 
 totex: totex.icn
 	$(ICONC) totex.icn
@@ -120,14 +120,14 @@ xchunks: xchunks.icn
 	$(ICONT) xchunks.icn
 
 l2h.icn: l2h.nw
-	notangle -L'#line %-1L "%F"%N' -R'l2h.icn' l2h.nw $(CPIF) l2h.icn
+	notangle -L'#line %-1L "%F"%N' -R$@ l2h.nw $(CPIF) $@
 l2h: l2h.icn
-	$(ICONT) -o l2h l2h.icn   # no longer compiles with iconc
+	$(ICONT) -o $@ l2h.icn   # no longer compiles with iconc
 
 sl2h.icn: l2h.nw
-	notangle -L'#line %-1L "%F"%N' -R'sl2h.icn' l2h.nw $(CPIF) sl2h.icn
+	notangle -L'#line %-1L "%F"%N' -R$@ l2h.nw $(CPIF) $@
 sl2h: sl2h.icn
-	$(ICONT) -o sl2h sl2h.icn   # no longer compiles with iconc
+	$(ICONT) -o $@ sl2h.icn   # no longer compiles with iconc
 
 noindex: noindex.icn
 	$(ICONT) noindex.icn

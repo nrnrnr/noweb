@@ -27,32 +27,32 @@ clean:
 clobber: clean
 
 compress.html: compress.nw
-	$(NOWEAVE) -index -html compress.nw > compress.html
+	$(NOWEAVE) -index -html compress.nw > $@
 compress.tex: compress.nw
-	$(NOWEAVE) -index compress.nw > compress.tex
+	$(NOWEAVE) -index compress.nw > $@
 dag.html: dag.nw
-	$(NOWEAVE) -index -html dag.nw > dag.html
+	$(NOWEAVE) -index -html dag.nw > $@
 dag.tex: dag.nw
-	$(NOWEAVE) -index dag.nw > dag.tex
+	$(NOWEAVE) -index dag.nw > $@
 mipscoder.html: mipscoder.nw
-	$(NOWEAVE) -index -html mipscoder.nw > mipscoder.html
+	$(NOWEAVE) -index -html mipscoder.nw > $@
 mipscoder.tex: mipscoder.nw
-	$(NOWEAVE) -index mipscoder.nw > mipscoder.tex
+	$(NOWEAVE) -index mipscoder.nw > $@
 scanner.html: scanner.nw
-	$(NOWEAVE) -index -html scanner.nw > scanner.html
+	$(NOWEAVE) -index -html scanner.nw > $@
 scanner.tex: scanner.nw
-	$(NOWEAVE) -index scanner.nw > scanner.tex
+	$(NOWEAVE) -index scanner.nw > $@
 tree.html: tree.nw
-	$(NOWEAVE) -index -html tree.nw > tree.html
+	$(NOWEAVE) -index -html tree.nw > $@
 tree.tex: tree.nw
-	$(NOWEAVE) -index tree.nw > tree.tex
+	$(NOWEAVE) -index tree.nw > $@
 test.html: test.nw
-	$(NOWEAVE) -html test.nw > test.html
+	$(NOWEAVE) -html test.nw > $@
 test.tex: test.nw
-	$(NOWEAVE) test.nw > test.tex
+	$(NOWEAVE) test.nw > $@
 wc.html: wc.nw2html
-	$(NOWEAVE) -filter btdefn -index -html -n wc.nw2html > wc.html
+	$(NOWEAVE) -filter btdefn -index -html -n wc.nw2html > $@
 wcni.html: wc.nw2html
-	$(NOWEAVE) -filter btdefn -x     -html -n wc.nw2html > wcni.html
+	$(NOWEAVE) -filter btdefn -x     -html -n wc.nw2html > $@
 wc.tex: wc.nw
-	$(NOWEAVE) -filter btdefn -index wc.nw > wc.tex
+	$(NOWEAVE) -filter btdefn -index wc.nw > $@
