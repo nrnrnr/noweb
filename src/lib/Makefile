@@ -15,8 +15,7 @@ install: all
 	chmod +x $(DESTDIR)$(LIB)/pipedocs $(DESTDIR)$(LIB)/toascii $(DESTDIR)$(LIB)/h2a
 
 uninstall:
-	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(DESTDIR)$(LIB)/$$i; done
-	rm -f $(DESTDIR)$(LIB)/pipedocs
+	for i in unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn; do rm -f $(DESTDIR)$(LIB)/$$i; done
 
 source: toascii
 touch: toascii

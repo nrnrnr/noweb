@@ -73,7 +73,7 @@ install-code: install-shell
 	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
-	rm -f $(DESTDIR)$(LIB)/nt $(DESTDIR)$(LIB)/markup $(DESTDIR)$(LIB)/mnt $(DESTDIR)$(LIB)/finduses
+	for i in nt markup mnt finduses nwmktemp; do rm -f $(DESTDIR)$(LIB)/$$i; done
 	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) DESTDIR=$(DESTDIR) LIB=$(LIB) BIN=$(BIN) uninstall)
 	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) uninstall)
 @ I do the [[<<shell binaries>>]] before [[$(LIBSRC)]] so that the
@@ -139,7 +139,7 @@ install-tex:
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(DESTDIR)$(TEXINPUTS)/nwmac.tex $(DESTDIR)$(TEXINPUTS)/noweb.sty || true
+	for i in nwmac.tex noweb.sty; do rm -f $(DESTDIR)$(TEXINPUTS)/$$i; done
 
 install-elisp:
 	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(DESTDIR)$(ELISP); fi
