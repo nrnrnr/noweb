@@ -33,8 +33,6 @@ WEAVE=noweave
 SHELL=/bin/sh
 MANDIR=$(MAN)/man$(MANEXT)
 MAN7DIR=$(MAN)/man$(MAN7EXT)
-CATDIR=$(MAN)/cat$(MANEXT)
-CAT7DIR=$(MAN)/cat$(MAN7EXT)
 
 all:
 	(cd c && $(MAKE) "CC=$(CC)" "CFLAGS=$(CFLAGS)" $@)
@@ -156,25 +154,6 @@ install-gzipped-man:
 	(cd $(MANDIR) && ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
 	rm -f $(MANDIR)/nountangle.$(MANEXT).gz
 	(cd $(MANDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
-install-preformat-man:
-	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	mkdir -p $(CATDIR) $(CAT7DIR)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/cpif.txt  | gzip > $(CATDIR)/cpif.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nodefs.txt  | gzip > $(CATDIR)/nodefs.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroots.txt  | gzip > $(CATDIR)/noroots.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noweb.txt  | gzip > $(CATDIR)/noweb.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noindex.txt  | gzip > $(CATDIR)/noindex.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nuweb2noweb.txt  | gzip > $(CATDIR)/nuweb2noweb.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/notangle.txt  | gzip > $(CATDIR)/notangle.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroff.txt  | gzip > $(CATDIR)/noroff.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/sl2h.txt  | gzip > $(CATDIR)/sl2h.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/htmltoc.txt  | gzip > $(CATDIR)/htmltoc.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebstyle.txt  | gzip > $(CAT7DIR)/nowebstyle.$(MAN7EXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebfilters.txt  | gzip > $(CAT7DIR)/nowebfilters.$(MAN7EXT).gz
-	rm -f $(CATDIR)/noweave.$(MANEXT).gz
-	(cd $(CATDIR) && ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
-	rm -f $(CATDIR)/nountangle.$(MANEXT).gz
-	(cd $(CATDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-tex:
 	mkdir -p $(TEXINPUTS)
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)

@@ -38,8 +38,6 @@ WEAVE=noweave
 SHELL=/bin/sh
 MANDIR=$(MAN)/man$(MANEXT)
 MAN7DIR=$(MAN)/man$(MAN7EXT)
-CATDIR=$(MAN)/cat$(MANEXT)
-CAT7DIR=$(MAN)/cat$(MAN7EXT)
 
 all:
 	(cd c && $(MAKE) "CC=$(CC)" "CFLAGS=$(CFLAGS)" $@)
@@ -114,11 +112,6 @@ compressed pages.
 install-gzipped-man:
 	mkdir -p $(MANDIR) $(MAN7DIR)
 	<<compressed pages>>
-<<*>>=
-install-preformat-man:
-	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	mkdir -p $(CATDIR) $(CAT7DIR)
-	<<preformatted compressed pages>>
 <<generate chunks>>=
 NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h htmltoc"
 NORMAL7PAGES="nowebstyle nowebfilters"
@@ -162,22 +155,6 @@ done
 for i in $LINKPAGES; do
   echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT).gz'
   echo '(cd $(MANDIR) && ln notangle.$(MANEXT).gz' "$i"'.$(MANEXT).gz)'
-done
-
-echo '@<<preformatted compressed pages@>>='
-
-for i in $NORMALPAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
-	"xdoc/$i.txt" ' | gzip > $(CATDIR)/'"$i"'.$(MANEXT).gz'
-done
-for i in $NORMAL7PAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
-	"xdoc/$i.txt" ' | gzip > $(CAT7DIR)/'"$i"'.$(MAN7EXT).gz'
-done
-
-for i in $LINKPAGES; do
-  echo 'rm -f $(CATDIR)/'"$i"'.$(MANEXT).gz'
-  echo '(cd $(CATDIR) && ln notangle.$(MANEXT).gz' "$i"'.$(MANEXT).gz)'
 done
 <<*>>=
 install-tex:
