@@ -95,13 +95,13 @@ install-code: install-shell
 	mkdir -p $(DESTDIR)$(BIN) $(DESTDIR)$(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
 	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(DESTDIR)$(LIB)
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) DESTDIR=$(DESTDIR) LIB=$(LIB) BIN=$(BIN) install)
-	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) install)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
+	(cd lib && $(MAKE) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
 	for i in nt markup mnt finduses nwmktemp; do rm -f $(DESTDIR)$(LIB)/$$i; done
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) DESTDIR=$(DESTDIR) LIB=$(LIB) BIN=$(BIN) uninstall)
-	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) uninstall)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
 install-man:
 	mkdir -p $(DESTDIR)$(MANDIR) $(DESTDIR)$(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/cpif.1 > $(DESTDIR)$(MANDIR)/cpif.$(MANEXT)

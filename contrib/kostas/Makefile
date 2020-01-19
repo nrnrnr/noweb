@@ -14,8 +14,8 @@ all: C.filter C++.filter icon.filter oot.filter math.filter\
      autodefs.oot autodefs.math
 
 install: all
-	mv *.filter $(LIB)
-	mv autodefs.* $(LIB)
+	cp *.filter $(DESTDIR)$(LIB)
+	cp autodefs.* $(DESTDIR)$(LIB)
 
 
 # TeX files.

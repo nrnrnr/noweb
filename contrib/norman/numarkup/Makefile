@@ -17,7 +17,7 @@ all:
 
 install: all
 	strip $(TARGET)
-	cp $(TARGET) $(LIB)
+	cp $(TARGET) $(DESTDIR)$(LIB)
 
 source: main.c pass1.c latex.c input.c scraps.c names.c arena.c global.c
 

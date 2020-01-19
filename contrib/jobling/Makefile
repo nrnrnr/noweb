@@ -19,8 +19,8 @@ awk-scripts.awk: $(PROG).nw
 	notangle -R$@ $(PROG).nw | cpif $@
 
 install: $(PROGSRC) $(SCRIPTS)
-	cp $(PROGSRC) $(HOME)/bin
-	cp $(SCRIPTS) $(HOME)/lib
+	cp $(PROGSRC) $(DESTDIR)$(BIN)
+	cp $(SCRIPTS) $(DESTDIR)$(LIB)
 
 tidy:
 	rm *~ *% *.bak *.log *.blg

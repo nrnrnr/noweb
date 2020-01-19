@@ -8,4 +8,4 @@ source:
 clean:
 
 install:
-	cp -p $(FILTERS) $(LIB)
+	cp $(FILTERS) $(DESTDIR)$(LIB)
