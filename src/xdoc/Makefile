@@ -1,22 +1,15 @@
 WWW=$(HOME)/www/noweb
 SHELL=/bin/sh
-.SUFFIXES: .1 .7 .txt .ps
-.1.txt:
-	nroff -man $< > $@
+.SUFFIXES: .1 .7 .ps
 .1.ps:
 	psroff -t -man $< > $@
-.7.txt:
-	nroff -man $< > $@
 .7.ps:
 	psroff -t -man $< > $@
 
-MANPAGES=notangle.1   cpif.1   noweb.1   nodefs.1   noroots.1   noindex.1   \
-         nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1 htmltoc.1   \
-	 noroff.1
-TXTPAGES=notangle.txt cpif.txt noweb.txt nodefs.txt noroots.txt noindex.txt \
-         nowebstyle.txt nowebfilters.txt nuweb2noweb.txt sl2h.txt htmltoc.txt   \
-	 noroff.txt
-SRCS=$(MANPAGES) $(TXTPAGES)
+MANPAGES=notangle.1 cpif.1 noweb.1 nodefs.1 noroots.1 noindex.1 \
+         nowebstyle.7 nowebfilters.7 nuweb2noweb.1 sl2h.1 htmltoc.1 \
+         noroff.1
+SRCS=$(MANPAGES)
 
 DOVERSION=./doversion
 
