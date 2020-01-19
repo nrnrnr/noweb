@@ -22,13 +22,13 @@ install: correct-refs.csh all-scripts
 	cp *.awk $(HOME)/lib
 
 tidy:
-	-rm *~ *% *.bak *.log *.blg
+	rm *~ *% *.bak *.log *.blg
 
-clean:  tidy
-	-rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
+clean: tidy
+	rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
 
 realclean: clean
-	-rm $(DOCSRC) $(PROGSRC) $(SCRIPTS)
+	rm $(DOCSRC) $(PROGSRC) $(SCRIPTS)
 
 shar:
 	shar README Makefile $(PROG).nw > $(PROG).shar

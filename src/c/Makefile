@@ -60,12 +60,13 @@ touch: $(SRCS)
 
 boot: ;	touch $(SRCS)
 
-clean: ;	rm -f nt markup mnt finduses fakepretty
-		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~
-		rm -f *.atac *.trace *.html
+clean:
+	rm -f nt markup mnt finduses fakepretty
+	rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~
+	rm -f *.atac *.trace *.html
 
 clobber: clean
-		rm -f $(SRCS) fakepretty.c pretty.[ch]
+	rm -f $(SRCS) fakepretty.c pretty.[ch]
 
 doc.tex: doc.nw
 	cp doc.nw $@

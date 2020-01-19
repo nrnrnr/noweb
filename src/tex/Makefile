@@ -17,6 +17,6 @@ support.tex: support.nw
 	noweave -delay -x support.nw > $@
 
 clean:
-	/bin/rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
-	/bin/rm -f support.tex
+	rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
+	rm -f support.tex
 clobber: clean

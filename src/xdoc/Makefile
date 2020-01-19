@@ -98,6 +98,7 @@ guide.uu: guide.ps
 guide.html: guide.dvi
 	sl2h guide.tex | htmltoc > $@
 
-clean: ;	/bin/rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
+clean:
+	rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
 clobber: clean
 	rm -f *.1 *.7 *.txt

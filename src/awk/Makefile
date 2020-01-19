@@ -42,6 +42,7 @@ tohtml: tohtml.nw
 noindex: noindex.nw
 	notangle -R$@ noindex.nw > $@
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
 clobber: clean
 	rm -f totex noidx tohtml noindex

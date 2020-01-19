@@ -27,6 +27,7 @@ boot:
 toascii: toascii.nw
 	notangle -R$@ toascii.nw > $@
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~
 clobber: clean
 	rm -f toascii

@@ -53,7 +53,7 @@ FAQ: FAQ.html
 
 FAQ.html: $(HOME)/www/noweb/FAQ.html
 	rm -f $@
-	/bin/cp $(HOME)/www/noweb/FAQ.html $@
+	cp $(HOME)/www/noweb/FAQ.html $@
 	chmod -w $@
 
 install: install-code install-man install-tex install-elisp

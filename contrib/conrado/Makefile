@@ -12,4 +12,4 @@ install: all
 hospital.tex: hospital.nw d2tex
 	noweave -delay -filter ./d2tex hospital.nw > $@
 clean:
-	/bin/rm -f hospital.tex *.dvi *.aux *.log *.blg *.bbl *~
+	rm -f hospital.tex *.dvi *.aux *.log *.blg *.bbl *~

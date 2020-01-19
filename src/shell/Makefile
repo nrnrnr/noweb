@@ -25,5 +25,7 @@ noweb: noweb.nw
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
-clobber: clean ;	rm -f $(SRCS)
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
+clobber: clean
+	rm -f $(SRCS)
