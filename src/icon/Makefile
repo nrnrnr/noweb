@@ -18,11 +18,11 @@ SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
 
 .SUFFIXES: .nw .icn .html .tex .dvi
 .nw.icn:
-	notangle -L'#line %-1L "%F"%N' $*.nw $(CPIF) $*.icn
+	notangle -L'#line %-1L "%F"%N' $< $(CPIF) $@
 .nw.html:
-	noweave -filter l2h -autodefs icon -html -index $*.nw | htmltoc > $*.html
+	noweave -filter l2h -autodefs icon -html -index $< | htmltoc > $@
 .nw.tex:
-	noweave -delay -autodefs icon -index $*.nw > $*.tex
+	noweave -delay -autodefs icon -index $< > $@
 .tex.dvi:
 	latex $*; while grep -s 'Rerun to get cross' $*.log; do latex $*; done
 

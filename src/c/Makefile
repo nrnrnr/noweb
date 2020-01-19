@@ -31,11 +31,12 @@ SHELL=/bin/sh
 CPIF=>
 
 .SUFFIXES: .nw .tex .dvi .h
-.nw.tex: ;	noweave $*.nw >$*.tex
-.nw.c: ;	$(NOTANGLE) -L $*.nw >$*.c
-.nw.o: ;	$(NOTANGLE) -L $*.nw >$*.c
-		$(CC) $(CFLAGS) -c $*.c
-.nw.h: ;	$(NOTANGLE) -Rheader $*.nw $(CPIF) $*.h
+.nw.tex:
+	noweave $< > $@
+.nw.c:
+	$(NOTANGLE) -L $< > $@
+.nw.h:
+	$(NOTANGLE) -Rheader $< $(CPIF) $@
 
 all: nt markup mnt finduses nwmktemp
 

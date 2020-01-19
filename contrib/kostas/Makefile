@@ -19,14 +19,14 @@ install: all
 
 
 # TeX files.
-%.tex : %.nw
+%.tex: %.nw
 	$(WEAVE) $< > $@
 pp.tex: pp.nw
 	noweave -delay -autodefs icon -filter icon.filter -index pp.nw > $@
-%.dvi : %.tex
+%.dvi: %.tex
 	latex $<
 # Don't delete the intermediate .tex file.
-.PRECIOUS : %.tex
+.PRECIOUS: %.tex
 
 
 # Icon files.
@@ -48,7 +48,7 @@ mathdefs.icn: mathdefs.nw
 
 
 # Executables: filters.
-%.filter : %.icn
+%.filter: %.icn
 	$(ICONC) -o $@ $<
 
 # Executables: autodefs.
