@@ -136,24 +136,6 @@ uninstall-man:
 	rm -f $(MANDIR)/noweave.$(MANEXT)
 	rm -f $(MANDIR)/nountangle.$(MANEXT)
 	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
-install-gzipped-man:
-	mkdir -p $(MANDIR) $(MAN7DIR)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/cpif.1  | gzip -9 > $(MANDIR)/cpif.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nodefs.1  | gzip -9 > $(MANDIR)/nodefs.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroots.1  | gzip -9 > $(MANDIR)/noroots.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noweb.1  | gzip -9 > $(MANDIR)/noweb.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noindex.1  | gzip -9 > $(MANDIR)/noindex.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nuweb2noweb.1  | gzip -9 > $(MANDIR)/nuweb2noweb.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/notangle.1  | gzip -9 > $(MANDIR)/notangle.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroff.1  | gzip -9 > $(MANDIR)/noroff.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/sl2h.1  | gzip -9 > $(MANDIR)/sl2h.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/htmltoc.1  | gzip -9 > $(MANDIR)/htmltoc.$(MANEXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebstyle.7  | gzip -9 > $(MAN7DIR)/nowebstyle.$(MAN7EXT).gz
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebfilters.7  | gzip -9 > $(MAN7DIR)/nowebfilters.$(MAN7EXT).gz
-	rm -f $(MANDIR)/noweave.$(MANEXT).gz
-	(cd $(MANDIR) && ln notangle.$(MANEXT).gz noweave.$(MANEXT).gz)
-	rm -f $(MANDIR)/nountangle.$(MANEXT).gz
-	(cd $(MANDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-tex:
 	mkdir -p $(TEXINPUTS)
 	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
