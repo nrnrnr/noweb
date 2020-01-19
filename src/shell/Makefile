@@ -20,13 +20,13 @@ checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 noweave: noweave.nw
-	notangle -Rnoweave noweave.nw > noweave
+	notangle -R$@ noweave.nw > $@
 
 notangle: notangle.nw
-	notangle -Rnotangle notangle.nw > notangle
+	notangle -R$@ notangle.nw > $@
 
-noweb: noweb.nw 
-	notangle -Rnoweb noweb.nw > noweb
+noweb: noweb.nw
+	notangle -R$@ noweb.nw > $@
 
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw

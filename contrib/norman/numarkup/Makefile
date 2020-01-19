@@ -27,10 +27,10 @@ clean:
 $(OBJS): global.h
 
 $(TARGET): $(OBJS)
-	$(CC) -o $(TARGET) $(OBJS)
+	$(CC) -o $@ $(OBJS)
 
 numarkup.html: numarkup.nw
-	noweave -filter l2h -html -index numarkup.nw > numarkup.html
+	noweave -filter l2h -html -index numarkup.nw > $@
 
 numarkup.tex: numarkup.nw
 	noweb -o numarkup.nw

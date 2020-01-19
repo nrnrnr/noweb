@@ -9,7 +9,7 @@ install:
 source: noxref.krom
 
 noxref.krom: noxref.nw
-	notangle -Rnoxref noxref.nw > noxref.krom
+	notangle -Rnoxref noxref.nw > $@
 
 clean:
 	/bin/rm -f *.tex *.dvi *.ilg *.idx *.aux *.log *.blg *.bbl *~ *.ind noxref.krom
