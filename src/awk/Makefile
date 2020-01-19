@@ -12,7 +12,6 @@ BINEXECS=noindex
 EXECS=$(BINEXECS) $(LIBEXECS)
 
 all: $(EXECS)
-	chmod +x $(EXECS)
 sources: $(EXECS)
 touch: $(EXECS)
 	touch $(EXECS)
@@ -32,15 +31,19 @@ source: $(EXECS)
 
 totex: totex.nw
 	notangle -R$@ totex.nw > $@
+	chmod +x $@
 
 noidx: noidx.nw
 	notangle noidx.nw > $@
+	chmod +x $@
 
 tohtml: tohtml.nw
 	notangle tohtml.nw > $@
+	chmod +x $@
 
 noindex: noindex.nw
 	notangle -R$@ noindex.nw > $@
+	chmod +x $@
 
 clean:
 	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
