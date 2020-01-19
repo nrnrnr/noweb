@@ -35,14 +35,14 @@ boot:
 	touch $(SRCS)
 
 install: all
-	cp $(LIBEXECS) $(LIB)
-	cp $(BINEXECS) $(BIN)
-	cp $(LIBSPECIAL) $(LIB)/autodefs.c
+	cp $(LIBEXECS) $(DESTDIR)$(LIB)
+	cp $(BINEXECS) $(DESTDIR)$(BIN)
+	cp $(LIBSPECIAL) $(DESTDIR)$(LIB)/autodefs.c
 
 uninstall:
-	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
-	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
-	rm -f $(LIB)/autodefs.c
+	for i in $(LIBEXECS); do rm -f $(DESTDIR)$(LIB)/$$i; done
+	for i in $(BINEXECS); do rm -f $(DESTDIR)$(BIN)/$$i; done
+	rm -f $(DESTDIR)$(LIB)/autodefs.c
 
 clean:
 	rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~  *.toc *.html *.u1 *.u2

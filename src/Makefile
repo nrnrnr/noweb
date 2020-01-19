@@ -49,107 +49,107 @@ FAQ.html: $(HOME)/www/noweb/FAQ.html
 
 install: install-code install-man install-tex install-elisp
 uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
-	-rmdir $(BIN) $(LIB) 2>/dev/null || true
+	-rmdir $(DESTDIR)$(BIN) $(DESTDIR)$(LIB) 2>/dev/null || true
 
 install-shell:
-	mkdir -p $(BIN) $(LIB)
-	sed "s@|LIBDIR|@$(LIB)@" shell/noweb > $(BIN)/noweb
-	chmod +x $(BIN)/noweb
-	sed "s@|LIBDIR|@$(LIB)@" shell/notangle > $(BIN)/notangle
-	chmod +x $(BIN)/notangle
-	sed "s@|LIBDIR|@$(LIB)@" shell/$(WEAVE) > $(BIN)/$(WEAVE)
-	chmod +x $(BIN)/$(WEAVE)
-	sed "s@|LIBDIR|@$(LIB)@" shell/nountangle > $(BIN)/nountangle
-	chmod +x $(BIN)/nountangle
-	sed "s@|LIBDIR|@$(LIB)@" shell/nodefs > $(BIN)/nodefs
-	chmod +x $(BIN)/nodefs
-	sed "s@|LIBDIR|@$(LIB)@" shell/noroots > $(BIN)/noroots
-	chmod +x $(BIN)/noroots
-	sed "s@|LIBDIR|@$(LIB)@" shell/nuweb2noweb > $(BIN)/nuweb2noweb
-	chmod +x $(BIN)/nuweb2noweb
-	sed "s@|LIBDIR|@$(LIB)@" shell/cpif > $(BIN)/cpif
-	chmod +x $(BIN)/cpif
-	sed "s@|LIBDIR|@$(LIB)@" shell/htmltoc > $(BIN)/htmltoc
-	chmod +x $(BIN)/htmltoc
-	sed "s@|LIBDIR|@$(LIB)@" shell/noroff > $(BIN)/noroff
-	chmod +x $(BIN)/noroff
-	sed "s@|LIBDIR|@$(LIB)@" shell/toroff > $(LIB)/toroff
-	chmod +x $(LIB)/toroff
-	cp shell/tmac.w $(LIB)
+	mkdir -p $(DESTDIR)$(BIN) $(DESTDIR)$(LIB)
+	sed "s@|LIBDIR|@$(LIB)@" shell/noweb > $(DESTDIR)$(BIN)/noweb
+	chmod +x $(DESTDIR)$(BIN)/noweb
+	sed "s@|LIBDIR|@$(LIB)@" shell/notangle > $(DESTDIR)$(BIN)/notangle
+	chmod +x $(DESTDIR)$(BIN)/notangle
+	sed "s@|LIBDIR|@$(LIB)@" shell/$(WEAVE) > $(DESTDIR)$(BIN)/$(WEAVE)
+	chmod +x $(DESTDIR)$(BIN)/$(WEAVE)
+	sed "s@|LIBDIR|@$(LIB)@" shell/nountangle > $(DESTDIR)$(BIN)/nountangle
+	chmod +x $(DESTDIR)$(BIN)/nountangle
+	sed "s@|LIBDIR|@$(LIB)@" shell/nodefs > $(DESTDIR)$(BIN)/nodefs
+	chmod +x $(DESTDIR)$(BIN)/nodefs
+	sed "s@|LIBDIR|@$(LIB)@" shell/noroots > $(DESTDIR)$(BIN)/noroots
+	chmod +x $(DESTDIR)$(BIN)/noroots
+	sed "s@|LIBDIR|@$(LIB)@" shell/nuweb2noweb > $(DESTDIR)$(BIN)/nuweb2noweb
+	chmod +x $(DESTDIR)$(BIN)/nuweb2noweb
+	sed "s@|LIBDIR|@$(LIB)@" shell/cpif > $(DESTDIR)$(BIN)/cpif
+	chmod +x $(DESTDIR)$(BIN)/cpif
+	sed "s@|LIBDIR|@$(LIB)@" shell/htmltoc > $(DESTDIR)$(BIN)/htmltoc
+	chmod +x $(DESTDIR)$(BIN)/htmltoc
+	sed "s@|LIBDIR|@$(LIB)@" shell/noroff > $(DESTDIR)$(BIN)/noroff
+	chmod +x $(DESTDIR)$(BIN)/noroff
+	sed "s@|LIBDIR|@$(LIB)@" shell/toroff > $(DESTDIR)$(LIB)/toroff
+	chmod +x $(DESTDIR)$(LIB)/toroff
+	cp shell/tmac.w $(DESTDIR)$(LIB)
 
 uninstall-shell:
-	rm -f $(BIN)/noweb
-	rm -f $(BIN)/notangle
-	rm -f $(BIN)/$(WEAVE)
-	rm -f $(BIN)/nountangle
-	rm -f $(BIN)/nodefs
-	rm -f $(BIN)/noroots
-	rm -f $(BIN)/nuweb2noweb
-	rm -f $(BIN)/cpif
-	rm -f $(BIN)/htmltoc
-	rm -f $(BIN)/noroff
-	rm -f $(LIB)/toroff
-	rm -f $(LIB)/tmac.w
+	rm -f $(DESTDIR)$(BIN)/noweb
+	rm -f $(DESTDIR)$(BIN)/notangle
+	rm -f $(DESTDIR)$(BIN)/$(WEAVE)
+	rm -f $(DESTDIR)$(BIN)/nountangle
+	rm -f $(DESTDIR)$(BIN)/nodefs
+	rm -f $(DESTDIR)$(BIN)/noroots
+	rm -f $(DESTDIR)$(BIN)/nuweb2noweb
+	rm -f $(DESTDIR)$(BIN)/cpif
+	rm -f $(DESTDIR)$(BIN)/htmltoc
+	rm -f $(DESTDIR)$(BIN)/noroff
+	rm -f $(DESTDIR)$(LIB)/toroff
+	rm -f $(DESTDIR)$(LIB)/tmac.w
 
 install-code: install-shell
-	mkdir -p $(BIN) $(LIB)
+	mkdir -p $(DESTDIR)$(BIN) $(DESTDIR)$(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
-	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
-	(cd lib && $(MAKE) LIB=$(LIB) install)
+	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(DESTDIR)$(LIB)
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) DESTDIR=$(DESTDIR) LIB=$(LIB) BIN=$(BIN) install)
+	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
-	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
-	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
+	rm -f $(DESTDIR)$(LIB)/nt $(DESTDIR)$(LIB)/markup $(DESTDIR)$(LIB)/mnt $(DESTDIR)$(LIB)/finduses
+	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) DESTDIR=$(DESTDIR) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd lib && $(MAKE) DESTDIR=$(DESTDIR) LIB=$(LIB) uninstall)
 install-man:
-	mkdir -p $(MANDIR) $(MAN7DIR)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nodefs.1 > $(MANDIR)/nodefs.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroots.1 > $(MANDIR)/noroots.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noweb.1 > $(MANDIR)/noweb.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noindex.1 > $(MANDIR)/noindex.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nuweb2noweb.1 > $(MANDIR)/nuweb2noweb.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/notangle.1 > $(MANDIR)/notangle.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroff.1 > $(MANDIR)/noroff.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/sl2h.1 > $(MANDIR)/sl2h.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/htmltoc.1 > $(MANDIR)/htmltoc.$(MANEXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebstyle.7 > $(MAN7DIR)/nowebstyle.$(MAN7EXT)
-	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebfilters.7 > $(MAN7DIR)/nowebfilters.$(MAN7EXT)
-	rm -f $(MANDIR)/noweave.$(MANEXT)
-	(cd $(MANDIR) && ln notangle.$(MANEXT) noweave.$(MANEXT))
-	rm -f $(MANDIR)/nountangle.$(MANEXT)
-	(cd $(MANDIR) && ln notangle.$(MANEXT) nountangle.$(MANEXT))
+	mkdir -p $(DESTDIR)$(MANDIR) $(DESTDIR)$(MAN7DIR)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/cpif.1 > $(DESTDIR)$(MANDIR)/cpif.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nodefs.1 > $(DESTDIR)$(MANDIR)/nodefs.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroots.1 > $(DESTDIR)$(MANDIR)/noroots.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noweb.1 > $(DESTDIR)$(MANDIR)/noweb.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noindex.1 > $(DESTDIR)$(MANDIR)/noindex.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nuweb2noweb.1 > $(DESTDIR)$(MANDIR)/nuweb2noweb.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/notangle.1 > $(DESTDIR)$(MANDIR)/notangle.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/noroff.1 > $(DESTDIR)$(MANDIR)/noroff.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/sl2h.1 > $(DESTDIR)$(MANDIR)/sl2h.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/htmltoc.1 > $(DESTDIR)$(MANDIR)/htmltoc.$(MANEXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebstyle.7 > $(DESTDIR)$(MAN7DIR)/nowebstyle.$(MAN7EXT)
+	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebfilters.7 > $(DESTDIR)$(MAN7DIR)/nowebfilters.$(MAN7EXT)
+	rm -f $(DESTDIR)$(MANDIR)/noweave.$(MANEXT)
+	(cd $(DESTDIR)$(MANDIR) && ln notangle.$(MANEXT) noweave.$(MANEXT))
+	rm -f $(DESTDIR)$(MANDIR)/nountangle.$(MANEXT)
+	(cd $(DESTDIR)$(MANDIR) && ln notangle.$(MANEXT) nountangle.$(MANEXT))
 uninstall-man:
-	rm -f $(MANDIR)/cpif.$(MANEXT)
-	rm -f $(MANDIR)/nodefs.$(MANEXT)
-	rm -f $(MANDIR)/noroots.$(MANEXT)
-	rm -f $(MANDIR)/noweb.$(MANEXT)
-	rm -f $(MANDIR)/noindex.$(MANEXT)
-	rm -f $(MANDIR)/nuweb2noweb.$(MANEXT)
-	rm -f $(MANDIR)/notangle.$(MANEXT)
-	rm -f $(MANDIR)/noroff.$(MANEXT)
-	rm -f $(MANDIR)/sl2h.$(MANEXT)
-	rm -f $(MANDIR)/htmltoc.$(MANEXT)
-	rm -f $(MAN7DIR)/nowebstyle.$(MAN7EXT)
-	rm -f $(MAN7DIR)/nowebfilters.$(MAN7EXT)
-	rm -f $(MANDIR)/noweave.$(MANEXT)
-	rm -f $(MANDIR)/nountangle.$(MANEXT)
-	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
+	rm -f $(DESTDIR)$(MANDIR)/cpif.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/nodefs.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/noroots.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/noweb.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/noindex.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/nuweb2noweb.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/notangle.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/noroff.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/sl2h.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/htmltoc.$(MANEXT)
+	rm -f $(DESTDIR)$(MAN7DIR)/nowebstyle.$(MAN7EXT)
+	rm -f $(DESTDIR)$(MAN7DIR)/nowebfilters.$(MAN7EXT)
+	rm -f $(DESTDIR)$(MANDIR)/noweave.$(MANEXT)
+	rm -f $(DESTDIR)$(MANDIR)/nountangle.$(MANEXT)
+	-rmdir $(DESTDIR)$(MANDIR) $(DESTDIR)$(MAN7DIR) $(DESTDIR)$(MAN) 2>/dev/null || true
 install-tex:
-	mkdir -p $(TEXINPUTS)
-	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
+	mkdir -p $(DESTDIR)$(TEXINPUTS)
+	cp tex/nwmac.tex tex/noweb.sty $(DESTDIR)$(TEXINPUTS)
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
+	rm -f $(DESTDIR)$(TEXINPUTS)/nwmac.tex $(DESTDIR)$(TEXINPUTS)/noweb.sty || true
 
 install-elisp:
-	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
-	cp elisp/noweb-mode.el $(ELISP)
+	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(DESTDIR)$(ELISP); fi
+	cp elisp/noweb-mode.el $(DESTDIR)$(ELISP)
 
 uninstall-elisp:
-	rm -f $(ELISP)/noweb-mode.el || true
+	rm -f $(DESTDIR)$(ELISP)/noweb-mode.el || true
 source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 	sleep 1

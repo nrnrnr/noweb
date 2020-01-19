@@ -8,15 +8,15 @@ all: toascii
 	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
 
 install: all
-	cp unmarkup emptydefn nwmtime btdefn $(LIB)
-	sed 's@|LIBDIR|@$(LIB)@g' pipedocs > $(LIB)/pipedocs
-	sed 's@|LIBDIR|@$(LIB)@g' toascii > $(LIB)/toascii
-	sed 's@|LIBDIR|@$(LIB)@g' h2a > $(LIB)/h2a
-	chmod +x $(LIB)/pipedocs $(LIB)/toascii $(LIB)/h2a
+	cp unmarkup emptydefn nwmtime btdefn $(DESTDIR)$(LIB)
+	sed 's@|LIBDIR|@$(LIB)@g' pipedocs > $(DESTDIR)$(LIB)/pipedocs
+	sed 's@|LIBDIR|@$(LIB)@g' toascii > $(DESTDIR)$(LIB)/toascii
+	sed 's@|LIBDIR|@$(LIB)@g' h2a > $(DESTDIR)$(LIB)/h2a
+	chmod +x $(DESTDIR)$(LIB)/pipedocs $(DESTDIR)$(LIB)/toascii $(DESTDIR)$(LIB)/h2a
 
 uninstall:
-	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(LIB)/$$i; done
-	rm -f $(LIB)/pipedocs
+	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(DESTDIR)$(LIB)/$$i; done
+	rm -f $(DESTDIR)$(LIB)/pipedocs
 
 source: toascii
 touch: toascii

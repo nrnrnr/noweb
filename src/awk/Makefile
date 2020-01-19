@@ -20,13 +20,13 @@ boot:
 	touch $(EXECS)
 
 install: all
-	cp $(LIBEXECSBARE) $(LIB)
-	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(LIB)/"$$i"; chmod +x $(LIB)/$$i; done
-	cp $(BINEXECS) $(BIN)
+	cp $(LIBEXECSBARE) $(DESTDIR)$(LIB)
+	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(DESTDIR)$(LIB)/"$$i"; chmod +x $(DESTDIR)$(LIB)/$$i; done
+	cp $(BINEXECS) $(DESTDIR)$(BIN)
 
 uninstall:
-	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
-	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
+	for i in $(LIBEXECS); do rm -f $(DESTDIR)$(LIB)/$$i; done
+	for i in $(BINEXECS); do rm -f $(DESTDIR)$(BIN)/$$i; done
 
 source: $(EXECS)
 
