@@ -14,9 +14,6 @@ TXTPAGES=notangle.txt cpif.txt noweb.txt nodefs.txt noroots.txt noindex.txt \
 	 noroff.txt
 SRCS=$(MANPAGES) $(TXTPAGES)
 
-NAME="name of version checked in"
-CIMSG="message for version checked in"
-RCSFILES=*.nw *.tex Makefile
 DOVERSION=./doversion
 
 all: $(SRCS)
@@ -27,9 +24,6 @@ boot:
 	touch $(SRCS)
 
 www: $(WWW)/onepage.ps $(WWW)/guide.ps $(WWW)/guide.html
-
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 $(WWW)/onepage.ps: onepage.ps
 	cp onepage.ps $(WWW)

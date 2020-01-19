@@ -23,7 +23,6 @@ SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
 	columns.c errors.c getline.c finduses.c main.c markmain.c markup.c match.c \
 	mnt.c modtrees.c modules.c notangle.c nwmktemp.c recognize.c \
 	strsave.c markup.ps
-NAME='name of RCS version'
 
 NOTANGLE=notangle
 SHELL=/bin/sh
@@ -67,9 +66,6 @@ clean: ;	rm -f nt markup mnt finduses fakepretty
 
 clobber: clean
 		rm -f $(SRCS) fakepretty.c pretty.[ch]
-
-checkin: $(FILES) doc.nw
-		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
 
 doc.tex: doc.nw
 	cp doc.nw $@

@@ -6,8 +6,6 @@
 
 VERSION=2.12
 SHELL=/bin/sh
-CINAME=-Nv`echo $(VERSION) | tr . _`
-CIMSG=-f -m'standard checkin preparing to export version $(VERSION)'
 
 all:
 	@echo "You have no business running 'make' here; please look at the README file"
@@ -61,6 +59,3 @@ ctan:	clean source nwsrcfilter DATE emacscheck
 emacscheck:
 	-echo "Checking to ensure distribution matches personal emacs mode" 1>&2
 	diff src/elisp/noweb-mode.el $(HOME)/emacs/noweb-mode.el
-
-checkin:
-	(cd src && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@)

@@ -3,9 +3,6 @@
 
 LIB=/dev/null
 SHELL=/bin/sh
-CINAME=
-CIMSG=
-RCSFILES=emptydefn toascii.nw unmarkup Makefile nwmtime pipedocs h2a btdefn
 
 all: toascii
 	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
@@ -20,9 +17,6 @@ install: all
 uninstall:
 	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(LIB)/$$i; done
 	rm -f $(LIB)/pipedocs
-
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 source: toascii
 touch: toascii

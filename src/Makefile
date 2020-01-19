@@ -31,8 +31,6 @@ WEAVE=noweave
 
 # Stop editing.	 No user-serviceable parts below.
 SHELL=/bin/sh
-CINAME=
-CIMSG=
 MANDIR=$(MAN)/man$(MANEXT)
 MAN7DIR=$(MAN)/man$(MAN7EXT)
 CATDIR=$(MAN)/cat$(MANEXT)
@@ -193,12 +191,6 @@ install-elisp:
 
 uninstall-elisp:
 	rm -f $(ELISP)/noweb-mode.el || true
-checkin:
-	for i in lib tex xdoc; do (cd $$i && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@); done
-	for i in c icon awk; do (cd $$i && ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
-	(cd elisp && ci -l $(CINAME) $(CIMSG) *.el)
-	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README FAQ COPYRIGHT nwmake *.nw
-
 source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 	sleep 1

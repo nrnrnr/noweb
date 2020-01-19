@@ -5,9 +5,6 @@ LIB=/usr/public/pkg/noweb/lib
 
 EXEC=noweave noweb notangle noroff toroff
 SRCS=$(EXEC) tmac.w
-RCSFILES=noweave.nw notangle.nw noweb.nw noroff.nw noroots nocount Makefile
-CINAME=
-CIMSG=
 
 all:	$(SRCS)
 source: $(SRCS)
@@ -15,9 +12,6 @@ touch:	$(SRCS)
 	touch $(SRCS)
 boot:
 	touch $(SRCS)
-
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 noweave: noweave.nw
 	notangle -R$@ noweave.nw > $@
