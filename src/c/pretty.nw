@@ -225,7 +225,7 @@ static PrettyPrinter make_pp(void *cl, char *name) {
 @ 
 The program is always a filter, so it uses stdin and stdout.
 <<one-pass definitions>>=
-main (int argc, char *argv[]) {
+int main (int argc, char *argv[]) {
   struct io io;
   io.out = stdout;
   io.putline = put_stripped;
