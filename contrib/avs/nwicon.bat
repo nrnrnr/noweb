@@ -17,8 +17,8 @@ goto THEEND
 
 rem This represents 'make iconlib', but only like this I could put it to work
 cd icon
-rem j:\djgpp\bin\make ICONC=e:\\\\b\\\\icont ICONT=e:\\\\b\\\\icont
-%3 ICONC=%4 ICONT=%4
+rem j:\djgpp\bin\make ICONT=e:\\\\b\\\\icont
+%3 ICONT=%4
 if errorlevel 1 goto THEEND
 cp -p totex.exe ../lib
 if errorlevel 1 goto THEEND
@@ -28,8 +28,8 @@ cp -p noidx.exe ../lib
 if errorlevel 1 goto THEEND
 cp -p noindex.exe ../shell
 if errorlevel 1 goto THEEND
-rem j:\djgpp\bin\make ICONC=e:\\\\b\\\\icont ICONT=e:\\\\b\\\\icont LIB=g:/usr/local/lib/noweb BIN=i:/b install
-%3 ICONC=%4 ICONT=%4 LIB=%2 BIN=%1 install
+rem j:\djgpp\bin\make ICONT=e:\\\\b\\\\icont LIB=g:/usr/local/lib/noweb BIN=i:/b install
+%3 ICONT=%4 LIB=%2 BIN=%1 install
 if errorlevel 1 goto THEEND
 cd ..
 goto THEEND

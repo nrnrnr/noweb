@@ -11,10 +11,8 @@ either Icon or Awk, but Icon is better:
     code speeds up noweave by a factor of 3.  The Icon versions have
     fewer bugs and provide more filters (e.g., convert LaTeX to HTML
     in documentation chunks).  Not all of the examples will work with
-    the awk library.  If you have an Icon compiler and believe it
-    works, set `ICONC=iconc -f l' in the Makefile.  (Icon is freely
-    available from the University of Arizona, but the compiler is no
-    longer maintained.)
+    the awk library.  (Icon is freely available from the University
+    of Arizona, but the compiler is no longer maintained.)
 
   - As of version 2.12, the Awk code for noweb's indexing and
     cross-reference relies on the bit-manipulation primitives found
@@ -29,7 +27,7 @@ To build noweb:
   1) First point to compilers to be used to built the tools and
      library by setting these variables in the Makefile:
        CC         the name of an ANSI C compiler
-       LIBSRC	  'awk' or 'icon', depending on which library you want
+       LIBSRC     'awk' or 'icon', depending on which library you want
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:

@@ -1,8 +1,7 @@
 SHELL=/bin/sh
 LIB=/dev/null		# to be overridden
 BIN=/dev/null		# to be overridden
-ICONC=iconc -p -L/usr/X11R6/lib     # override to icont if no iconc on your system
-ICONT=icont		# override to iconc if all filters should be compiled
+ICONT=icont
 CPIF=| cpif		# change to ">" to insure all sources always made
 
 LIBEXECS=totex disambiguate noidx tohtml elide l2h docs2comments \
@@ -78,7 +77,7 @@ autodefs.tex: texdefs.icn
 	$(ICONT) -o $@ texdefs.icn
 
 autodefs.icon: icondefs.icn
-	$(ICONC) -o $@ icondefs.icn
+	$(ICONT) -o $@ icondefs.icn
 
 autodefs.yacc: yaccdefs.icn
 	$(ICONT) -o $@ yaccdefs.icn
@@ -105,16 +104,16 @@ autodefs.mmix: mmixdefs.icn
 	$(ICONT) -o $@ mmixdefs.icn
 
 totex: totex.icn
-	$(ICONC) totex.icn
+	$(ICONT) totex.icn
 
 totexnr: totexnr.icn
 	$(ICONT) totexnr.icn
 
 tohtml: tohtml.icn
-	$(ICONC) tohtml.icn
+	$(ICONT) tohtml.icn
 
 docs2comments: docs2comments.icn
-	$(ICONT) docs2comments.icn  # no longer compiles with iconc
+	$(ICONT) docs2comments.icn
 
 xchunks: xchunks.icn
 	$(ICONT) xchunks.icn
@@ -122,18 +121,18 @@ xchunks: xchunks.icn
 l2h.icn: l2h.nw
 	notangle -L'#line %-1L "%F"%N' -R$@ l2h.nw $(CPIF) $@
 l2h: l2h.icn
-	$(ICONT) -o $@ l2h.icn   # no longer compiles with iconc
+	$(ICONT) -o $@ l2h.icn
 
 sl2h.icn: l2h.nw
 	notangle -L'#line %-1L "%F"%N' -R$@ l2h.nw $(CPIF) $@
 sl2h: sl2h.icn
-	$(ICONT) -o $@ sl2h.icn   # no longer compiles with iconc
+	$(ICONT) -o $@ sl2h.icn
 
 noindex: noindex.icn
 	$(ICONT) noindex.icn
 
 noidx: noidx.icn
-	$(ICONT) noidx.icn  # no longer compiles with iconc
+	$(ICONT) noidx.icn
 
 elide: elide.icn
 	$(ICONT) elide.icn

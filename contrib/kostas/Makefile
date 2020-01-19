@@ -1,7 +1,7 @@
 # Only works with Gnu make.
 
 LIB=/opt/noweb/lib
-ICONC=icont
+ICONT=icont
 # This is supposed to be the defns.nw file in the icon directory of the distribution.
 defns=defns.nw
 TANGLE=notangle
@@ -49,13 +49,13 @@ mathdefs.icn: mathdefs.nw
 
 # Executables: filters.
 %.filter: %.icn
-	$(ICONC) -o $@ $<
+	$(ICONT) -o $@ $<
 
 # Executables: autodefs.
 autodefs.oot: ootdefs.icn
-	$(ICONC) -o $@ ootdefs.icn
+	$(ICONT) -o $@ ootdefs.icn
 autodefs.math: mathdefs.icn
-	$(ICONC) -o $@ mathdefs.icn
+	$(ICONT) -o $@ mathdefs.icn
 
 
 # Cleaning: remove all files that can be recreated from noweb sources.
