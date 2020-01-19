@@ -106,7 +106,7 @@ do
 done
 <<*>>=
 install-man:
-	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
+	mkdir -p $(MANDIR) $(MAN7DIR)
 	<<ordinary pages>>
 uninstall-man:
 	<<uninstall ordinary pages>>
@@ -116,12 +116,12 @@ Slackware no longer uses preformatted compressed pages, just
 compressed pages.
 <<*>>=
 install-gzipped-man:
-	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
+	mkdir -p $(MANDIR) $(MAN7DIR)
 	<<compressed pages>>
 <<*>>=
 install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	mkdir -p $(MAN) $(CATDIR) $(CAT7DIR)
+	mkdir -p $(CATDIR) $(CAT7DIR)
 	<<preformatted compressed pages>>
 <<generate chunks>>=
 NORMALPAGES="cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h htmltoc"

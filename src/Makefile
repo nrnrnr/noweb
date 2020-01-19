@@ -109,7 +109,7 @@ uninstall-code: uninstall-shell
 	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
 	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
 install-man:
-	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
+	mkdir -p $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1 > $(MANDIR)/cpif.$(MANEXT)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.1 > $(MANDIR)/nodefs.$(MANEXT)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.1 > $(MANDIR)/noroots.$(MANEXT)
@@ -143,7 +143,7 @@ uninstall-man:
 	rm -f $(MANDIR)/nountangle.$(MANEXT)
 	rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
 install-gzipped-man:
-	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
+	mkdir -p $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1  | gzip -9 > $(MANDIR)/cpif.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.1  | gzip -9 > $(MANDIR)/nodefs.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.1  | gzip -9 > $(MANDIR)/noroots.$(MANEXT).gz
@@ -162,7 +162,7 @@ install-gzipped-man:
 	(cd $(MANDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
-	mkdir -p $(MAN) $(CATDIR) $(CAT7DIR)
+	mkdir -p $(CATDIR) $(CAT7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.txt  | gzip > $(CATDIR)/cpif.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/nodefs.txt  | gzip > $(CATDIR)/nodefs.$(MANEXT).gz
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/noroots.txt  | gzip > $(CATDIR)/noroots.$(MANEXT).gz

@@ -44,7 +44,7 @@ tarnames: clean source nwsrcfilter DATE
 tar: clean source nwsrcfilter DATE emacscheck
 	chmod +w src/Makefile
 	rm -rf /tmp/noweb-$(VERSION)
-	mkdir /tmp/noweb-$(VERSION)
+	mkdir -p /tmp/noweb-$(VERSION)
 	tar cvf - `find . ! -type d -not -name FAQ.old -print | ./nwsrcfilter` | (cd /tmp/noweb-$(VERSION) && tar xf - )
 	(cd /tmp && tar cf - noweb-$(VERSION) ) | gzip -v > ../noweb-$(VERSION).tgz
 	rm -f ../noweb.tgz
