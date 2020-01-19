@@ -3,4 +3,4 @@ all:
 source:
 install:
 clean:
-	/bin/rm -f *.dvi *.log *.aux
+	rm -f *.dvi *.log *.aux

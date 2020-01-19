@@ -21,13 +21,13 @@ install: correct-refs.csh $(SCRIPTS)
 	cp $(SCRIPTS) $(HOME)/lib
 
 tidy:
-	-rm *~ *% *.bak *.log *.blg
+	rm -f *~ *% *.bak *.log *.blg
 
 clean: tidy
-	-rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
+	rm -f *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
 
 realclean: clean
-	-rm correct-refs.tex correct-refs.csh $(SCRIPTS)
+	rm -f correct-refs.tex correct-refs.csh $(SCRIPTS)
 
 shar:
 	shar README Makefile $(PROG).nw > $(PROG).shar

@@ -55,12 +55,12 @@ FAQ: FAQ.html
 
 FAQ.html: $(HOME)/www/noweb/FAQ.html
 	rm -f $@
-	/bin/cp $(HOME)/www/noweb/FAQ.html $@
+	cp $(HOME)/www/noweb/FAQ.html $@
 	chmod -w $@
 
 install: install-code install-man install-tex install-elisp
 uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
-	-rmdir $(BIN) $(LIB) 2>/dev/null || true
+	rmdir $(BIN) $(LIB) 2>/dev/null || true
 
 install-shell:
 	mkdir -p $(BIN) $(LIB)
@@ -110,7 +110,7 @@ install-man:
 	<<ordinary pages>>
 uninstall-man:
 	<<uninstall ordinary pages>>
-	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
+	rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
 @
 Slackware no longer uses preformatted compressed pages, just
 compressed pages.
@@ -190,14 +190,14 @@ install-tex:
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
+	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty
 
 install-elisp:
 	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:
-	rm -f $(ELISP)/noweb-mode.el || true
+	rm -f $(ELISP)/noweb-mode.el
 @
 <<*>>=
 checkin:

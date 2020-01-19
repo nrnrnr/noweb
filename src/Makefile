@@ -50,12 +50,12 @@ FAQ: FAQ.html
 
 FAQ.html: $(HOME)/www/noweb/FAQ.html
 	rm -f $@
-	/bin/cp $(HOME)/www/noweb/FAQ.html $@
+	cp $(HOME)/www/noweb/FAQ.html $@
 	chmod -w $@
 
 install: install-code install-man install-tex install-elisp
 uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
-	-rmdir $(BIN) $(LIB) 2>/dev/null || true
+	rmdir $(BIN) $(LIB) 2>/dev/null || true
 
 install-shell:
 	mkdir -p $(BIN) $(LIB)
@@ -141,7 +141,7 @@ uninstall-man:
 	rm -f $(MAN7DIR)/nowebfilters.$(MAN7EXT)
 	rm -f $(MANDIR)/noweave.$(MANEXT)
 	rm -f $(MANDIR)/nountangle.$(MANEXT)
-	-rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
+	rmdir $(MANDIR) $(MAN7DIR) $(MAN) 2>/dev/null || true
 install-gzipped-man:
 	mkdir -p $(MAN) $(MANDIR) $(MAN7DIR)
 	sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/cpif.1  | gzip -9 > $(MANDIR)/cpif.$(MANEXT).gz
@@ -185,14 +185,14 @@ install-tex:
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty || true
+	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty
 
 install-elisp:
 	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)
 
 uninstall-elisp:
-	rm -f $(ELISP)/noweb-mode.el || true
+	rm -f $(ELISP)/noweb-mode.el
 checkin:
 	for i in lib tex xdoc; do (cd $$i && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@); done
 	for i in c icon awk; do (cd $$i && ci -l $(CINAME) $(CIMSG) *.nw Makefile); done

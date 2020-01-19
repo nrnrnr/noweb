@@ -12,4 +12,4 @@ noxref.krom: noxref.nw
 	chmod +x $@
 
 clean:
-	/bin/rm -f *.tex *.dvi *.ilg *.idx *.aux *.log *.blg *.bbl *~ *.ind noxref.krom
+	rm -f *.tex *.dvi *.ilg *.idx *.aux *.log *.blg *.bbl *~ *.ind noxref.krom

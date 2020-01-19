@@ -3,4 +3,4 @@ all:
 install:
 source:
 clean:
-	/bin/rm -f nocond *.dvi *.log *.aux *.toc *.tex *.tex nocond.1
+	rm -f nocond *.dvi *.log *.aux *.toc *.tex nocond.1

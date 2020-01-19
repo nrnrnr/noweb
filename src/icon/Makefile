@@ -45,13 +45,13 @@ uninstall:
 	rm -f $(LIB)/autodefs.c
 
 clean:
-	/bin/rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~ *.toc *.html *.u1 *.u2
-	/bin/rm -f *.[ch] *.ps *.gz
-	/bin/rm -f $(EXECS)
-	/bin/rm -f sl2h
+	rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~ *.toc *.html *.u1 *.u2
+	rm -f *.[ch] *.ps *.gz
+	rm -f $(EXECS)
+	rm -f sl2h
 
 clobber: clean
-	/bin/rm -f *.icn
+	rm -f *.icn
 
 texdefs.icn: texdefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' texdefs.nw defns.nw $(CPIF) $@

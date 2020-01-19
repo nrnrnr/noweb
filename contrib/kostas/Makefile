@@ -69,4 +69,4 @@ rem := $(rem) $(nowebs:.nw=.toc)
 
 # Also remove the Icon files for the filters.
 clean:
-	-rm -f $(rem) C.icn C++.icn icon.icn oot.icn math.icn *.filter autodefs.*
+	rm -f $(rem) C.icn C++.icn icon.icn oot.icn math.icn *.filter autodefs.*

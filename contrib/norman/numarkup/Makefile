@@ -24,7 +24,7 @@ install:
 source: main.c pass1.c latex.c input.c scraps.c names.c arena.c global.c
 
 clean:
-	rm -f *.o *.c *.h *.tex *.log *.dvi *~ *.blg $(TARGET) *.html *~
+	rm -f *.o *.c *.h *.tex *.log *.dvi *~ *.blg $(TARGET) *.html
 
 $(OBJS): global.h
 
