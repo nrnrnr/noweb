@@ -2,8 +2,8 @@
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
-CC=gcc -ansi -pedantic -O -Wall -Werror
-CFLAGS=
+CC=gcc
+CFLAGS=-ansi -pedantic -O -Wall -Werror
 # If you have Icon, you should use the Icon versions of the noweb pipeline.
 # Set LIBSRC=icon
 LIBSRC=awk

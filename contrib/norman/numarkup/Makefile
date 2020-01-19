@@ -29,7 +29,7 @@ clean:
 $(OBJS): global.h
 
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS)
 
 numarkup.html: numarkup.nw
 	noweave -filter l2h -html -index numarkup.nw > $@
