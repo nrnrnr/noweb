@@ -40,8 +40,6 @@ MANDIR=$(MAN)/man$(MANEXT)
 MAN7DIR=$(MAN)/man$(MAN7EXT)
 CATDIR=$(MAN)/cat$(MANEXT)
 CAT7DIR=$(MAN)/cat$(MAN7EXT)
-LIBNAME=$(LIB)
-TEXNAME=$(TEXINPUTS)
 
 all:
 	(cd c && $(MAKE) "CC=$(CC)" "CFLAGS=$(CFLAGS)" $@)
@@ -89,7 +87,7 @@ for i in noweb notangle '$(WEAVE)' nountangle nodefs noroots nuweb2noweb cpif ht
 	 noroff
 do
   echo '@<<shell binaries@>>='
-  echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(BIN)/'"$i"
+  echo 'sed "s@|LIBDIR|@$(LIB)@"' "shell/$i" '> $(BIN)/'"$i"
   echo 'chmod +x $(BIN)/'"$i"
   echo '@<<uninstall shell binaries@>>='
   echo 'rm -f $(BIN)/'"$i"
@@ -97,7 +95,7 @@ done
 for i in toroff
 do
   echo '@<<shell binaries@>>='
-  echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(LIB)/'"$i"
+  echo 'sed "s@|LIBDIR|@$(LIB)@"' "shell/$i" '> $(LIB)/'"$i"
   echo 'chmod +x $(LIB)/'"$i"
   echo '@<<uninstall shell binaries@>>='
   echo 'rm -f $(LIB)/'"$i"
@@ -129,14 +127,14 @@ LINKPAGES="noweave nountangle"
 
 for i in $NORMALPAGES; do
   echo '@<<ordinary pages@>>='
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.1" '> $(MANDIR)/'"$i"'.$(MANEXT)'
   echo '@<<uninstall ordinary pages@>>='
   echo 'rm -f $(MANDIR)/'"$i"'.$(MANEXT)'
 done
 for i in $NORMAL7PAGES; do
   echo '@<<ordinary pages@>>='
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.7" '> $(MAN7DIR)/'"$i"'.$(MAN7EXT)'
   echo '@<<uninstall ordinary pages@>>='
   echo 'rm -f $(MAN7DIR)/'"$i"'.$(MAN7EXT)'
@@ -153,11 +151,11 @@ done
 echo '@<<compressed pages@>>='
 
 for i in $NORMALPAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.1" ' | gzip -9 > $(MANDIR)/'"$i"'.$(MANEXT).gz'
 done
 for i in $NORMAL7PAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.7" ' | gzip -9 > $(MAN7DIR)/'"$i"'.$(MAN7EXT).gz'
 done
 
@@ -169,11 +167,11 @@ done
 echo '@<<preformatted compressed pages@>>='
 
 for i in $NORMALPAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.txt" ' | gzip > $(CATDIR)/'"$i"'.$(MANEXT).gz'
 done
 for i in $NORMAL7PAGES; do
-  echo 'sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@"' \
+  echo 'sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@"' \
 	"xdoc/$i.txt" ' | gzip > $(CAT7DIR)/'"$i"'.$(MAN7EXT).gz'
 done
 
