@@ -3,23 +3,24 @@ DOCSRC = $(PROG).tex
 PROGSRC = $(PROG).csh
 SCRIPTS = list-anchors.awk awk-scripts.awk
 
-all:    correct-refs.tex correct-refs.csh all-scripts
+all: $(DOCSRC) $(PROGSRC) $(SCRIPTS)
 
-correct-refs.tex: correct-refs.nw
-	noweave -delay -index $< > $@
+$(DOCSRC): $(PROG).nw
+	noweave -delay -index $(PROG).nw > $@
 
-correct-refs.csh: correct-refs.nw
-	notangle -R$@ $< | cpif $@
+$(PROGSRC): $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
 	chmod +x $@
 
-all-scripts: correct-refs.nw
-	notangle -Rlist-anchors.awk $< | cpif list-anchors.awk
-	notangle -Rawk-scripts.awk $< | cpif awk-scripts.awk
-	touch all-scripts
+list-anchors.awk: $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
 
-install: correct-refs.csh all-scripts
-	cp correct-refs.csh $(HOME)/bin
-	cp *.awk $(HOME)/lib
+awk-scripts.awk: $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
+
+install: $(PROGSRC) $(SCRIPTS)
+	cp $(PROGSRC) $(HOME)/bin
+	cp $(SCRIPTS) $(HOME)/lib
 
 tidy:
 	rm *~ *% *.bak *.log *.blg
