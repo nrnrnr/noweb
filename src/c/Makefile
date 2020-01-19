@@ -2,8 +2,8 @@
 # See file COPYRIGHT for more information.
 #
 # Adjust these two lines for your ANSI C compiler
-CC=gcc -ansi -pedantic -O -Wall -Werror
-CFLAGS=
+CC=gcc
+CFLAGS=-ansi -pedantic -O -Wall -Werror
 
 # after installation, make doc.dvi for literate version
 
@@ -40,19 +40,19 @@ CPIF=>
 all: nt markup mnt finduses nwmktemp
 
 nt: $(TANGLEOBJS)
-	$(CC) $(CFLAGS) -o $@ $(TANGLEOBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(TANGLEOBJS)
 
 nwmktemp: nwmktemp.o
-	$(CC) $(CFLAGS) -o $@ nwmktemp.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ nwmktemp.o
 
 finduses: $(FINDUSESOBJS)
-	$(CC) $(CFLAGS) -o $@ $(FINDUSESOBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(FINDUSESOBJS)
 
 markup: $(MARKUPOBJS)
-	$(CC) $(CFLAGS) -o $@ $(MARKUPOBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(MARKUPOBJS)
 
 mnt: $(MNTOBJS)
-	$(CC) $(CFLAGS) -o $@ $(MNTOBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(MNTOBJS)
 
 source: $(SRCS)
 touch: $(SRCS)
@@ -88,7 +88,7 @@ FPOBJS=fakepretty.o pretty.o errors.o getline.o match.o strsave.o columns.o
 fakepretty.o: pretty.h
 
 fakepretty: $(FPOBJS)
-	$(CC) $(CFLAGS) -o $@ $(FPOBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(FPOBJS)
 
 
 columns.o:       columns.h
