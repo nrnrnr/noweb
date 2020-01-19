@@ -25,6 +25,7 @@ boot:
 
 toascii: toascii.nw
 	notangle -R$@ toascii.nw > $@
+	chmod +x $@
 
 clean:
 	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~
