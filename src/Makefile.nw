@@ -128,7 +128,7 @@ done
 for i in $LINKPAGES; do
   echo '@<<ordinary pages@>>='
   echo 'rm -f $(DESTDIR)$(MANDIR)/'"$i"'.$(MANEXT)'
-  echo '(cd $(DESTDIR)$(MANDIR) && ln notangle.$(MANEXT)' "$i"'.$(MANEXT))'
+  echo '(cd $(DESTDIR)$(MANDIR) && ln -s notangle.$(MANEXT)' "$i"'.$(MANEXT))'
   echo '@<<uninstall ordinary pages@>>='
   echo 'rm -f $(DESTDIR)$(MANDIR)/'"$i"'.$(MANEXT)'
 done

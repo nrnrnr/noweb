@@ -117,9 +117,9 @@ install-man:
 	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebstyle.7 > $(DESTDIR)$(MAN7DIR)/nowebstyle.$(MAN7EXT)
 	sed -e "s@|LIBDIR|@$(LIB)@" -e "s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/nowebfilters.7 > $(DESTDIR)$(MAN7DIR)/nowebfilters.$(MAN7EXT)
 	rm -f $(DESTDIR)$(MANDIR)/noweave.$(MANEXT)
-	(cd $(DESTDIR)$(MANDIR) && ln notangle.$(MANEXT) noweave.$(MANEXT))
+	(cd $(DESTDIR)$(MANDIR) && ln -s notangle.$(MANEXT) noweave.$(MANEXT))
 	rm -f $(DESTDIR)$(MANDIR)/nountangle.$(MANEXT)
-	(cd $(DESTDIR)$(MANDIR) && ln notangle.$(MANEXT) nountangle.$(MANEXT))
+	(cd $(DESTDIR)$(MANDIR) && ln -s notangle.$(MANEXT) nountangle.$(MANEXT))
 uninstall-man:
 	rm -f $(DESTDIR)$(MANDIR)/cpif.$(MANEXT)
 	rm -f $(DESTDIR)$(MANDIR)/nodefs.$(MANEXT)
