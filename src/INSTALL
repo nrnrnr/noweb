@@ -57,7 +57,7 @@ To build noweb:
      to substitute tempfile(1) or some other means of creating a
      temporary file.
 
-  3) Type `make boot'.  This command updates timestamps so that noweb
+  3) Type `make touch'.  This command updates timestamps so that noweb
      does not try to build itself using noweb.
 
   4) Fasten your seat belt and type `make all install'.  If you want a

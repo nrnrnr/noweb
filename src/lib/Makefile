@@ -3,8 +3,9 @@
 
 LIB=/dev/null
 SHELL=/bin/sh
+SRCS=toascii
 
-all: toascii
+all: $(SRCS)
 	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
 
 install: all
@@ -17,11 +18,11 @@ install: all
 uninstall:
 	for i in unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn; do rm -f $(DESTDIR)$(LIB)/$$i; done
 
-source: toascii
-touch: toascii
-	touch toascii
-boot:
-	touch toascii
+source: $(SRCS)
+touch:
+	touch $(SRCS)
+clobber: clean
+	rm -f $(SRCS)
 
 toascii: toascii.nw
 	notangle -R$@ toascii.nw > $@
@@ -29,5 +30,3 @@ toascii: toascii.nw
 
 clean:
 	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~
-clobber: clean
-	rm -f toascii

@@ -149,18 +149,14 @@ uninstall-elisp:
 	if [ -n "$(ELISP)" ]; then rm -f $(DESTDIR)$(ELISP)/noweb-mode.el; fi
 source: FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
-	sleep 1
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) touch); done
 touch:
 	touch FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
-boot:
+clobber: clean
+	rm -f FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 clean:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
-	rm -f nwsrcfilter *~ */*~
-
-clobber: clean
+	rm -f *~ */*~
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 
 Makefile: Makefile.nw

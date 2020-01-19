@@ -56,18 +56,15 @@ mnt: $(MNTOBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(MNTOBJS)
 
 source: $(SRCS)
-touch: $(SRCS)
+touch:
 	touch $(SRCS)
-
-boot: ;	touch $(SRCS)
-
-clean:
-	rm -f nt markup mnt finduses fakepretty
-	rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~
-	rm -f *.atac *.trace *.html
-
 clobber: clean
 	rm -f $(SRCS) fakepretty.c pretty.[ch]
+
+clean:
+	rm -f nt markup mnt finduses nwmktemp fakepretty
+	rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~
+	rm -f *.atac *.trace *.html
 
 doc.tex: doc.nw
 	cp doc.nw $@

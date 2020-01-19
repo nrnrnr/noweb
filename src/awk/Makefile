@@ -12,11 +12,11 @@ BINEXECS=noindex
 EXECS=$(BINEXECS) $(LIBEXECS)
 
 all: $(EXECS)
-sources: $(EXECS)
-touch: $(EXECS)
+source: $(EXECS)
+touch:
 	touch $(EXECS)
-boot:
-	touch $(EXECS)
+clobber: clean
+	rm -f $(EXECS)
 
 install: all
 	cp $(LIBEXECSBARE) $(DESTDIR)$(LIB)
@@ -26,8 +26,6 @@ install: all
 uninstall:
 	for i in $(LIBEXECS); do rm -f $(DESTDIR)$(LIB)/$$i; done
 	for i in $(BINEXECS); do rm -f $(DESTDIR)$(BIN)/$$i; done
-
-source: $(EXECS)
 
 totex: totex.nw
 	notangle -R$@ totex.nw > $@
@@ -47,5 +45,3 @@ noindex: noindex.nw
 
 clean:
 	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
-clobber: clean
-	rm -f totex noidx tohtml noindex

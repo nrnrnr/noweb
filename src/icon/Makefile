@@ -26,12 +26,12 @@ SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
 	latex $*; while grep -s 'Rerun to get cross' $*.log; do latex $*; done
 
 all: $(EXECS)
-source: $(SRCS)
-touch: $(SRCS)
-	touch $(SRCS)
 
-boot:
+source: $(SRCS)
+touch:
 	touch $(SRCS)
+clobber: clean
+	rm -f $(SRCS)
 
 install: all
 	cp $(LIBEXECS) $(DESTDIR)$(LIB)
@@ -48,9 +48,6 @@ clean:
 	rm -f *.[ch] *.ps *.gz
 	rm -f $(EXECS)
 	rm -f sl2h
-
-clobber: clean
-	rm -f *.icn
 
 texdefs.icn: texdefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' texdefs.nw defns.nw $(CPIF) $@

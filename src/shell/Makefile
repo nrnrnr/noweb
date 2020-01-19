@@ -6,12 +6,13 @@ LIB=/usr/public/pkg/noweb/lib
 EXEC=noweave noweb notangle noroff toroff
 SRCS=$(EXEC) tmac.w
 
-all:	$(SRCS)
+all: $(SRCS)
+
 source: $(SRCS)
-touch:	$(SRCS)
+touch:
 	touch $(SRCS)
-boot:
-	touch $(SRCS)
+clobber: clean
+	rm -f $(SRCS)
 
 noweave: noweave.nw
 	notangle -R$@ noweave.nw > $@
@@ -27,5 +28,3 @@ noroff toroff tmac.w: roff.nw
 
 clean:
 	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
-clobber: clean
-	rm -f $(SRCS)

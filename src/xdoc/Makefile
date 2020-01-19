@@ -22,10 +22,10 @@ DOVERSION=./doversion
 
 all: $(SRCS)
 source: $(SRCS)
-touch: $(SRCS)
+touch:
 	touch $(SRCS)
-boot:
-	touch $(SRCS)
+clobber: clean
+	rm -f $(SRCS)
 
 www: $(WWW)/onepage.ps $(WWW)/guide.ps $(WWW)/guide.html
 
@@ -104,5 +104,3 @@ guide.html: guide.dvi
 
 clean:
 	rm -f *.dvi *.log *.blg *~ wc.tex *.ps *.gz *.uu *.html
-clobber: clean
-	rm -f *.1 *.7 *.txt
