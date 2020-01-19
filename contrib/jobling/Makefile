@@ -17,7 +17,7 @@ all-scripts: correct-refs.nw
 	notangle -Rawk-scripts.awk $< | cpif awk-scripts.awk
 	touch all-scripts
 
-install:
+install: correct-refs.csh all-scripts
 	cp correct-refs.csh $(HOME)/bin
 	cp *.awk $(HOME)/lib
 

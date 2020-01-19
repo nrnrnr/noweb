@@ -13,7 +13,7 @@ WEAVE=noweave -delay -filter icon.filter -index
 all: C.filter C++.filter icon.filter oot.filter math.filter\
      autodefs.oot autodefs.math
 
-install:
+install: all
 	mv *.filter $(LIB)
 	mv autodefs.* $(LIB)
 

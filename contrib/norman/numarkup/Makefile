@@ -13,9 +13,7 @@ all:
 	noweb -t numarkup.nw
 	$(MAKE) $(TARGET)
 
-install:
-	noweb -t numarkup.nw
-	$(MAKE) $(TARGET)
+install: all
 	strip $(TARGET)
 	cp $(TARGET) $(LIB)
 

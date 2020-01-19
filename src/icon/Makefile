@@ -34,7 +34,7 @@ touch: $(SRCS)
 boot:
 	touch $(SRCS)
 
-install: $(EXECS)
+install: all
 	cp $(LIBEXECS) $(LIB)
 	cp $(BINEXECS) $(BIN)
 	cp $(LIBSPECIAL) $(LIB)/autodefs.c

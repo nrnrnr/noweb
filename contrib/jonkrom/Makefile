@@ -3,7 +3,7 @@ SHELL=/bin/sh
 all: noxref.krom
 	chmod +x noxref.krom
 
-install:
+install: all
 	cp noxref.krom $(LIB)
 
 source: noxref.krom

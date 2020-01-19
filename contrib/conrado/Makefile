@@ -5,7 +5,7 @@ LIB=/dev/null	# to be overridden by install
 
 all: d2tex
 source: d2tex
-install:
+install: all
 	cp d2tex $(LIB)/dijkstra.filter
 
 # TeX files.
