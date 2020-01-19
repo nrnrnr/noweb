@@ -2,7 +2,7 @@ LIB=/dev/null  # to be overridden by install
 
 .SUFFIXES: .nw .icn
 .nw.icn:
-	notangle -L'#line %-1L "%F"%N' $*.nw | cpif $*.icn
+	notangle -L'#line %-1L "%F"%N' $< | cpif $@
 
 all: d2tex
 source: d2tex

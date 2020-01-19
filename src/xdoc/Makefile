@@ -2,13 +2,13 @@ WWW=$(HOME)/www/noweb
 SHELL=/bin/sh
 .SUFFIXES: .1 .7 .txt .ps
 .1.txt:
-	nroff -man $*.1 > $*.txt
+	nroff -man $< > $@
 .1.ps:
-	psroff -t -man $*.1 > $*.ps
+	psroff -t -man $< > $@
 .7.txt:
-	nroff -man $*.7 > $*.txt
+	nroff -man $< > $@
 .7.ps:
-	psroff -t -man $*.7 > $*.ps
+	psroff -t -man $< > $@
 
 MANPAGES=notangle.1   cpif.1   noweb.1   nodefs.1   noroots.1   noindex.1   \
 	nowebstyle.7   nowebfilters.7   nuweb2noweb.1   sl2h.1   htmltoc.1   \

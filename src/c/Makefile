@@ -33,14 +33,11 @@ CPIF=>
 
 .SUFFIXES: .nw .tex .dvi .h
 .nw.tex:
-	noweave $*.nw >$*.tex
+	noweave $< > $@
 .nw.c:
-	$(NOTANGLE) -L $*.nw >$*.c
-.nw.o:
-	$(NOTANGLE) -L $*.nw >$*.c
-	$(CC) $(CFLAGS) -c $*.c
+	$(NOTANGLE) -L $< > $@
 .nw.h:
-	$(NOTANGLE) -Rheader $*.nw $(CPIF) $*.h
+	$(NOTANGLE) -Rheader $< $(CPIF) $@
 
 all: nt markup mnt finduses nwmktemp
 

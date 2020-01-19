@@ -5,13 +5,13 @@ NOWEAVE=noweave
 
 .SUFFIXES: .i3 .m3 .nw .tex .dvi .html
 .nw.html:
-	$(NOWEAVE) -filter btdefn -index -html $*.nw > $*.html
+	$(NOWEAVE) -filter btdefn -index -html $< > $@
 .nw.tex:
-	$(NOWEAVE) -index -filter btdefn $*.nw > $*.tex
+	$(NOWEAVE) -index -filter btdefn $< > $@
 .nw.i3:
-	$(NOTANGLE) -Rinterface -L'<* LINE %L "%F" *>%N' $*.nw > $*.i3
+	$(NOTANGLE) -Rinterface -L'<* LINE %L "%F" *>%N' $< > $@
 .nw.m3:
-	$(NOTANGLE) -L'<* LINE %L "%F" *>%N' $*.nw > $*.m3
+	$(NOTANGLE) -L'<* LINE %L "%F" *>%N' $< > $@
 .tex.dvi:
 	latex '\scrollmode \input '"$*"; while grep -s 'Rerun to get cross-references right' $*.log; do latex '\scrollmode \input '"$*"; done
 
