@@ -1,7 +1,6 @@
 # Copyright 1993 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 SHELL=/bin/sh
-LIB=/usr/public/pkg/noweb/lib
 
 EXEC=noweave noweb notangle noroff toroff
 SRCS=$(EXEC) tmac.w

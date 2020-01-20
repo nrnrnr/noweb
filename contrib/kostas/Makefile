@@ -1,6 +1,6 @@
 # Only works with Gnu make.
 
-LIB=/opt/noweb/lib
+LIB=/dev/null	# to be overridden
 ICONT=icont
 # This is supposed to be the defns.nw file in the icon directory of the distribution.
 defns=defns.nw

@@ -1,3 +1,5 @@
+BIN=/dev/null	# to be overridden
+LIB=/dev/null	# to be overridden
 PROG = correct-refs
 DOCSRC = $(PROG).tex
 PROGSRC = $(PROG).csh
