@@ -148,13 +148,11 @@ install-elisp:
 
 uninstall-elisp:
 	if [ -n "$(ELISP)" ]; then rm -f $(DESTDIR)$(ELISP)/noweb-mode.el; fi
-source: FAQ
+source:
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 touch:
-	touch FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 clobber: clean
-	rm -f FAQ
 	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 clean:
 	rm -f *~ */*~
