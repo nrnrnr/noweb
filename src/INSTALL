@@ -33,10 +33,10 @@ To build noweb:
      variables in the Makefile:
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
        LIB        a directory to store markup, nt, noxref, ...
-       MAN        man pages will go in $MAN/man1
+       MAN        man pages will go in $MAN/man1 and $MAN/man7
        TEXINPUTS  a directory TeX will look for nwmac.tex and noweb.sty
        ELISP      a directory for noweb-mode.el, for emacs 19 and up
-     All of these files are *output* files, where noweb will place
+     All of these are *output* directories, where noweb will place
      binaries and man pages that are customized for your installation.
      Therefore you should:
        - make sure you have permission to write to these directories
