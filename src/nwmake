@@ -1,3 +1,3 @@
 #!/bin/sh
-if [ $# -eq 0 ]; then set iconlib all install; fi  # "$@" breaks make for empty args
+if [ $# -eq 0 ]; then set all install; fi  # "$@" breaks make for empty args
 /bin/make CC=lcc CFLAGS="-A -A" BIN=/usr/local/bin LIB=/usr/local/lib/noweb MAN=/usr/local/man TEXINPUTS=/usr/local/lib/tex/inputs "$@"
