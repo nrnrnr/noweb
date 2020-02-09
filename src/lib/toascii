@@ -1,0 +1,131 @@
+#!/bin/sh
+delay=0 noindex=0
+for i do
+        case $i in
+                -delay)         delay=1         ;;
+                -noindex)       noindex=1       ;;
+                *)      echo "This can't happen -- $i passed to toascii" 1>&2 ; exit 1 ;;
+        esac
+done
+awkfile=$(mktemp)
+textfile=$(mktemp)
+tagsfile=$(mktemp)
+export awkfile textfile tagsfile
+trap 'rm -f $awkfile $textfile $tagsfile' 0 1 2 10 14 15
+nawk 'BEGIN { textfile=ENVIRON["textfile"]
+              tagsfile=ENVIRON["tagsfile"] }
+      /^@begin code/ { ++secno }
+      /^@xref label/ { print $3, secno >tagsfile }
+      /^@((begin|end) (docs|code))/ { print >textfile }
+      /^@(text|nl|defn|use)/ { print >textfile }
+      /^@xref (ref|notused)/ { print >textfile }
+      /^@xref (begin|end)(defs|uses)/ { print >textfile }
+      /^@xref (def|use)item/ { print >textfile}
+      /^@xref ((begin|end)chunks)|(chunk(begin|use|defn|end))/ { print >textfile }
+      /^@index (begin|end)(defs|uses)/ { print >textfile }
+      /^@index (is(us|defin)ed)|((def|use)item)/ { print >textfile }
+      /^@index ((begin|end)index)|(entry(begin|use|defn|end))/ { print >textfile }'
+nawk 'BEGIN {
+              textfile = ENVIRON["textfile"]
+              tagsfile = ENVIRON["tagsfile"]
+              tfmt="detex | fmt -79"
+              cfmt="expand -4 | fold -75 | sed \"s/^/    /\""
+              xfmt="fold -75 | sed \"s/^/  /\""
+              zfmt="cat"
+              while (getline <tagsfile > 0)
+                      tag[$1] = $2
+              close(tagsfile)
+      }
+      /^@begin docs/ { out = tfmt }
+      /^@end docs/   { close(out) }
+      /^@begin code/ { out = cfmt; code = 1; ++secno }
+      /^@end code/   { endcode(); close(out); printf "\n" }
+      /^@text/       { printf "%s", substr($0, 7) | out }
+      /^@nl/         { # printf "(->%s)", formatname(out) | out ; 
+                       printf "\n" | out }
+      /^@xref ref/ { lastxrefref = tag[substr($0, 11)] }
+      /^@defn/     { name = convquote(substr($0, 7))
+                     printf "\n### %d ### %s%s=",
+                         secno, chunkname(name, lastxrefref), defn[name]
+                     defn[name] = "+" }
+      /^@use/      { name = convquote(substr($0, 6))
+                     printf "%s", chunkname(name, lastxrefref) | out }
+      /^@xref begindefs/      { endcode()
+                                printf "This definition continued in" | out }
+      /^@xref beginuses/      { endcode()
+                                printf "This code used in" | out }
+      /^@xref notused/        { endcode()
+                                print "This code not used in this document." | out }
+      /^@xref (def|use)item/  { addlist(tag[$3]) }
+      /^@xref end(defs|uses)/ { printlist() }
+      $0 ~ /^@index begindefs/ && !noindex {
+              endcode()
+              print "Defines:" | out }
+
+      $0 ~ /^@index isused/ && !noindex {
+              if (tag[$3] != lastxrefref) addlist(tag[$3]) }
+
+      $0 ~ /^@index defitem/ && !noindex {
+              printf "    %s,", $3 | out
+              if (nlist == 0) printf " not used in this document.\n" | out
+              else { printf " used in" | out; printlist() } }
+      $0 ~ /^@index beginuses/ && !noindex { endcode(); printf "Uses" | out }
+      $0 ~ /^@index isdefined/ && !noindex { lastuse = tag[$3] }
+      $0 ~ /^@index useitem/   && !noindex { addlist(sprintf("%s %s", $3, lastuse)) }
+      $0 ~ /^@index enduses/   && !noindex { printlist() }
+      /^@xref beginchunks/ { close(out); out = zfmt
+                             print "List of code chunks\n" | out }
+      /^@xref chunkbegin/  { name = convquote(substr($0, length($3) + 19))
+                             printf "%s\n", chunkname(name, tag[$3]) | out }
+      /^@xref chunkuse/    { addlist(tag[$3]) }
+      /^@xref chunkdefn/   { }
+      /^@xref chunkend/    { if (nlist == 0)
+                                 print "    Not used in this document." | out
+                             else { printf "   Used in" | out; printlist() } }
+      /^@xref endchunks/   { }
+      $0 ~ /^@index beginindex/ && !noindex { print "\nList of identifiers (defini" \
+                                                    "tion in parentheses)\n" | out }
+      $0 ~ /^@index entrybegin/ && !noindex { name = substr($0, length($3 + 19))
+                                              lastdefn = tag[$3]
+                                              printf "%s:  ", $4 | out }
+      $0 ~ /^@index entryuse/ && !noindex   { addlist(tag[$3]) }
+      $0 ~ /^@index entrydefn/ && !noindex  { }
+      $0 ~ /^@index entryend/ && !noindex   { for (i = 1; i <= nlist; i++)
+                                                  if (list[i] == lastdefn)
+                                                      sub(/.*/, "(&)", list[i])
+                                              if (nlist == 0)
+                                                  print "Not used." | out
+                                              else printlist() }
+      $0 ~ /^@index endindex/ && !noindex   { }
+      /^@fatal / { exit 1 }
+      END   { 
+              close(out) 
+      }
+      function endcode() {
+              if (code == 1) {
+                      code = 0
+                      close(out)
+                      out = xfmt
+                      printf "\n" | out } }
+      function addlist(s,    i) {
+              for (i = 1; i <= nlist; i++)
+                      if (s == list[i]) return
+              list[++nlist] = s }
+
+      function printlist(    i) {
+              if (nlist == 1) printf " %s.\n", list[1] | out
+              else if (nlist == 2) printf " %s and %s.\n", list[1], list[2] | out
+              else {
+                      for (i = 1; i < nlist; i++)
+                              printf " %s,", list[i] | out
+                      printf " and %s.\n", list[nlist] | out }
+              for (i in list) delete list[i]
+              nlist = 0 }
+      function convquote(s) { gsub(/\[\[|\]\]/, "", s); return s }
+      function chunkname(name, number) {
+        if (number == 0)
+          return sprintf("<%s>", name)
+        else
+          return sprintf("<%s %d>", name, number)
+      }' noindex=$noindex $textfile
+exit $?
