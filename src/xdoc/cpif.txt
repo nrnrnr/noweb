@@ -1,0 +1,33 @@
+CPIF(1)                     General Commands Manual                    CPIF(1)
+
+
+
+NNAAMMEE
+       cpif - selectively update files
+
+SSYYNNOOPPSSIISS
+       ccppiiff [--eeqq|--nnee] file ...
+
+DDEESSCCRRIIPPTTIIOONN
+       _c_p_i_f  is  an auxiliary tool for use with _n_o_t_a_n_g_l_e(1) and _m_a_k_e(1).  _c_p_i_f
+       compares its standard input to each of the named files, overwriting the
+       file  if  the  comparison succeeds or if the named file does not exist.
+       If neither --eeqq or --nnee is specified, the default is --nnee.  Typical  usage
+       is in the following default rule, suitable for use in a Makefile.
+        .nw.h: ; notangle -Rheader $*.nw | cpif $*.h
+
+SSEEEE AALLSSOO
+       _n_o_t_a_n_g_l_e(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                        CPIF(1)

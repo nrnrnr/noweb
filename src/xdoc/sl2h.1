@@ -1,0 +1,40 @@
+.TH NOWEB 1 "local 10/40/2008"
+.SH NAME
+sl2h \- simple latex to HTML converter
+.SH SYNOPSIS
+\fBsl2h\fP [\fB\-show\-unknowns\fP] [\fB\-html\-quotes\fP] [file ...]
+.SH DESCRIPTION
+.I sl2h
+is a simple converter from
+.IR latex (1)
+format to HTML
+(which can be used with, e.g., \fInetscape\fP(1) or \fIMosaic\fP(1)).
+If the \fB\-show\-unknowns\fP options is given, unrecognized
+.I LaTeX 
+control
+sequences appear in bold in the output.
+If the \fB\-html\-quotes\fP option is given, 
+.B sl2h
+converts LaTeX double-quote ligatures into HTML 4 double-quote entities.
+.I sl2h
+uses the LaTeX-generated .toc and .bbl files to help create table of contents
+and bibliography.
+.SH BUGS
+It is possible to tell
+.B sl2h
+about new control sequences by putting special TeX comments in one's 
+documentation chunks, but there's no documentation.
+Use the source, Luke.
+.SH SEE ALSO
+.IR nowebfilters (7),
+.IR htmltoc (1)
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

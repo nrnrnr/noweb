@@ -1,0 +1,180 @@
+.TH NOWEB 7 "local 10/40/2008"
+.SH NAME
+nowebstyle \- \fILaTeX\fP package for \fInoweb\fP
+.SH SYNOPSIS
+.B "\\\\usepackage{noweb}"
+.SH DESCRIPTION
+When 
+.I noweave
+generates code for 
+.IR LaTeX ,
+the
+.B noweb
+package is required.
+In addition to the necessary arcana, it
+defines a 
+.B webcode
+environment in which you can place fragments of 
+code, and in which
+only backslash and curly braces have their special meanings;
+all other characters are taken literally.
+It also defines a
+.B noweb
+pagestyle.
+Finally, it defines a
+.B "\\\\noweboptions{...}"
+command that can be used to tinker with the appearance of the output.
+Options are separated by commas and include:
+.TP
+.B margintag
+Put the sub-page number (tag) of each code-chunk definition in the
+left margin. (Default)
+.TP
+.B nomargintag
+Don't use margin tags.
+.TP
+.B shift
+Shift text to the left so that long code lines won't extend
+off the right-hand side of the page.
+.TP
+.B smallcode
+Set code in 
+.I LaTeX
+.B "\\\\small"
+font instead of 
+.B "\\\\normalsize."
+Similar options exist for all the 
+.I LaTeX
+size-changing commands.
+.TP
+.B longxref, shortxref, noxref
+Choose a style for chunk cross-reference.
+Long style uses  small paragraphs after each chunk, as in Knuth.
+Short style uses symbols on the definition line, as in Hanson.
+.B noxref
+provides no chunk cross-reference. 
+Defaults to 
+.B shortxref.
+.TP
+.B alphasubpage, numsubpage, nosubpage
+Number chunks by the number of the page on which they appear,
+followed by an alphabetic (numeric, not used) ``sub-page'' indicator.
+Defaults to 
+.B alphasubpage.
+.B nosubpage
+implies
+.B nomargintag.
+.TP
+.B webnumbering
+Number chunks consecutively, in 
+.I WEB
+style, instead of using sub-page numbers.
+.TP
+.B subscriptidents, nosubscriptidents, hyperidents, nohyperidents
+Controls subscripting of identifiers in code, including quoted code.
+Selecting
+.B subscriptidents
+means an identifier appearing in a code chunk (or in quoted code
+within a documentation 
+chunk) will be subscripted with the chunk number of its definition.
+.B hyperidents
+means such identifiers will be hyperlinked to their definitions,
+provided of course that a hypertext package like
+.B hyperref
+is loaded.
+.B nosubscriptidents
+and 
+.B nohyperidents
+are equivalent, and they turn off such markings.
+The default is
+.B hyperidents.
+.TP
+.B subscriptquotedidents, nosubscriptquotedidents, hyperquotedidents, nohyperquotedidents
+Controls linking of identifiers as above, but applies only to uses of
+identifiers
+in quoted code.
+.TP
+.B hideunuseddefs
+Omit defined but unused identifiers from
+the local identifier cross-reference (Preston Briggs).
+.TP
+.B noidentxref
+Omit the local identifier cross-reference which follows each code chunk.
+.TP
+.B externalindex
+Use an index generated with 
+.I noindex(1)
+(q.v.).
+.TP
+.B longchunks
+When expanding 
+.B "\\\\nowebchunks,"
+show page numbers of definitions and uses of each chunk.
+.TP
+.B english, french, german, portuges, icelandic
+Write cross-reference information in the language specified.
+Defaults to 
+.B english.
+.SH CONTROL SEQUENCES
+The noweb package describes a gazillion special control sequences.
+Only a few are listed here.
+.PP \" .TP will not work with the backslashes on the next line. Period.
+\fB\\nextchunklabel{l}\fP
+.RS
+Associates label \fBl\fP
+with the sub-page reference of the next code chunk.
+Can be used in for concise chunk cross-reference with, e.g.,
+\fBchunk~\\subpageref{l}\fP.
+.RE
+.PP
+.B "\\\\nwanchorto{URL}{anchor text}"
+.RS
+Creates a link to the given URL with the given anchor text.
+Implemented in 
+.I latex(1)
+using footnotes, but 
+.I sl2h(1)
+translates this to
+.B "<a href=URL>anchor text</a>"
+.RE
+.PP
+.B "\\\\nwanchorname{name}{anchor text}"
+.RS
+Creates an anchor point for a hyperlink.
+Implemented in 
+.I latex(1)
+using 
+.B "\\\\label",
+but
+.I sl2h(1)
+translates this to
+.B "<a name=name>anchor text</a>"
+.RE
+.PP
+.B "\\\\ifhtml ... \\\\fi"
+.RS
+Text between
+.B "\\\\ifhtml"
+and
+.B "\\\\fi"
+is ignored by 
+.I latex(1),
+but 
+.I sl2h(1)
+and the 
+.I l2h 
+noweb filter translate the text into HTML.
+.RE
+.SH SEE ALSO
+.IR noweave (1),
+.IR noweb (1)
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

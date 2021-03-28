@@ -1,0 +1,54 @@
+.TH NOWEB 1 "local 10/40/2008"
+.SH NAME
+nodefs \- find definitions in noweb file
+.SH SYNOPSIS
+.B nodefs
+[\fB\-auto\fP \fIlang\fP]
+[\fB\-showauto\fP]
+file ...
+.SH DESCRIPTION
+.I nodefs
+is an auxiliary tool that produces output for use with the
+.B \-indexfrom
+option of
+.IR noweave (1).
+.I nodefs
+searches a
+.I noweb
+file for identifier definitions, printing the identifiers on standard output, 
+one per line.
+If the 
+.B \-auto \fIlang\fP
+option is given,
+.I nodefs
+tries to discover definitions automatically, assuming the program
+is written in language \fIlang\fP.
+The 
+.B \-showauto
+option displays permissible values of \fIlang\fP, which vary but may include
+.B tex
+or 
+.BR icon .
+.PP
+For a complete description of using
+.I nodefs
+together with 
+.IR noweave (1)
+and 
+.IR noindex (1),
+see the man page for 
+.IR noindex (1).
+.SH SEE ALSO
+.IR noweave (1),
+.IR noweb (1),
+.IR noindex (1)
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

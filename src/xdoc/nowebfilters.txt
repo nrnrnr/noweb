@@ -1,0 +1,131 @@
+NOWEB(7)               Miscellaneous Information Manual               NOWEB(7)
+
+
+
+NNAAMMEE
+       nowebfilters - filters and parsers for use with noweb
+
+SSYYNNOOPPSSIISS
+       [nnoowweeaavvee|nnoottaannggllee|nnoowweebb] [--ffiilltteerr _f_i_l_t_e_r|--mmaarrkkuupp _p_a_r_s_e_r] ...
+
+DDEESSCCRRIIPPTTIIOONN
+       This  man  page documents the various filters and parsers that are sup‐
+       plied with _n_o_w_e_b(1).  A filter, which transforms the pipeline represen‐
+       tation,  is  used  with  the  --ffiilltteerr  option.  A parser, which reads a
+       source file and emits the pipeline representation,  is  used  with  the
+       --mmaarrkkuupp  option.   Not  all  filters  and  parsers are available at all
+       installations.
+
+FFIILLTTEERRSS
+       aauuttooddeeffss..**
+              _n_o_w_e_a_v_e_'_s --aauuttooddeeffss and --sshhoowwaauuttooddeeffss options use these filters,
+              which  automatically find defined identifiers.  The ** stands for
+              the name of a programming language.  (Icon installation only.)
+
+       bbttddeeffnn The bbttddeeffnn filter uses Dave Hanson's convention to mark  defini‐
+              tions.  In code chunks, each defining instances of an identifier
+              should be preceded by a single backtick character  (ASCII  140).
+              The bbttddeeffnn filter removes these backticks from the code and con‐
+              verts them to definitions, thus: ``ddeeffiinniittiioonn.  It, not  @@  %%ddeeff,
+              should  be  used  with both _n_o_t_a_n_g_l_e(1) and _n_o_w_e_a_v_e(1), at least
+              for programs written in C-like languages.
+
+       ddiissaammbbiigguuaattee
+              The ddiissaammbbiigguuaattee filter makes it possible  to  abbreviate  chunk
+              names using a trailing ellipsis (three periods), in the style of
+              WEB and _n_u_w_e_b(1).
+
+       ddooccss22ccoommmmeennttss _o_p_t_i_o_n_s
+              The ddooccss22ccoommmmeennttss filter converts documentation chunks  to  com‐
+              ments  in code chunks.  Options include --aallll, which converts all
+              documentation chunks into comments; --oonnee converts only one docu‐
+              mentation  chunk preceding each code chunk.  The --ww_k option for‐
+              mats comments _k columns wide.
+
+              Other options control the language and  style  of  the  comment.
+              Languages  available  include  --aawwkk, --cc, --cc++++, --ff7777, --ff9900, --iiccnn,
+              --iiccoonn, --lliisspp, --mm33, --mmll, --ooccaammllwweebb, --ppaassccaall, --ssccmm, and --tteexx.
+
+              Norman recommends using nnoottaannggllee(1) with ddooccssttooccoommmmeennttss  instead
+              of nnoouunnttaannggllee(1).  (Icon installation only.)
+
+       eelliiddee _p_a_t_t_e_r_n_s
+              The eelliiddee filter removes from the stream any code chunk matching
+              any of the arguments.  Each argument is a  pattern  in  which  ??
+              matches any single character and ** mmaattcchheess aannyy sseeqquueennccee ooff cchhaarr‐‐
+              aacctteerrss..
+
+       eemmppttyyddeeffnn
+              The eemmppttyyddeeffnn filter makes an empty definition (<<<<>>>>==) an abbre‐
+              viation for a continuation of the previous definition.
+
+       ll22hh [--sshhooww--uunnkknnoowwnnss] [--hhttmmll--qquuootteess]
+              The  ll22hh  filter converts LaTeX to HTML in documentation chunks.
+              If the --sshhooww--uunnkknnoowwnnss options is given, unrecognized LaTeX  con‐
+              trol   sequences   appear   in  bold  in  the  output.   If  the
+              --hhttmmll--qquuootteess option is given, ll22hh  converts  LaTeX  double-quote
+              ligatures  into  HTML  4  double-quote  entities.   ll22hh uses the
+              LaTeX-generated .toc and .bbl files to help create table of con‐
+              tents and bibliography.  (Icon installation only.)
+
+       ppiippeeddooccss _c_o_m_m_a_n_d
+              The  ppiippeeddooccss  filter  runs  each documentation chunk through an
+              invocation of _c_o_m_m_a_n_d, which may be any Unix command.  The Noweb
+              library  includes the command hh22aa, which uses _l_y_n_x(1) to convert
+              HTML to ASCII.
+
+       xxcchhuunnkkss _f_i_l_e_s
+              The xxcchhuunnkkss filter pulls in code chunks from an external source.
+              The _f_i_l_e_s argument lists one or more noweb files, which are used
+              only for their definitions of code chunks.  Empty chunk  defini‐
+              tions  in the main document are replaced with the external defi‐
+              nitions of the same name.  This  filter  makes  it  possible  to
+              include  the same code chunks in multiple documents, or even the
+              same code chunks multiple times in  the  same  document.   (Icon
+              installation only.)
+
+PPAARRSSEERRSS
+       A  parser  converts  a source file to the noweb pipeline format, inter‐
+       preting the ``markup'' in that file.  By default,  the  tools  use  the
+       standard  noweb markup, but some installations may support nuweb markup
+       as well.  Parsers include
+
+       mmaarrkkuupp Converts standard _n_o_w_e_b(1) markup to pipeline format.
+
+       nnuummaarrkkuupp
+              Converts _n_u_w_e_b(1) markup to noweb pipeline format.   It  is  not
+              part  of  the  standard  installation,  but  it  can be found in
+              _n_o_w_e_b's ccoonnttrriibb//nnoorrmmaann directory.
+
+FFIILLEESS
+       All filters and parsers are stored in ||LLIIBBDDIIRR||
+
+BBUUGGSS
+       It is possible to tell ll22hh about new control sequences by putting  spe‐
+       cial  TeX  comments in one's documentation chunks, but there's no docu‐
+       mentation.  Use the source, Luke.
+
+       nnuummaarrkkuupp loses information, e.g., about the proper treatment  of  tabs.
+       It  also  doesn't  compensate for _n_o_t_a_n_g_l_e's newline-removal heuristic,
+       which means results on _n_u_w_e_b files may differ subtly  from  those  pro‐
+       duced by _n_u_w_e_b_.
+
+       Many filters are not available in installations that use Awk instead of
+       Icon.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_a_v_e(1), _n_o_t_a_n_g_l_e(1), _n_o_w_e_b(1)
+       The _N_o_w_e_b _H_a_c_k_e_r_'_s _G_u_i_d_e
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman  Ramsey,  Tufts  University.    Internet   address   NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(7)

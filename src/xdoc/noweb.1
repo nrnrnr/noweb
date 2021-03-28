@@ -1,0 +1,221 @@
+.TH NOWEB 1 "local 10/40/2008"
+.SH NAME
+noweb \- a simple literate-programming tool
+.SH SYNOPSIS
+.B noweb
+[\fB-t\fP] 
+[\fB-o\fP] 
+[\fB-L\fP\fIformat\fP] 
+[\fB-markup\fP \fIparser\fP]
+[file] ...
+.SH DESCRIPTION
+.I Noweb
+is a literate-programming tool like
+.I FunnelWEB
+or 
+.IR nuweb ,
+only simpler.
+A 
+.I noweb
+file contains program source code interleaved with documentation.
+When 
+.I noweb
+is invoked, it writes the program source code 
+to the output files mentioned in the noweb file, and it writes a 
+.I TeX
+file for typeset documentation.
+.PP
+The 
+.IR noweb (1)
+command is for people who don't like reading man pages or who are switching from 
+.IR nuweb .
+To get the most out of
+.IR noweb ,
+use
+.IR notangle (1)
+and 
+.IR noweave (1)
+instead.
+.SH FORMAT OF NOWEB FILES
+A 
+.I noweb 
+file is a sequence of
+.IR chunks ,
+which may appear in any order.
+A chunk may contain code or documentation.
+Documentation chunks begin with a line that starts with an at sign (@) 
+followed by a space or newline.
+They have no names.
+Code chunks begin with
+.br
+<<\fIchunk name\fP>>=
+.br
+on a line by itself.
+The double left angle bracket (<<) must be in the first column.
+Chunks are terminated by the beginning of another chunk, or by end of file.
+If the first line in the file does not mark the beginning of a
+chunk, it is assumed to be the first line of a documentation chunk.
+.PP
+Documentation chunks contain text that is copied verbatim to the
+.I TeX
+file (except for quoted code).
+.I noweb
+works with \fILaTeX\fP; the first documentation chunk must contain
+a 
+.I LaTeX
+.B "\\\\documentclass"
+command, it must contain
+.B "\\\\usepackage{noweb}"
+in the preamble, and finally
+it must also contain a 
+.I LaTeX
+.B "\\\\begin{document}"
+command.
+.PP
+Code chunks contain program source code and references to other code
+chunks.
+Several code chunks may have the same name;
+.I noweb
+concatenates their definitions to produce a single chunk, just as
+other literate-programming tools do.
+.I noweb
+looks for chunks that are defined but not used in the source file.
+If the name of such a chunk contains no spaces, the chunk is
+an ``output file;''
+.I noweb
+expands it and writes the result onto the file of the same name.
+A code-chunk definition is like a macro definition;
+it contains references to other chunks, which are 
+themselves expanded, and so on.
+\fInoweb\fP's output is readable; it preserves the indentation of expanded
+chunks with respect to the chunks in which they appear.
+.PP
+If a star (\fB*\fP) is appended to the name of an output file,
+.I noweb
+includes line-number information as specified by the \fB\-L\fP\fIformat\fP
+option (or for C if no \fB\-L\fP\fIformat\fP option is given).
+The name itself may not contain shell metacharacters.
+.PP
+Code may be quoted within documentation
+chunks by placing double square brackets
+(\fB[[\fI...\fB]]\fR) around it.
+These double square brackets are used to
+give the code special typographic treatment in the
+.I TeX
+file.
+If quoted code ends with three or more square brackets,
+.I noweb
+chooses the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
+parsed correctly.
+.PP
+In code, noweb treats unpaired
+double left or right angle brackets as literal \fB<<\fP and \fB>>\fP.  
+To force any
+such brackets, even paired brackets or brackets in documentation, 
+to be treated as literal, use a preceding at sign (e.g. \fB@<<\fP).
+.SH OPTIONS
+.TP
+.B \-t
+Suppress generation of a 
+.I TeX
+file.
+.TP
+.B \-o
+Suppress generation of output files.
+.TP
+.B \-L\fIformat\fR
+Use 
+.I format
+to format line-number information for starred output files.
+(If the option is omitted, a format suitable for C is used.)
+.I format
+is as defined by 
+.IR notangle (1);
+.TP
+.B "\-markup \fIparser\fP"
+Use 
+.I parser
+to parse the input file.
+Enables use of noweb tools on files in other formats;
+for example, the 
+.B numarkup
+parser understands
+.IR nuweb (1)
+format.
+See 
+.IR nowebfilters (7)
+for more information.
+For experts only.
+.SH BUGS
+.PP
+Ignoring unused chunks whose names contain spaces
+sometimes causes problems, especially in the case when a chunk has
+multiple definitions and one is misspelled;
+the misspelled definition will be silently ignored.
+.IR noroots (1)
+can be used as a sanity checker to catch this sort of mistake.
+.PP
+.I noweb
+is intended for users who don't want the power or the complexity of 
+command-line options.
+More sophisticated users should avoid
+.I noweb
+and use 
+.I noweave 
+and 
+.I notangle
+instead.
+If the design were better, we could all use the same commands.
+.PP
+.I noweb
+requires the new version of
+.IR awk ,
+assumed to be called
+.IR nawk .
+DEC
+.I nawk
+has a bug in that that causes problems with braces in
+.I TeX
+output.
+GNU 
+.I gawk
+is reported to work.
+.PP
+The default
+.I LaTeX
+pagestyles don't set the width of the boxes containing headers and footers.
+Since 
+.I noweb
+code paragraphs are extra wide, this 
+.I LaTeX
+bug sometimes results in extra-wide headers and footers.
+The remedy is to redefine the relevant 
+.B ps@*
+commands;
+.B ps@noweb
+in 
+.B noweb.sty
+can be used as an example.
+.SH SEE ALSO
+.PP
+.IR notangle (1),
+.IR noweave (1),
+.IR noroots (1),
+.IR nountangle (1),
+.IR nowebstyle (7),
+.IR nowebfilters (7),
+.IR nuweb2noweb (1)
+.br
+Norman Ramsey,
+.I "Literate programming simplified, IEEE Software"
+11(5):97-105, September 1994.
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

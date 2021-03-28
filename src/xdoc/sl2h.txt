@@ -1,0 +1,39 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       sl2h - simple latex to HTML converter
+
+SSYYNNOOPPSSIISS
+       ssll22hh [--sshhooww--uunnkknnoowwnnss] [--hhttmmll--qquuootteess] [file ...]
+
+DDEESSCCRRIIPPTTIIOONN
+       _s_l_2_h  is  a simple converter from _l_a_t_e_x(1) format to HTML (which can be
+       used with, e.g., _n_e_t_s_c_a_p_e(1)  or  _M_o_s_a_i_c(1)).   If  the  --sshhooww--uunnkknnoowwnnss
+       options  is  given, unrecognized _L_a_T_e_X control sequences appear in bold
+       in the output.  If the --hhttmmll--qquuootteess  option  is  given,  ssll22hh  converts
+       LaTeX  double-quote  ligatures into HTML 4 double-quote entities.  _s_l_2_h
+       uses the LaTeX-generated .toc and .bbl files to help  create  table  of
+       contents and bibliography.
+
+BBUUGGSS
+       It is possible to tell ssll22hh about new control sequences by putting spe‐
+       cial TeX comments in one's documentation chunks, but there's  no  docu‐
+       mentation.  Use the source, Luke.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_b_f_i_l_t_e_r_s(7), _h_t_m_l_t_o_c(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(1)

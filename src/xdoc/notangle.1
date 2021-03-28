@@ -1,0 +1,641 @@
+.TH NOWEB 1 "local 10/40/2008"
+.SH NAME
+notangle, noweave, nountangle \- noweb, a literate-programming tool
+.SH SYNOPSIS
+.B notangle
+[\fB\-R\fProotname ...] [\fB\-filter\fP command]
+[\fB\-L\fP[format]] [file] ...
+.br
+\fBnountangle\fP 
+[\fB\-ml\fP|\fB\-m3\fP|\fB\-c\fP|\fB\-c++\fP|\fB\-awk\fP|\fB\-tex\fP|\fB\-f77\fP|\fB\-f90\fP|\fB\-lisp\fP|\fB\-matlab\fP]
+[\fB\-R\fProotname ...] [\fB\-filter\fP command] [\fB\-w\fPwidth] [file] ...
+.br
+\fBnoweave\fP [options] [file] ...
+.SH DESCRIPTION
+.I Noweb
+is a literate-programming tool like Knuth's
+.I WEB,
+only simpler.
+A 
+.I noweb
+file contains program source code interleaved with documentation.
+When 
+.I notangle
+is given a 
+.I noweb
+file, it writes the program on standard output.
+When 
+.I noweave
+is given a 
+.I noweb
+file, it reads the 
+.I noweb
+source and produces, on standard output, \fILaTeX\fP, \fITeX\fP, \fItroff\fP,
+or \fIHTML\fP
+source for typeset documentation.
+.I nountangle
+converts a literate program into an ordinary program by
+turning interleaved documentation into comments.
+The file name `\-' refers to standard input.
+.SH FORMAT OF NOWEB FILES
+A 
+.I noweb 
+file is a sequence of
+.IR chunks ,
+which may appear in any order.
+A chunk may contain code or documentation.
+Documentation chunks begin with a line that starts with an at sign (@) 
+followed by a space or newline.
+They have no names.
+Code chunks begin with
+.br
+<<\fIchunk name\fP>>=
+.br
+on a line by itself.
+The double left angle bracket (<<) must be in the first column.
+Chunks are terminated by the beginning of another chunk, or by end of file.
+If the first line in the file does not mark the beginning of a
+chunk, it is assumed to be the first line of a documentation chunk.
+.PP
+Documentation chunks contain text that is ignored by
+.I notangle
+and copied verbatim to 
+standard output
+by
+.I noweave
+(except for quoted code).
+.I noweave
+can work with \fILaTeX\fP, plain \fITeX\fP, \fItroff\fP or \fIHTML\fP.
+With plain \fITeX\fP, it inserts a reference to a 
+.I TeX
+macro package, \fInwmac\fP, which defines commands like
+.B \echapter
+and
+.B \esection.
+.PP
+Code chunks contain program source code and references to other code
+chunks.
+Several code chunks may have the same name;
+.I notangle
+concatenates their definitions to produce a single chunk, just as does
+.IR tangle (1).
+Code chunk definitions are like macro definitions;
+.I notangle
+extracts a program by expanding one chunk (by default, the chunk named
+\fB<<\fP*\fB>>\fP).
+The definition of that chunk contains references to other chunks, which are 
+themselves expanded, and so on.
+\fInotangle\fP's output is readable; it preserves the indentation of expanded
+chunks with respect to the chunks in which they appear.
+.PP
+Code may be quoted within documentation
+chunks by placing double square brackets
+(\fB[[\fI...\fB]]\fR) around it.
+These double square brackets are ignored by
+.I notangle,
+but they may be used by 
+.I noweave
+to give the code special typographic treatment, e.g., hypertext links.
+If quoted code ends with three or more square brackets,
+.I noweave
+chooses the rightmost pair, so that, for example, \fB[[a[i]]]\fR is
+parsed correctly.
+The names of
+code chunks may appear within quoted code unless that quoted code is itself
+part of the name of a code chunk.
+.PP
+In code, noweb treats unpaired
+double left or right angle brackets as literal \fB<<\fP and \fB>>\fP.  
+To force any
+such brackets, even paired brackets or brackets in documentation, 
+to be treated as literal, use a preceding at sign (e.g. \fB@<<\fP).
+.PP
+Some programming or formatting languages may require a single \fB@\fP sign in 
+the first column. 
+Noweb users may achieve this effect by putting a doubled \fB@@\fP in the first column;
+in this position only, it stands for a single \fB@\fP sign.
+.SH TANGLING
+.I notangle
+and
+.I nountangle
+accept the same set of options, although some options have effects only on one 
+or the other.
+The options are:
+.TP
+.B \-R\fIname\fR
+Expand the \fB<<\fIname\fB>>\fR code chunk.
+The 
+.B \-R
+option can be repeated, 
+in which case each chunk is written to the output.
+If no
+.B \-R
+option is given, expand the chunk named  \fB<<\fP*\fB>>\fP.
+.TP
+.B \-L\fIformat\fR
+Emit line number indications at chunk boundaries.
+A line number indication identifies the source of the line that follows it.
+In
+.IR format ,
+.B "%F"
+indicates the name of the source file,
+.B "%L"
+indicates the line number of the source file,
+.B "%N"
+indicates a newline,
+and 
+.B "%%"
+indicates a percent sign.
+A sign and digit may be inserted between the percent sign and the `\fBL\fP',
+in which case the line number will be adjusted by that amount.
+If 
+.I format
+is omitted, the default format is that accepted by the C preprocessor:
+`\fB#line %L "%F"%N\fR'.
+When using the \fB\-L\fIformat\fR option, 
+.I notangle
+ensures that all text appears in the same column in input and output.
+.I nountangle
+ignores this option.
+.IP " "
+Common format strings include:
+.ta \w'zzzSunyFORTRANxxxx'u
+.nf
+   C	\fB\-L'#line %L "%F"%N'\fP
+   Sun FORTRAN	\fB\-L'\\# %L "%F"%N'\fP
+   Icon	\fB\-L'#line %\-1L "%F"%N'\fP
+   Modula-3	\fB\-L'<*LINE %L "%F" *>%N'\fP
+   SML/NJ	\fB\-L'(*#line %L "%F"*)'\fP
+.fi
+.IP " "
+To solve the converse problem, that is, to get noweb to do something sensible 
+with \fB#line\fP in its input, see the \fBsharpline\fP filter in the examples
+directory.
+.TP
+.B \-t\fIk\fP
+Copy tabs untouched from input to output, and use tabs for indentation, 
+assuming stops every \fIk\fP columns.
+By default, tabs are expanded to spaces with stops every 8 columns.
+.TP
+.B \-filter \fIcmd\fP
+Filter the 
+.I noweb
+source through 
+.I cmd
+after converting it to tool form and before tangling.
+.I notangle
+looks for 
+.I cmd
+first on the user's
+.BR PATH ,
+then in
+.BR |LIBDIR| .
+Such filters
+can be used to add features to
+.IR notangle ;
+for an example see
+.BR |LIBDIR|/emptydefn .
+For experts only.
+.TP
+.B "\-markup \fIparser\fP"
+Use 
+.I parser
+to parse the input file.
+Enables use of noweb tools on files in other formats;
+for example, the 
+.B numarkup
+parser understands
+.IR nuweb (1)
+format.
+See 
+.IR nowebfilters (7)
+for more information.
+For experts only.
+.TP
+.B "\-awk | \-c | \-icn | \-icon | \-ml | \-m3 | \-pascal | \-f77 | \-f90 | \-tex"
+When 
+.I nountangle
+transforms documentation chunks into comments, use the comment format of the language
+named.
+.B \-c
+is the default.
+.I notangle
+ignores these options.
+.TP
+.B \-w\fIn\fP
+When 
+.I nountangle
+transforms documentation chunks into comments, create comments on lines of width \fIn\fP.
+.I notangle
+ignores this option.
+.SH WEAVING
+Output from \fInoweave\fP can
+be used in \fITeX\fP documents that 
+.B "\\\\input nwmac,"
+in \fILaTeX\fP documents that  use the
+.B noweb
+package (see \fInowebstyle(1)\fP),
+and in \fIHTML\fP documents to be browsed with 
+.I Mosaic(1).
+.I Noweave
+treats code chunks somewhat like
+.I LaTeX list environments.
+If the ``\fB@ \fP'' that terminates a code chunk is followed immediately by text,
+that text follows the code chunk without a paragraph break.
+If the rest of the line is blank, 
+.I noweave
+puts 
+.I TeX
+into ``vertical mode,'' and later text starts a fresh, indented paragraph.
+.PP
+No page breaks occur in the middle of code chunks unless necessary to avoid
+an overfull vbox.
+The documentation chunk immediately preceding a code chunk appears on
+the same page as that code chunk unless doing so would violate the previous rule.
+.PP
+.I Noweave
+inserts no extra newlines in its \fITeX\fP output, so the line numbers given
+in
+.I TeX
+error messages are the same as those in the input file.
+.PP
+.I noweave
+has
+options that dictate choice of 
+formatter
+and that support different formatting idioms and tools.
+Basic options are described here; options related to index
+and cross-reference information are described in the 
+INDEXING AND CROSS-REFERENCE section.
+.TP
+.B \-latex
+Emit LaTeX, including wrapper in 
+.B article
+style with the
+.B noweb
+package and page style. (Default)
+.TP 
+.B \-tex
+Emit plain TeX, including wrapper with
+.B nwmac
+macros.
+.TP
+.B \-html
+Emit HTML, using HTML wrapper.
+The output is uninteresting without \fB-index\fP or \fB-x\fP.
+The tags \fB<nowebchunks>\fP and \fB<nowebindex>\fP, on lines by themselves,
+produce a list of chunks and an index of identifiers, respectively.
+If these tags are not present, the list and index are placed at the end of the file.
+.TP
+.B \-latex+html
+Assume documentation chunks are LaTeX, but generate HTML for code chunks,
+suitably marked so conversion with 
+.I latex2html(1)
+yields reasonable output.
+A LaTeX wrapper is implied, but can be turned off with \fB-n\fP.
+.I Use of this option is 
+.B deprecated; 
+use
+.B \-html
+with 
+.B "\-filter l2h"
+instead.
+.TP
+.B \-troff
+Emit 
+.IR troff (1)
+markup (with no wrapper).
+The result should be processed with 
+.IR noroff (1).
+Bug reports for 
+.B \-troff
+to Arnold Robbins
+.B <arnold@skeeve.com>.
+.TP
+.B \-n
+Don't use any wrapper (header or trailer).
+This option is useful when \fInoweave\fP's output will be
+a part of a larger document.
+See also 
+.B \-delay.
+.TP
+.B \-filter \fIcmd\fP
+Filters the 
+.I noweb
+source through 
+.I cmd
+after converting it to tool form and before converting to
+.I TeX.
+.I noweave
+looks for 
+.I cmd
+first on the user's
+.B PATH,
+then in
+.B |LIBDIR|.
+Such filters
+can be used to add features to
+.I noweave;
+for an example, see
+.B |LIBDIR|/noxref.krom.
+.I Noweave
+supports up to four filters; one can get more by shell trickery, 
+for example, \fB-filter "icon.filter | noidx"\fP.
+The \fB-autodefs\fP,
+\fB-x\fP, \fB-index\fP, and \fB-indexfrom\fP options are implemented as filters.
+Filters are executed with the shell's
+.B eval
+command, so
+.I cmd
+should be quoted accordingly.
+.TP
+.B "\-markup \fIparser\fP"
+Use 
+.I parser
+to parse the input file.
+Enables use of noweb tools on files in other formats;
+for example, the 
+.B numarkup
+parser understands
+.IR nuweb (1)
+format.
+See 
+.IR nowebfilters (7)
+for more information.
+For experts only.
+.TP 
+.B \-option \fIopt\fP
+Adds \fB\enoweboptions{\fP\fIopt\fP\fB}\fP to the
+.I LaTeX
+header.
+See 
+.I nowebstyle(1) 
+for values of
+.I opt.
+Normally useful only with the
+.B \-latex
+option, but 
+.B "\-option longxref"
+works black magic with 
+.B \-html.
+.TP
+.B \-delay
+By default, 
+.I noweave
+puts file-name and other information into the output before the first chunk
+of the program.
+.B \-delay
+delays that information until after the first documentation chunk, making
+act a little bit like the 
+.I WEB
+``limbo.''
+The option is typically used to enable a user to put a specialized
+.I LaTeX
+.B "\\\\documentclass"
+command and other preamble material in the first documentation chunk (i.e., 
+.I before
+the first @ sign).
+This option also forces trailing cross-referencing information to be emitted
+just before the final chunk, instead of at the end of the document;
+the final chunk is expected to contain
+.B "\\\\end{document}."
+The 
+.B \-delay
+option implies the
+.B \-n 
+option.
+.TP
+.B \-t\fIk\fP
+Expand tabs with stops every \fIk\fP columns.
+(Default is to expand every 8 columns.)
+.TP
+.B \-t
+Copy tabs to the output.
+.TP
+.B \-v
+Print the pipeline and RCS info on standard error.
+.SH INDEXING AND CROSS-REFERENCE
+
+When used with 
+.IR LaTeX ,
+.IR troff ,
+or
+.I HTML,
+.I noweave
+can provide indexing and cross-reference information for chunks and for 
+programming-language identifiers.
+Identifier definitions may be marked by hand using backticks (`); the 
+\fB-filter btdefn\fP option recognizes these markings.
+For some languages, definitions may be found automatically using the 
+\fB-autodefs\fP option.
+This section describes the indexing and cross-reference options;
+it might well be skipped on first reading.
+.TP
+.B \-x
+For 
+.I LaTeX,
+add a page number to each chunk name identifying the location of that
+chunk's definition, and emit cross-reference information relating definitions and uses.
+For 
+.I HTML,
+create hypertext links between uses and definitions of chunks.
+When
+.B noweave -x
+is used with
+.I LaTeX,
+the control sequence
+.B "\\\\nowebchunks"
+expands to a sorted list of all code chunks.
+.TP
+.B \-index
+Build cross-reference information (or hypertext links) for defined identifiers.
+Definitions are those found in the input files by
+.B \-autodefs
+.I language
+or by
+.BR \-filter btdefn.
+Requires
+.I LaTeX
+or
+.I HTML.
+.B \-index
+implies
+.B \-x;
+including both will generate strange-looking output.
+.I noweave
+does not generate
+cross-references to identifiers that appear in quoted code (\fB@[[\fP...\fB@]]\fP),
+but it does generate hypertext links.
+When
+.B noweave -index
+is used with
+.I LaTeX, 
+the control sequence
+.B "\\\\nowebindex"
+expands to an index of identifiers.
+.TP
+.B \-indexfrom \fIindex\fP
+Like 
+.B \-index,
+but the identifiers to be indexed are taken from file \fIindex\fP.
+See
+.I noindex(1).
+.TP
+.B \-autodefs \fIlang\fP
+Discover identifier definitions automatically.
+Code in chunks must be in language \fIlang\fP.
+Permissible \fIlang\fPs vary but may include
+.B tex
+or 
+.B icon.
+Useless without
+.B \-index,
+which it must precede.
+.TP
+.B \-showautodefs
+Show values of \fIlang\fP usable with \fB-autodefs\fP.
+.SH ERROR MESSAGES
+If
+.I notangle
+or
+.I noweave
+encounters a chunk name within documentation, it assumes that this
+indicates an error, usually misspelling ``<<name>>=''.
+Other error messages should be self-explanatory.
+.PP
+It is incorrect to refer to a chunk that is never
+defined, but it is OK for chunks to be defined and not used.
+.SH EXAMPLES
+If you have trouble digesting this man page, you're not alone.
+Here are a few examples to get you started.
+I'll assume you have a
+.B foo.nw
+file with a C program in chunk 
+.B <<foo.c>>
+and a header file in chunk
+.BR <<foo.h>> ,
+and that your documentation is marked up using
+.IR latex(1) .
+I'll show you how to build things using the most common options.
+.PP
+To rebuild your C source, try
+.RS
+.B "notangle \-L \-Rfoo.c foo.nw > foo.c"
+.RE
+To rebuild your header file, try
+.RS
+.B "notangle \-Rfoo.h foo.nw | cpif foo.h"
+.RE
+There are two compromises here.
+Omitting \fB\-L\fP keeps \fB#line\fP out of your header file,
+and using \fBcpif\fP prevents the command from rewriting 
+.B foo.h
+unless the contents have changed.  Thus, this is good code to put in a Makefile rule.
+.PP
+To build a printed document, run
+.RS
+.B "noweave \-autodefs c \-index foo.nw > foo.tex"
+.RE
+If you have your own preamble, containing \fB\\documentclass\fP and all, 
+you will also need the \fB\-delay\fP option.
+.PP
+To build a web page, run
+.RS
+.B "noweave \-filter l2h \-autodefs c \-index \-html foo.nw | htmltoc > foo.html"
+.RE
+Have fun!
+.SH FILES
+.PP
+.ta \w'|TEXINPUTS|nwkernel.texxxxx'u
+.nf
+|LIBDIR|/markup	markup preprocessor
+|LIBDIR|/unmarkup	inverts markup
+|LIBDIR|/nt	notangle proper
+|LIBDIR|/finduses	find uses of identifiers for index
+|LIBDIR|/noidx	generate index and cross-reference info
+|LIBDIR|/toroff	back end to emit \fItroff\fP
+|LIBDIR|/totex	back end to emit \fITeX\fP or \fILaTeX\fP
+|LIBDIR|/tohtml	back end to emit HTML
+|TEXINPUTS|/nwmac.tex	formatting \fITeX\fP macros
+|TEXINPUTS|/noweb.sty	use in \fILaTeX\fP documents; see \fInowebstyle(7)\fP
+.fi
+.SH SEE ALSO
+.PP
+.IR cpif (1),
+.IR nodefs (1),
+.IR noroots (1),
+.IR noweb (1),
+.IR noindex (1),
+.IR noroff (1),
+.IR nowebstyle (7),
+.IR nowebfilters (7)
+.SH BUGS
+.I notangle 
+and
+.I nountangle
+fail if names used on the command line contain single quotes.
+.PP
+Ignoring unused chunks can cause problems;
+if a chunk has
+multiple definitions and one is misspelled,
+the misspelled definition is silently ignored.
+.IR noroots (1)
+can be used to catch this mistake.
+\".PP
+\".I noweb
+\"requires the new version of
+\".IR awk ,
+\"assumed to be called
+\".IR nawk .
+\"DEC
+\".I nawk
+\"has a bug in that that causes 
+\".B noweave
+\"to fail to translate braces correctly.
+\"GNU 
+\".I gawk
+\"is reported to work.
+\".PP
+\"DEC 
+\".I sh
+\"has a bug that causes the
+\".B \-filter
+\"option to fail whenever the filter command contains more than one word.
+.PP
+The 
+.I "-L"
+option of
+.I notangle
+puts an implicit initial newline in the format string.
+.PP
+The default
+.I LaTeX
+pagestyles don't set the width of the boxes containing headers and footers.
+Since 
+.I noweb
+code paragraphs are extra wide, this 
+.I LaTeX
+bug sometimes results in extra-wide headers and footers.
+The remedy is to redefine the relevant 
+.B ps@*
+commands;
+.B ps@noweb
+in 
+.B noweb.sty
+can be used as an example.
+.PP
+.IR latex2html (1)
+mangles some source files.
+.PP
+.I noweave
+has too many options, and this man page is too long.
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

@@ -1,0 +1,171 @@
+.TH NOWEB 1 "local 10/40/2008"
+.SH NAME
+noindex \- build external index for noweb document
+.SH SYNOPSIS
+.B noindex \fIbasename\fP\fR[\fP.tex\fR]
+.SH DESCRIPTION
+.I noindex
+looks through 
+.I LaTeX
+.B .aux
+files for identifiers that should go in a
+.I noweb
+external index.
+It sorts all identifiers and writes the results on
+.I basename\fB.nwi\fP.
+.SH NOWEB INDEXING STRATEGIES
+A 
+.I noweb
+program consists of one or more files.
+In the simple case, these files are run through
+.I noweave
+together, to produce a single
+.I LaTeX
+file.
+.I "noweave \-index"
+suffices to produce an index and cross-referencing information;
+neither 
+.I nodefs
+nor
+.I noindex
+is required.
+.PP
+When a 
+.I noweb
+program
+consists of several source files, it is often better to run each source file
+through 
+.I noweave
+to produce its own 
+.I LaTeX 
+file, then use
+.I noindex
+to produce an external index.
+This technique has several advantages:
+.IP
+The line numbers in the 
+.I LaTeX
+files correspond to the line numbers in the source files, so it is easier
+to diagnose 
+.I LaTeX
+errors.
+.IP
+The
+.I LaTeX
+.B "\\\\includeonly"
+feature can be used, making it possible to format parts of large programs while retaining
+complete cross-reference information.
+.IP
+When used with
+.IR make (1),
+the technique 
+avoids running 
+.I noweave
+over source files that have not changed.
+.IP
+Using the external index places fewer demands on \fILaTeX\fP's memory,
+making it read its
+.B .aux
+files much more quickly.
+.PP
+The disadvantages are that 
+.I nodefs
+and 
+.I noindex
+are needed for full cross-referencing and a properly sorted index.
+.SH EXAMPLE
+This example assumes a 
+.I noweb
+program of three source files:
+.B a.nw ,
+.B b.nw ,
+and
+.BR c.nw .
+The file
+.B doc.tex
+is assumed to contain 
+.I LaTeX
+boilerplate, including the commands
+.IP
+\\noweboptions{externalindex}
+.nf
+\\include{a}
+\\include{b}
+\\include{c}
+.fi
+.PP
+The first sequence of steps is to create a file listing all the
+identifiers defined anywhere in 
+.BR a ,
+.BR b ,
+or 
+.BR c .
+.IP
+nodefs a.nw > a.defs
+.nf
+nodefs b.nw > b.defs
+nodefs c.nw > c.defs
+sort \-u a.defs b.defs c.defs | cpif all.defs
+.fi
+.PP
+Using
+.I "sort \-u"
+and
+.IR cpif (1)
+avoids changing
+.B all.defs
+unless the set of identifiers changes.
+This technique, used in a Makefile, avoids unnecessary rebuilding.
+.PP
+The next series of steps is to create
+.I LaTeX
+files with full cross-reference information for all identifiers.
+.IP
+noweave \-n \-indexfrom all.defs a.nw > a.tex
+.nf
+noweave \-n \-indexfrom all.defs b.nw > b.tex
+noweave \-n \-indexfrom all.defs c.nw > c.tex
+.fi
+.PP
+The final steps run
+.I LaTeX
+once to create
+.B .aux
+files, then
+.I noindex 
+to create the index,
+then
+.I LaTeX
+again to format the complete document.
+.IP
+latex doc
+.nf 
+noindex doc
+latex doc
+.fi
+.PP
+In a Makefile,
+.I noindex
+can be run before every invocation of
+.I LaTeX.
+.SH BUGS
+.I noindex
+is distributed in awk and Icon versions.
+The awk version is slow and does a poorer job sorting.
+.PP
+There is no comparable machinery to make it possible to use multiple files 
+with the HTML back end.
+.SH SEE ALSO
+.IR noweave (1),
+.IR nodefs (1),
+.IR cpif (1)
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

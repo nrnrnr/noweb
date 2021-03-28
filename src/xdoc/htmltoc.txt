@@ -1,0 +1,43 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       htmltoc - add table of contents to HTML document
+
+SSYYNNOOPPSSIISS
+       hhttmmllttoocc [--22334455] [file]
+
+DDEESSCCRRIIPPTTIIOONN
+       _h_t_m_l_t_o_c adds a table of contents to the HTML document named on the com‐
+       mand line or provided as standard input.   The  table  of  contents  is
+       inserted  between  <<ttaabblleeooffccoonntteennttss>> and <<//ttaabblleeooffccoonntteennttss>>,, which must
+       appear on lines by themselves.  Any text between those two  markers  is
+       _d_i_s_c_a_r_d_e_d_.   These  markers  are  inserted automatically by the _s_l_2_h(1)
+       filter.
+
+       The table of contents includes only headers at levels 2, 3, 4,  and  5.
+       This  can  be changed by using a command-line option, e.g., --112233445566778899PP
+       ttoo iinncclluuddee aallll ppoossssiibbllee hheeaaddeerrss..
+
+BBUUGGSS
+       _h_t_m_l_t_o_c can't cope with a header that is split across  multiple  lines,
+       even though this is legal HTML.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_b_f_i_l_t_e_r_s(7), _s_l_2_h(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+       Stephen Parker provided a preliminary version.
+
+
+
+                               local 10/40/2008                       NOWEB(1)

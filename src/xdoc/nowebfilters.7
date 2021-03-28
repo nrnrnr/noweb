@@ -1,0 +1,211 @@
+.TH NOWEB 7 "local 10/40/2008"
+.SH NAME
+nowebfilters \- filters and parsers for use with noweb
+.SH SYNOPSIS
+[\fBnoweave\fP|\fBnotangle\fP|\fBnoweb\fP]
+[\fB\-filter\fP \fIfilter\fP|\fB\-markup\fP \fIparser\fP] ...
+.SH DESCRIPTION
+This man page documents the various filters and parsers that are 
+supplied with 
+.IR noweb (1).
+A filter, which transforms the pipeline representation, is used with the
+.B \-filter
+option.
+A parser, which reads a source file and emits the pipeline representation,
+is used with the
+.B \-markup
+option.
+Not all filters and parsers are available at all installations.
+.SH FILTERS
+.TP
+.B autodefs.*
+.I noweave's
+.B \-autodefs
+and 
+.B \-showautodefs
+options use these filters, which automatically find defined identifiers.
+The 
+.B *
+stands for the name of a programming language.
+(Icon installation only.)
+.TP
+.B btdefn
+The
+.B btdefn
+filter uses Dave Hanson's convention to mark definitions.
+In code chunks, each defining instances of an identifier should be preceded by 
+a single backtick character (ASCII 140).
+The
+.B btdefn
+filter removes these backticks from the code and converts them to definitions,
+thus:
+.BR "`definition".
+It, not
+.BR "@ %def" ,
+should be used with both 
+.IR notangle (1)
+and
+.IR noweave (1),
+at least for programs written in C-like languages.
+.TP
+.B disambiguate
+The 
+.B disambiguate 
+filter makes it possible to abbreviate chunk names using a trailing ellipsis
+(three periods), in the style of WEB and 
+.IR nuweb (1).
+.TP
+.BI docs2comments " options"
+The
+.B docs2comments
+filter converts documentation chunks to comments in code chunks.
+Options include 
+.BR "\-all" ,
+which converts all documentation chunks into comments;
+.B "\-one" 
+converts only one documentation chunk preceding each code chunk.
+The
+.BI "\-w" k
+option formats comments 
+.I k
+columns wide.
+.IP
+Other options control the language and style of the comment.
+Languages available include
+.BR      "\-awk" , 
+.BR      "\-c" ,
+.BR      "\-c++" ,
+.BR      "\-f77" ,
+.BR      "\-f90" ,
+.BR      "\-icn" , 
+.BR      "\-icon" ,
+.BR      "\-lisp" , 
+.BR      "\-m3" ,
+.BR      "\-ml" , 
+.BR      "\-ocamlweb" ,
+.BR      "\-pascal" ,
+.BR      "\-scm" ,
+and
+.BR      "\-tex" .
+.IP
+Norman recommends using
+.BR notangle (1)
+with
+.B docstocomments
+instead of
+.BR nountangle (1).
+(Icon installation only.)
+.TP
+.B elide \fIpatterns\fP
+The
+.B elide
+filter
+removes from the stream any code chunk matching 
+any of the arguments.
+Each argument is a pattern in which
+.B ?
+matches any single character and
+.B * matches any sequence of characters.
+.TP
+.B emptydefn
+The 
+.B emptydefn
+filter makes an empty definition (\fB<<>>=\fP) an abbreviation for
+a continuation of the previous definition.
+.TP 
+\fBl2h\fP [\fB\-show\-unknowns\fP] [\fB\-html\-quotes\fP]
+The 
+.B l2h
+filter converts LaTeX to HTML in documentation chunks.
+If the \fB\-show\-unknowns\fP options is given, unrecognized LaTeX control
+sequences appear in bold in the output.
+If the \fB\-html\-quotes\fP option is given, 
+.B l2h
+converts LaTeX double-quote ligatures into HTML 4 double-quote entities.
+.B l2h
+uses the LaTeX-generated .toc and .bbl files to help create table of contents
+and bibliography.
+(Icon installation only.)
+.TP
+.B pipedocs\fI command\fP
+The 
+.B pipedocs
+filter runs each documentation chunk through an invocation of
+.IR command ,
+which may be any Unix command.
+The Noweb library includes the command
+.BR h2a ,
+which uses 
+.IR lynx (1)
+to convert HTML to 
+ASCII.
+.TP
+.BI xchunks " files"
+The 
+.B xchunks
+filter pulls in code chunks from an external source.
+The
+.I files
+argument lists one or more noweb files, which are used only for their 
+definitions of code chunks.
+Empty chunk definitions in the main document are replaced with 
+the external definitions of the same name.
+This filter makes it possible to include the same code chunks 
+in multiple documents, or even the same code chunks multiple 
+times in the same document.
+(Icon installation only.)
+.SH PARSERS
+A parser converts a source file to the noweb pipeline format,
+interpreting the ``markup'' in that file.
+By default, the tools use the standard noweb markup, but some installations
+may support nuweb markup as well.
+Parsers include
+.TP
+.B markup
+Converts standard
+.IR noweb (1)
+markup to pipeline format.
+.TP
+.B numarkup
+Converts 
+.IR nuweb (1)
+markup to noweb pipeline format.
+It is not part of the standard installation, but it can be found in \fInoweb\fP's 
+.B contrib/norman
+directory.
+.SH FILES
+All filters and parsers are stored in
+.B |LIBDIR|
+.SH BUGS
+It is possible to tell
+.B l2h
+about new control sequences by putting special TeX comments in one's 
+documentation chunks, but there's no documentation.
+Use the source, Luke.
+.PP
+.B numarkup
+loses information, e.g., about the proper treatment of tabs.
+It also doesn't compensate for \fInotangle\fP's newline-removal
+heuristic, which means results on 
+.I nuweb
+files may differ subtly from those produced by 
+.I nuweb.
+.PP
+Many filters are not available in installations that use Awk instead of Icon.
+.SH SEE ALSO
+.IR noweave (1),
+.IR notangle (1),
+.IR noweb (1)
+.br
+The
+.I "Noweb Hacker's Guide"
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

@@ -1,0 +1,361 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       notangle, noweave, nountangle - noweb, a literate-programming tool
+
+SSYYNNOOPPSSIISS
+       nnoottaannggllee [--RRrootname ...] [--ffiilltteerr command] [--LL[format]] [file] ...
+       nnoouunnttaannggllee [--mmll|--mm33|--cc|--cc++++|--aawwkk|--tteexx|--ff7777|--ff9900|--lliisspp|--mmaattllaabb] [--RRroot‐
+       name ...] [--ffiilltteerr command] [--wwwidth] [file] ...
+       nnoowweeaavvee [options] [file] ...
+
+DDEESSCCRRIIPPTTIIOONN
+       _N_o_w_e_b is a literate-programming tool like Knuth's _W_E_B_, only simpler.  A
+       _n_o_w_e_b file contains program source code interleaved with documentation.
+       When _n_o_t_a_n_g_l_e is given a _n_o_w_e_b file, it writes the program on  standard
+       output.   When _n_o_w_e_a_v_e is given a _n_o_w_e_b file, it reads the _n_o_w_e_b source
+       and produces, on standard output, _L_a_T_e_X, _T_e_X, _t_r_o_f_f, or _H_T_M_L source for
+       typeset  documentation.  _n_o_u_n_t_a_n_g_l_e converts a literate program into an
+       ordinary program by turning interleaved  documentation  into  comments.
+       The file name `-' refers to standard input.
+
+FFOORRMMAATT OOFF NNOOWWEEBB FFIILLEESS
+       A _n_o_w_e_b file is a sequence of _c_h_u_n_k_s, which may appear in any order.  A
+       chunk may contain code or documentation.   Documentation  chunks  begin
+       with a line that starts with an at sign (@) followed by a space or new‐
+       line.  They have no names.  Code chunks begin with
+       <<_c_h_u_n_k _n_a_m_e>>=
+       on a line by itself.  The double left angle bracket (<<) must be in the
+       first column.  Chunks are terminated by the beginning of another chunk,
+       or by end of file.  If the first line in the file  does  not  mark  the
+       beginning  of a chunk, it is assumed to be the first line of a documen‐
+       tation chunk.
+
+       Documentation chunks contain text  that  is  ignored  by  _n_o_t_a_n_g_l_e  and
+       copied verbatim to standard output by _n_o_w_e_a_v_e (except for quoted code).
+       _n_o_w_e_a_v_e can work with _L_a_T_e_X, plain _T_e_X, _t_r_o_f_f or _H_T_M_L.  With plain _T_e_X,
+       it  inserts  a  reference  to a _T_e_X macro package, _n_w_m_a_c, which defines
+       commands like \\cchhaapptteerr and \\sseeccttiioonn..
+
+       Code chunks contain program source code and references  to  other  code
+       chunks.   Several code chunks may have the same name; _n_o_t_a_n_g_l_e concate‐
+       nates their definitions to produce a single chunk, just  as  does  _t_a_n_‐
+       _g_l_e(1).   Code  chunk  definitions are like macro definitions; _n_o_t_a_n_g_l_e
+       extracts a program by expanding one chunk (by default, the chunk  named
+       <<<<*>>>>).   The  definition  of  that  chunk contains references to other
+       chunks, which are themselves expanded, and so on.  _n_o_t_a_n_g_l_e's output is
+       readable;  it preserves the indentation of expanded chunks with respect
+       to the chunks in which they appear.
+
+       Code may be quoted within documentation chunks by placing double square
+       brackets ([[[[_._._.]]]]) around it.  These double square brackets are ignored
+       by _n_o_t_a_n_g_l_e_, but they may be used by _n_o_w_e_a_v_e to give the  code  special
+       typographic treatment, e.g., hypertext links.  If quoted code ends with
+       three or more square brackets, _n_o_w_e_a_v_e chooses the rightmost  pair,  so
+       that,  for  example,  [[[[aa[[ii]]]]]]  is parsed correctly.  The names of code
+       chunks may appear within quoted code unless that quoted code is  itself
+       part of the name of a code chunk.
+
+       In  code,  noweb treats unpaired double left or right angle brackets as
+       literal <<<< and >>>>.  To force any such brackets, even paired brackets or
+       brackets in documentation, to be treated as literal, use a preceding at
+       sign (e.g. @@<<<<).
+
+       Some programming or formatting languages may require a single @@ sign in
+       the  first  column.   Noweb  users may achieve this effect by putting a
+       doubled @@@@ in the first column; in this position only, it stands for  a
+       single @@ sign.
+
+TTAANNGGLLIINNGG
+       _n_o_t_a_n_g_l_e  and  _n_o_u_n_t_a_n_g_l_e accept the same set of options, although some
+       options have effects only on one or the other.  The options are:
+
+       --RR_n_a_m_e Expand the <<<<_n_a_m_e>>>> code chunk.  The --RR option can be  repeated,
+              in  which  case  each  chunk is written to the output.  If no --RR
+              option is given, expand the chunk named  <<<<*>>>>.
+
+       --LL_f_o_r_m_a_t
+              Emit line number indications at chunk boundaries.  A line number
+              indication  identifies  the  source of the line that follows it.
+              In _f_o_r_m_a_t, %%FF indicates the name of the source  file,  %%LL  indi‐
+              cates  the  line  number of the source file, %%NN indicates a new‐
+              line, and %%%% indicates a percent sign.  A sign and digit may  be
+              inserted between the percent sign and the `LL', in which case the
+              line number will be adjusted by that amount.  If _f_o_r_m_a_t is omit‐
+              ted,  the default format is that accepted by the C preprocessor:
+              `##lliinnee %%LL ""%%FF""%%NN'.  When using  the  --LL_f_o_r_m_a_t  option,  _n_o_t_a_n_g_l_e
+              ensures  that  all  text appears in the same column in input and
+              output.  _n_o_u_n_t_a_n_g_l_e ignores this option.
+
+              Common format strings include:
+                 C              --LL''##lliinnee %%LL ""%%FF""%%NN''
+                 Sun FORTRAN    --LL''\\## %%LL ""%%FF""%%NN''
+                 Icon           --LL''##lliinnee %%--11LL ""%%FF""%%NN''
+                 Modula-3       --LL''<<**LLIINNEE %%LL ""%%FF"" **>>%%NN''
+                 SML/NJ         --LL''((**##lliinnee %%LL ""%%FF""**))''
+
+              To solve the converse problem, that is, to get noweb to do some‐
+              thing sensible with ##lliinnee in its input, see the sshhaarrpplliinnee filter
+              in the examples directory.
+
+       --tt_k    Copy tabs untouched from input  to  output,  and  use  tabs  for
+              indentation,  assuming  stops every _k columns.  By default, tabs
+              are expanded to spaces with stops every 8 columns.
+
+       --ffiilltteerr _c_m_d
+              Filter the _n_o_w_e_b source through _c_m_d after converting it to  tool
+              form  and  before tangling.  _n_o_t_a_n_g_l_e looks for _c_m_d first on the
+              user's PPAATTHH, then in ||LLIIBBDDIIRR||.  Such filters can be used to  add
+              features  to  _n_o_t_a_n_g_l_e;  for  an example see ||LLIIBBDDIIRR||//eemmppttyyddeeffnn.
+              For experts only.
+
+       --mmaarrkkuupp _p_a_r_s_e_r
+              Use _p_a_r_s_e_r to parse the input file.  Enables use of noweb  tools
+              on  files  in  other  formats;  for example, the nnuummaarrkkuupp parser
+              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
+              information.  For experts only.
+
+       --aawwkk || --cc || --iiccnn || --iiccoonn || --mmll || --mm33 || --ppaassccaall || --ff7777 || --ff9900 || --tteexx
+              When  _n_o_u_n_t_a_n_g_l_e  transforms documentation chunks into comments,
+              use the comment  format  of  the  language  named.   --cc  is  the
+              default.  _n_o_t_a_n_g_l_e ignores these options.
+
+       --ww_n    When  _n_o_u_n_t_a_n_g_l_e  transforms documentation chunks into comments,
+              create comments on lines of  width  _n.   _n_o_t_a_n_g_l_e  ignores  this
+              option.
+
+WWEEAAVVIINNGG
+       Output  from _n_o_w_e_a_v_e can be used in _T_e_X documents that \\iinnppuutt nnwwmmaacc,, in
+       _L_a_T_e_X documents that  use the nnoowweebb package (see _n_o_w_e_b_s_t_y_l_e_(_1_)), and in
+       _H_T_M_L  documents  to  be  browsed  with  _M_o_s_a_i_c_(_1_)_.  _N_o_w_e_a_v_e treats code
+       chunks somewhat like _L_a_T_e_X _l_i_s_t _e_n_v_i_r_o_n_m_e_n_t_s_.  If the ``@@ '' that  ter‐
+       minates a code chunk is followed immediately by text, that text follows
+       the code chunk without a paragraph break.  If the rest of the  line  is
+       blank, _n_o_w_e_a_v_e puts _T_e_X into ``vertical mode,'' and later text starts a
+       fresh, indented paragraph.
+
+       No page breaks occur in the middle of code chunks unless  necessary  to
+       avoid  an overfull vbox.  The documentation chunk immediately preceding
+       a code chunk appears on the same page as that code chunk  unless  doing
+       so would violate the previous rule.
+
+       _N_o_w_e_a_v_e  inserts  no extra newlines in its _T_e_X output, so the line num‐
+       bers given in _T_e_X error messages are the same as  those  in  the  input
+       file.
+
+       _n_o_w_e_a_v_e  has  options that dictate choice of formatter and that support
+       different formatting idioms and tools.   Basic  options  are  described
+       here;  options  related  to  index  and cross-reference information are
+       described in the INDEXING AND CROSS-REFERENCE section.
+
+       --llaatteexx Emit LaTeX, including wrapper in aarrttiiccllee style  with  the  nnoowweebb
+              package and page style. (Default)
+
+       --tteexx   Emit plain TeX, including wrapper with nnwwmmaacc macros.
+
+       --hhttmmll  Emit  HTML,  using  HTML  wrapper.   The output is uninteresting
+              without --iinnddeexx or --xx.  The tags <<nnoowweebbcchhuunnkkss>> and  <<nnoowweebbiinnddeexx>>,
+              on lines by themselves, produce a list of chunks and an index of
+              identifiers, respectively.  If these tags are not  present,  the
+              list and index are placed at the end of the file.
+
+       --llaatteexx++hhttmmll
+              Assume  documentation  chunks  are  LaTeX, but generate HTML for
+              code chunks, suitably marked so  conversion  with  _l_a_t_e_x_2_h_t_m_l_(_1_)
+              yields  reasonable  output.  A LaTeX wrapper is implied, but can
+              be turned off with --nn.  _U_s_e _o_f _t_h_i_s _o_p_t_i_o_n  _i_s  ddeepprreeccaatteedd;;  use
+              --hhttmmll with --ffiilltteerr ll22hh instead.
+
+       --ttrrooffff Emit  _t_r_o_f_f(1)  markup  (with no wrapper).  The result should be
+              processed with _n_o_r_o_f_f(1).  Bug reports for --ttrrooffff to Arnold Rob‐
+              bins <<aarrnnoolldd@@sskkeeeevvee..ccoomm>>..
+
+       --nn     Don't  use any wrapper (header or trailer).  This option is use‐
+              ful when _n_o_w_e_a_v_e's output will be a part of a  larger  document.
+              See also --ddeellaayy..
+
+       --ffiilltteerr _c_m_d
+              Filters the _n_o_w_e_b source through _c_m_d after converting it to tool
+              form and before converting to _T_e_X_.  _n_o_w_e_a_v_e looks for _c_m_d  first
+              on  the user's PPAATTHH,, then in ||LLIIBBDDIIRR||..  Such filters can be used
+              to  add  features  to  _n_o_w_e_a_v_e_;  for  an  example,   see   ||LLIIBB‐‐
+              DDIIRR||//nnooxxrreeff..kkrroomm..   _N_o_w_e_a_v_e supports up to four filters; one can
+              get more by shell trickery, for example, --ffiilltteerr ""iiccoonn..ffiilltteerr  ||
+              nnooiiddxx"".   The  --aauuttooddeeffss, --xx, --iinnddeexx, and --iinnddeexxffrroomm options are
+              implemented as filters.  Filters are executed with  the  shell's
+              eevvaall command, so _c_m_d should be quoted accordingly.
+
+       --mmaarrkkuupp _p_a_r_s_e_r
+              Use  _p_a_r_s_e_r to parse the input file.  Enables use of noweb tools
+              on files in other formats;  for  example,  the  nnuummaarrkkuupp  parser
+              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
+              information.  For experts only.
+
+       --ooppttiioonn _o_p_t
+              Adds \\nnoowweebbooppttiioonnss{{_o_p_t}} to the _L_a_T_e_X header.  See  _n_o_w_e_b_s_t_y_l_e_(_1_)
+              for values of _o_p_t_.  Normally useful only with the --llaatteexx option,
+              but --ooppttiioonn lloonnggxxrreeff works black magic with --hhttmmll..
+
+       --ddeellaayy By default, _n_o_w_e_a_v_e puts file-name and  other  information  into
+              the output before the first chunk of the program.  --ddeellaayy delays
+              that information until after the first documentation chunk, mak‐
+              ing act a little bit like the _W_E_B ``limbo.''  The option is typ‐
+              ically used to enable a user to put a specialized  _L_a_T_e_X  \\ddooccuu‐‐
+              mmeennttccllaassss command and other preamble material in the first docu‐
+              mentation chunk (i.e., _b_e_f_o_r_e the first @  sign).   This  option
+              also forces trailing cross-referencing information to be emitted
+              just before the final chunk, instead of at the end of the  docu‐
+              ment;  the  final  chunk  is expected to contain \\eenndd{{ddooccuummeenntt}}..
+              The --ddeellaayy option implies the --nn option.
+
+       --tt_k    Expand tabs with stops every _k columns.  (Default is  to  expand
+              every 8 columns.)
+
+       --tt     Copy tabs to the output.
+
+       --vv     Print the pipeline and RCS info on standard error.
+
+IINNDDEEXXIINNGG AANNDD CCRROOSSSS--RREEFFEERREENNCCEE
+       When  used with _L_a_T_e_X, _t_r_o_f_f, or _H_T_M_L_, _n_o_w_e_a_v_e can provide indexing and
+       cross-reference information for  chunks  and  for  programming-language
+       identifiers.   Identifier definitions may be marked by hand using back‐
+       ticks (`); the --ffiilltteerr bbttddeeffnn option recognizes  these  markings.   For
+       some  languages,  definitions  may  be  found  automatically  using the
+       --aauuttooddeeffss option.  This section describes the indexing and cross-refer‐
+       ence options; it might well be skipped on first reading.
+
+       --xx     For  _L_a_T_e_X_, add a page number to each chunk name identifying the
+              location of that chunk's definition,  and  emit  cross-reference
+              information  relating  definitions  and  uses.  For _H_T_M_L_, create
+              hypertext links between uses and definitions  of  chunks.   When
+              nnoowweeaavvee --xx is used with _L_a_T_e_X_, the control sequence \\nnoowweebbcchhuunnkkss
+              expands to a sorted list of all code chunks.
+
+       --iinnddeexx Build  cross-reference  information  (or  hypertext  links)  for
+              defined  identifiers.   Definitions are those found in the input
+              files by --aauuttooddeeffss _l_a_n_g_u_a_g_e or by --ffiilltteerrbtdefn.  Requires _L_a_T_e_X
+              or  _H_T_M_L_.   --iinnddeexx  implies  --xx;;  including  both  will generate
+              strange-looking output.  _n_o_w_e_a_v_e does not generate  cross-refer‐
+              ences to identifiers that appear in quoted code (@@[[[[...@@]]]]), but
+              it does generate hypertext links.  When nnoowweeaavvee --iinnddeexx  is  used
+              with _L_a_T_e_X_, the control sequence \\nnoowweebbiinnddeexx expands to an index
+              of identifiers.
+
+       --iinnddeexxffrroomm _i_n_d_e_x
+              Like --iinnddeexx,, but the identifiers to be indexed  are  taken  from
+              file _i_n_d_e_x.  See _n_o_i_n_d_e_x_(_1_)_.
+
+       --aauuttooddeeffss _l_a_n_g
+              Discover  identifier  definitions automatically.  Code in chunks
+              must be in  language  _l_a_n_g.   Permissible  _l_a_n_gs  vary  but  may
+              include tteexx or iiccoonn..  Useless without --iinnddeexx,, which it must pre‐
+              cede.
+
+       --sshhoowwaauuttooddeeffss
+              Show values of _l_a_n_g usable with --aauuttooddeeffss.
+
+EERRRROORR MMEESSSSAAGGEESS
+       If _n_o_t_a_n_g_l_e or _n_o_w_e_a_v_e encounters a chunk name within documentation, it
+       assumes   that   this   indicates   an   error,   usually   misspelling
+       ``<<name>>=''.  Other error messages should be self-explanatory.
+
+       It is incorrect to refer to a chunk that is never defined, but it is OK
+       for chunks to be defined and not used.
+
+EEXXAAMMPPLLEESS
+       If  you  have  trouble digesting this man page, you're not alone.  Here
+       are a few examples to get you started.  I'll assume you have  a  ffoooo..nnww
+       file  with  a  C  program in chunk <<<<ffoooo..cc>>>> and a header file in chunk
+       <<<<ffoooo..hh>>>>, and that your documentation is  marked  up  using  _l_a_t_e_x_(_1_).
+       I'll show you how to build things using the most common options.
+
+       To rebuild your C source, try
+              nnoottaannggllee --LL --RRffoooo..cc ffoooo..nnww >> ffoooo..cc
+       To rebuild your header file, try
+              nnoottaannggllee --RRffoooo..hh ffoooo..nnww || ccppiiff ffoooo..hh
+       There  are  two  compromises here.  Omitting --LL keeps ##lliinnee out of your
+       header file, and using ccppiiff prevents the command from  rewriting  ffoooo..hh
+       unless  the contents have changed.  Thus, this is good code to put in a
+       Makefile rule.
+
+       To build a printed document, run
+              nnoowweeaavvee --aauuttooddeeffss cc --iinnddeexx ffoooo..nnww >> ffoooo..tteexx
+       If you have your own preamble, containing \\ddooccuummeennttccllaassss and  all,  you
+       will also need the --ddeellaayy option.
+
+       To build a web page, run
+              nnoowweeaavvee  --ffiilltteerr ll22hh --aauuttooddeeffss cc --iinnddeexx --hhttmmll ffoooo..nnww || hhttmmllttoocc >>
+              ffoooo..hhttmmll
+       Have fun!
+
+FFIILLEESS
+       |LIBDIR|/markup            markup preprocessor
+       |LIBDIR|/unmarkup          inverts markup
+       |LIBDIR|/nt                notangle proper
+       |LIBDIR|/finduses          find uses of identifiers for index
+       |LIBDIR|/noidx             generate index and cross-reference info
+       |LIBDIR|/toroff            back end to emit _t_r_o_f_f
+       |LIBDIR|/totex             back end to emit _T_e_X or _L_a_T_e_X
+       |LIBDIR|/tohtml            back end to emit HTML
+       |TEXINPUTS|/nwmac.tex      formatting _T_e_X macros
+       |TEXINPUTS|/noweb.sty      use in _L_a_T_e_X documents; see _n_o_w_e_b_s_t_y_l_e_(_7_)
+
+SSEEEE AALLSSOO
+       _c_p_i_f(1), _n_o_d_e_f_s(1), _n_o_r_o_o_t_s(1), _n_o_w_e_b(1), _n_o_i_n_d_e_x(1), _n_o_r_o_f_f(1), _n_o_w_e_b_‐
+       _s_t_y_l_e(7), _n_o_w_e_b_f_i_l_t_e_r_s(7)
+
+BBUUGGSS
+       _n_o_t_a_n_g_l_e  and _n_o_u_n_t_a_n_g_l_e fail if names used on the command line contain
+       single quotes.
+
+       Ignoring unused chunks can cause problems; if a chunk has multiple def‐
+       initions  and  one is misspelled, the misspelled definition is silently
+       ignored.  _n_o_r_o_o_t_s(1) can be used to catch this mistake.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       The _-_L option of _n_o_t_a_n_g_l_e puts an implicit initial newline in the  for‐
+       mat string.
+
+       The  default _L_a_T_e_X pagestyles don't set the width of the boxes contain‐
+       ing headers and footers.  Since _n_o_w_e_b code paragraphs are  extra  wide,
+       this  _L_a_T_e_X  bug  sometimes  results in extra-wide headers and footers.
+       The remedy is to redefine  the  relevant  ppss@@**  commands;  ppss@@nnoowweebb  in
+       nnoowweebb..ssttyy can be used as an example.
+
+       _l_a_t_e_x_2_h_t_m_l(1) mangles some source files.
+
+       _n_o_w_e_a_v_e has too many options, and this man page is too long.
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(1)

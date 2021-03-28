@@ -13,9 +13,6 @@ src/c/doc.aux
 src/c/*.aux
 contrib/*/*/*.aux
 src/c/*.o
-src/xdoc/*.1
-src/xdoc/*.txt
-src/xdoc/*.7
 /src/c/markup.ps
 /nwsrcfilter
 /src/icon/autodefs.*

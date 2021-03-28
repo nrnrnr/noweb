@@ -1,0 +1,38 @@
+.TH CPIF 1 "local 10/40/2008"
+.SH NAME
+cpif \- selectively update files
+.SH SYNOPSIS
+.B cpif
+[\fB\-eq\fP|\fB\-ne\fP] file ...
+.SH DESCRIPTION
+.I cpif
+is an auxiliary tool for use with 
+.IR notangle (1)
+and
+.IR make (1).
+.I cpif
+compares its standard input to each of the named files,
+overwriting the file if the comparison succeeds or if
+the named file does not exist.
+If neither
+.B \-eq
+or 
+.B \-ne
+is specified, the default is
+.BR \-ne .
+Typical usage is in the following default rule, suitable for use in a Makefile.
+.br
+ .nw.h: ; notangle \-Rheader $*.nw | cpif $*.h
+.br
+.SH SEE ALSO
+.IR notangle (1)
+.SH VERSION
+This man page is from 
+.I noweb
+version 2.12.
+.SH AUTHOR
+Norman Ramsey, Tufts University.
+Internet address \fBNorman.Ramsey@tufts.edu\fP.
+.br
+Noweb home page at \fBhttp://www.cs.tufts.edu/~nr/noweb\fP.
+

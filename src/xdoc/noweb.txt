@@ -1,0 +1,123 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       noweb - a simple literate-programming tool
+
+SSYYNNOOPPSSIISS
+       nnoowweebb [--tt] [--oo] [--LL_f_o_r_m_a_t] [--mmaarrkkuupp _p_a_r_s_e_r] [file] ...
+
+DDEESSCCRRIIPPTTIIOONN
+       _N_o_w_e_b is a literate-programming tool like _F_u_n_n_e_l_W_E_B or _n_u_w_e_b, only sim‐
+       pler.  A _n_o_w_e_b file contains program source code interleaved with docu‐
+       mentation.  When _n_o_w_e_b is invoked, it writes the program source code to
+       the output files mentioned in the noweb file, and it writes a _T_e_X  file
+       for typeset documentation.
+
+       The  _n_o_w_e_b(1) command is for people who don't like reading man pages or
+       who are switching from _n_u_w_e_b.  To get the most out of _n_o_w_e_b, use _n_o_t_a_n_‐
+       _g_l_e(1) and _n_o_w_e_a_v_e(1) instead.
+
+FFOORRMMAATT OOFF NNOOWWEEBB FFIILLEESS
+       A _n_o_w_e_b file is a sequence of _c_h_u_n_k_s, which may appear in any order.  A
+       chunk may contain code or documentation.   Documentation  chunks  begin
+       with a line that starts with an at sign (@) followed by a space or new‐
+       line.  They have no names.  Code chunks begin with
+       <<_c_h_u_n_k _n_a_m_e>>=
+       on a line by itself.  The double left angle bracket (<<) must be in the
+       first column.  Chunks are terminated by the beginning of another chunk,
+       or by end of file.  If the first line in the file  does  not  mark  the
+       beginning  of a chunk, it is assumed to be the first line of a documen‐
+       tation chunk.
+
+       Documentation chunks contain text that is copied verbatim  to  the  _T_e_X
+       file (except for quoted code).  _n_o_w_e_b works with _L_a_T_e_X; the first docu‐
+       mentation chunk must contain a _L_a_T_e_X \\ddooccuummeennttccllaassss  command,  it  must
+       contain  \\uusseeppaacckkaaggee{{nnoowweebb}}  in  the preamble, and finally it must also
+       contain a _L_a_T_e_X \\bbeeggiinn{{ddooccuummeenntt}} command.
+
+       Code chunks contain program source code and references  to  other  code
+       chunks.  Several code chunks may have the same name; _n_o_w_e_b concatenates
+       their definitions to produce a single chunk, just  as  other  literate-
+       programming  tools do.  _n_o_w_e_b looks for chunks that are defined but not
+       used in the source file.  If the name of such a chunk contains no  spa‐
+       ces,  the  chunk is an ``output file;'' _n_o_w_e_b expands it and writes the
+       result onto the file of the same name.  A code-chunk definition is like
+       a  macro  definition; it contains references to other chunks, which are
+       themselves expanded, and so on.  _n_o_w_e_b's output is  readable;  it  pre‐
+       serves the indentation of expanded chunks with respect to the chunks in
+       which they appear.
+
+       If a star (**) is appended to the name of an output file, _n_o_w_e_b includes
+       line-number  information  as specified by the --LL_f_o_r_m_a_t option (or for C
+       if no --LL_f_o_r_m_a_t option is given).  The name itself may not contain shell
+       metacharacters.
+
+       Code may be quoted within documentation chunks by placing double square
+       brackets ([[[[_._._.]]]]) around it.  These double square brackets are used to
+       give the code special typographic treatment in the _T_e_X file.  If quoted
+       code ends with three or more square brackets, _n_o_w_e_b chooses the  right‐
+       most pair, so that, for example, [[[[aa[[ii]]]]]] is parsed correctly.
+
+       In  code,  noweb treats unpaired double left or right angle brackets as
+       literal <<<< and >>>>.  To force any such brackets, even paired brackets or
+       brackets in documentation, to be treated as literal, use a preceding at
+       sign (e.g. @@<<<<).
+
+OOPPTTIIOONNSS
+       --tt     Suppress generation of a _T_e_X file.
+
+       --oo     Suppress generation of output files.
+
+       --LL_f_o_r_m_a_t
+              Use _f_o_r_m_a_t to format line-number information for starred  output
+              files.   (If  the  option is omitted, a format suitable for C is
+              used.)  _f_o_r_m_a_t is as defined by _n_o_t_a_n_g_l_e(1);
+
+       --mmaarrkkuupp _p_a_r_s_e_r
+              Use _p_a_r_s_e_r to parse the input file.  Enables use of noweb  tools
+              on  files  in  other  formats;  for example, the nnuummaarrkkuupp parser
+              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
+              information.  For experts only.
+
+BBUUGGSS
+       Ignoring  unused  chunks  whose  names  contain spaces sometimes causes
+       problems, especially in the case when a chunk has multiple  definitions
+       and  one  is  misspelled;  the  misspelled  definition will be silently
+       ignored.  _n_o_r_o_o_t_s(1) can be used as a sanity checker to catch this sort
+       of mistake.
+
+       _n_o_w_e_b  is intended for users who don't want the power or the complexity
+       of command-line options.  More sophisticated users should  avoid  _n_o_w_e_b
+       and  use  _n_o_w_e_a_v_e  and _n_o_t_a_n_g_l_e instead.  If the design were better, we
+       could all use the same commands.
+
+       _n_o_w_e_b requires the new version of _a_w_k, assumed to be called _n_a_w_k.   DEC
+       _n_a_w_k  has a bug in that that causes problems with braces in _T_e_X output.
+       GNU _g_a_w_k is reported to work.
+
+       The default _L_a_T_e_X pagestyles don't set the width of the boxes  contain‐
+       ing  headers  and footers.  Since _n_o_w_e_b code paragraphs are extra wide,
+       this _L_a_T_e_X bug sometimes results in  extra-wide  headers  and  footers.
+       The  remedy  is  to  redefine  the  relevant ppss@@** commands; ppss@@nnoowweebb in
+       nnoowweebb..ssttyy can be used as an example.
+
+SSEEEE AALLSSOO
+       _n_o_t_a_n_g_l_e(1),  _n_o_w_e_a_v_e(1),  _n_o_r_o_o_t_s(1),  _n_o_u_n_t_a_n_g_l_e(1),   _n_o_w_e_b_s_t_y_l_e(7),
+       _n_o_w_e_b_f_i_l_t_e_r_s(7), _n_u_w_e_b_2_n_o_w_e_b(1)
+       Norman   Ramsey,   _L_i_t_e_r_a_t_e   _p_r_o_g_r_a_m_m_i_n_g   _s_i_m_p_l_i_f_i_e_d_,  _I_E_E_E  _S_o_f_t_w_a_r_e
+       11(5):97-105, September 1994.
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman  Ramsey,  Tufts  University.    Internet   address   NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(1)

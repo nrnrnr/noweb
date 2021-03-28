@@ -1,0 +1,30 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       nuweb2noweb - convert nuweb files to noweb form
+
+SSYYNNOOPPSSIISS
+       nnuuwweebb22nnoowweebb file ...
+
+DDEESSCCRRIIPPTTIIOONN
+       _N_u_w_e_b_2_n_o_w_e_b  converts  a file or files in _n_u_w_e_b format to _n_o_w_e_b format,
+       writing the results on standard output.   Input  is  from  the  file(s)
+       named on the command line.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_b(1), _n_u_w_e_b(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                                  10/40/2008                          NOWEB(1)

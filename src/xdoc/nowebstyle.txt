@@ -1,0 +1,123 @@
+NOWEB(7)               Miscellaneous Information Manual               NOWEB(7)
+
+
+
+NNAAMMEE
+       nowebstyle - _L_a_T_e_X package for _n_o_w_e_b
+
+SSYYNNOOPPSSIISS
+       \\uusseeppaacckkaaggee{{nnoowweebb}}
+
+DDEESSCCRRIIPPTTIIOONN
+       When  _n_o_w_e_a_v_e  generates code for _L_a_T_e_X, the nnoowweebb package is required.
+       In addition to the necessary arcana, it defines a  wweebbccooddee  environment
+       in  which  you can place fragments of code, and in which only backslash
+       and curly braces have their special meanings; all other characters  are
+       taken  literally.   It  also  defines  a  nnoowweebb pagestyle.  Finally, it
+       defines a \\nnoowweebbooppttiioonnss{{......}} command that can be used  to  tinker  with
+       the  appearance  of  the  output.   Options are separated by commas and
+       include:
+
+       mmaarrggiinnttaagg
+              Put the sub-page number (tag) of each code-chunk  definition  in
+              the left margin. (Default)
+
+       nnoommaarrggiinnttaagg
+              Don't use margin tags.
+
+       sshhiifftt  Shift  text to the left so that long code lines won't extend off
+              the right-hand side of the page.
+
+       ssmmaallllccooddee
+              Set code in _L_a_T_e_X \\ssmmaallll font instead of  \\nnoorrmmaallssiizzee..   Similar
+              options exist for all the _L_a_T_e_X size-changing commands.
+
+       lloonnggxxrreeff,, sshhoorrttxxrreeff,, nnooxxrreeff
+              Choose  a  style  for  chunk  cross-reference.   Long style uses
+              small paragraphs after each chunk, as  in  Knuth.   Short  style
+              uses  symbols on the definition line, as in Hanson.  nnooxxrreeff pro‐
+              vides no chunk cross-reference.  Defaults to sshhoorrttxxrreeff..
+
+       aallpphhaassuubbppaaggee,, nnuummssuubbppaaggee,, nnoossuubbppaaggee
+              Number chunks by the number of the page on  which  they  appear,
+              followed by an alphabetic (numeric, not used) ``sub-page'' indi‐
+              cator.  Defaults to aallpphhaassuubbppaaggee..  nnoossuubbppaaggee  implies  nnoommaarrggiinn‐‐
+              ttaagg..
+
+       wweebbnnuummbbeerriinngg
+              Number chunks consecutively, in _W_E_B style, instead of using sub-
+              page numbers.
+
+       ssuubbssccrriippttiiddeennttss,, nnoossuubbssccrriippttiiddeennttss,, hhyyppeerriiddeennttss,, nnoohhyyppeerriiddeennttss
+              Controls subscripting of identifiers in code,  including  quoted
+              code.   Selecting  ssuubbssccrriippttiiddeennttss means an identifier appearing
+              in a code chunk (or in quoted code within a documentation chunk)
+              will  be  subscripted  with  the chunk number of its definition.
+              hhyyppeerriiddeennttss means such identifiers will be hyperlinked to  their
+              definitions,  provided  of  course that a hypertext package like
+              hhyyppeerrrreeff is loaded.   nnoossuubbssccrriippttiiddeennttss  and  nnoohhyyppeerriiddeennttss  are
+              equivalent,  and  they  turn  off such markings.  The default is
+              hhyyppeerriiddeennttss..
+
+       ssuubbssccrriippttqquuootteeddiiddeennttss,,   nnoossuubbssccrriippttqquuootteeddiiddeennttss,,    hhyyppeerrqquuootteeddiiddeennttss,,
+       nnoohhyyppeerrqquuootteeddiiddeennttss
+              Controls  linking  of  identifiers as above, but applies only to
+              uses of identifiers in quoted code.
+
+       hhiiddeeuunnuusseeddddeeffss
+              Omit defined but unused identifiers from  the  local  identifier
+              cross-reference (Preston Briggs).
+
+       nnooiiddeennttxxrreeff
+              Omit  the  local  identifier  cross-reference which follows each
+              code chunk.
+
+       eexxtteerrnnaalliinnddeexx
+              Use an index generated with _n_o_i_n_d_e_x_(_1_) (q.v.).
+
+       lloonnggcchhuunnkkss
+              When expanding \\nnoowweebbcchhuunnkkss,, show page  numbers  of  definitions
+              and uses of each chunk.
+
+       eenngglliisshh,, ffrreenncchh,, ggeerrmmaann,, ppoorrttuuggeess,, iicceellaannddiicc
+              Write  cross-reference  information  in  the language specified.
+              Defaults to eenngglliisshh..
+
+CCOONNTTRROOLL SSEEQQUUEENNCCEESS
+       The noweb package describes  a  gazillion  special  control  sequences.
+       Only a few are listed here.
+
+       \\nneexxttcchhuunnkkllaabbeell{{ll}}
+              Associates  label ll with the sub-page reference of the next code
+              chunk.  Can be used in for concise chunk  cross-reference  with,
+              e.g., cchhuunnkk~~\\ssuubbppaaggeerreeff{{ll}}.
+
+       \\nnwwaanncchhoorrttoo{{UURRLL}}{{aanncchhoorr tteexxtt}}
+              Creates  a  link  to  the  given URL with the given anchor text.
+              Implemented in _l_a_t_e_x_(_1_) using footnotes, but _s_l_2_h_(_1_)  translates
+              this to <<aa hhrreeff==UURRLL>>aanncchhoorr tteexxtt<<//aa>>
+
+       \\nnwwaanncchhoorrnnaammee{{nnaammee}}{{aanncchhoorr tteexxtt}}
+              Creates  an  anchor  point  for  a  hyperlink.   Implemented  in
+              _l_a_t_e_x_(_1_) using \\llaabbeell  ,,  but  _s_l_2_h_(_1_)  translates  this  to  <<aa
+              nnaammee==nnaammee>>aanncchhoorr tteexxtt<<//aa>>
+
+       \\iiffhhttmmll ...... \\ffii
+              Text between \\iiffhhttmmll and \\ffii is ignored by _l_a_t_e_x_(_1_)_, but _s_l_2_h_(_1_)
+              and the _l_2_h noweb filter translate the text into HTML.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_a_v_e(1), _n_o_w_e_b(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman  Ramsey,  Tufts  University.    Internet   address   NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(7)

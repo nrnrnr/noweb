@@ -1,0 +1,103 @@
+NOWEB(1)                    General Commands Manual                   NOWEB(1)
+
+
+
+NNAAMMEE
+       noindex - build external index for noweb document
+
+SSYYNNOOPPSSIISS
+       nnooiinnddeexx _b_a_s_e_n_a_m_e[..tteexx]
+
+DDEESSCCRRIIPPTTIIOONN
+       _n_o_i_n_d_e_x  looks  through _L_a_T_e_X ..aauuxx files for identifiers that should go
+       in a _n_o_w_e_b external index.  It sorts all  identifiers  and  writes  the
+       results on _b_a_s_e_n_a_m_e..nnwwii_.
+
+NNOOWWEEBB IINNDDEEXXIINNGG SSTTRRAATTEEGGIIEESS
+       A  _n_o_w_e_b  program  consists  of one or more files.  In the simple case,
+       these files are run through _n_o_w_e_a_v_e together, to produce a single _L_a_T_e_X
+       file.   _n_o_w_e_a_v_e _-_i_n_d_e_x suffices to produce an index and cross-referenc‐
+       ing information; neither _n_o_d_e_f_s nor _n_o_i_n_d_e_x is required.
+
+       When a _n_o_w_e_b program consists of several source files, it is often bet‐
+       ter  to  run  each source file through _n_o_w_e_a_v_e to produce its own _L_a_T_e_X
+       file, then use _n_o_i_n_d_e_x to produce an external  index.   This  technique
+       has several advantages:
+
+              The  line numbers in the _L_a_T_e_X files correspond to the line num‐
+              bers in the source files, so it  is  easier  to  diagnose  _L_a_T_e_X
+              errors.
+
+              The  _L_a_T_e_X  \\iinncclluuddeeoonnllyy feature can be used, making it possible
+              to format parts  of  large  programs  while  retaining  complete
+              cross-reference information.
+
+              When  used  with  _m_a_k_e(1),  the technique avoids running _n_o_w_e_a_v_e
+              over source files that have not changed.
+
+              Using the external index places fewer demands on _L_a_T_e_X's memory,
+              making it read its ..aauuxx files much more quickly.
+
+       The  disadvantages  are  that  _n_o_d_e_f_s  and  _n_o_i_n_d_e_x are needed for full
+       cross-referencing and a properly sorted index.
+
+EEXXAAMMPPLLEE
+       This example assumes a _n_o_w_e_b program of three source files: aa..nnww ,, bb..nnww
+       ,,  and cc..nnww.  The file ddoocc..tteexx is assumed to contain _L_a_T_e_X boilerplate,
+       including the commands
+
+              \noweboptions{externalindex}
+              \include{a}
+              \include{b}
+              \include{c}
+
+       The first sequence of steps is to create a file listing all the identi‐
+       fiers defined anywhere in aa, bb, or cc.
+
+              nodefs a.nw > a.defs
+              nodefs b.nw > b.defs
+              nodefs c.nw > c.defs
+              sort -u a.defs b.defs c.defs | cpif all.defs
+
+       Using  _s_o_r_t  _-_u  and _c_p_i_f(1) avoids changing aallll..ddeeffss unless the set of
+       identifiers changes.  This technique, used in a Makefile, avoids unnec‐
+       essary rebuilding.
+
+       The  next series of steps is to create _L_a_T_e_X files with full cross-ref‐
+       erence information for all identifiers.
+
+              noweave -n -indexfrom all.defs a.nw > a.tex
+              noweave -n -indexfrom all.defs b.nw > b.tex
+              noweave -n -indexfrom all.defs c.nw > c.tex
+
+       The final steps run _L_a_T_e_X once to create ..aauuxx files,  then  _n_o_i_n_d_e_x  to
+       create the index, then _L_a_T_e_X again to format the complete document.
+
+              latex doc
+              noindex doc
+              latex doc
+
+       In a Makefile, _n_o_i_n_d_e_x can be run before every invocation of _L_a_T_e_X_.
+
+BBUUGGSS
+       _n_o_i_n_d_e_x  is  distributed  in awk and Icon versions.  The awk version is
+       slow and does a poorer job sorting.
+
+       There is no comparable machinery to make it possible  to  use  multiple
+       files with the HTML back end.
+
+SSEEEE AALLSSOO
+       _n_o_w_e_a_v_e(1), _n_o_d_e_f_s(1), _c_p_i_f(1)
+
+VVEERRSSIIOONN
+       This man page is from _n_o_w_e_b version 2.12.
+
+AAUUTTHHOORR
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       sseeyy@@ttuuffttss..eedduu.
+       Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
+
+
+
+
+                               local 10/40/2008                       NOWEB(1)
