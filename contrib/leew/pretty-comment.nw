@@ -1,0 +1,251 @@
+%
+% to tangle:
+%		notangle -t4 -Rpretty-comment.awk pretty-comment.nw > pretty-comment.awk
+% to weave:
+%		noweave -t4 -delay -x pretty-comment.nw > pretty-comment.tex
+%
+\documentclass[twoside,11pt]{article}
+\usepackage[perpage,symbol]{footmisc}
+\usepackage{noweb,xspace}
+\noweboptions{longchunks}
+\let\nwnotused=\nwoutput
+
+\oddsidemargin=54pt	 % standard LaTeX margins don't work well for 2-sided webs
+\evensidemargin=54pt % (54pt is std LaTeX 1-sided margin for 11pt text)
+
+\newcommand\noweb{\texttt{noweb}\xspace}
+\newcommand\notangle{\texttt{notangle}\xspace}
+\newcommand\noweave{\texttt{noweave}\xspace}
+\newcommand\awk{\texttt{awk}\xspace}
+\newcommand\Awk{\texttt{Awk}\xspace}
+\newcommand\sh{\texttt{sh}\xspace}
+\newcommand\bash{\texttt{bash}\xspace}
+
+\newenvironment{qcode}{\begin{quote}\small}{\end{quote}}
+
+\title {A \noweave Filter for Prettyprinting Inline Comments in Code Chunks%
+	\thanks{Copyright \copyright~2021 by Lee Wittenberg.
+		Although this software is freely distributable, it is not in
+		the public domain.  It is provided ``as is'' and without any
+		express or implied warranties, including, without limitation,
+		the implied warranties of merchantability and fitness for a
+		particular purpose.}}
+\author {Lee Wittenberg\\\tt leew@alumni.stanford.edu}
+
+\pagestyle{noweb}
+\begin{document}
+\maketitle
+\addtocounter{footnote}{1}	% skip over \thanks footnote number
+
+\section{Introduction}
+This web provides a \noweave filter called
+``\texttt{pretty-comment},'' which allows inline comments in code chunks
+to be typeset by \TeX\ rather than just printed verbatim like
+the rest of the code.  It currently only works for ``short'' comments that
+begin with a single or multi-character symbol and end with a newline.
+And, let's face it, ``long'' multi-line comments are unnecessary in a
+literate program, so it probably will never deal with
+those.\footnote{The \texttt{README} for a previous version,
+written in Snobol, declares ``I won't object if anyone wants to
+rewrite it in another language, but I will maintain (and use) only
+this version.''  Obviously, that statement is no longer true.  This
+(\awk) version will also be maintained.}
+
+\subsection{Usage}
+Use it with \noweave's "-filter" option:
+\begin{qcode}
+	[[noweave -filter pretty-comment.awk < pgm.nw >pgm.tex]]
+\end{qcode}
+
+The filter
+accepts one or two command-line arguments to deal with the various
+comment conventions in different programming languages.
+The first is the
+string to recognize as the start-of-comment symbol.  For example:
+\begin{qcode}
+	[[noweave -filter 'pretty-comment.awk \#' < pgm.nw >pgm.tex]]
+\end{qcode}
+could be used to typeset comments in a shell script (or in any of the
+myriad scripting languages that use `[[#]]' as a comment starter).  The
+backslash is necessary in the Bourne and Bourne Again shells; other
+command interpreters (such as Windows' \texttt{cmd}) may not need it.
+The comment delimiter will be set in typewriter type along
+with the rest of the code.
+
+If you want it typeset differently, you
+can specify a second argument to the filter.  For example,
+\begin{qcode}
+	[[noweave -filter 'pretty-comment.awk \# \\mbox{\\rm\\#}' \]]\\
+	\mbox{}[[    < pgm.nw >pgm.tex]]
+\end{qcode}
+will typeset the \#-sign in roman type like the rest of the
+comment (and the text chunks).  Again, the backslash escapes are needed
+for \sh and \bash, but things may work differently elsewhere.
+
+Invoked with no arguments, the filter assumes that comments begin with
+the C\texttt{++}/Java `[[//]]' symbol, to be typeset as
+`{\small[[/\negthinspace\negthinspace/]]}' (`/\negthinspace\negthinspace/').
+Filenames on the command line are ignored.
+
+\subsection{Known Issues}
+There are a few issues with this filter that users must be aware of:
+\begin{itemize}
+	\item
+	If your system does not support the ``[[#!/bin/awk]]'' convention,
+	you will have to use ``[[awk -f pretty-comment.awk]]'' to invoke
+	the filter.
+	\item
+	This filter makes the (unwarranted, according to the
+	\emph{Hacker's Guide}) assumption that each [[@text]] line in a
+	code chunk contains a complete line of code, so it should not be
+	run after any filter that is likely to break [[@text]] lines into
+	pieces.  In particular,
+	if you use \noweave's ``[[-index]]'' option, it must appear on the
+	command line \emph{after} ``[[-filter pretty-comment.awk]],''
+	not before.\footnote{A fix for this flaw is likely to be fairly
+	complicated in \awk, but if there is enough demand, I will attempt
+	it.}
+	\item
+	Math mode in prettyprinted comments doesn't always work as
+	expected.  For example, [[$n'$]] will cause \TeX\ to choke, but
+	[[$n^\prime$]] will not, and will produce the same result.  As far
+	as I know, there is always a workaround.
+	\item
+	For a different reason, ``[[[[]]\ldots[[]]]]'' quoted code in
+	prettyprinted comments must not be used within math mode.  For
+	example, you should use ``[[$a+{}$[[...]][[]]]][[${}-b$]]''
+	rather than ``[[$a+[[...]]]][[-b$]].''
+	\item
+	The filter has only been tested using \LaTeX.  It \emph{should}
+	work with plain \TeX, but there are no guarantees.
+\end{itemize}
+@
+\section{The Program}
+The algorithm for this filter is quite simple.  We care only about
+inline comments in code chunks, so we have to keep track of whether or
+not we are in a code chunk (using the [[incode]] variable).  Code
+chunks begin with ``[[@begin code]]'' and conclude with
+``[[@end code]].''  Code chunk ``[[@text]]'' lines are adjusted as
+necessary.  Finally, all lines, adjusted or not, are printed, so as to
+be passed on to the next stage of the pipeline.
+<<pretty-comment.awk>>=
+#!/bin/awk -f
+BEGIN {
+	<<Determine the proper comment delimiter>>
+	incode = 0
+}
+/^@begin code /	{ incode = 1 }
+/^@end code /	{ incode = 0 }
+incode && /^@text / {
+	<<Adjust comment part of [[@text]] line in a code chunk>>
+}
+{print}
+@
+The command line arguments determine the comment delimiter
+([[cdelim]]) to be used, and how it should be typeset ([[ctypeset]]).
+If there are no arguments, defaults
+are provided.  As this program is intended only as a \noweave filter, and
+\awk treats its arguments as input file names, we clear the command
+line of all arguments before proceeding further.
+<<Determine the proper comment delimiter>>=
+if (ARGC == 1) {
+	<<Set [[cdelim]], [[ctypeset]] to default values>>
+} else {
+	<<Set [[cdelim]], [[ctypeset]] according to args>>
+	<<Clear all arguments from command line>>
+}
+@
+By default, our comment delimiter is `[[//]]', to be typeset as
+`/\negthinspace\negthinspace/'.
+<<Set [[cdelim]], [[ctypeset]] to default values>>=
+cdelim = "//"
+ctypeset = "/\\negthinspace\\negthinspace/"
+@ %
+Otherwise, the delimiter is specified by [[ARGV[1]]] and its \TeX\
+representation (if different) by [[ARGV[2]]].
+<<Set [[cdelim]], [[ctypeset]] according to args>>=
+cdelim = ARGV[1]
+if (ARGC > 2) {
+	ctypeset = ARGV[2]
+} else {
+	ctypeset = cdelim
+}
+@
+Setting [[ARGC]] to~1 effectively clears the command line.
+<<Clear all arguments from command line>>=
+ARGC = 1
+@
+We use [[cdelim]] to split the line into a code part ([[part[1]]]) and
+a comment part ([[part[2]]]).  If there is no comment part, there's
+nothing to be done.  
+Otherwise, we adjust the comment part
+appropriately, and then put the adjusted line back together again.
+\nextchunklabel{adjust}
+<<Adjust comment part of [[@text]] line in a code chunk>>=
+n = <<Split comment from code into [[part]] array>>
+if (n > 1) {
+	<<Combine [[part[2]]] through [[part[n]]] as a single [[part[2]]]>>
+	<<Adjust comment part of the line, [[part[2]]]>>
+	<<Put adjusted line (in [[part]] array) back together>>
+}
+@
+\Awk's [[split]] function divides the current line ([[$0]]) into
+pieces, depending on the comment delimiter, [[cdelim]].  It returns
+the number of pieces that result.
+\nextchunklabel{split}
+<<Split comment from code into [[part]] array>>=
+split($0, part, cdelim)
+@
+If the split created more than two parts, it means that (for some
+reason) the delimiter, [[cdelim]], was included in the text of the
+comment.  In that case, we concatenate all the ``comment parts'' into
+a single [[part[2]]], putting the extra delimiter(s) back where they
+belong.
+<<Combine [[part[2]]] through [[part[n]]] as a single [[part[2]]]>>=
+for (i=3; i <= n; i++) {
+	part[2] = part[2] cdelim part[i]
+}
+@
+Changing the comment part of a line into a \noweb markup [[@literal]]
+line does the really hard work.  We also have to deal with
+[[[[[]]\ldots[[[]]]] quoted code in comments, which is a bit trickier.
+<<Adjust comment part of the line, [[part[2]]]>>=
+<<Turn [[part[2]]] into [[@literal]] line>>
+<<Deal with [[[[]]\ldots[[]]]]'s in [[part[2]]]>>
+@
+The \noweb filter mechanism requires [[@literal]] markup to be on a line
+by itself.  The \noweb macro [[\setupmodname]] (mostly) restores \TeX\
+to regular processing, so wrapping it and the comment text in an
+[[\hbox]] pretty much turns the comment into ``normal'' text.
+<<Turn [[part[2]]] into [[@literal]] line>>=
+part[2] = \
+	"\n@literal " ctypeset "\\hbox{\\setupmodname{}" part[2] "}"
+@
+Dealing with [[[[]]\ldots[[]]]] quoted code in a comment is a bit
+tricky.  For each one, we close the [[\hbox]] and end its [[@literal]]
+line, followed by [[@text]] markup containing the quoted code,
+and continued with
+a line that starts another [[@literal]] (which is ended by the
+orignal [[\hbox]] closing brace).  Since \awk's [[gsub]] function
+leaves the opening and closing square brackets in place, we need to
+remove all the [[[[]]'s that start the [[@text]] markup and all the
+[[]]]]'s that end one.
+
+Remember that we are dealing only with the comment part of a line
+here, so any [[@text]]'s here must have been placed there by the first
+[[gsub]].
+<<Deal with [[[[]]\ldots[[]]]]'s in [[part[2]]]>>=
+gsub(/\[\[[^]]*\]\]*/, "}\n@text &\n@literal " \
+		"\\hbox{\\setupmodname{}", part[2])
+gsub(/@text \[\[/, "@text ", part[2])
+gsub("]]\n", "\n", part[2])
+@
+Putting the line back together (so it can be printed) is simply a
+question of concatenating its two parts and reassigning [[$0]].
+<<Put adjusted line (in [[part]] array) back together>>=
+$0 = part[1] part[2]
+@
+\section*{Chunk Index}
+\nowebchunks
+
+\end{document}

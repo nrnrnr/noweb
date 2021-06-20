@@ -1,0 +1,27 @@
+%
+% This hack causes the noweb to display its defined identifiers list
+% for each chunk in a 2-column format, using LaTeX's "multicol" package.
+%
+% It's been modified from the code in noweb.sty.
+% 
+% Occasionly, the "multicols" environment will break the first column
+% at an awkward place (the second line, say, of a definition used many
+% times).  Placing the command "\setcounter{unbalance}{1}" immediately
+% before the chunk definition in question will fix this.
+%
+\usepackage{noweb}\usepackage{multicol}
+
+\makeatletter
+\def\nwidentdefs#1{% list of index pairs
+  \ifnw@hideunuseddefs\nwix@totaluses{#1}\else\nwix@listcount{#1}\fi
+  \ifnum\nwix@counter>0
+    \nwcodecomment{\@nwlangdepdfs:}%
+    \setlength{\columnsep}{1em}%
+    \setlength{\columnseprule}{0pt}%
+    \setlength{\multicolsep}{0pt}%
+    \begin{minipage}{.8\textwidth}%
+    \begin{multicols}{2}%
+    {\def\\##1{\nwix@id@uses ##1}#1}%
+    \end{multicols}\vspace*{.4em}\end{minipage}%
+  \fi}
+\makeatother

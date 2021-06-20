@@ -10,3 +10,8 @@ nobrace looks for unbalanced braces in code chunks.
 
 pretty-comment uses LaTeX to typeset inline comments...
 and it's written in SNOBOL!
+
+pretty-comment.nw is a reworking of pretty-comment, in awk and Noweb.
+
+2col-defn-hack.tex is a LaTeX hack that prints chunk identifier lists
+in 2 columns
