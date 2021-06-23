@@ -6,18 +6,18 @@ TARGET = numarkup
 OBJS = main.o pass1.o latex.o input.o scraps.o names.o arena.o global.o
 
 .SUFFIXES: .nw
-.nw.c: ;	notangle -R"$@"'*' -L $< | cpif $@
-.nw.h: ;	notangle -R"$@" $< | cpif $@
+.nw.c:
+	notangle -R"$@"'*' -L $< | cpif $@
+.nw.h:
+	notangle -R"$@" $< | cpif $@
 
-all: 
+all:
 	noweb -t numarkup.nw
-	make $(TARGET)
+	$(MAKE) $(TARGET)
 
-install:
-	noweb -t numarkup.nw
-	make $(TARGET)
+install: all
 	strip $(TARGET)
-	cp $(TARGET) $(LIB)
+	cp $(TARGET) $(DESTDIR)$(LIB)
 
 source: main.c pass1.c latex.c input.c scraps.c names.c arena.c global.c
 
@@ -27,11 +27,10 @@ clean:
 $(OBJS): global.h
 
 $(TARGET): $(OBJS)
-	$(CC) -o $(TARGET) $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS)
 
 numarkup.html: numarkup.nw
-	noweave -filter l2h -html -index numarkup.nw > numarkup.html
+	noweave -filter l2h -html -index numarkup.nw > $@
 
 numarkup.tex: numarkup.nw
 	noweb -o numarkup.nw
-

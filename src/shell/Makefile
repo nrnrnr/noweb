@@ -1,35 +1,29 @@
 # Copyright 1993 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 SHELL=/bin/sh
-LIB=/usr/public/pkg/noweb/lib
 
 EXEC=noweave noweb notangle noroff toroff
 SRCS=$(EXEC) tmac.w
-RCSFILES=noweave.nw notangle.nw noweb.nw noroff.nw noroots nocount Makefile
-CINAME=
-CIMSG=
 
-all:	$(SRCS)
+all: $(SRCS)
+
 source: $(SRCS)
-touch:	$(SRCS)
+touch:
 	touch $(SRCS)
-boot:
-	touch $(SRCS)
-
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
+clobber: clean
+	rm -f $(SRCS)
 
 noweave: noweave.nw
-	notangle -Rnoweave noweave.nw > noweave
+	notangle -R$@ noweave.nw > $@
 
 notangle: notangle.nw
-	notangle -Rnotangle notangle.nw > notangle
+	notangle -R$@ notangle.nw > $@
 
-noweb: noweb.nw 
-	notangle -Rnoweb noweb.nw > noweb
+noweb: noweb.nw
+	notangle -R$@ noweb.nw > $@
 
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm
-clobber: clean ;	rm -f $(SRCS)
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.nwt roff.mm

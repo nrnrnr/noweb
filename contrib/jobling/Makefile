@@ -1,34 +1,37 @@
+BIN=/dev/null	# to be overridden
+LIB=/dev/null	# to be overridden
 PROG = correct-refs
-DOCSRC = $(PROG).tex 
-PROGSRC = $(PROG).csh 
+DOCSRC = $(PROG).tex
+PROGSRC = $(PROG).csh
 SCRIPTS = list-anchors.awk awk-scripts.awk
 
-all:    correct-refs.tex correct-refs.csh all-scripts
+all: $(DOCSRC) $(PROGSRC) $(SCRIPTS)
 
-correct-refs.tex: correct-refs.nw
-	noweave -delay -index $< > $@
+$(DOCSRC): $(PROG).nw
+	noweave -delay -index $(PROG).nw > $@
 
-correct-refs.csh: correct-refs.nw
-	notangle -Rcorrect-refs.csh $< | cpif $@
+$(PROGSRC): $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
 	chmod +x $@
 
-all-scripts: correct-refs.nw
-	notangle -Rlist-anchors.awk $< | cpif list-anchors.awk
-	notangle -Rawk-scripts.awk $< | cpif awk-scripts.awk
-	touch all-scripts
+list-anchors.awk: $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
 
-install:
-	cp correct-refs.csh $(HOME)/bin
-	cp *.awk $(HOME)/lib
+awk-scripts.awk: $(PROG).nw
+	notangle -R$@ $(PROG).nw | cpif $@
+
+install: $(PROGSRC) $(SCRIPTS)
+	cp $(PROGSRC) $(DESTDIR)$(BIN)
+	cp $(SCRIPTS) $(DESTDIR)$(LIB)
 
 tidy:
-	-rm *~ *% *.bak *.log *.blg
+	rm *~ *% *.bak *.log *.blg
 
-clean:  tidy
-	-rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
+clean: tidy
+	rm *.ps *.dvi *.toc *.aux *.bbl *.dep $(PROG).shar
 
 realclean: clean
-	-rm $(DOCSRC) $(PROGSRC) $(SCRIPTS)
+	rm $(DOCSRC) $(PROGSRC) $(SCRIPTS)
 
 shar:
 	shar README Makefile $(PROG).nw > $(PROG).shar

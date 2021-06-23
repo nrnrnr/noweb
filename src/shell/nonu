@@ -1,5 +1,5 @@
 #!/bin/sh
-LIB=/usr/public/pkg/noweb/lib
+LIB=|LIBDIR|
 # attempt to convert nuweb to noweb using sam
 
 tmp=$($LIB/nwmktemp)
