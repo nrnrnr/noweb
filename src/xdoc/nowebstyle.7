@@ -165,6 +165,21 @@ and the
 .I l2h 
 noweb filter translate the text into HTML.
 .RE
+.SH COMPATIBILITY
+For compatibility with plain 
+.IR TeX , 
+.I noweb
+continues to use the old-style font commands
+.B "\\\\tt"
+and so on.
+When used with the KOMA scripts (document classes 
+.BR scrartcl , 
+.BR scrreprt , 
+and
+.BR scrbook ),
+.I noweb
+needs the document-class option
+.BR enabledeprecatedfontcommands .
 .SH SEE ALSO
 .IR noweave (1),
 .IR noweb (1)
