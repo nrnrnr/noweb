@@ -28,8 +28,7 @@ END {
       nr = split(line[i], array, " ") ;
       stat = array[1] ;
       name = array[nr] ;
-      if ((stat == "@xref" || (stat == "@defn" && nr == 2)) && (name in root_ch
-unks)) {
+      if ((stat == "@xref" || (stat == "@defn" && nr == 2)) && (name in root_chunks)) {
         replace = " \\textup{\\texttt{"name"}}" ;
         gsub("_", "\\_", replace) ;
         gsub(" "name, replace, line[i]) ;
