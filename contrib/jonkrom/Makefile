@@ -1,15 +1,15 @@
 LIB=/dev/null	# override for installation
 SHELL=/bin/sh
 all: noxref.krom
-	chmod +x noxref.krom
 
-install:
-	cp noxref.krom $(LIB)
+install: all
+	cp noxref.krom $(DESTDIR)$(LIB)
 
 source: noxref.krom
 
 noxref.krom: noxref.nw
-	notangle -Rnoxref noxref.nw > noxref.krom
+	notangle -Rnoxref noxref.nw > $@
+	chmod +x noxref.krom
 
 clean:
-	/bin/rm -f *.tex *.dvi *.ilg *.idx *.aux *.log *.blg *.bbl *~ *.ind noxref.krom
+	rm -f *.tex *.dvi *.ilg *.idx *.aux *.log *.blg *.bbl *~ *.ind noxref.krom

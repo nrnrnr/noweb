@@ -8,40 +8,40 @@ SHELL=/bin/sh
 LIBEXECSBARE=noidx tohtml
 LIBEXECSDEP=totex
 LIBEXECS=$(LIBEXECSBARE) $(LIBEXECSDEP)
-BINEXECS=noindex 
+BINEXECS=noindex
 EXECS=$(BINEXECS) $(LIBEXECS)
 
-all:	$(EXECS)
-	chmod +x $(EXECS)
-sources: $(EXECS)
-touch: $(EXECS)
+all: $(EXECS)
+source: $(EXECS)
+touch:
 	touch $(EXECS)
-boot:
-	touch $(EXECS)
+clobber: clean
+	rm -f $(EXECS)
 
 install: all
-	cp $(LIBEXECSBARE) $(LIB)
-	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(LIB)/"$$i"; chmod +x $(LIB)/$$i; done
-	cp $(BINEXECS) $(BIN)
+	cp $(LIBEXECSBARE) $(DESTDIR)$(LIB)
+	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(DESTDIR)$(LIB)/"$$i"; chmod +x $(DESTDIR)$(LIB)/$$i; done
+	cp $(BINEXECS) $(DESTDIR)$(BIN)
 
 uninstall:
-	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
-	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
-
-source: $(EXECS)
+	for i in $(LIBEXECS); do rm -f $(DESTDIR)$(LIB)/$$i; done
+	for i in $(BINEXECS); do rm -f $(DESTDIR)$(BIN)/$$i; done
 
 totex: totex.nw
-	notangle -Rtotex totex.nw > totex
+	notangle -R$@ totex.nw > $@
+	chmod +x $@
 
 noidx: noidx.nw
-	notangle noidx.nw > noidx
+	notangle noidx.nw > $@
+	chmod +x $@
 
 tohtml: tohtml.nw
-	notangle tohtml.nw > tohtml
+	notangle tohtml.nw > $@
+	chmod +x $@
 
-noindex: noindex.nw 
-	notangle -Rnoindex noindex.nw > noindex
+noindex: noindex.nw
+	notangle -R$@ noindex.nw > $@
+	chmod +x $@
 
-clean: ;	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html
-clobber: clean
-	rm -f totex noidx tohtml noindex
+clean:
+	rm -f *.log *.blg *.dvi *.toc *.aux *.tex *~ *.html

@@ -11,10 +11,8 @@ either Icon or Awk, but Icon is better:
     code speeds up noweave by a factor of 3.  The Icon versions have
     fewer bugs and provide more filters (e.g., convert LaTeX to HTML
     in documentation chunks).  Not all of the examples will work with
-    the awk library.  If you have an Icon compiler and believe it
-    works, set `ICONC=iconc -f l' in the Makefile.  (Icon is freely
-    available from the University of Arizona, but the compiler is no
-    longer maintained.)
+    the awk library.  (Icon is freely available from the University
+    of Arizona, but the compiler is no longer maintained.)
 
   - As of version 2.12, the Awk code for noweb's indexing and
     cross-reference relies on the bit-manipulation primitives found
@@ -29,22 +27,22 @@ To build noweb:
   1) First point to compilers to be used to built the tools and
      library by setting these variables in the Makefile:
        CC         the name of an ANSI C compiler
-       LIBSRC	  'awk' or 'icon', depending on which library you want
+       LIBSRC     'awk' or 'icon', depending on which library you want
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
        LIB        a directory to store markup, nt, noxref, ...
-       MAN        man pages will go in $MAN/man1
+       MAN        man pages will go in $MAN/man1 and $MAN/man7
        TEXINPUTS  a directory TeX will look for nwmac.tex and noweb.sty
        ELISP      a directory for noweb-mode.el, for emacs 19 and up
-     All of these files are *output* files, where noweb will place
+     All of these are *output* directories, where noweb will place
      binaries and man pages that are customized for your installation.
      Therefore you should:
        - make sure you have permission to write to these directories
        - refrain from making them point into the noweb source distribution
        - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH
-     If you don't use emacs, just leave ELISP set to /dev/null.
+     If you don't use emacs, just leave ELISP set to blank.
 
   2) If your modern awk is called something other than `nawk', run the
      `awkname' script to change all references to nawk.  For example,
@@ -59,7 +57,7 @@ To build noweb:
      to substitute tempfile(1) or some other means of creating a
      temporary file.
 
-  3) Type `make boot'.  This command updates timestamps so that noweb
+  3) Type `make touch'.  This command updates timestamps so that noweb
      does not try to build itself using noweb.
 
   4) Fasten your seat belt and type `make all install'.  If you want a
