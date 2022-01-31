@@ -45,18 +45,18 @@ CAT7DIR=$(MAN)/cat$(MAN7EXT)
 LIBNAME=$(LIB)
 TEXNAME=$(TEXINPUTS)
 
-all: 
-	cd c; make "CC=$(CC)" "CFLAGS=$(CFLAGS)" all 
-	for i in shell lib xdoc tex; do (cd $$i; make all); done
-	cd $(LIBSRC); make "ICONT=$(ICONT)" "ICONC=$(ICONC)" all
+all:
+	(cd c && $(MAKE) "CC=$(CC)" "CFLAGS=$(CFLAGS)" $@)
+	for i in shell lib xdoc tex; do (cd $$i && $(MAKE) $@); done
+	(cd $(LIBSRC) && $(MAKE) "ICONT=$(ICONT)" "ICONC=$(ICONC)" $@)
 
 FAQ: FAQ.html
-	sleep 1; html2ascii FAQ.html > FAQ
+	sleep 1; html2ascii FAQ.html > $@
 
 FAQ.html: $(HOME)/www/noweb/FAQ.html
-	rm -f FAQ.html
-	/bin/cp $(HOME)/www/noweb/FAQ.html FAQ.html
-	chmod -w FAQ.html
+	rm -f $@
+	/bin/cp $(HOME)/www/noweb/FAQ.html $@
+	chmod -w $@
 
 install: install-code install-man install-tex install-elisp
 uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
@@ -201,28 +201,28 @@ uninstall-elisp:
 @ 
 <<*>>=
 checkin:
-	for i in lib tex xdoc; do (cd $$i; make "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" checkin); done
-	for i in c icon awk; do (cd $$i; ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
-	(cd elisp; ci -l $(CINAME) $(CIMSG) *.el)
+	for i in lib tex xdoc; do (cd $$i && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@); done
+	for i in c icon awk; do (cd $$i && ci -l $(CINAME) $(CIMSG) *.nw Makefile); done
+	(cd elisp && ci -l $(CINAME) $(CIMSG) *.el)
 	ci -l $(CINAME) $(CIMSG) Makefile.nw INSTALL INSTALL.DOS README FAQ COPYRIGHT nwmake *.nw
 
 source: FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make CPIF=">" source); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) CPIF=">" $@); done
 	sleep 1
 	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
 touch:
 	touch FAQ
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make touch); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 boot:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make boot); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 clean:
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clean); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 	rm -f nwsrcfilter *~ */*~
 
 clobber: clean
-	for i in c shell lib xdoc icon awk tex; do (cd $$i; make clobber); done
+	for i in c shell lib xdoc icon awk tex; do (cd $$i && $(MAKE) $@); done
 
 Makefile: Makefile.nw
-	chmod +w Makefile
-	notangle -R'script' Makefile.nw | sh > Makefile
-	chmod -w Makefile
+	chmod +w $@
+	notangle -R'script' Makefile.nw | sh > $@
+	chmod -w $@

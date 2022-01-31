@@ -14,13 +14,13 @@ checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 nwmac.tex: support.nw
-	notangle -Rnwmac.tex support.nw > nwmac.tex
+	notangle -R$@ support.nw > $@
 
 noweb.sty: support.nw
-	notangle -Rnoweb.sty support.nw > noweb.sty
+	notangle -R$@ support.nw > $@
 
 support.tex: support.nw
-	noweave -delay -x support.nw > support.tex
+	noweave -delay -x support.nw > $@
 
 clean: 
 	/bin/rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc

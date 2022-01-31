@@ -9,7 +9,7 @@ correct-refs.tex: correct-refs.nw
 	noweave -delay -index $< > $@
 
 correct-refs.csh: correct-refs.nw
-	notangle -Rcorrect-refs.csh $< | cpif $@
+	notangle -R$@ $< | cpif $@
 	chmod +x $@
 
 all-scripts: correct-refs.nw
