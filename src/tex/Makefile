@@ -10,7 +10,6 @@ touch: nwmac.tex noweb.sty
 boot:
 	touch nwmac.tex noweb.sty
 
-
 nwmac.tex: support.nw
 	notangle -R$@ support.nw > $@
 

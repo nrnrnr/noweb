@@ -1,3 +1,8 @@
 #!/bin/sh
 
-echo "Git version: $(git describe --abbrev=20  --dirty --always --tags)"
+case $1 in
+  -prefix) prefix="Git version: " ;;
+  *) prefix="" ;;
+esac
+
+echo "$prefix$(git describe --abbrev=20  --dirty --always --tags)"

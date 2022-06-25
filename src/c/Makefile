@@ -94,7 +94,7 @@ fakepretty: $(FPOBJS)
 
 
 gitversion.c: ../gitversion ../../.git/refs/heads/master
-	echo 'const char gitversion[] = "'"$$(../gitversion)"'";' > $@
+	echo 'const char gitversion[] = "'"$$(../gitversion -prefix)"'";' > $@
 
 
 columns.o:      columns.h

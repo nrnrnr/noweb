@@ -9,7 +9,6 @@ Here's the organization of the source:
 <<noweb>>=
 #!/bin/sh
 <<copyright notice>>
-# <<git version>>
 LIB=|LIBDIR|
 markup=$LIB/markup mntopt=-L status=0 tex=1 output=1
 <<consume options, setting [[tex]], [[output]], [[mntopt]], and [[markup]]>>
@@ -59,6 +58,7 @@ $LIB/totex -delay | cpif $texname
 <<consume options, setting [[tex]], [[output]], [[mntopt]], and [[markup]]>>=
 while [ $# -gt 0 ]; do
   case $1 in
+    -gitversion) echo "|GITVERSION|" ; exit ;;
     -to|-ot) tex= output= ; shift ;;
     -t)  tex=             ; shift ;;
     -o)  output=          ; shift ;;

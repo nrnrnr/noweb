@@ -33,3 +33,4 @@ src/c/*.o
 /noweb
 /src/shell/gitversion.nw
 /src/c/gitversion.c
+/src/tex/gitversion.nw

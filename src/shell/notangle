@@ -1,11 +1,11 @@
 #!/bin/sh
 # Copyright 1991 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# Git version: v2_12-19-g40f02fe6ad62d366ff88-dirty
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= markopt= filters=
 while [ $# -gt 0 ]; do
         case $1 in
+        -gitversion) echo "|GITVERSION|" ; exit ;;
         -ml|-m3|-awk|-icn|-icon|-pascal|-c|-c++|-f77|-f90|-tex|-w[0-9][0-9]*) ;; 
                                         # deliberately ignore nountangle args
         -t)  ;; # this is default

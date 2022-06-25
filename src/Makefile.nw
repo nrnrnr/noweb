@@ -15,6 +15,7 @@ LIBSRC=awk
 # If you are lucky enough to have an Icon compiler icont, use ICONC=iconc
 ICONC=icont
 ICONT=icont
+GITVERSION=`./gitversion`
 
 # BIN is where the commands (notangle, noweave, nountangle, noroots) land
 # LIB is where the pieces of the pipes (nt, markup, unmarkup) are stored
@@ -91,7 +92,7 @@ for i in noweb notangle '$(WEAVE)' nountangle nodefs noroots nuweb2noweb cpif ht
 	 noroff
 do
   echo '@<<shell binaries@>>='
-  echo 'sed "s@|LIBDIR|@$(LIBNAME)@"' "shell/$i" '> $(BIN)/'"$i"
+  echo 'sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@"' "shell/$i" '> $(BIN)/'"$i"
   echo 'chmod +x $(BIN)/'"$i"
   echo '@<<uninstall shell binaries@>>='
   echo 'rm -f $(BIN)/'"$i"
@@ -186,12 +187,20 @@ done
 <<*>>=
 install-tex:
 	mkdir -p $(TEXINPUTS)
-	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
+	<<tex installation>>
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty
-
+	<<tex uninstallation>>
+<<generate chunks>>=
+for i in nwmac.tex noweb.sty
+do
+  echo '@<<tex installation@>>='
+  echo 'sed "s@|GITVERSION|@$(GITVERSION)@"' "tex/$i" '> $(TEXINPUTS)/'"$i"
+  echo '@<<tex uninstallation@>>='
+  echo 'rm -f $(TEXINPUTS)/'"$i"
+done
+<<*>>=
 install-elisp:
 	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)

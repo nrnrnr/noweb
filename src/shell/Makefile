@@ -16,17 +16,14 @@ touch: $(SRCS)
 boot:
 	touch $(SRCS)
 
-gitversion.nw: ../gitversion ../../.git/refs/heads/master
-	(echo "<<git version>>="; ../gitversion) > $@
+noweave: noweave.nw
+	notangle -R$@ noweave.nw > $@
 
-noweave: noweave.nw gitversion.nw
-	notangle -R$@ noweave.nw gitversion.nw > $@
+notangle: notangle.nw
+	notangle -R$@ notangle.nw > $@
 
-notangle: notangle.nw gitversion.nw
-	notangle -R$@ notangle.nw gitversion.nw > $@
-
-noweb: noweb.nw gitversion.nw
-	notangle -R$@ noweb.nw gitversion.nw > $@
+noweb: noweb.nw
+	notangle -R$@ noweb.nw > $@
 
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw

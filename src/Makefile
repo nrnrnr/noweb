@@ -10,6 +10,7 @@ LIBSRC=awk
 # If you are lucky enough to have an Icon compiler icont, use ICONC=iconc
 ICONC=icont
 ICONT=icont
+GITVERSION=`./gitversion`
 
 # BIN is where the commands (notangle, noweave, nountangle, noroots) land
 # LIB is where the pieces of the pipes (nt, markup, unmarkup) are stored
@@ -59,25 +60,25 @@ uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
 
 install-shell:
 	mkdir -p $(BIN) $(LIB)
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/noweb > $(BIN)/noweb
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/noweb > $(BIN)/noweb
 	chmod +x $(BIN)/noweb
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/notangle > $(BIN)/notangle
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/notangle > $(BIN)/notangle
 	chmod +x $(BIN)/notangle
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/$(WEAVE) > $(BIN)/$(WEAVE)
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/$(WEAVE) > $(BIN)/$(WEAVE)
 	chmod +x $(BIN)/$(WEAVE)
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/nountangle > $(BIN)/nountangle
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/nountangle > $(BIN)/nountangle
 	chmod +x $(BIN)/nountangle
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/nodefs > $(BIN)/nodefs
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/nodefs > $(BIN)/nodefs
 	chmod +x $(BIN)/nodefs
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/noroots > $(BIN)/noroots
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/noroots > $(BIN)/noroots
 	chmod +x $(BIN)/noroots
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/nuweb2noweb > $(BIN)/nuweb2noweb
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/nuweb2noweb > $(BIN)/nuweb2noweb
 	chmod +x $(BIN)/nuweb2noweb
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/cpif > $(BIN)/cpif
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/cpif > $(BIN)/cpif
 	chmod +x $(BIN)/cpif
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/htmltoc > $(BIN)/htmltoc
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/htmltoc > $(BIN)/htmltoc
 	chmod +x $(BIN)/htmltoc
-	sed "s@|LIBDIR|@$(LIBNAME)@" shell/noroff > $(BIN)/noroff
+	sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/noroff > $(BIN)/noroff
 	chmod +x $(BIN)/noroff
 	sed "s@|LIBDIR|@$(LIBNAME)@" shell/toroff > $(LIB)/toroff
 	chmod +x $(LIB)/toroff
@@ -181,12 +182,13 @@ install-preformat-man:
 	(cd $(CATDIR) && ln notangle.$(MANEXT).gz nountangle.$(MANEXT).gz)
 install-tex:
 	mkdir -p $(TEXINPUTS)
-	cp tex/nwmac.tex tex/noweb.sty $(TEXINPUTS)
+	sed "s@|GITVERSION|@$(GITVERSION)@" tex/nwmac.tex > $(TEXINPUTS)/nwmac.tex
+	sed "s@|GITVERSION|@$(GITVERSION)@" tex/noweb.sty > $(TEXINPUTS)/noweb.sty
 	-texhash || echo "Program texhash not found or failed"
 
 uninstall-tex:
-	rm -f $(TEXINPUTS)/nwmac.tex $(TEXINPUTS)/noweb.sty
-
+	rm -f $(TEXINPUTS)/nwmac.tex
+	rm -f $(TEXINPUTS)/noweb.sty
 install-elisp:
 	if [ "/dev/null" != "$(ELISP)" ]; then mkdir -p $(ELISP); fi
 	cp elisp/noweb-mode.el $(ELISP)

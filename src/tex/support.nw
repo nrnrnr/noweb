@@ -25,6 +25,9 @@ This file contains both plain {\TeX} and {\LaTeX} support:
 % noweb.sty -- LaTeX support for noweb
 % DON'T read or edit this file!  Use ...noweb-source/tex/support.nw instead.
 @
+<<kernel>>=
+\def\nwgitversion{|GITVERSION|}
+@ 
 
 \section{Basic {\TeX} support for {\tt noweb}}
 This basic code is used for both {\TeX} and {\LaTeX}.

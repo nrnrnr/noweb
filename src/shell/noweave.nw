@@ -9,7 +9,6 @@ Here's the organization of the source:
 <<noweave>>=
 #!/bin/sh
 <<copyright notice>>
-# <<git version>>
 <<initialization>>
 <<scan options and arguments>>
 <<emit markup on standard output>> |
@@ -40,6 +39,7 @@ done
 arg=
 while [ $# -gt 0 ]; do
   case $1 in
+    -gitversion) echo "|GITVERSION|"; exit ;;
     <<first pass {\tt noweave} options>>
     -)  arg="$arg $1" ;;
     -*) echo "$0: Unrecognized option '$1'" 1>&2 ; <<show usage>>; exit 1 ;;
