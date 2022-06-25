@@ -32,9 +32,6 @@ boot:
 
 www: $(WWW)/onepage.ps $(WWW)/guide.ps $(WWW)/guide.html
 
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
-
 $(WWW)/onepage.ps: onepage.ps
 	cp onepage.ps $(WWW)
 

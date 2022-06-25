@@ -10,8 +10,6 @@ touch: nwmac.tex noweb.sty
 boot:
 	touch nwmac.tex noweb.sty
 
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
 nwmac.tex: support.nw
 	notangle -R$@ support.nw > $@

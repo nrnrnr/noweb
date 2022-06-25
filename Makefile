@@ -61,6 +61,3 @@ ctan: clean source nwsrcfilter DATE emacscheck
 emacscheck:
 	-echo "Checking to ensure distribution matches personal emacs mode" 1>&2
 	diff src/elisp/noweb-mode.el $(HOME)/emacs/noweb-mode.el
-
-checkin:
-	(cd src && $(MAKE) "CINAME=$(CINAME)" "CIMSG=$(CIMSG)" $@)

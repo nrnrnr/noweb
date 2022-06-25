@@ -21,9 +21,6 @@ uninstall:
 	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(LIB)/$$i; done
 	rm -f $(LIB)/pipedocs
 
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
-
 source: toascii
 touch: toascii
 	touch toascii

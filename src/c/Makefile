@@ -70,9 +70,6 @@ clean:
 clobber: clean
 	rm -f $(SRCS) fakepretty.c pretty.[ch]
 
-checkin: $(FILES) doc.nw
-	ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
-
 doc.tex: doc.nw
 	cp doc.nw $@
 

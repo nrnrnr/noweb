@@ -16,9 +16,6 @@ touch: $(SRCS)
 boot:
 	touch $(SRCS)
 
-checkin:
-	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
-
 gitversion.nw: ../gitversion ../../.git/refs/heads/master
 	(echo "<<git version>>="; ../gitversion) > $@
 
