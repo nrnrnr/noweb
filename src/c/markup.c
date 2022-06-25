@@ -1,8 +1,6 @@
 #line 24 "markup.nw"
 static char rcsid[] = "$Id: markup.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
-static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
-  { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,12 +12,16 @@ static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
 
 #line 64 "markup.nw"
 char at_sign = '@';             /* should be the only place '@' is mentioned */
-#line 88 "markup.nw"
+#line 89 "markup.nw"
 static char def_marker[] = " %def ";
 #define def_length (6)
 
 #line 74 "markup.nw"
 int starts_doc(char *line) {
+    
+#line 39 "markup.nw"
+(void)(rcsid); (void)(rcsname);
+#line 76 "markup.nw"
     return (*line==at_sign && (line[1]=='\0' || isspace(line[1])));
 }
 
@@ -27,22 +29,22 @@ char *first_doc_line(char *line) {
     if (line[1]!='\0' && line[1] !='\n') return line+2;
     else return line+1;
 }
-#line 91 "markup.nw"
+#line 92 "markup.nw"
 int is_def(char *line) {
     int answer;
     static int complained;
     
-#line 104 "markup.nw"
+#line 105 "markup.nw"
 { static int checked = 0;
   if (!checked) {
     assert(strlen(def_marker) == def_length);
     checked = 1;
   }
 }
-#line 95 "markup.nw"
+#line 96 "markup.nw"
     answer = (*line==at_sign && !strncmp(line+1, def_marker, def_length));
     
-#line 114 "markup.nw"
+#line 115 "markup.nw"
 if (answer && !complained) {
     complained = 1;
 /*
@@ -50,21 +52,21 @@ if (answer && !complained) {
 	            "         or `-filter btdefn'\n");
 */
 }
-#line 97 "markup.nw"
+#line 98 "markup.nw"
     return answer;
 }
 
 char *remove_def_marker(char *line) {
     return line+1+def_length;
 }
-#line 144 "markup.nw"
+#line 145 "markup.nw"
 char *mod_start(char *s, int mark) {
     return find_escaped(s,"<<","@<<", mark);
 }
 char *mod_end(char *s, int mark) {
     return find_escaped(s,">>","@>>", mark);
 }
-#line 163 "markup.nw"
+#line 164 "markup.nw"
 int starts_code (char *line, char *filename, int lineno) {
     char *tail;
     if (mod_start(line,0) != line+2) return 0;
@@ -80,26 +82,26 @@ void getmodname(char *dest, int size, char *source) {
     char *q = mod_start(p,1);
 
     if (q==NULL) 
-#line 184 "markup.nw"
-{
-    free(p);
-    impossible
-        ("I couldn't manage to extract a module name, but I'm sure I saw one");
-}
-#line 178 "markup.nw"
-    if (mod_end(q,1)==NULL) 
-#line 184 "markup.nw"
+#line 185 "markup.nw"
 {
     free(p);
     impossible
         ("I couldn't manage to extract a module name, but I'm sure I saw one");
 }
 #line 179 "markup.nw"
+    if (mod_end(q,1)==NULL) 
+#line 185 "markup.nw"
+{
+    free(p);
+    impossible
+        ("I couldn't manage to extract a module name, but I'm sure I saw one");
+}
+#line 180 "markup.nw"
     strncpy(dest,q,size-1);
     dest[size-1] = '\0';
     free(p);
 }
-#line 207 "markup.nw"
+#line 208 "markup.nw"
 char *find_escaped(register char *s, char *search, char *escape, int mark) {
     register char first = *search;
     register char first_escape = (escape != NULL ? *escape : '\0');

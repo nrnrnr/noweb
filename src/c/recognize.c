@@ -1,44 +1,42 @@
 #line 24 "recognize.nw"
 static char rcsid[] = "$Id: recognize.nw,v 1.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
-static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
-  { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
-#line 39 "recognize.nw"
+#line 37 "recognize.nw"
 #include <string.h>
 #include <stdlib.h>
-#line 54 "recognize.nw"
+#line 55 "recognize.nw"
 typedef struct recognizer *Recognizer;
-#line 69 "recognize.nw"
+#line 70 "recognize.nw"
 typedef void (*Callback) (void *closure, char *id, char *instance);
-#line 52 "recognize.nw"
+#line 53 "recognize.nw"
 Recognizer new_recognizer(char *alphanum, char *symbols);
-#line 60 "recognize.nw"
+#line 61 "recognize.nw"
 void add_ident(Recognizer r, char *id);
 void stop_adding(Recognizer r);
-#line 63 "recognize.nw"
+#line 64 "recognize.nw"
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
-#line 76 "recognize.nw"
+#line 77 "recognize.nw"
 typedef struct goto_node Goto_Node;
 typedef struct move_node Move_Node;
-#line 79 "recognize.nw"
+#line 80 "recognize.nw"
 typedef struct name_node {
   struct name_node *next; /* points to the next name on the output list */
   char *name;
 } Name_Node;
-#line 84 "recognize.nw"
+#line 85 "recognize.nw"
 struct move_node {
   Move_Node *next;      /* points to the next node on the move list */
   Goto_Node *state;     /* the next state for this character */
   unsigned char c;
 };
-#line 90 "recognize.nw"
+#line 91 "recognize.nw"
 struct goto_node {
   Name_Node *output;    /* list of words ending in this state */
   Move_Node *moves;     /* list of possible moves */
   Goto_Node *fail;      /* and where to go when no move fits */
   Goto_Node *next;      /* next goto node with same depth */
 };
-#line 97 "recognize.nw"
+#line 98 "recognize.nw"
 struct recognizer {
   Goto_Node *root[256]; /* might want 128, depending on the character set */
   char *alphas;
@@ -48,9 +46,9 @@ struct recognizer {
                          created while adding ids, used while building
                          the failure functions */
 };
-#line 322 "recognize.nw"
+#line 324 "recognize.nw"
 int reject_match(Recognizer r, char *id, char *input, char *current);
-#line 114 "recognize.nw"
+#line 115 "recognize.nw"
 static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
 {
   Move_Node *m = g->moves;
@@ -58,17 +56,21 @@ static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
     m = m->next;
   return m ? m->state : NULL;
 }
-#line 127 "recognize.nw"
+#line 128 "recognize.nw"
 Recognizer new_recognizer(char *alphanum, char *symbols)
 {
   Recognizer r = (Recognizer) calloc(1, sizeof(struct recognizer));
+  
+#line 41 "recognize.nw"
+(void)(rcsid); (void)(rcsname);
+#line 132 "recognize.nw"
   r->alphas = alphanum;
   r->syms = symbols;
   r->max_depth = 10;
   r->depths = (Goto_Node **) calloc(r->max_depth, sizeof(Goto_Node *));
   return r;
 }
-#line 142 "recognize.nw"
+#line 144 "recognize.nw"
 void add_ident(Recognizer r, char *id)
 {
   int depth = 2;
@@ -77,20 +79,20 @@ void add_ident(Recognizer r, char *id)
   Goto_Node *q = r->root[c];
   if (!q) 
     
-#line 162 "recognize.nw"
+#line 164 "recognize.nw"
 {
   q = (Goto_Node *) calloc(1, sizeof(Goto_Node));
   r->root[c] = q;
   q->next = r->depths[1];
   r->depths[1] = q;
 }
-#line 150 "recognize.nw"
+#line 152 "recognize.nw"
   c = *p++;
   while (c) {
     Goto_Node *new = goto_lookup(c, q);
     if (!new)
       
-#line 169 "recognize.nw"
+#line 171 "recognize.nw"
 {
   Move_Node *new_move = (Move_Node *) malloc(sizeof(Move_Node));
   new = (Goto_Node *) calloc(1, sizeof(Goto_Node));
@@ -100,7 +102,7 @@ void add_ident(Recognizer r, char *id)
   q->moves = new_move;
   if (depth == r->max_depth)
     
-#line 182 "recognize.nw"
+#line 184 "recognize.nw"
 {
   int i;
   Goto_Node **new_depths = (Goto_Node **) calloc(2*depth, sizeof(Goto_Node *));
@@ -110,17 +112,17 @@ void add_ident(Recognizer r, char *id)
   free(r->depths);
   r->depths = new_depths;
 }
-#line 178 "recognize.nw"
+#line 180 "recognize.nw"
   new->next = r->depths[depth];
   r->depths[depth] = new;
 }
-#line 155 "recognize.nw"
+#line 157 "recognize.nw"
     q = new;
     depth++;
     c = *p++;
   }
   
-#line 192 "recognize.nw"
+#line 194 "recognize.nw"
 if (!q->output) {
   char *copy = malloc(strlen(id) + 1);
   strcpy(copy, id);
@@ -128,9 +130,9 @@ if (!q->output) {
   q->output->next = NULL;
   q->output->name = copy;
 }
-#line 160 "recognize.nw"
+#line 162 "recognize.nw"
 }
-#line 208 "recognize.nw"
+#line 210 "recognize.nw"
 void stop_adding(Recognizer r)
 {
   int depth;
@@ -165,7 +167,7 @@ void stop_adding(Recognizer r)
     }
   }
 }
-#line 247 "recognize.nw"
+#line 249 "recognize.nw"
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
 {
   Goto_Node *state = NULL;
@@ -173,15 +175,15 @@ void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
   unsigned char c = (unsigned char) *current++;
   while (c) {
     
-#line 263 "recognize.nw"
+#line 265 "recognize.nw"
 {
   while (state && !goto_lookup(c, state))
     state = state->fail;
   state = state ? goto_lookup(c, state) : r->root[c];
 }
-#line 254 "recognize.nw"
+#line 256 "recognize.nw"
     
-#line 273 "recognize.nw"
+#line 275 "recognize.nw"
 {
   if (state) {
     Name_Node *p = state->output;
@@ -192,11 +194,11 @@ void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
     }
   }
 }
-#line 255 "recognize.nw"
+#line 257 "recognize.nw"
     c = *current++;
   }
 }
-#line 297 "recognize.nw"
+#line 299 "recognize.nw"
 int reject_match(Recognizer r, char *id, char *input, char *current)
 {
   int len = strlen(id);

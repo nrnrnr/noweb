@@ -4,8 +4,6 @@
 <<*>>=
 static char rcsid[] = "$Id: finduses.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
-static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
-  { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +49,8 @@ int main(int argc, char **argv) {
        add_use_markers(stdin, stdout);
     }
     nowebexit(NULL);
-    return errorlevel;          /* slay warning */
+    (void)(rcsid); (void)(rcsname);   /* slay warnings */
+    return errorlevel;                /* slay warning */
 }
 @
 <<read identifiers to be defined from files named in [[argv]]>>=

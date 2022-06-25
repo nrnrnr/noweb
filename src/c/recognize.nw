@@ -23,8 +23,6 @@ efficient solution~\cite{aho:efficient}.
 <<*>>=
 static char rcsid[] = "$Id: recognize.nw,v 1.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
-static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
-  { {rcsid, keepalive}, {rcsname, keepalive} }; /* avoid warnings */
 <<Include files>>
 <<header>>
 <<Type definitions>>
@@ -38,6 +36,9 @@ static struct keepalive { char *s; struct keepalive *p; } keepalive[] =
 <<Include files>>=
 #include <string.h>
 #include <stdlib.h>
+@ 
+<<suppress warnings about [[rcsid]] and [[rcsname]]>>=
+(void)(rcsid); (void)(rcsname);
 @ 
 
 \paragraph{External Interface}
@@ -127,6 +128,7 @@ The [[max_depth]] should be initialized to be at least 2.
 Recognizer new_recognizer(char *alphanum, char *symbols)
 {
   Recognizer r = (Recognizer) calloc(1, sizeof(struct recognizer));
+  <<suppress warnings about [[rcsid]] and [[rcsname]]>>
   r->alphas = alphanum;
   r->syms = symbols;
   r->max_depth = 10;
