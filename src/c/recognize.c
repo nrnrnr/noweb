@@ -1,100 +1,42 @@
-% \documentstyle[noweb]{article}
-% 
-% \setlength{\oddsidemargin}{0in}
-% \setlength{\evensidemargin}{0in}
-% \setlength{\topmargin}{0in}
-% \addtolength{\topmargin}{-\headheight}
-% \addtolength{\topmargin}{-\headsep}
-% \setlength{\textheight}{8.9in}
-% \setlength{\textwidth}{6.5in}
-% \setlength{\marginparwidth}{0.5in}
-
-\subsection{An Efficient String Matcher (by Preston Briggs)}
-\label{preston}
-
-\subsubsection{Introduction}
-
-The obvious approach to this problem would be quite expensive for
-large documents; however, there is an interesting paper describing an
-efficient solution~\cite{aho:efficient}.
-
-\paragraph{Boilerplate} \indent\null\par
-
-<<*>>=
+#line 24 "recognize.nw"
 static char rcsid[] = "$Id: recognize.nw,v 1.24 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
-<<Include files>>
-<<header>>
-<<Type definitions>>
-<<Prototypes>>
-<<Function definitions>>
-@
-<<header>>=
-<<Exported type definitions>>
-<<Exported prototypes>>
-@
-<<Include files>>=
+#line 37 "recognize.nw"
 #include <string.h>
 #include <stdlib.h>
-@ 
-<<suppress warnings about [[rcsid]] and [[rcsname]]>>=
-(void)(rcsid); (void)(rcsname);
-@ 
-
-\paragraph{External Interface}
-
-The externally visible interface was designed by Norman Ramsey.
-
-We assume that [[alphanum]] and [[symbols]] point to constant
-strings; {\sl i.e.,} we don't bother to copy them into separately
-allocated space.
-
-<<Exported prototypes>>=
-Recognizer new_recognizer(char *alphanum, char *symbols);
-<<Exported type definitions>>=
+#line 55 "recognize.nw"
 typedef struct recognizer *Recognizer;
-@
-A copy is made of the string pointed to by [[id]].
-It won't hurt to add the same identifier multiple times to a given
-recognizer.
-<<Exported prototypes>>=
+#line 70 "recognize.nw"
+typedef void (*Callback) (void *closure, char *id, char *instance);
+#line 53 "recognize.nw"
+Recognizer new_recognizer(char *alphanum, char *symbols);
+#line 61 "recognize.nw"
 void add_ident(Recognizer r, char *id);
 void stop_adding(Recognizer r);
-<<Exported prototypes>>=
+#line 64 "recognize.nw"
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
-@ 
-
-[[instance]] is a pointer to the place within [[input]] that we
-saw the identifier.
-<<Exported type definitions>>=
-typedef void (*Callback) (void *closure, char *id, char *instance);
-@
-
-\subsubsection{Defining the Automata}
-
-
-<<Type definitions>>=
+#line 77 "recognize.nw"
 typedef struct goto_node Goto_Node;
 typedef struct move_node Move_Node;
-<<Type definitions>>=
+#line 80 "recognize.nw"
 typedef struct name_node {
   struct name_node *next; /* points to the next name on the output list */
   char *name;
 } Name_Node;
-<<Type definitions>>=
+#line 85 "recognize.nw"
 struct move_node {
   Move_Node *next;      /* points to the next node on the move list */
   Goto_Node *state;     /* the next state for this character */
   unsigned char c;
 };
-<<Type definitions>>=
+#line 91 "recognize.nw"
 struct goto_node {
   Name_Node *output;    /* list of words ending in this state */
   Move_Node *moves;     /* list of possible moves */
   Goto_Node *fail;      /* and where to go when no move fits */
   Goto_Node *next;      /* next goto node with same depth */
 };
-<<Type definitions>>=
+#line 98 "recognize.nw"
 struct recognizer {
   Goto_Node *root[256]; /* might want 128, depending on the character set */
   char *alphas;
@@ -104,14 +46,9 @@ struct recognizer {
                          created while adding ids, used while building
                          the failure functions */
 };
-@
-
-\paragraph{A Utility Function}
-
-We need a function that, given the current state and a character, will
-return the next state as directed by the ``goto table.'' If there is
-no defined entry in the table, the function returns [[NULL]].
-<<Function definitions>>=
+#line 324 "recognize.nw"
+int reject_match(Recognizer r, char *id, char *input, char *current);
+#line 115 "recognize.nw"
 static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
 {
   Move_Node *m = g->moves;
@@ -119,28 +56,21 @@ static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
     m = m->next;
   return m ? m->state : NULL;
 }
-@
-
-\subsubsection{Building the Automata}
-
-The [[max_depth]] should be initialized to be at least 2.
-<<Function definitions>>=
+#line 128 "recognize.nw"
 Recognizer new_recognizer(char *alphanum, char *symbols)
 {
   Recognizer r = (Recognizer) calloc(1, sizeof(struct recognizer));
-  <<suppress warnings about [[rcsid]] and [[rcsname]]>>
+  
+#line 41 "recognize.nw"
+(void)(rcsid); (void)(rcsname);
+#line 132 "recognize.nw"
   r->alphas = alphanum;
   r->syms = symbols;
   r->max_depth = 10;
   r->depths = (Goto_Node **) calloc(r->max_depth, sizeof(Goto_Node *));
   return r;
 }
-@
-
-\paragraph{Building the Goto Table}
-
-We assume [[id]] is at least 1 character long.
-<<Function definitions>>=
+#line 144 "recognize.nw"
 void add_ident(Recognizer r, char *id)
 {
   int depth = 2;
@@ -148,26 +78,21 @@ void add_ident(Recognizer r, char *id)
   unsigned char c = *p++;
   Goto_Node *q = r->root[c];
   if (!q) 
-    <<Create an entry for [[root[c]]]>>
-  c = *p++;
-  while (c) {
-    Goto_Node *new = goto_lookup(c, q);
-    if (!new)
-      <<Create a new goto entry and attach to [[q]]'s move list>>
-    q = new;
-    depth++;
-    c = *p++;
-  }
-  <<Set [[q->output]] to [[id]] (if not already present)>>
-}
-<<Create an entry for [[root[c]]]>>=
+    
+#line 164 "recognize.nw"
 {
   q = (Goto_Node *) calloc(1, sizeof(Goto_Node));
   r->root[c] = q;
   q->next = r->depths[1];
   r->depths[1] = q;
 }
-<<Create a new goto entry and attach to [[q]]'s move list>>=
+#line 152 "recognize.nw"
+  c = *p++;
+  while (c) {
+    Goto_Node *new = goto_lookup(c, q);
+    if (!new)
+      
+#line 171 "recognize.nw"
 {
   Move_Node *new_move = (Move_Node *) malloc(sizeof(Move_Node));
   new = (Goto_Node *) calloc(1, sizeof(Goto_Node));
@@ -176,11 +101,8 @@ void add_ident(Recognizer r, char *id)
   new_move->next = q->moves;
   q->moves = new_move;
   if (depth == r->max_depth)
-    <<Double the size of the [[depths]] array>>
-  new->next = r->depths[depth];
-  r->depths[depth] = new;
-}
-<<Double the size of the [[depths]] array>>=
+    
+#line 184 "recognize.nw"
 {
   int i;
   Goto_Node **new_depths = (Goto_Node **) calloc(2*depth, sizeof(Goto_Node *));
@@ -190,7 +112,17 @@ void add_ident(Recognizer r, char *id)
   free(r->depths);
   r->depths = new_depths;
 }
-<<Set [[q->output]] to [[id]] (if not already present)>>=
+#line 180 "recognize.nw"
+  new->next = r->depths[depth];
+  r->depths[depth] = new;
+}
+#line 157 "recognize.nw"
+    q = new;
+    depth++;
+    c = *p++;
+  }
+  
+#line 194 "recognize.nw"
 if (!q->output) {
   char *copy = malloc(strlen(id) + 1);
   strcpy(copy, id);
@@ -198,15 +130,9 @@ if (!q->output) {
   q->output->next = NULL;
   q->output->name = copy;
 }
-@
-
-%\newpage
-\paragraph{Building the Failure Functions}
-
-After all the strings have been added to the goto table, we can
-construct the failure functions.  It's going to be hard to explain
-this one.
-<<Function definitions>>=
+#line 162 "recognize.nw"
+}
+#line 210 "recognize.nw"
 void stop_adding(Recognizer r)
 {
   int depth;
@@ -241,37 +167,23 @@ void stop_adding(Recognizer r)
     }
   }
 }
-@
-
-\subsubsection{Using the Automata}
-
-<<Function definitions>>=
+#line 249 "recognize.nw"
 void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
 {
   Goto_Node *state = NULL;
   char *current = input;
   unsigned char c = (unsigned char) *current++;
   while (c) {
-    <<Goto the next state>>
-    <<Perform the callback for any outputs>>
-    c = *current++;
-  }
-}
-@
-This is all complicated by my use of [[NULL]] to indicate the
-initial state. However, we get a nice speedup by using the [[root]]
-array instead of walking down the move list for every character.
-<<Goto the next state>>=
+    
+#line 265 "recognize.nw"
 {
   while (state && !goto_lookup(c, state))
     state = state->fail;
   state = state ? goto_lookup(c, state) : r->root[c];
 }
-@
-
-We walk down the output list, calling [[f]] with each name that is
-not rejected (see the next section).
-<<Perform the callback for any outputs>>=
+#line 256 "recognize.nw"
+    
+#line 275 "recognize.nw"
 {
   if (state) {
     Name_Node *p = state->output;
@@ -282,20 +194,11 @@ not rejected (see the next section).
     }
   }
 }
-@
-
-% \newpage
-\paragraph{Rejecting Matches}
-
-A problem with simple substring matching is that the string ``he''
-would match longer strings like ``she'' and ``her.'' Norman Ramsey
-suggested examining the characters occuring immediately before and
-after a match and rejecting the match if it appears to be part of a
-longer token. Of course, the concept of {\sl token\/} is
-language-dependent, so we may be occasionally mistaken.
-For the present, we'll consider the mechanism an experiment.
-
-<<Function definitions>>=
+#line 257 "recognize.nw"
+    c = *current++;
+  }
+}
+#line 299 "recognize.nw"
 int reject_match(Recognizer r, char *id, char *input, char *current)
 {
   int len = strlen(id);
@@ -312,13 +215,3 @@ int reject_match(Recognizer r, char *id, char *input, char *current)
   if (next && strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
   return 0;
 }
-@ Note we never reject a zero [[prev]] or [[next]], since some
-implementations of [[strchr]] always return true when searching for a
-zero character. 
-@
-
-We need a prototype for [[reject_match]], since it's referenced
-before its definition.
-
-<<Prototypes>>=
-int reject_match(Recognizer r, char *id, char *input, char *current);

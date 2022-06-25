@@ -1,0 +1,85 @@
+#line 3 "asdldefs.nw"
+procedure main(args)
+  go()
+end
+#line 7 "asdldefs.nw"
+global idchars
+procedure postpass(name, arg)
+  static kind
+  initial { idchars := &letters ++ &digits ++ '_.' 
+            kind := "bogus"
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then (arg || "--") ? (tab(find("--") \ 1) ? {
+               if (optwhite(), any(&lcase), t := tab(many(idchars)), optwhite(), ="=")
+	       then
+                 undotted(t)
+               while tab(upto(idchars)) do
+                 if (="imports", any(' \t')) then 
+                   (tab(upto(idchars)), tab(many(idchars)))
+	         else if any(&ucase) then undotted(tab(many(idchars)))
+                 else tab(many(idchars))
+             })
+  }
+  return
+end
+
+procedure undotted(s)
+  return if upto('.', s) then &null else writedefn(s)
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+
+procedure optwhite()
+ suspend tab(many(' \t')) | ""
+end
+#line 41 "asdldefs.nw"
+procedure rcsinfo () 
+  return "$Id: asdldefs.nw,v 1.15 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+#line 1 "defns.nw"
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    if match("@fatal ", line) then exit(1)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 18 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 23 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 25 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 35 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

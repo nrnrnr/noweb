@@ -1,7 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 4 -*-
-\section{Scanning for uses of identifiers}
-\subsection{Main program}
-<<*>>=
+#line 5 "finduses.nw"
 static char rcsid[] = "$Id: finduses.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
 static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
@@ -12,24 +9,26 @@ static char rcsname[] = "$Name: v2_12 $";
 #include "match.h"
 #include "getline.h"
 #include "recognize.h"
-@
-These choices of alphanumerics and symbols seem to work for most languages.
-Making [[@]] alphanumeric helps {\LaTeX}, and making [[#]]
-alphanumeric helps avoid false hits on C preprocessor directives like
-[[#define]] and [[#include]].
-<<*>>=
+#line 21 "finduses.nw"
 static Recognizer nwindex;
 #define ALPHANUM "_'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#"
 #define SYMBOLS "!%^&*-+:=|~<>./?`"
 /* note $ and \ both delimiters */
-@ 
-
-By default, find uses within quoted code ([[[[...]]]]).
-<<*>>=
+#line 29 "finduses.nw"
 static int showquotes = 1;
-<<typedefs>>
-<<local prototypes>>
-<<*>>=
+#line 96 "finduses.nw"
+typedef struct line_and_outfile {
+    char *line;
+    FILE *out;
+} LineOut;
+#line 65 "finduses.nw"
+static void read_ids(FILE *in);
+#line 101 "finduses.nw"
+static void add_use_markers(FILE *in, FILE *out);
+#line 153 "finduses.nw"
+static void write_index_use(void *closure, char *id, char *instance);
+static char *emit_up_to(FILE *f, char *s, char *limit);
+#line 33 "finduses.nw"
 int main(int argc, char **argv) {
     FILE *fp;
     int i;
@@ -42,42 +41,19 @@ int main(int argc, char **argv) {
             errormsg(Error, "%s: unknown option %s\n", progname, argv[i]);
     nwindex = new_recognizer(ALPHANUM, SYMBOLS);
     if (i == argc) {
-       <<add uses to stdin, grabbing defns from stdin>>
-    } else {
-       <<read identifiers to be defined from files named in [[argv]]>>
-       stop_adding(nwindex);
-       add_use_markers(stdin, stdout);
-    }
-    nowebexit(NULL);
-    (void)(rcsid); (void)(rcsname);   /* slay warnings */
-    return errorlevel;                /* slay warning */
-}
-@
-<<read identifiers to be defined from files named in [[argv]]>>=
-for (; i < argc; i++)
-    if ((fp=fopen(argv[i],"r"))==NULL)
-        errormsg(Error, "%s: couldn't open file %s\n", progname, argv[i]);
-    else {
-        read_ids(fp);
-        fclose(fp);
-    }
-<<local prototypes>>=
-static void read_ids(FILE *in);
-<<*>>=
-static void read_ids(FILE *in) {
-    char *line;
-    while ((line = getline_nw(in)) != NULL) {
-        if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
-        add_ident(nwindex, line);
-    }
-}
-@ 
-<<add uses to stdin, grabbing defns from stdin>>=
+       
+#line 76 "finduses.nw"
 {   FILE *tmp = tmpfile();
     char *line;
-    if (tmp == NULL) <<complain about opening temp file and exit>>
+    if (tmp == NULL) 
+#line 156 "finduses.nw"
+errormsg(Fatal, "%s: couldn't open temporary file\n", progname);
+#line 79 "finduses.nw"
     while ((line = getline_nw(stdin)) != NULL) {
-        if (fputs(line, tmp) == EOF) <<complain about writing temp file and exit>>
+        if (fputs(line, tmp) == EOF) 
+#line 158 "finduses.nw"
+errormsg(Fatal, "%s: error writing temporary file\n", progname);
+#line 81 "finduses.nw"
         if (is_index(line, "defn")) {
             if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
             add_ident(nwindex, line+1+5+1+4+1);
@@ -92,14 +68,34 @@ static void read_ids(FILE *in) {
     stop_adding(nwindex);
     add_use_markers(tmp, stdout);
 }
-<<typedefs>>=
-typedef struct line_and_outfile {
+#line 46 "finduses.nw"
+    } else {
+       
+#line 57 "finduses.nw"
+for (; i < argc; i++)
+    if ((fp=fopen(argv[i],"r"))==NULL)
+        errormsg(Error, "%s: couldn't open file %s\n", progname, argv[i]);
+    else {
+        read_ids(fp);
+        fclose(fp);
+    }
+#line 48 "finduses.nw"
+       stop_adding(nwindex);
+       add_use_markers(stdin, stdout);
+    }
+    nowebexit(NULL);
+    (void)(rcsid); (void)(rcsname);   /* slay warnings */
+    return errorlevel;                /* slay warning */
+}
+#line 67 "finduses.nw"
+static void read_ids(FILE *in) {
     char *line;
-    FILE *out;
-} LineOut;
-<<local prototypes>>=
-static void add_use_markers(FILE *in, FILE *out);
-<<*>>=
+    while ((line = getline_nw(in)) != NULL) {
+        if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
+        add_ident(nwindex, line);
+    }
+}
+#line 103 "finduses.nw"
 static void add_use_markers(FILE *in, FILE *out) {
     char *line;
     int incode = 0;
@@ -119,25 +115,14 @@ static void add_use_markers(FILE *in, FILE *out) {
             fprintf(out, "%s", line);
     }       
 }
-@ 
-
-We gradually cut out the uses, and the tail of the line is left in [[info.line]],
-to be printed by the code above.
-There's a tricky bug lurking here---if one identifier is a prefix of another,
-but both are recognized (as with the C$++$ [[::]] separator), we have to avoid
-writing them both out in full, because that would duplicate text unnecessarily.
-As a result, we always emit the line in pieces.
-The function [[emit_up_to(f, s, limit)]] emits the piece of the string [[s]] up to 
-but not including [[limit]], if any.
-It returns [[limit]] or [[s]], whichever is greater.
-<<*>>=
+#line 134 "finduses.nw"
 static void write_index_use(void *closure, char *id, char *instance) {
   LineOut *info = (LineOut *) closure;
   info->line = emit_up_to(info->out, info->line, instance);
   fprintf(info->out, "@index use %s\n", id);
   info->line = emit_up_to(info->out, info->line, instance + strlen(id));
 }
-<<*>>=
+#line 141 "finduses.nw"
 static char *emit_up_to(FILE *f, char *s, char *limit) {
   if (s < limit) {
     char saved = *limit;
@@ -149,10 +134,3 @@ static char *emit_up_to(FILE *f, char *s, char *limit) {
     return s;
   }
 }
-<<local prototypes>>=
-static void write_index_use(void *closure, char *id, char *instance);
-static char *emit_up_to(FILE *f, char *s, char *limit);
-<<complain about opening temp file and exit>>=
-errormsg(Fatal, "%s: couldn't open temporary file\n", progname);
-<<complain about writing temp file and exit>>=
-errormsg(Fatal, "%s: error writing temporary file\n", progname);

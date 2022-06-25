@@ -1,0 +1,180 @@
+#line 8 "docs2comments.nw"
+global format, subst, firstline, lastline, allchunks, chunks, width
+record wrap(l, r)		# put fore and aft of line
+record breakup(strings)		# split up these strings with spaces
+record tr(old, new)		# translate old chars to new
+global left_quote, right_quote
+
+procedure main(args)
+  format := wrap("/* ", " */")
+  subst := breakup(["/*","*/"])
+  width := 80
+  left_quote := "[["
+  right_quote := "]]"
+  while a := get(args) do
+    case a of {
+      "-ml" | "-m3" : (format := wrap("(* ", " *)"), subst := breakup(["(*", "*)"]))
+      "-awk" | "-icn" | "-icon" :    format := wrap("# ")
+      "-lisp" | "-scm" : format := wrap(";;; ")
+      "-c++" :    format := wrap("// ")
+      "-c" :      { format := wrap(" * "); firstline := "/*"; lastline := " */"
+		    subst := breakup(["/*", "*/"])
+		  }
+      "-ocamlweb" :  { format := wrap("  "); firstline := "(*"; lastline := "  *)"
+  		    subst := breakup(["(*", "*)"])
+		       left_quote := "["; right_quote := "]"
+		  }
+      "-pascal" : { format := wrap("{ ", " }"); subst := tr("{}", "--") }
+      "-f77" :  format := wrap("C ")
+      "-f90" :  format := wrap("! ")
+      "-tex" :  format := wrap("%% ")
+      "-lua" :  format := wrap("-- ")
+
+      "-all" :  allchunks := 1
+      "-one" :  allchunks := &null
+      default :
+	a ?
+	  if (="-w", width <- integer(tab(many(&digits))), pos(0)) then
+	    &null
+          else if ="-L" then
+	    &null # deliberately ignore requests for #line
+          else {
+	    write("@fatal unknown argument '", a, "' to docs2comments")
+	    exit(1)
+	  }
+    }
+  
+#line 96 "docs2comments.nw"
+chunks := []
+while line := read() do
+  line ?
+    if ="@end docs" | ="@end code" then {
+      if (\holding)[-1] == "" then pull (holding)
+      put(chunks, code(preceding_defn, \defn_pending, holding) | docs(holding))
+## if type(chunks[-1]) == "code" then
+## every write("##### " || (
+## "preceding defn is " || image(preceding_defn) |
+## "defn pending is " || image(defn_pending) |
+##                                   "Holding chunk with these lines:" | image(!holding)))
+      defn_pending := &null
+      holding := &null
+      chunks := drain(chunks)
+    } else if ="@begin docs" then {
+      indocs := 1
+      holding := [""]
+    } else if ="@begin code" then {
+      indocs := &null
+      holding := [""]
+    } else if \indocs then {
+      if ="@text " then {
+        grab(tab(0), holding)
+      } else if ="@quote" & pos(0) then {
+        grab(left_quote, holding)
+      } else if ="@endquote" & pos(0) then {
+        grab(right_quote, holding)
+      } else if ="@nl" & pos(0) then {
+        put(\holding, "")
+      }
+    } else if ="@defn " then {
+        defn_pending := tab(0)
+        if holding[-1] == "" then pull (holding)
+        preceding_defn := holding
+        holding := []
+    } else {
+        if match("@xref ") & (\holding)[-1] == "" then pull(holding)
+        put(\holding, line)
+    }
+drain(put(chunks, docs([])))
+#line 53 "docs2comments.nw"
+  return
+end
+#line 57 "docs2comments.nw"
+procedure insert_blanks(s, bad)
+  s ? {
+    r := ""
+    while r ||:= tab(find(bad)) do {
+      r ||:= bad[1]
+      every i := 2 to *bad do r ||:= " " || bad[i]
+      =bad
+    }
+    return r || tab(0)
+  }
+end
+#line 70 "docs2comments.nw"
+procedure comment(s)
+  case type(subst) of {
+    "breakup" : every s := insert_blanks(s, !subst.strings)
+    "tr" : s := map(s, subst.old, subst.new)
+    "null" : &null
+    default : stop("unknown substitution of type ", type(subst))
+  }
+  if /format.r then
+    return format.l || s
+  else {
+    if *s < width then s ||:= repl(" ", width - *s)
+    return format.l || s || format.r
+  }    
+end
+#line 88 "docs2comments.nw"
+procedure grab(s, holding)
+  return (\holding)[-1] := holding[-1] || s
+end
+
+record docs(lines)
+record code(preceding, defn, lines)
+
+#line 138 "docs2comments.nw"
+procedure emit_as_comments(c)
+  type(c) == "docs" | runerr(1, "Unexpected code chunk")
+  every write("@text ", comment(trailing_nonblank(\c.lines)), "\n@nl")
+  return
+end
+
+procedure trailing_nonblank(l)
+  local suspended
+  every s := !l do
+    if \suspended | *s > 0 then {
+      suspended := 1
+      suspend s
+    }
+end
+        
+
+procedure drain(chunks)
+  static n
+  initial n := -1
+  if type(c := chunks[-2]) == "code" then {
+    write("@begin code ", n +:= 1)
+    every write(!c.preceding | ("@defn " || c.defn) | "@nl")
+    write("@text ", \firstline, "\n@nl")
+    every i := (if \allchunks then 1 else *chunks -2) to *chunks - 2 do
+      emit_as_comments(chunks[i])
+    write("@text ", comment("<" || c.defn || ">="), "\n@nl")
+    write("@text ", \lastline, "\n@nl")
+    copyxreflines(\c.lines)
+    bad := &null
+    (bad := get(\c.lines)) == "@nl" | 
+      { write(&errout, "expected newline after definition; got ", image(bad));
+        runerr(1, bad) }
+    every write(!c.lines)
+    c := chunks[-1]
+    if type(c) == "docs" & upto(\c.lines[1], ~' \n\t') then {
+      write("@text ", \firstline, "\n@nl")
+      emit_as_comments(c)
+      write("@text ", \lastline, "\n@nl")
+      write("@nl")
+      chunks := []
+    } else 
+      chunks := [c]
+    write("@end code ", n)
+  }
+  return chunks
+end
+
+procedure copyxreflines(l)
+  while match("@xref ", l[1]) do { 
+    #write(&errout, "COPYING ", image(l[1]))
+    get(l) #write(get(l))
+  }
+  return
+end

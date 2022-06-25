@@ -1,0 +1,218 @@
+#line 37 "htmltoc.nw"
+$define	sentinel "<tableofcontents>"
+$define	sentinel_end "</tableofcontents>"
+#line 44 "htmltoc.nw"
+record	ioc(number, level, text)
+#line 46 "htmltoc.nw"
+global	contents
+#line 52 "htmltoc.nw"
+procedure	readfile(f)
+	local old_contents
+	intoc := &null
+	contents := []
+        old_contents := []
+	no := 0
+
+	file := list()
+	while l := read(f) do l ? { 
+#line 71 "htmltoc.nw"
+if =sentinel then {
+	intoc := "in table of contents"
+	put(file, l)
+} else if =sentinel_end then {
+	intoc := &null
+	put(file, l)
+} else if \intoc then {
+        put(old_contents, l)
+} else if /intoc then {
+	if 
+#line 88 "htmltoc.nw"
+(pre := tab(upto('<')), ="<", skip(), tab(any('hH')), n := tab(many(&digits)), 
+ skip(), =">")
+#line 80 "htmltoc.nw"
+                                then {
+		
+#line 102 "htmltoc.nw"
+if (c := tab(upto('<')), ="</", skip(), tab(any('hH')), =n, skip(), =">") then {
+  no +:= 1
+  c ? c := strip_toc_anchors() || tab(0)
+  addcontents(no, n, c)
+  
+#line 112 "htmltoc.nw"
+put(file, pre || "<h" || n || "><a name=toc" || no || ">" || c ||
+          "</a></h" || n || ">" || tab(0))
+#line 107 "htmltoc.nw"
+} else
+  write(&errout, "Unterminated <h", n, ">", tab(0), "...")
+#line 82 "htmltoc.nw"
+	} else
+		put(file, l)
+}
+#line 60 "htmltoc.nw"
+                                             }
+        if \intoc then {
+           push(old_contents, sentinel_end)
+           every l := !copy(old_contents) do l ? { 
+#line 71 "htmltoc.nw"
+if =sentinel then {
+	intoc := "in table of contents"
+	put(file, l)
+} else if =sentinel_end then {
+	intoc := &null
+	put(file, l)
+} else if \intoc then {
+        put(old_contents, l)
+} else if /intoc then {
+	if 
+#line 88 "htmltoc.nw"
+(pre := tab(upto('<')), ="<", skip(), tab(any('hH')), n := tab(many(&digits)), 
+ skip(), =">")
+#line 80 "htmltoc.nw"
+                                then {
+		
+#line 102 "htmltoc.nw"
+if (c := tab(upto('<')), ="</", skip(), tab(any('hH')), =n, skip(), =">") then {
+  no +:= 1
+  c ? c := strip_toc_anchors() || tab(0)
+  addcontents(no, n, c)
+  
+#line 112 "htmltoc.nw"
+put(file, pre || "<h" || n || "><a name=toc" || no || ">" || c ||
+          "</a></h" || n || ">" || tab(0))
+#line 107 "htmltoc.nw"
+} else
+  write(&errout, "Unterminated <h", n, ">", tab(0), "...")
+#line 82 "htmltoc.nw"
+	} else
+		put(file, l)
+}
+#line 63 "htmltoc.nw"
+                                                                   }
+	}
+
+	return file
+end
+#line 92 "htmltoc.nw"
+procedure skip()
+  suspend tab(many(' \t')) | ""
+end
+#line 117 "htmltoc.nw"
+procedure strip_toc_anchors()
+  local s, p
+  if (="<a name=toc", tab(many(&digits)), =">", s := strip_toc_anchors(), ="</a>") then
+    return s
+  else {
+    s := to_next_anchor_or_end_anchor() | runerr(1, "never found an anchor")
+    if pos(0) | at_end_anchor() then
+      return s
+    else
+      return s || tab_past_anchor_start() || strip_toc_anchors() ||
+             tab_past_anchor_end()
+  }      
+end
+#line 132 "htmltoc.nw"
+procedure at_end_anchor() 
+  &subject[&pos:0] ?
+    return tab_past_anchor_end()
+end
+
+procedure at_start_anchor() 
+  &subject[&pos:0] ?
+    return tab_past_anchor_start()
+end
+
+procedure tab_past_anchor_end()
+  suspend ="<" || optwhite() || ="/" || optwhite() || =("a"|"A") || optwhite() || =">"
+end
+
+procedure tab_past_anchor_start()
+  suspend ="<" || optwhite() || =("a"|"A") || white() || tab(upto('>')) || =">"
+end
+
+procedure to_next_anchor_or_end_anchor()
+  return (1(tab(upto('<')), at_start_anchor() | at_end_anchor()) | tab(0)) \ 1
+end
+
+procedure white()
+  suspend tab(many(' \t'))
+end
+procedure optwhite()
+  suspend white() | ""
+end
+#line 171 "htmltoc.nw"
+procedure addcontents(no, n, s)
+	if map(s) ~== "contents" & find(n, toclevels) then
+		put(contents, ioc(no, n, strip_tags(s)))
+	return
+end
+
+procedure strip_tags(s)
+  s ? {
+    r := ""
+    while r ||:= tab(upto('<')) do (tab(upto('>')), =">")
+    return r || tab(0)
+  }
+end
+#line 191 "htmltoc.nw"
+global minlevel
+
+procedure tocindent(level)
+  return repl("  ", level-minlevel)
+end
+
+procedure	writetoc()
+	local level
+	minlevel := 99
+        every minlevel >:= (!contents).level 
+	level := minlevel - 1 # triggers opening list
+
+	every l := !contents do {
+		
+#line 215 "htmltoc.nw"
+while level > l.level do {
+	write(tocindent(level), "</ul>")
+	level -:= 1
+}
+while level < l.level do {
+	level +:= 1
+	write(tocindent(level), "<ul compact>")
+}
+#line 205 "htmltoc.nw"
+		write(tocindent(level),
+		      "<li><a href=\"#toc", l.number, "\">", l.text, "</a></li>")
+	}
+	
+#line 226 "htmltoc.nw"
+while level >= minlevel do {
+	write(tocindent(level), "</ul>")
+	level -:= 1
+}
+#line 209 "htmltoc.nw"
+end
+#line 235 "htmltoc.nw"
+procedure add_contents(f)
+	file := readfile(f)
+
+	every l := !file do {
+	        write(l)
+		if match(sentinel, l) then writetoc()
+	}
+end
+#line 246 "htmltoc.nw"
+global toclevels
+procedure main(args)
+  if args[1] ? (="-", toclevels := tab(many(&digits)), pos(0)) then get(args)
+  else toclevels := "2345"
+  if *args = 0 then add_contents(&input)
+  else every add_contents(openfile(!args))
+  return
+end
+
+procedure openfile(f)
+  return open(f) | stop("Cannot open file ", f)
+end
+#line 259 "htmltoc.nw"
+procedure rcsinfo () 
+  return "$Id: htmltoc.nw,v 1.20 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

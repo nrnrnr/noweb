@@ -1,0 +1,99 @@
+#line 3 "lrtldefs.nw"
+procedure main(args)
+  go()
+end
+#line 7 "lrtldefs.nw"
+procedure postpass(name, arg)
+  static kind, definers
+  initial { kind := "bogus"
+            definers := ["fun", "val", "structure", "signature",
+			 "type", "rtlop"]
+          }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if =(""|" "|"  ") & =!definers & tab(many(' ')) then {
+            skiptyvars(); optwhite()
+	    if ="[" then
+              while define_id()
+            else
+              define_id()
+        }
+  }
+  return
+end
+
+procedure define_id()
+  static id1, id2, reserved
+  initial { id1 := &letters ++ &digits ++ '\'_'
+            id2 := '!%&$+-/:<=>?@\\~^|#*`'
+            reserved := set()
+            every insert(reserved, !"*|:=#_" | "->" | "=>")
+	  }
+  optwhite()
+  if id := tab(many(id1 | id2)) then {
+    member(reserved, id) | writedefn(id)
+    return id
+  }
+  fail
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+
+procedure skiptyvars()
+  suspend =("'"|"#") || tab(many(&letters ++ &digits ++ '\'_')) |
+          ="(" || bal(')', '(', ')') || =")"
+end       
+
+procedure optwhite()
+ suspend tab(many(' \t')) | ""
+end
+#line 55 "lrtldefs.nw"
+procedure rcsinfo () 
+  return "$Id: lrtldefs.nw,v 1.17 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+#line 1 "defns.nw"
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    if match("@fatal ", line) then exit(1)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 18 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 23 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 25 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 35 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

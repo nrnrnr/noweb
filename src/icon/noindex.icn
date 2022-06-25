@@ -1,0 +1,98 @@
+#line 6 "noindex.nw"
+procedure main(args)
+  if *args ~= 1 then 
+    write(&errout, "Usage: noindex basename")
+  else {
+    in := get(args)
+    if in[-4:0] == ".tex" then in[-4:0] := ".aux"
+    else if not (in[-4:0] == ".aux") then in ||:= ".aux"
+    gobble(in, idx := [])
+    f := open(in[1:-4] || ".nwi", "w") | fatal("Cannot write ", in[1:-4] || ".nwi")
+    last := ""
+    every out := stripcount(!alphasort(idx)) do
+      write(f, last ~== out) & last := out
+    close(f)
+  }
+  return
+end
+#line 23 "noindex.nw"
+procedure gobble(name, idx)
+  static count
+  initial count := 0
+  in := open(name) | 
+#line 40 "noindex.nw"
+{ write(&errout, "No file ", name, "."); return }
+#line 27 "noindex.nw"
+  while line := read(in) do
+    line ? 
+      if ="\\@input{" & name := tab(upto('}')) & move(1) & pos(0) then
+        gobble(name, idx)
+      else if ="\\nwixadds{" then 
+        put(idx, right(count +:= 1, 6, "0") || " " || tab(0))
+  return
+end
+#line 36 "noindex.nw"
+procedure stripcount(s)
+  s ? { tab(many(&digits)); tab(many(' ')); return "\\nwixaddsx{" || tab(0) }
+end
+#line 42 "noindex.nw"
+procedure alphasort(x)
+  t := table()
+  every s := !x do t[s] := sortkey(s)
+  t := sort(t, 2)
+  l := []
+  every put(l, (!t)[1])
+  return l
+end
+#line 51 "noindex.nw"
+procedure sortkey(s)
+  local count
+  map(s) ? {
+    count := tab(many(&digits))
+    tab(many(' '))
+    if ="c}" then return firstkey() || "\n" || count
+    else if ="i}" then return firstkey() || "\n" || count
+    else fatal("not chunk or index")
+  }
+end
+#line 62 "noindex.nw"
+procedure firstkey()
+  ="{{" | fatal("bad index or chunk format")
+  s := (remove_control_sequences() ? tab(bal('}', '{', '}') | 0))
+  return alphabet(s) || "\n" || s
+end
+#line 68 "noindex.nw"
+procedure alphabet(s)
+  static keep
+  initial keep := &lcase ++ ' \t'
+  r := ""
+  s ? {
+    while tab(upto(keep)) do 
+      if tab(many(' \t')) then
+         r ||:= " "
+      else
+         r ||:= tab(many(&lcase)) | fatal("This can't happen")
+  }
+  r ? { tab(many(' ')) ; return tab(0) }	# strip leading blanks
+end
+#line 82 "noindex.nw"
+procedure remove_control_sequences()
+  s := ""
+  while s ||:= tab(upto('\\')) do {
+    ="\\"
+    tab(many(&letters)) | move(1)	# skip
+    tab(many(' \t'))
+  }
+  return s || tab(0)
+end
+#line 93 "noindex.nw"
+procedure fatal(L[])
+  write!(["@fatal noindex "] ||| L)
+  write!([&errout, "noweb error in noindex: "] ||| L)
+  exit(1)
+end
+#line 99 "noindex.nw"
+procedure rcsinfo () 
+  return "$Id: noindex.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

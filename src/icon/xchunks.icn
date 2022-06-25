@@ -1,0 +1,142 @@
+#line 31 "xchunks.nw"
+record chunk(lines, type)
+  # lines is all the lines of the chunk
+  # type is "code" or "docs" or "unknown"
+
+procedure main(args)
+  local merge, summary
+  while args[1][1] == "-" do
+    case args[1] of {
+     "-merge"   : merge := get(args)
+     "-summary" : { get(args); summary := " (summary)" }
+     default    : break
+   }
+  *args > 0 | stop("xchunks needs an external database")
+
+  
+#line 136 "xchunks.nw"
+db := "markup"
+every db ||:= " " || !args
+db := open(db, "rp") | stop("cannot pipe from ", image(db))
+
+#line 47 "xchunks.nw"
+  dbchunks := readchunks(db)
+  defns := defnstable(dbchunks)
+    # defns maps name to list of code chunks defining that name
+  if \merge then
+      every merge_chunks(!defns)
+  if \summary then
+      every add_defn_string(!defns, summary)
+
+  thisdoc := readchunks(&input)
+  every c := !thisdoc do
+    if c.type ~== "code" | notEmpty(c) | /defns[chunkName(c)] then
+      every write(!c.lines)
+    else {
+      write("@crc_prefix on")
+      every write(!(!defns[chunkName(c)]).lines)
+      write("@crc_prefix off")
+    }
+end
+#line 69 "xchunks.nw"
+procedure readchunks(infile)
+  local chunks, c
+  local file, lnum, lines, startline
+  chunks := []
+  lnum := 1
+  while line := read(infile) do
+    line ?
+      if ="@file " then {
+        file := tab(0)
+        lnum := 1
+      } else if ="@line " then {
+        lnum := integer(tab(0))
+      } else if ="@begin " then {
+        lines := []
+        put(lines, "@file " || \file)
+        put(lines, "@line " || lnum)
+        put(lines, line)
+        startline := line
+        c := chunk(lines, tab(upto(' ')|0))
+        line := read(infile) | stop("unmatched ", startline)
+        while line ? not ="@end " do {
+          put(c.lines, line)
+          line := read(infile) | stop("unmatched ", startline)
+          line ?
+            if ="@file " then { file := tab(0); lnum := 1 }
+            else if ="@line " then { lnum := integer(tab(0)) }
+            else if =("@nl"|"@index nl") & pos(0) then { lnum := lnum + 1 }
+        }
+        put(c.lines, line)
+        put(chunks, c)
+      } else {
+        put(chunks, chunk([line], "unknown"))
+        line ?
+          if ="@file " then { file := tab(0); lnum := 1 }
+          else if ="@line " then { lnum := integer(tab(0)) }
+          else if =("@nl"|"@index nl") & pos(0) then { lnum := lnum + 1 }
+      }
+  return chunks
+end
+#line 111 "xchunks.nw"
+procedure defnstable(chunks)
+  t := table()
+  every c := !chunks & c.type == "code" do {
+    /t[chunkName(c)] := []
+    put(t[chunkName(c)], c)
+  }
+  return t
+end
+#line 124 "xchunks.nw"
+procedure chunkName(c)
+  return (!c.lines ? (="@defn " & tab(0))) | stop("no @defn in code chunk")
+end
+
+procedure notEmpty(c)
+  static nonwhite
+  initial nonwhite := ~' \t'
+  return !c.lines ? ="@use " | (="@text ", upto(nonwhite))
+end
+#line 142 "xchunks.nw"
+procedure merge_chunks(chunks)
+  while *chunks > 1 do {
+    c := get(chunks)
+    strip_code_tail(c)
+    strip_code_head(chunks[1])
+    every put(c.lines, !chunks[1].lines)
+    chunks[1] := c
+  }
+  return chunks
+end
+#line 154 "xchunks.nw"
+procedure strip_code_tail(c)
+  if c.lines[-1] ? match("@end code") then
+    pull(c.lines)
+  else
+    stop("Unexpected line")
+  return c
+end
+
+procedure strip_code_head(c)
+  local pfx
+  pfx := []
+  if match("@begin code", c.lines[1]) then
+    get(c.lines)
+  else
+    stop("bad line " || c.lines[1])
+  while not match("@defn ", c.lines[1]) do
+    push(pfx, get(c.lines))
+  get(c.lines) | stop("this can't happen")
+  while c.lines[1] ~== "@nl" do
+    push(pfx, get(c.lines))
+  get(c.lines) | stop("this can't happen")
+  every push(c.lines, !pfx)
+  return c
+end
+#line 180 "xchunks.nw"
+procedure add_defn_string(chunks, s)
+  every c := !chunks & i := 1 to *c.lines do
+    if match("@defn ", c.lines[i]) then
+      c.lines[i] ||:= s
+  return chunks
+end

@@ -1,0 +1,65 @@
+#line 5 "pipedocs.nw"
+procedure main(args)
+  if args[1] == "-nearcode" then
+    nearcode := get(args)
+  cmd := get(args) | stop("pipedocs: no command")
+
+  cmd := "sed '/^@begin docs /s/[0-9][0-9]*/0/' | unmarkup | " || cmd || 
+         " | awk  ' NR == 1 && /^[ \t]*$/ {next}\n{print}\n' | markup | grep -v '^@file $'"
+
+  last := &null
+
+  while line := read() do
+      {##  write("====> process ", image(line), "; last = ", type(last),
+       ##        "(", *\last | "?", "), lastcode = ", image(lastcode))
+    if match("@begin code ", line) then {
+      if type(last) == "list" then
+          pipeout(last, cmd)
+      last := "code"
+      until match("@end code ", line) do {
+        write(line)
+        line := read()
+      }
+      write(line)
+#write("******until completed with ", line)
+    } else if match("@begin docs ", line) then {
+      l := [line]
+      until match("@end docs ", line) do
+          put(l, line := read())
+#write("******until completed with ", line)
+      put(l, line)
+      if /nearcode then {
+        pipeout(l, cmd)
+        last := &null
+      } else if last === "code" & notblank(l) then {
+        pipeout(l, cmd)
+        every write("@begin docs 0" | "@nl" | "@end docs 0")
+        last := &null
+      } else {
+        last := l
+      }
+    } else {
+      write(line)
+    }
+     }
+  return
+end
+
+#line 52 "pipedocs.nw"
+procedure pipeout(lines, cmd)
+  f := open(cmd, "wp")
+  every write(f, !lines)
+  return close(f)
+end
+
+#line 59 "pipedocs.nw"
+procedure notblank(l)
+  every x := !l do
+    x ?
+      if ="@nl" & pos(0) then
+          fail
+      else if ="@text " & { tab(many(' \t')); not(pos(0)) } then
+          return x
+end
+
+

@@ -1,0 +1,67 @@
+#line 7 "disambiguate.nw"
+global chunknames
+
+procedure remember(name)
+  initial chunknames := table()
+  if *name = 0 then fail
+  /chunknames[name[1]] := set()
+  insert(chunknames[name[1]], name)
+  return
+end
+#line 20 "disambiguate.nw"
+procedure disambiguate(arg)
+  local s
+  if *arg = 0 then fail
+  search := chunknames[arg[1]]
+  if /search then fatal("Can't resolve ", arg, "...")
+  every match(arg, n := !search) do 
+    if /s then s := n
+    else fatal("Ambiguous abbreviation: <<", arg, "...>> could denote\n\t<<",
+              s, ">> or\n\t<<", n, ">>")
+  if *s = 0 then fatal("Can't resolve ", arg, "...")
+  return s
+end
+#line 35 "disambiguate.nw"
+global lines, defns, uses, names, firstdefnout
+
+procedure main(args)
+  lines := []
+  while put(lines, line := read()) do
+    apply(pass1, line)
+  every apply(pass2, !lines)
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+
+procedure pass1(name, chunkname)
+  initial chunknames := set()
+  case name of {
+    "defn" | "use" : 
+      if chunkname[0-:3] ~== "..." then remember(chunkname)
+  }
+  return
+end
+
+procedure pass2(name, arg)
+  case name of {
+    "defn" | "use" : 
+        if arg[0:-3] == "..." then arg := disambiguate(arg[1:-3])
+  }
+  write("@", name, (" " || \arg) | "")
+  if name == "fatal" then exit(1)
+  return
+end
+#line 68 "disambiguate.nw"
+procedure fatal(L[])
+  write!(["@fatal disambiguate "] ||| L)
+  write!([&errout, "noweb error in disambiguate: "] ||| L)
+  exit(1)
+end
+
+#line 75 "disambiguate.nw"
+procedure rcsinfo () 
+  return "$Id: disambiguate.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
