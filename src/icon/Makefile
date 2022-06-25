@@ -1,7 +1,7 @@
 SHELL=/bin/sh
 LIB=/dev/null  # to be overridden
 BIN=/dev/null  # to be overridden
-ICONC=iconc -p -L/usr/X11R6/lib     # override to icont if no iconc on your system
+ICONC=icont    # change to iconc if lucky enough to have it
 ICONT=icont    # override to iconc if all filters should be compiled
 CPIF=| cpif    # change to ">" to insure all sources always made
 

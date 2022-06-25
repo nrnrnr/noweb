@@ -7,8 +7,8 @@ CFLAGS=
 # If you have Icon, you should use the Icon versions of the noweb pipeline.
 # Set LIBSRC=icon
 LIBSRC=awk
-# If you have no Icon compiler, but do have icont, make ICONC=icont
-ICONC=iconc
+# If you are lucky enough to have an Icon compiler icont, use ICONC=iconc
+ICONC=icont
 ICONT=icont
 
 # BIN is where the commands (notangle, noweave, nountangle, noroots) land
