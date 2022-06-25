@@ -229,6 +229,23 @@ extra [[\reset@font]] does no harm.]
   \def\Bf{\reset@font\bf}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
+@ 
+<<man page: compatibility>>=
+.SH COMPATIBILITY
+For compatibility with plain 
+.IR TeX , 
+.I noweb
+continues to use the old-style font commands
+.B "\\\\tt"
+and so on.
+When used with the KOMA scripts (document classes 
+.BR scrartcl , 
+.BR scrreprt , 
+and
+.BR scrbook ),
+.I noweb
+needs the document-class option
+.BR enabledeprecatedfontcommands .
 @
 \clearpage
 \section{The {\tt noweb} document-style option for {\LaTeX}}

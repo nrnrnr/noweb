@@ -621,6 +621,7 @@ Options are separated by commas and include:
 The noweb package describes a gazillion special control sequences.
 Only a few are listed here.
 <<man page: noweb style control sequences>>
+<<man page: compatibility>>
 .SH SEE ALSO
 .IR noweave (1),
 .IR noweb (1)

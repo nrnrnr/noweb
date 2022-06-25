@@ -27,9 +27,9 @@ FFOORRMMAATT OOFF NNOOWWEEBB FFIILLEESS
        <<_c_h_u_n_k _n_a_m_e>>=
        on a line by itself.  The double left angle bracket (<<) must be in the
        first column.  Chunks are terminated by the beginning of another chunk,
-       or by end of file.  If the first line in the file  does  not  mark  the
-       beginning  of a chunk, it is assumed to be the first line of a documen‐
-       tation chunk.
+       or by end of file.  If the first line in the file does not mark the be‐
+       ginning  of a chunk, it is assumed to be the first line of a documenta‐
+       tion chunk.
 
        Documentation chunks contain text that is copied verbatim  to  the  _T_e_X
        file (except for quoted code).  _n_o_w_e_b works with _L_a_T_e_X; the first docu‐
@@ -77,15 +77,15 @@ OOPPTTIIOONNSS
 
        --mmaarrkkuupp _p_a_r_s_e_r
               Use _p_a_r_s_e_r to parse the input file.  Enables use of noweb  tools
-              on  files  in  other  formats;  for example, the nnuummaarrkkuupp parser
-              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
-              information.  For experts only.
+              on  files in other formats; for example, the nnuummaarrkkuupp parser un‐
+              derstands _n_u_w_e_b(1) format.  See _n_o_w_e_b_f_i_l_t_e_r_s(7) for more  infor‐
+              mation.  For experts only.
 
 BBUUGGSS
        Ignoring  unused  chunks  whose  names  contain spaces sometimes causes
        problems, especially in the case when a chunk has multiple  definitions
-       and  one  is  misspelled;  the  misspelled  definition will be silently
-       ignored.  _n_o_r_o_o_t_s(1) can be used as a sanity checker to catch this sort
+       and  one  is misspelled; the misspelled definition will be silently ig‐
+       nored.  _n_o_r_o_o_t_s(1) can be used as a sanity checker to catch  this  sort
        of mistake.
 
        _n_o_w_e_b  is intended for users who don't want the power or the complexity
