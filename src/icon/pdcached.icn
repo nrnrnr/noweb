@@ -1,0 +1,238 @@
+#line 5 "pdcached.nw"
+procedure main(args)
+  cachename := get(args) | stop("pdcached: no cache")
+  if args[1] == "-nearcode" then
+    nearcode := get(args)
+  cmd := get(args) | stop("pdcached: no command")
+
+  cmd := "sed '/^@begin docs /s/[0-9][0-9]*/0/' | unmarkup | " || cmd || 
+         " | markup | grep -v '^@file $'"
+
+  last := &null
+  loadcache(cachename)
+
+  while line := read() do
+      {##  write("====> process ", image(line), "; last = ", type(last),
+       ##        "(", *\last | "?", "), lastcode = ", image(lastcode))
+    if match("@begin code ", line) then {
+      if type(last) == "list" then
+          pipeout(last, cmd)
+      last := "code"
+      until match("@end code ", line) do {
+        write(line)
+        line := read()
+      }
+      write(line)
+#write("******until completed with ", line)
+    } else if match("@begin docs ", line) then {
+      l := [line]
+      until match("@end docs ", line) do
+          put(l, line := read())
+#write("******until completed with ", line)
+      put(l, line)
+      if /nearcode then {
+        pipeout(l, cmd)
+        last := &null
+      } else if last === "code" & notblank(l) then {
+        pipeout(l, cmd)
+        every write("@begin docs 0" | "@nl" | "@end docs 0")
+        last := &null
+      } else {
+        last := l
+      }
+    } else {
+      write(line)
+    }
+     }
+  savecache(cachename)
+  return
+end
+
+#line 55 "pdcached.nw"
+procedure pipeout(lines, cmd)
+  local cached
+  static tmp
+  initial { tmp := "/tmp/pdcached.out"
+            hitcount := misscount := 0
+          }
+  cached := find_in_cache(lines)
+  if /cached then {
+    misscount +:= 1
+    f := open(cmd || " > " || tmp, "wp")
+    every write(f, !lines)
+    close(f)
+    f := open(tmp, "r")
+    cached := []
+    while put(cached, read(f))
+    close(f)
+    adjustblanks(lines, cached)
+    save_in_cache(lines, cached)
+  } else {
+    adjustblanks(lines, cached)
+    hitcount +:= 1
+  }
+  every write(!cached)
+  return
+end
+#line 84 "pdcached.nw"
+procedure adjustblanks(in, out)
+  if &fail & find("Applying a primitive", !in) then {
+    write(&errout, "For ", image(in[1]), "/", image(out[1]), ", notblank(in) = ",
+          image(notblank(in)) | "<failed>",
+          "; blankstring(out[1]) = ", image(blankstring(out[1])) | "<failed>")
+    every i := 1 to *in  do write(&errout, " in[", i, "] = ", image( in[i]))
+    every i := 1 to *out do write(&errout, "out[", i, "] = ", image(out[i]))
+  }
+  if notblank(in) then 
+    if notblank(out) then
+      &null  # this is OK, so do nothing
+    else
+      remove_initial_blanks(out)
+  else # input begins with blanks
+    if notblank(out) then
+      insert_initial_newline(out)
+    else
+      &null # this is OK, so do nothing
+  return
+end
+
+procedure blankstring(s)
+  s ? { tab(many(' \t')); return pos(0) }
+end
+#line 110 "pdcached.nw"
+global cache, hitcount, misscount
+
+procedure strip_chunk_number(s)
+  s ?
+      if =("@" || ("begin" | "end") || " " || ("docs" | "code") || " ") then
+          return tab(1)
+      else
+          return s
+end
+
+procedure find_in_cache(lines)
+  c := cache
+  every l := strip_chunk_number(!lines) do
+    c := \c[l] | return &null
+  return c[&null]
+end
+
+procedure save_in_cache(lines, cached)
+  c := cache
+  i := 1
+  while l := strip_chunk_number(lines[i]) do {
+    /c[l] := table()
+    c := c[l]
+    i := i + 1
+  }
+  c[&null] := cached
+  return    
+end
+
+link xcode
+
+procedure loadcache(cachename)
+  cache := xdecode(c := open(cachename)) | table()
+  close(\c)
+  return
+end
+
+link numbers
+
+procedure savecache(cachename)
+  write(&errout, "Cache misses ",
+        frn(real(misscount) * 100.0 / real(misscount + hitcount), 0, 1), "% of ",
+        misscount+hitcount, " queries")
+  if misscount = 0 then return
+  system("lockfile " || cachename || ".lock")
+  xencoden(cache, cachename || ".new")
+  rename(cachename || ".new", cachename) | stop("Could not update cache")
+  remove(cachename || ".lock")
+  return # forget the other!
+
+  c := open(cachename || ".fast", "w") | stop("cannot open fast cache")
+  wval(c, cache)
+  close(c)
+end
+#line 165 "pdcached.nw"
+procedure readval(f)
+  local stack
+  stack := []
+  while l := read(f) do
+    l ? case move(1) of {
+      "s" : push(stack, tab(0))
+      "l" : push(stack, [])
+      "t" : push(stack, table())
+      "n" : push(stack, &null)
+      "a" : { v := pop(stack); put(stack[1], v) }
+      "k" : { v := pop(stack); k := pop(stack); stack[1][k] := v }
+    }
+  return stack[1]
+end      
+
+procedure wval(f, v)
+  return case type(v) of {
+    "string" : write(f, "s", v)
+    "list"   : wlis (f, v)
+    "table"  : wtab (f, v)
+    "null"   : write(f, "n")
+    default  : stop("writing unknown type")
+  }
+end
+
+procedure wlis(f, l)
+  write(f, "l")
+  every v := !l do {
+    wval(f, v); write(f, "a")
+  }
+  return  
+end
+
+procedure wtab(f, t)
+  write(f, "t")
+  every k := key(t) do {
+    wval(f, k); wval(f, t[k]); write(f, "k")
+  }
+  return  
+end
+#line 208 "pdcached.nw"
+procedure notblank(l)
+  every x := !l do
+    x ?
+      if ="@nl" & pos(0) then
+          fail
+      else if ="@text " & { tab(many(' \t')); not(pos(0)) } then
+          return x
+end
+#line 217 "pdcached.nw"
+procedure remove_initial_blanks(l)
+  p := []
+  while c := get(l) do
+    c ?
+      if ="@nl" | (="@text " & { tab(many(' \t')); pos(0) }) then {
+          &null # skip this baby
+      } else if =("@text" | "@end docs") then {
+        while push(l, pop(p))
+        return l
+      } else {
+        push(p, c)
+      }
+  while push(l, pop(p))
+  return l
+end
+#line 233 "pdcached.nw"
+procedure insert_initial_newline(l)
+  p := []
+  while c := get(l) do
+    if match("@text "|"@end docs", c) then {
+      push(l, c)
+      push(l, "@nl")
+      while push(l, pop(p))
+      return l
+    } else {
+      push(p, c)
+    }
+  push(l, "@nl")
+  while push(l, pop(p))
+  return l
+end

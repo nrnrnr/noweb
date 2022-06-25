@@ -1,0 +1,96 @@
+#line 2 "pascaldefs.nw"
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  go()
+end
+#line 8 "pascaldefs.nw"
+procedure postpass(name, arg)
+  static kind
+  initial { kind := "bogus" }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then arg ?
+        if (optwhite(), =("function "|"procedure "), not hasword(arg, "forward")) then{
+            tab(many(' '))
+            writedefn(tab(upto(' ():;')))
+        } else if (optwhite(), x := allupper(), optwhite(), ="=") then {
+            writedefn(x)
+        }
+  }
+  return
+end
+
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline
+end
+
+procedure words()
+  static alnum
+  initial alnum := &letters ++ &digits ++ '_'
+  suspend if any(alnum) then tab(many(alnum))
+          else if pos(0) then fail
+          else if tab(upto(alnum)) then words()
+end
+
+procedure hasword(s, w)
+  suspend (tab(0) ? words()) == w
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+
+procedure allupper()
+  static uppers
+  initial uppers := &ucase ++ &digits ++ '_'
+  suspend tab(many(uppers))
+end
+
+
+procedure rcsinfo () 
+  return "$Id: pascaldefs.nw,v 1.17 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+#line 1 "defns.nw"
+procedure go()
+  local line
+  while line := read() do {
+    apply(prepass, line)
+    write(line)
+    if match("@fatal ", line) then exit(1)
+    apply(postpass, line)
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 18 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 23 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 31 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 25 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 35 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

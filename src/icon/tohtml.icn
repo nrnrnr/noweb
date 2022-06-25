@@ -1,0 +1,489 @@
+#line 10 "tohtml.nw"
+# Copyright 1994 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+#line 19 "tohtml.nw"
+# Don't try to understand this file!  Look at icon/tohtml.nw in the noweb source!
+
+global braw, eraw
+procedure main(args)
+  local delay, raw, where, localindex, noindex, shortxref
+  
+#line 218 "tohtml.nw"
+useitemstab := table()
+defns := table("")
+defns_above := set()	# keep track of defining chunks we've seen
+#line 25 "tohtml.nw"
+  every braw | eraw := ""
+  delay := !args == "-delay"
+  noindex := !args == "-noindex"
+  shortxref := if !args == "-longxref" then &null else 1
+  localindex := (/noindex, !args == "-localindex") # produce local identifier xref?
+  raw := !args == "-raw"
+  if \raw then {braw := "\\begin{rawhtml}"; eraw := "\\end{rawhtml}"}
+  if !args == "-no-gen-comment" then &null
+  else 
+    write(braw, "<!-- this file was generated automatically by noweave;",
+          " better not edit it-->", eraw)
+  while inputline := read() do inputline ? {
+    
+#line 90 "tohtml.nw"
+if ="@text " then 	{ text +:= *(line := tab(0))
+			  if \code then
+			    writes((
+#line 98 "tohtml.nw"
+2(line ? {tab(many(' \t')); not pos(0)}, 
+  linkto(\lastindexref, escapeSpecials(line)),
+  lastindexref := &null)
+#line 92 "tohtml.nw"
+                               )          | escapeSpecials(line))
+		          else if \quoting then
+			    writes((
+#line 123 "tohtml.nw"
+2(line ? {tab(many(' \t')); not pos(0)}, 
+  linklabelto(lastxreflabel, lastindexref, escapeSpecials(line), "bare"),
+  lastxreflabel := lastindexref := &null)
+#line 94 "tohtml.nw"
+                                        ) | escapeSpecials(line))
+                          else
+                            writes((
+#line 107 "tohtml.nw"
+1(line ? skip_white_tags() || 
+         linklabel(\lastxreflabel, skip_chars()) || tab(0),
+  insert(defns_above, \lastxreflabel),
+  lastxreflabel := &null)
+#line 96 "tohtml.nw"
+                                                   ) | line)                } else
+#line 207 "tohtml.nw"
+if ="@nl" & pos(0) then { 
+#line 292 "tohtml.nw"
+if \shortxref & (\pendinguses | \pendingprev | \pendingnext | \notused) then {
+  
+#line 297 "tohtml.nw"
+if \pendinguses & *\useitems > 0 then {
+  writes(" <b>(")
+  every i := 1 to *\useitems do {
+    usedir := if member(defns_above, useitems[i]) then "&lt;-U" else "U-&gt;"
+    writes(if i > 1 then " " else "", linkto(useitems[i], usedir))
+  }
+  writes(")</b>")
+}
+if \pendingprev | \pendingnext then {
+  writes(" <b>[")
+  writes(linkto(\pendingprev, "&lt;-"))
+  writes("D")
+  writes(linkto(\pendingnext, "-&gt;"))
+  writes("]</b>")
+}
+#line 294 "tohtml.nw"
+  pendinguses := pendingprev := pendingnext := notused := &null
+}
+#line 208 "tohtml.nw"
+			  write()                                                } else
+#line 62 "tohtml.nw"
+if ="@begin code " then	{ code := 1   ; thischunk := &null
+			  
+#line 350 "tohtml.nw"
+useitems := []
+notused := &null
+#line 64 "tohtml.nw"
+                          writes(braw, "<pre>"); ecode := "</pre>"               } else
+if ="@end code "   then { 
+#line 313 "tohtml.nw"
+if /shortxref then {
+  useitems := useitemstab[\thischunk]
+  if \pendingprev | \pendingnext | (\pendinguses, (*\useitems > 0 | \notused)) then {
+    
+#line 356 "tohtml.nw"
+if ecode == "</pre>" then {
+  writes("</pre><blockquote>")
+  ecode := "</blockquote>"
+}
+#line 317 "tohtml.nw"
+    
+#line 342 "tohtml.nw"
+useprefix := "Used "
+every i := 1 to *\useitems do {
+  usedir := if member(defns_above, useitems[i]) then "above" else "below"
+  usesuffix := if *\useitems > 1 then " (" || i || ")" else ""
+  writes(useprefix, linkto(useitems[i], usedir || usesuffix))
+  useprefix := ", "
+}
+#line 318 "tohtml.nw"
+    useitemstab[\thischunk]
+    if *\useitems > 0 & (\pendingprev | \pendingnext) then
+      writes("; ")
+    p := if *\useitems > 0 then "previous" else "Previous"
+    n := if *\useitems > 0 then "next"     else "Next"
+    if \pendingprev then
+      if \pendingnext then
+        writes(linkto(pendingprev, p), " and ",
+               linkto(pendingnext, "next"), " definitions")
+      else
+        writes(linkto(pendingprev, p), " definition")
+    else
+      if \pendingnext then
+        writes(linkto(pendingnext, n), " definition")
+    if \pendingprev | \pendingnext | *\useitems > 0 then
+      writes(".")
+    if \notused then
+      writes("<br>\nThis code is written to a file (or else not used).")
+    write("<p>")
+    pendinguses := pendingprev := pendingnext := useitems := notused := &null
+  } 
+} else
+  &null
+#line 66 "tohtml.nw"
+                          code := nil ; previscode := 1 
+                          writes(ecode, eraw)                                    } else
+#line 210 "tohtml.nw"
+if ="@defn " then 	{ writechunk(lastxreflabel, lastxrefref, "dfn", 
+                                     thischunk := tab(0), defns[thischunk] || "=")
+			  insert(defns_above, \lastxreflabel)
+			  useitems := \useitemstab[thischunk]
+			  pendinguses := 1
+			  
+#line 274 "tohtml.nw"
+every lastxreflabel | lastxrefref := &null
+#line 216 "tohtml.nw"
+                          defns[thischunk] := "+"                                } else
+#line 74 "tohtml.nw"
+if ="@begin docs " then	{ if \previscode then writes(if /raw then "<p>" else "\\par")
+                          previscode := &null
+                          text := 0                                              } else
+#line 82 "tohtml.nw"
+if ="@end docs " then  	{ write(linklabel(\lastxreflabel, "*"))
+                          lastxreflabel := &null                                 } else
+#line 222 "tohtml.nw"
+if ="@use " then 	{ writechunk(lastxreflabel, lastxrefref, "i", tab(0)) 
+       	                  
+#line 274 "tohtml.nw"
+every lastxreflabel | lastxrefref := &null
+#line 223 "tohtml.nw"
+                                                                                 } else
+#line 251 "tohtml.nw"
+if ="@xref " then {
+  if fun := tab(upto(' ')) then {move(1); arg := tab(0)}
+  else { fun := tab(0); arg := &null }
+  case fun of { 
+    
+#line 265 "tohtml.nw"
+"label"     : { 
+#line 276 "tohtml.nw"
+warn_unused_xref("label", \lastxreflabel)
+#line 265 "tohtml.nw"
+                                                        ; lastxreflabel := arg }
+"ref"       : { 
+#line 278 "tohtml.nw"
+warn_unused_xref("ref", \lastxrefref)
+#line 266 "tohtml.nw"
+                                                  ;   lastxrefref   := arg }
+"prevdef"   : pendingprev   := arg
+"nextdef"   : pendingnext   := arg
+"beginuses" : useitems := []
+"useitem"   : put(useitems, arg)
+"enduses"   : useitemstab[\thischunk] := useitems
+"notused"   : notused := arg
+#line 364 "tohtml.nw"
+"begindefs" | "defitem" | "enddefs" : &null
+#line 367 "tohtml.nw"
+"beginchunks" : { write(braw, "<ul>") }
+"chunkbegin"  : { writes("<li>"); comma := ": "; count := 0
+                  arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
+                  writechunk(&null, ref, "i", name) }
+"chunkuse"    : { writes(comma, linkto(arg, "U" || (count +:= 1)));  comma := ", " }
+"chunkdefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
+"chunkend"    : write()
+"endchunks"   : write("</ul>", eraw)
+#line 255 "tohtml.nw"
+                        
+    default : (\arg|"") ? warn_unknown("xref " || fun)
+  }
+} else
+#line 385 "tohtml.nw"
+if ="@index " then {
+  if /noindex then {
+    if fun := tab(upto(' ')) then {move(1); arg := tab(0)}
+    else { fun := tab(0); arg := &null }
+    case fun of { 
+      
+#line 376 "tohtml.nw"
+"beginindex"  : { write(braw, "<ul>") }
+"entrybegin"  : { writes("<li>"); comma := ": "; count := 0
+                  arg ? { ref := tab(upto(' ')); =" "; name := tab(0) }
+                  writes(linklabelto("NWI-" || escapeSpecials(name), ref, name, "b")) }
+"entryuse"    : { writes(comma, linkto(arg, "U" || (count +:= 1)));  comma := ", " }
+"entrydefn"   : { writes(comma, linkto(arg, "D" || (count +:= 1)));  comma := ", " }
+"entryend"    : write()
+"endindex"   : write("</ul>", eraw)
+#line 400 "tohtml.nw"
+"use" 	    : { lastindexref := lastxrefref; lastxrefref := &null }
+"defn"      : { 
+#line 274 "tohtml.nw"
+every lastxreflabel | lastxrefref := &null
+#line 401 "tohtml.nw"
+                                        }
+"localdefn" : { 
+#line 274 "tohtml.nw"
+every lastxreflabel | lastxrefref := &null
+#line 402 "tohtml.nw"
+                                        }
+"nl"        : &null # do nothing -- no hope of keeping line numbering
+#line 408 "tohtml.nw"
+"begindefs" : if \localindex then {
+	        
+#line 313 "tohtml.nw"
+if /shortxref then {
+  useitems := useitemstab[\thischunk]
+  if \pendingprev | \pendingnext | (\pendinguses, (*\useitems > 0 | \notused)) then {
+    
+#line 356 "tohtml.nw"
+if ecode == "</pre>" then {
+  writes("</pre><blockquote>")
+  ecode := "</blockquote>"
+}
+#line 317 "tohtml.nw"
+    
+#line 342 "tohtml.nw"
+useprefix := "Used "
+every i := 1 to *\useitems do {
+  usedir := if member(defns_above, useitems[i]) then "above" else "below"
+  usesuffix := if *\useitems > 1 then " (" || i || ")" else ""
+  writes(useprefix, linkto(useitems[i], usedir || usesuffix))
+  useprefix := ", "
+}
+#line 318 "tohtml.nw"
+    useitemstab[\thischunk]
+    if *\useitems > 0 & (\pendingprev | \pendingnext) then
+      writes("; ")
+    p := if *\useitems > 0 then "previous" else "Previous"
+    n := if *\useitems > 0 then "next"     else "Next"
+    if \pendingprev then
+      if \pendingnext then
+        writes(linkto(pendingprev, p), " and ",
+               linkto(pendingnext, "next"), " definitions")
+      else
+        writes(linkto(pendingprev, p), " definition")
+    else
+      if \pendingnext then
+        writes(linkto(pendingnext, n), " definition")
+    if \pendingprev | \pendingnext | *\useitems > 0 then
+      writes(".")
+    if \notused then
+      writes("<br>\nThis code is written to a file (or else not used).")
+    write("<p>")
+    pendinguses := pendingprev := pendingnext := useitems := notused := &null
+  } 
+} else
+  &null
+#line 410 "tohtml.nw"
+                if /uglyindex | /shortxref then {
+                  
+#line 356 "tohtml.nw"
+if ecode == "</pre>" then {
+  writes("</pre><blockquote>")
+  ecode := "</blockquote>"
+}
+#line 412 "tohtml.nw"
+                  writes("Defines ") 
+                } else {
+                  writes("<hr><b>[</b>")
+                }
+                comma := "" 
+              }
+"isused"    : &null
+"defitem"   : if \localindex then { 
+                writes(comma, linkto("NWI-" || escapeSpecials(arg), 
+                                sgmlwrap("code", escapeSpecials(arg))))
+                comma := if /uglyindex | /shortxref then ", " else "<b>,</b> "
+              }
+"enddefs"   : if \localindex then 
+                write(if /uglyindex | /shortxref then " (links are to index).<p>" 
+                      else "<b>]</b>")
+"beginuses" | "isdefined" | "useitem" | "enduses" : &null  # use local links
+#line 390 "tohtml.nw"
+                           
+      default : (\arg|"") ? warn_unknown("index " || fun)
+    }
+  }
+  # don't get any warnings if not doing indexing
+} else
+#line 237 "tohtml.nw"
+if ="@quote"    & pos(0) then 	{ quoting := 1   ; writes(braw, "<code>")        } else
+if ="@endquote" & pos(0) then 	{ quoting := nil ; writes("</code>", eraw)       } else
+#line 240 "tohtml.nw"
+if ="@file "                  then { filename := tab(0); 
+#line 274 "tohtml.nw"
+every lastxreflabel | lastxrefref := &null
+#line 240 "tohtml.nw"
+                                                                                 } else
+if ="@literal "               then { writes(tab(0))                              } else
+if ="@header html "           then { 
+#line 246 "tohtml.nw"
+writes("<html><head><title>", tab(0), "</title></head><body>")
+#line 242 "tohtml.nw"
+                                                          		         } else
+if ="@trailer html" & pos(0)  then { 
+#line 248 "tohtml.nw"
+write("</body></html>")
+#line 243 "tohtml.nw"
+                                                           		         } else
+#line 51 "tohtml.nw"
+if match("@fatal ") then {				# follows last else
+  exit(1)
+} else if ="@" then 
+  warn_unknown(1(tab(upto(' ')|0), pos(0) | move(1)))
+else
+  fatal("Botched line in noweb pipeline: ", tab(0))
+#line 38 "tohtml.nw"
+  }
+  write()
+end
+#line 131 "tohtml.nw"
+procedure skip_white_tags()
+  suspend thewhite() ||
+             ((="<" || thewhite() || (="/" || thewhite() | "") ||
+                  (tab(many(&letters)) | ="!--") || 
+                   tab(upto(">")) || =">" || skip_white_tags() |
+              "") \ 1)
+end
+#line 139 "tohtml.nw"
+procedure skip_chars()
+  if not any('<') & upto('<') then
+    suspend tab(upto('<'))
+  else if any('&') & upto(';') then
+    suspend (tab(upto(';')) || =";")
+  else if (any('<') & upto('>')) | any(' \t') then
+    (write(&errout, "broken skip_chars, report to nr@eecs.harvard.edu: ", image(tab(0))),
+     &fail)
+  else if any('<') then
+    (write(&errout, "warning: can't find end of HTML tag: ", image(tab(0)),
+	   "\n\tquoted code embedded in comment?"), &fail)
+  else if pos(0) then 
+    fail
+  else
+    suspend tab(0)
+end
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+procedure thewhite()
+  return optwhite() \ 1
+end
+#line 162 "tohtml.nw"
+procedure skip_tags_and_char(count)
+  local tag
+  /count := 0
+  if any('&') & upto(';') then
+    suspend(tab(upto(';')) || =";")
+  else if any('<') then
+    suspend ="<" || (tab(many(' \t')) | "") ||
+            (="/" | (tag := tab(many(&letters)))) ||
+            tab(upto(">")) || =">" || 
+            (if map(tag) == "a" then 
+               tab(upto("<")) || ="<" || optwhite() || ="/" || optwhite() || 
+               (("A"|"a") == tab(many(&letters))) || optwhite || =">"
+             else "") ||
+             skip_tags_and_char(count+1)
+  else
+    suspend (tab(many(' \t')) | "") || 
+            ((move(1) | if count > 0 then "")\1)  # succeed at end if count > 0
+            
+end
+#line 228 "tohtml.nw"
+procedure writechunk(label, ref, tag, name, suffix)
+  /suffix := ""
+  writes(linklabelto(label, ref, 
+                     sgmlwrap(tag, "&lt;" || convquotes(name) || "&gt;" || suffix),
+		     "bare"))
+  return
+end
+#line 280 "tohtml.nw"
+procedure warn_unused_xref(tag, label)
+  static warned
+  initial warned := set()
+  if not member(warned, tag) then {
+    insert(warned, tag)
+    write(&errout, "Warning: internal inconsistency in noweb (not urgent)---")
+    write(&errout, "\tnever used @xref ", tag, " ", label)
+  }
+  return
+end  
+#line 436 "tohtml.nw"
+procedure linklabelto(label, ref, contents, bare)
+  local s
+  s   := if \bare then "" else braw
+  s ||:= if \label | \ref then "<a"   else ""
+  s ||:= " name=" || image(\label)
+  s ||:= " href=" || image("#" || \ref)
+  s ||:= if \label | \ref then ">"    else ""
+  s ||:= if \bare then "" else eraw
+  s ||:= contents
+  s ||:= if \bare then "" else braw
+  s ||:= if \label | \ref then "</a>" else ""
+  s ||:= if \bare then "" else eraw
+  return s
+end
+#line 453 "tohtml.nw"
+procedure linklabel(label, contents, bare)
+  return linklabelto(label, &null, contents, bare)
+end
+
+procedure linkto(ref, contents)
+  return linklabelto(&null, ref, contents, "bare")
+end
+#line 467 "tohtml.nw"
+procedure sgmlwrap(tag, s)
+  return "<" || tag || ">" || s || "</" || tag || ">"
+end
+#line 475 "tohtml.nw"
+procedure escapeSpecials (l)
+  static escapes, specials
+  initial {escapes := table(); 
+           escapes["&"] := "&amp;"
+           escapes["<"] := "&lt;"
+           escapes[">"] := "&gt;"
+           escapes["\""] := "&quot;"
+	   specials := ''
+           every specials ++:= key(escapes)
+          }
+  s := ""
+  l ? { 
+    while s ||:= tab(upto(specials)) do
+      s ||:= escapes[move(1)]
+    return s || tab(0)
+  }
+end
+#line 496 "tohtml.nw"
+procedure convquotes(s)
+  r := ""
+  s ? {  # don't call escapeSpecials on s; it destroys internal markup
+    while r ||:= tab(find("[[")) do {
+      ="[[" | fatal("impossible missing [[")
+      r ||:= "<code>" || tab(find("]]"))
+      r ||:= tab(many(']')-2)
+      ="]]" | fatal("impossible missing ]] in ", image(s))
+      r ||:= "</code>"
+    }
+    return r || tab(0)
+  }
+end
+#line 511 "tohtml.nw"
+procedure warn_unknown(tag)
+  static warned
+  initial warned := set()
+  if not member(warned, tag) then {
+    write(&errout, "Warning: unrecognized escape @", tag, " ", tab(0))
+    insert(warned, tag)
+  }
+  return
+end
+#line 522 "tohtml.nw"
+procedure fatal(L[])
+  write!([&errout, "noweb error in tohtml: "] ||| L)
+  exit(1)
+end
+#line 529 "tohtml.nw"
+procedure rcsinfo () 
+  return "$Id: tohtml.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

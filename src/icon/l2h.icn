@@ -1,0 +1,2237 @@
+#line 217 "l2h.nw"
+procedure star(cs)
+  suspend cs | (cs || "*")
+end
+#line 596 "l2h.nw"
+procedure asciiCharCode(S)
+   return emit_text(S, char(2(optwhite(), TeXnumber(), optwhite())))
+end
+procedure TeXnumber()
+  return integer(
+    (="'",   "8r" || tab(many(&digits))) |
+    (="\"", "16r" || tab(many(&digits))) |
+    tab(many(&digits)))
+end
+#line 671 "l2h.nw"
+procedure convert(S, optstring)
+  static specials
+  initial { 
+    
+#line 819 "l2h.nw"
+activetab := table(unknown_cs)
+activeclosure := table()
+#line 969 "l2h.nw"
+cstab := table(unknown_cs)
+csclosure := table()
+#line 987 "l2h.nw"
+unknown_set := set()
+#line 1015 "l2h.nw"
+every begintab | endtab := table(unknown_env)
+every begincl  | endcl  := table()
+#line 1028 "l2h.nw"
+unknown_envs := set()
+#line 1381 "l2h.nw"
+liststack := []
+# write(&errout, "Initialized liststack")
+suspendstack := []
+#line 1961 "l2h.nw"
+countertab := table()
+#line 1969 "l2h.nw"
+accent_name  := table()
+accent_valid := table('')
+accent_name ["`"]  := "grave"
+accent_valid["`"]  := 'AEIOUaeiou'
+accent_name ["'"]  := "acute"
+accent_valid["'"]  := 'AEIOUYaeiouy'
+accent_name ["^"]  := "circ"
+accent_valid["^"]  := 'AEIOUaeiou'
+accent_name ["hat"]  := "circ"
+accent_valid["hat"]  := 'AEIOUaeiou'
+accent_name ["\""] := "uml"
+accent_valid["\""] := 'AEIOUaeiouy'
+accent_name ["~"]  := "tilde"
+accent_valid["~"]  := 'ANOano'
+accent_name ["="]  := "bar"
+accent_name ["."]  := "dot"
+accent_name ["u"]  := "u"
+accent_name ["v"]  := "v"
+accent_name ["H"]  := "H"
+accent_name ["t"]  := "t"
+accent_name ["c"]  := "cedil"
+accent_valid["c"]  := 'Cc'
+accent_name ["d"]  := "underdot"
+accent_name ["b"]  := "underbar"
+#line 2675 "l2h.nw"
+csfunctions := table()
+#line 675 "l2h.nw"
+    
+#line 114 "l2h.nw"
+substitution(",", " ")
+substitution(" ", " ")
+substitution("\n", "\n")
+substitution("\t", " ")
+ignore("raggedright")
+ignore("@")
+ignore("/")			# no italic correction
+substitution("", "\n")		# \<newline> treated as request for newline
+every c := !"$%#{}_" do
+  substitution(c, c)
+substitution("&", "&amp;")
+argblock("emph", "em")
+every argblock("footnote" | "footnotetext" | "thanks",
+	       " <b>[</b>", "<b>]</b> ")   # put footnotes in bold brackets
+substitution("today", &date)
+#line 132 "l2h.nw"
+ignore("textrm")		# html can't switch to default font!
+argblock("textit", "i")     
+argblock("textbf", "b")     
+argblock("textsl", "i")     
+ignore("textsc")
+argblock("texttt", "tt")
+ignore("textsf")
+ignore("boldmath")
+# \boldmath could be done by introducing S.mathfont, but I don't want to!
+#line 142 "l2h.nw"
+ignore("mathrm")		# html can't switch to default font!
+argblock("mathit", "i")     
+argblock("mathbf", "b")     
+argblock("mathtt", "tt")
+ignore("mathsf")
+argblock("mathcal", "i")
+every ignore("scriptstyle"|"displaystyle"|"scriptscriptstyle")
+every ignore("mathord"|"mathbin"|"mathrel")
+#line 152 "l2h.nw"
+every ignore("tiny" | "scriptsize" | "footnotesize" | "small" | "normalsize" | 
+             "large" | "Large" | "LARGE" | "huge" | "Huge")
+#line 160 "l2h.nw"
+every accent(key(accent_name))
+every ignore("dag" | "ddag")
+substitution("S", "&sect;")
+substitution("P", "&para;")
+substitution("copyright", "&copy;")
+substitution("pounds", "&pound;")
+substitution("o", "&oslash;")
+substitution("O", "&Oslash;")
+substitution("aa", "&aring;")
+substitution("AA", "&Aring;")
+substitution("ae", "&aelig;")
+substitution("AE", "&Aelig;")
+#line 175 "l2h.nw"
+argblockv("part",          "h1", &null, "*[")
+argblockv("chapter",       "h1", &null, "*[")
+argblockv("section",       "h2", &null, "*[")     
+argblockv("subsection",    "h3", &null, "*[")     
+argblockv("subsubsection", "h4", &null, "*[")     
+argblockv("paragraph",     "h5", &null, "*[")     
+argblockv("subparagraph",  "h6", &null, "*[")     
+ignore("appendix")
+auxfile("tableofcontents", "toc", 
+        "<p>\n<tableofcontents>\n<b>[Table of contents]</b>\n</tableofcontents>\n<p>", 
+        "<h2>Table of Contents</h2>\n<tableofcontents>\n", "\n</tableofcontents>\n")
+cstab["tableofcontents"] := Ctableofcontents # override to call set_toclevel
+ignore("listoftables")
+ignore("listoffigures")
+ignore("addtocontents", "{{")
+ignoreenv("filecontents", "{")
+#line 198 "l2h.nw"
+cstab["("] := Cmath
+cstab[")"] := Cmath_end
+cstab["["] := Cdisplaymath
+cstab["]"] := Cdisplaymath_end
+ignoreenv("equation")
+every table_env(star("eqnarray"), 0, " ", "<blockquote><i>", "</i></blockquote>") 
+							 # also lame
+substitution("frac", "<b>frac</b>")
+substitution("sqrt", "<b>frac</b>")
+every substitution("ldots" | "cdots" | "vdots", "...")
+ignore("left")
+ignore("right")
+ignore("overline")
+substitution(":", " ")
+substitution(";", " ")
+ignore("!")
+#line 223 "l2h.nw"
+substitution("Diamond", "&lt;&gt;")
+substitution("langle",  "&lt;")
+substitution("rangle",  "&gt;")
+substitution("le",      "&lt;=")
+substitution("ne",      "!=")
+substitution("ge",      "&gt;=")
+substitution("times",   "&times;")
+substitution("divide",  "&divide;")
+substitution("bmod", "</i>mod<i>") # better hook in with math
+substitution("equiv", "===")
+every x := "arccos" | "arcsin" | "arctan" | "arg" | "cos" | "cosh" |
+           "cot" | "coth" | "csc" | "deg" | "det" | "dim" | "exp" | 
+           "gcd" | "hom" | "lim" | "liminf" | "limsup" | "ln" | "log" | 
+           "max" | "min" | "sec" | "sin" | "sinh" | "sup" | "tan" | "tanh" 
+do
+  substitution(x, "</i>" || x || "<i>")
+substitution("liminf", "</i>lim inf<i>")
+substitution("limsup", "</i>lim sup<i>")
+every x := "alpha" | "beta" | "gamma" | "delta" | "epsilon" | "zeta" | "eta" |
+            "theta" | "iota" | "kappa" | "lambda" | "nu" | "xi" | "pi" | 
+	    "rho" | "sigma" | "tau" | "upsilon" | "phi" | "chi" | "psi" | "omega" |
+            "in"
+do
+  substitution(x, "<b>" || x || "</b>")
+substitution("mu", "&micro;")
+every x := "Gamma" | "Delta" | "Theta" | "Lambda" | "Xi" | "Pi" | "Sigma" |
+            "Upsilon" | "Phi" | "Psi" | "Omega"
+do
+  substitution(x, "<b>" || x || "</b>")
+#line 255 "l2h.nw"
+substitution("lfloor", "</i>|_<i>")
+substitution("rfloor", "</i>_|<i>")
+substitution("leq", "&lt;=")
+substitution("geq", "&gt;=")
+substitution("ll", "&laquo;")
+substitution("gg", "&raquo;")
+substitution("Rightarrow", "==&gt;")
+substitution("rightarrow", "--&gt;")
+substitution("approx", "<u>~</u>")
+#line 268 "l2h.nw"
+envblock("quote", "blockquote")
+envblock("quotation", "blockquote")
+envblock("center", "blockquote")
+envblock("flushleft", "blockquote")
+envblock("flushright", "blockquote")
+envblock("verse", "blockquote")
+verbatim("verbatim", escape_HTML_specials, "pre")
+cstab["verb"] := Cverb
+cstab["verb*"] := Cverb
+csclosure["verb*"] := 1
+cstab["verbatiminput"] := Cverbatiminput
+csclosure["verbatiminput"] := verbatim_cl(escape_HTML_specials)
+#line 284 "l2h.nw"
+cstab["item"] := Citem
+csclosure["item"] := [item_cl("<li>", "", "<li>")]
+listenv("itemize", "ul")
+listenv("enumerate", "ol")
+listenv("description", "dl")
+#line 292 "l2h.nw"
+ignore("documentstyle", "[{")
+ignore("documentclass", "[{")
+ignore("usepackage", "[{")
+ignore("pagestyle", "{")
+ignore("thispagestyle", "{")
+ignore("pagenumbering", "{")
+ignore("newcounter", "{")
+ignore("global")
+ignore("etalchar") # used in the .bbl files: \newcommand{\etalchar}[1]{$^{#1}$}
+#line 307 "l2h.nw"
+argblockv("title", "h1")
+argblockv("author","address")
+argblockv("date",  "b")
+substitution("maketitle", "<!--title goes here-->")
+ignoreenv("titlepage")
+envblock("abstract", "<h2>Abstract</h2><blockquote>", "</blockquote>")
+#line 322 "l2h.nw"
+cstab["label"] := Clabel
+cstab["ref"] := Cref
+cstab["pageref"] := Cref
+cstab["subpageref"] := Cref
+cstab["chunklabel"] := Clabel
+#line 332 "l2h.nw"
+ignore("bibliographystyle", "{")
+auxfile("bibliography", "bbl", "<b>[BibTeX bibliography]</b>", &null, &null, "{")
+envblock("thebibliography", "<h2>References</h2>", "", "{")
+every cstab["cite" | "citeN" | "opencite" | "openciteN" | "citeyear"] := Ccite
+cstab["bibitem"] := Cbibitem
+ignore("newblock")
+ignore("nocite", "{")
+#line 343 "l2h.nw"
+every ignore("input" | "include" | "includeonly", "{")
+# filecontents not done yet
+#line 348 "l2h.nw"
+cstab["\\"] := Cbackback
+substitution("linebreak", "<br>")
+ignore("-")
+ignoreenv("sloppypar")
+ignore("sloppy")
+#line 357 "l2h.nw"
+substitution("pagebreak", "<hr>")
+substitution("newpage", "<hr>")
+substitution("clearpage", "<hr>")
+ignore("enlargethispage", "*{")
+#line 364 "l2h.nw"
+ignore("mbox")
+ignore("makebox", "([[")  # ( comes from picture area
+ignore("fbox")
+ignore("framebox", "[[")  # could insert horizontal rules, but why?
+ignore("newsavebox", 1)
+ignore("sbox", 2)
+ignore("savebox", "{[[{")
+ignore("usebox", 1)
+envblock("minipage", "blockquote", &null, "[{")
+argblock("parbox",   "blockquote", &null, "[{")
+#line 377 "l2h.nw"
+ignore("hspace", "*{")
+ignore("hfil")
+ignore("hfill")
+ignore("vspace", "*{")
+ignore("vfil")
+ignore("vfill")
+#line 386 "l2h.nw"
+ignore("newlength", "{")
+ignore("setlength", "{{")
+ignore("addtolength", "{{")
+#line 392 "l2h.nw"
+envblock("picture", "<b>[picture]</b>", "", "((")
+ignore("put", "({")
+ignore("multiput", "(({{")
+ignore("dashbox", "{([")
+ignore("line", "({")
+ignore("vector", "({")
+ignore("shortstack", "[")
+ignore("circle", "*{")
+ignore("oval", "([")
+ignore("frame")
+ignore("thinlines")
+ignore("thicklines")
+#line 408 "l2h.nw"
+every envblock(star("figure"), "<hr>", "<hr>", "[")
+every envblock(star("table"),  "<hr>", "<hr>", "[")
+argblock("caption", "b")  # captions in bold
+#line 415 "l2h.nw"
+envblock("tabbing", "blockquote")
+# \= is accent
+ignore(">")
+ignore("+")
+ignore("kill")
+#line 423 "l2h.nw"
+tabular("array",    "[")
+tabular("tabular",  "[")
+tabular("tabularx", "{[")
+tabular("tabular*", "{[")
+every cstab["multicolumn"|"multispan"] := Cmulticolumn
+cstab["span"] := Cspan
+cstab["noalign"] := Cnoalign
+cstab["hline"] := Chline
+cstab["toprule"] := Chline
+cstab["midrule"] := Chline
+cstab["bottomrule"] := Chline
+ignore("cline", "{")
+ignore("newcolumntype", "{{")
+#line 439 "l2h.nw"
+ignore("newcommand", "A[[{")
+ignore("renewcommand", "A[[{")
+ignore("providecommand", "A[[{")
+ignore("newenvironment", "{[{{")
+ignore("renewenvironment", "{[{{")
+ignore("newtheorem", "{{")
+#line 450 "l2h.nw"
+cstab["setcounter"] := Csetcounter
+ignore("addtocounter", "{{")
+#line 455 "l2h.nw"
+cstab["makeatletter"] := Cmakeatletter
+cstab["makeatother"] := Cmakeatother
+#line 460 "l2h.nw"
+every fontchange("tt" | "ttfamily", "tt")
+every fontchange("bf" | "bfseries", "b")
+every fontchange("it" | "itshape", "i")
+fontchange("sl", "i")
+fontchange("em", "em")
+ignore("rm")		# html can't switch to default font!
+ignore("sf")
+ignore("sc")
+#line 470 "l2h.nw"
+ignore("rmfamily")
+ignore("normalfont")
+#line 473 "l2h.nw"
+ignoreenv("document")
+#line 475 "l2h.nw"
+substitution("LaTeX", "LaTeX")
+#line 477 "l2h.nw"
+ignore("numberline", "{")
+ignore("protect")
+ignore("onecolumn")
+ignore("twocolumn", "C")
+ignore("typeout", "[{")
+ignore("closedbib")
+#line 484 "l2h.nw"
+every ignore("leftmargini" | "leftmarginii" | "labelsep" | "fboxsep", "=")
+every ignore("tabcolsep", "=")
+every ignore("evensidemargin" | "marginparsep" | "marginparwidth" | 
+             "oddsidemargin" | "textheight" | "textwidth" | "topmargin", "=")
+#line 489 "l2h.nw"
+ignore("DeclareMathVersion", "{")
+ignore("mathversion", "{")
+ignore("setpapersize", "{")
+ignore("setmarginsrb", "{{{{{{{{")
+ignore("marginparwidth", "=")
+ignore("marginparsep", "=")
+#line 498 "l2h.nw"
+ignoreenv("multicols", "{C")
+cstab["citeN"] := Ccite
+ignore("afterpage", "{")
+every cstab["psfig"|"epsfig"] := Cepsfig
+cstab["includegraphics"] := Cincludegraphics
+ignore("newcolumntype", "{{")
+#line 507 "l2h.nw"
+cstab["kill"] := Ckill
+#line 511 "l2h.nw"
+activesubst("~", "&nbsp;")
+argblock("centerline", "<br>", "<br>")
+substitution("cr", "<br>")
+substitution("hrule", "<hr>")
+substitution("vrule", "|")
+substitution("hrulefill", "------")
+ignore("hyphenation", "{")
+ignore("hbox")
+ignore("rlap")
+ignore("llap")
+ignore("vbox")
+ignore("vtop")
+ignore("hidewidth")
+ignore("message", "{")
+ignore("relax")
+ignore("null")
+ignore("offinterlineskip")
+ignore("omit")
+ignore("newdimen", "{")
+ignore("nobreak")
+#line 532 "l2h.nw"
+cstab["par"] := implicit_paragraph
+cstab["smallskip"] := implicit_paragraph
+cstab["medskip"] := implicit_paragraph
+cstab["bigskip"] := implicit_paragraph
+cstab["vskip"] := implicit_paragraph
+csclosure["vskip"] := "="
+#line 544 "l2h.nw"
+every ignore("begingroup" | "endgroup" | "bgroup" | "egroup")
+#line 546 "l2h.nw"
+cstab["newif"]   := Cnewif
+cstab["iffalse"] := Ciffalse
+cstab["iftrue"]  := Ciftrue
+cstab["ifhtml"]  := Ciftrue  # false in LaTeX, but true when converting!
+cstab["else"]    := Celse
+cstab["fi"]      := Cfi
+cstab["ifx"] := cstab["if"] := cstab["ifnum"] := Ciffalse
+#line 556 "l2h.nw"
+ignore("let", "A=")
+every ignore("hfuzz" | "parindent" | "parskip" | "baselineskip", "=")
+every ignore("hbadness" | "hsize" | "vsize" | "overfullrule" | "tabskip", "=")
+every ignore("extrarowheight" | "codemargin", "=")
+every ignore("looseness", "=")
+substitution("hskip", " ", "=")
+ignore("setbox", "{=")
+every ignore("box" | "unhbox" | "unvbox", "{")
+#line 565 "l2h.nw"
+ignore("unskip")
+ignore("hss")
+ignore("phantom", "{")
+every ignore("kern" | "lower" | "spacefactor", "=") # a cheat, but works
+every ignore("clubpenalty" | "widowpenalty", "=")
+#line 578 "l2h.nw"
+every ignore("expandafter" | "indent" | "noindent" | "leavevmode" | "strut")
+ignore("def", 1)
+#line 581 "l2h.nw"
+substitution("TeX", "TeX")
+substitution("BibTeX", "BibTeX")
+substitution("MF", "METAFONT")
+#line 594 "l2h.nw"
+cstab["char"] := asciiCharCode
+#line 608 "l2h.nw"
+macro("nwanchorto",   2, "<a href=\"#$1\">#2</a>")
+macro("nwanchorname", 2, "<a name=\"#$1\">#2</a>")
+ignore("nwaddbox", "{")
+verbatim("latexonly", do_nothing)
+verbatim("rawhtml", emit_text)
+#line 617 "l2h.nw"
+substitution("quad", " ")
+#line 624 "l2h.nw"
+ignore("noweboptions", 1)
+#line 630 "l2h.nw"
+substitution("nowebindex", "<nowebindex>")
+substitution("nowebchunks", "<nowebchunks>")
+ignore("nowebsize")
+#line 634 "l2h.nw"
+envblock("fields",  "blockquote", &null, "[")     # lame; could try to <tt> 1st col
+envblock("fields*", "blockquote", &null, "{")     # lame; could try to <tt> 1st col
+ignore("citeauthoryear", "{{{")
+ignore("authoryear", "{{")
+substitution("bibrule", "--------")
+let("bibskip", "par")
+every cstab["anoncite"|"authorcite"] := Ccite
+#line 644 "l2h.nw"
+ignore("pssilent")
+ignore("psnoisy")
+#line 1012 "l2h.nw"
+cstab["begin"] := do_begin
+cstab["end"]   := do_end
+#line 1385 "l2h.nw"
+cstab["suspend"] := Csuspend
+cstab["resume"] := Cresume
+#line 1603 "l2h.nw"
+cstab["uppercase"] := Cuppercase
+#line 1899 "l2h.nw"
+cstab["contentsline"] := Ccontentsline
+#line 676 "l2h.nw"
+    
+#line 2677 "l2h.nw"
+csfunctions["argblock"] := argblock
+csfunctions["argblockv"] := argblockv
+csfunctions["envblock"] := envblock
+csfunctions["fontchange"] := fontchange
+csfunctions["ignore"] := ignore
+csfunctions["ignoreenv"] := ignoreenv
+csfunctions["let"] := let
+csfunctions["letenv"] := letenv
+csfunctions["listenv"] := listenv
+csfunctions["substitution"] := substitution
+csfunctions["activesubst"] := activesubst
+csfunctions["closure"] := let_closure
+csfunctions["let_closure"] := let_closure
+csfunctions["newcommand"] := l2h_macro
+csfunctions["macro"] := l2h_macro
+csfunctions["environment"] := l2h_environment
+csfunctions["tabular"] := tabular
+#line 677 "l2h.nw"
+    specials := '\\{}<>-\'`"%$&~\n\0\1' 
+  }
+
+  if \optstring then return optstring ? convert(S)
+  else {
+    
+#line 867 "l2h.nw"
+l := S.newtext
+S.newtext := []
+while c := get(l) do
+  c.proc!c.args
+#line 700 "l2h.nw"
+if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
+emit_text(S, tab(upto(specials) | 0))
+while not pos(0) do 
+  if S.mode == "Q" then { # quoting
+    emit_text(S, tab(upto('\1') | 0))
+    if ="\1" then {
+      emit_text(S, "\1")
+      S.mode := S.quotemode
+    }
+  } else {
+    if any(S.activechars) then
+      do_activechar(S, move(1))
+    else
+      case move(1) of {
+        "\\" : {
+#line 941 "l2h.nw"
+cs := if pos(0) then ""
+      else if any(S.csletters) then tab(many(S.csletters))
+      else move(1)
+if /S.ignoring | cs == ("else"|"fi") | cstab[cs] === (Ciffalse|Ciftrue) then
+  do_cs(S, cs)
+else
+  &null # error("### Ignoring \\", cs)
+#line 714 "l2h.nw"
+                                    }
+        "{"  : {
+#line 915 "l2h.nw"
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+#line 715 "l2h.nw"
+                                           }
+        "}"  : {
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 716 "l2h.nw"
+                                            }
+        "%"  : {
+#line 1066 "l2h.nw"
+parse_dynamic_add(S)
+delay_newtext(S)
+eat_comment(S)
+#line 717 "l2h.nw"
+                           }
+        "\n" : {
+#line 1313 "l2h.nw"
+emit_text(S, "\n")
+if /S.ignoring then Cnewline(S)
+#line 718 "l2h.nw"
+                           }
+        "$"  : {
+#line 1301 "l2h.nw"
+if /S.ignoring then
+  if ="$" then
+    if S.mode == "M" then { Cdisplaymath_end(S); S.mode := "V" }
+    else                  { Cdisplaymath(S);     S.mode := "M" } 
+  else
+    if S.mode == "M" then { Cmath_end(S); S.mode := "H" }
+    else                  { Cmath(S);     S.mode := "M" } 
+#line 719 "l2h.nw"
+                               }
+        "&"  : ampersand(S)
+        "\0" : {S.quotemode := S.mode; S.mode := "Q"; emit_text(S, "\0")}
+        # remaining cases simply escape HTML specials
+        "<"  : emit_text(S, "&lt;")
+        ">"  : emit_text(S, "&gt;")
+        "\"" : emit_text(S, "&quot;")
+        "-"  : {
+#line 735 "l2h.nw"
+if S.mode == "V" then S.mode := "H"
+if S.mode == "H" then
+    if ="--" then emit_text(S, "&mdash;")
+    else if ="-" then emit_text(S, "&ndash;")
+    else emit_text(S, "-")
+else
+    emit_text(S, "-")
+#line 726 "l2h.nw"
+                                            }
+        "`"  : {
+#line 746 "l2h.nw"
+if S.mode == "V" then S.mode := "H"
+if \html_quotes & S.mode == "H" then
+    if ="`" then emit_text(S, "&ldquo;")
+    else emit_text(S, "&lsquo;")
+else
+    emit_text(S, "`")
+#line 727 "l2h.nw"
+                                         }
+        "'"  : {
+#line 753 "l2h.nw"
+if S.mode == "V" then S.mode := "H"
+if \html_quotes & S.mode == "H" & ="'" then emit_text(S, "&rdquo;")
+else                                        emit_text(S, "'")
+#line 728 "l2h.nw"
+                                          }
+      }
+    if S.mode == "V" & any(~'\\{}<>%\n\t ') then S.mode := "H"
+    emit_text(S, tab(upto(specials++S.activechars) | 0))
+  }
+return 1(. S.the_text, S.the_text := "")  # what's been converted
+#line 683 "l2h.nw"
+  }
+end
+#line 744 "l2h.nw"
+global html_quotes # render quotes as HTML 4 entities
+#line 760 "l2h.nw"
+record state(mode, quotemode 
+#line 788 "l2h.nw"
+, text, the_text
+#line 804 "l2h.nw"
+, ignoring
+#line 822 "l2h.nw"
+, activechars
+#line 844 "l2h.nw"
+, newtext
+#line 887 "l2h.nw"
+, delayed_newtext
+#line 897 "l2h.nw"
+, open, closes
+#line 949 "l2h.nw"
+, csletters
+#line 1082 "l2h.nw"
+, comment
+#line 1521 "l2h.nw"
+, ifstack
+#line 1628 "l2h.nw"
+, tables
+#line 760 "l2h.nw"
+                                                      )
+	# mode is Q, H, V, or M
+	# quotemode is saved mode: H, V, or M
+#line 766 "l2h.nw"
+procedure converter(mode)
+  /mode := "V"
+  return state(mode, mode 
+#line 790 "l2h.nw"
+, accumulate_text, ""
+#line 806 "l2h.nw"
+, &null
+#line 824 "l2h.nw"
+, '~'
+#line 846 "l2h.nw"
+, []
+#line 889 "l2h.nw"
+, []
+#line 899 "l2h.nw"
+, [], []
+#line 951 "l2h.nw"
+, &letters
+#line 1084 "l2h.nw"
+, ""
+#line 1523 "l2h.nw"
+, []
+#line 1630 "l2h.nw"
+, []
+#line 768 "l2h.nw"
+                                                                      )
+end
+#line 774 "l2h.nw"
+procedure reset(S)
+  
+#line 792 "l2h.nw"
+S.text := accumulate_text
+S.the_text := ""
+#line 808 "l2h.nw"
+S.ignoring := &null
+#line 826 "l2h.nw"
+S.activechars := '~'
+#line 848 "l2h.nw"
+S.newtext := []
+#line 891 "l2h.nw"
+S.delayed_newtext := []
+#line 901 "l2h.nw"
+every S.open | S.closes := []
+#line 953 "l2h.nw"
+S.csletters := &letters
+#line 1086 "l2h.nw"
+S.comment := ""
+#line 1525 "l2h.nw"
+if *S.ifstack > 0 then S.ifstack := []  # keeps GC down
+#line 1632 "l2h.nw"
+S.tables := []
+#line 776 "l2h.nw"
+  return S
+end
+#line 783 "l2h.nw"
+procedure accumulate_text(S, text)
+  S.the_text ||:= text
+  return
+end
+#line 800 "l2h.nw"
+procedure emit_text(S, text)
+  return if \S.ignoring then "" else S.text(S, text)
+end
+#line 813 "l2h.nw"
+global activetab, activeclosure
+procedure do_activechar(S, c)
+  (activetab[c])(S, c, activeclosure[c])
+  return
+end
+#line 852 "l2h.nw"
+record closure(proc, args)
+#line 857 "l2h.nw"
+procedure before_next_newtext(S, proc, args)
+  push(S.newtext, closure(proc, args))
+end
+
+procedure after_next_newtext(S, proc, args)
+  put(S.newtext, closure(proc, args))
+end
+#line 876 "l2h.nw"
+procedure delay_newtext(S)
+  push(S.delayed_newtext, S.newtext)
+  S.newtext := []
+  return
+end
+
+procedure undelay_newtext(S)
+  S.newtext := \pop(S.delayed_newtext) |
+    {write(&errout, "This can't happen: no delayed_newtext"); &null[0]}
+end
+#line 903 "l2h.nw"
+procedure after_next_open(S, proc, args)
+  return put(S.open, closure(proc, args))
+end
+
+procedure before_next_close(S, proc, args)
+  return push(S.closes[1], closure(proc, args)) # lost at top level
+end
+
+procedure after_next_close(S, proc, args)
+  return put(S.closes[1], closure(proc, args)) # lost at top level
+end
+#line 960 "l2h.nw"
+global cstab, csclosure
+
+procedure do_cs(S, cs)
+  tab(many(' \t')) # skip white space following CS
+  if pos(0) | any('\n') then before_next_newtext(S, skipblanks, [S])
+  (cstab[cs])(S, cs, csclosure[cs])
+  return 
+end
+#line 976 "l2h.nw"
+global show_unknowns
+procedure unknown_cs(S, cs, cl)
+#  if S.text === ignore_text then return # a bit of a hack  -- should no longer be needed
+  if \show_unknowns then S.text(S, "<b>\\" || cs || "</b>")
+  if not member(unknown_set, cs) then {
+    write(\unknown_file, "Warning: unknown control sequence \\", cs)
+    insert(unknown_set, cs)
+  }
+  return
+end
+#line 989 "l2h.nw"
+global cstab, csclosure, unknown_set
+#line 995 "l2h.nw"
+global begintab, endtab, begincl, endcl
+
+procedure do_begin(S, cs, cl)
+  (="{", env := tab(upto('}')), ="}") | error("botched \\begin{...}")
+  
+#line 915 "l2h.nw"
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+#line 1000 "l2h.nw"
+  (begintab[env])(S, env, begincl[env])
+  return 
+end
+
+procedure do_end(S, cs, cl)
+  (="{", env := tab(upto('}')), ="}") | error("botched \\end{...}")
+  # write(&errout, "calling ", image(endtab[env]), " for \\end{", env, "}")
+  (endtab[env])(S, env, endcl[env])
+  
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 1009 "l2h.nw"
+  return 
+end
+#line 1018 "l2h.nw"
+procedure unknown_env(S, env, cl)
+###  if S.text === ignore_text then return # a bit of a hack # no longer needed
+  if \show_unknowns then S.text(S, "<b>{" || env || "}</b>")
+  if not member(unknown_envs, env) then {
+    write(\unknown_file, "Warning: unknown environment {", env, "}")
+    insert(unknown_envs, env)
+  }
+  return
+end
+#line 1030 "l2h.nw"
+global unknown_envs
+#line 1034 "l2h.nw"
+procedure warn_unknown(s, type, mark, rmark)
+  if *s > 0 then {
+    pushout("Unknown " || type || ": ")
+    every pushout(((\mark | "")\1) || !sort(s) || ((\rmark | "")\1) || " ")
+    pushout("\n")
+ }
+end
+#line 1042 "l2h.nw"
+procedure pushout(s)
+  static col
+  initial col := 0
+  if find("\n", s) then
+    s ? {
+      pushout(tab(upto('\n')))
+      while ="\n" do {col := 0; write(&errout)}
+      pushout(tab(0))
+    }  
+  else {
+    col +:= *s
+    if col >= 79 then {writes(&errout, "\n  "); col := *s + 2}
+    writes(&errout, s)
+  }
+  return
+end
+#line 1070 "l2h.nw"
+procedure eat_comment(S)
+  S.comment ||:= tab(upto('\n') | 0)
+  if pos(0) then
+    before_next_newtext(S, eat_comment, [S])
+  else {
+    undelay_newtext(S)
+    Ccomment(S)
+    S.comment := ""
+  }
+  return
+end    
+#line 1106 "l2h.nw"
+record verbatim_cl(output, terminator, html, translate_blank)
+
+procedure verbatim(name, output, html)
+  begintab[name] := Cverbatim
+  begincl [name] := verbatim_cl(output, &null, html)
+  return
+end
+
+procedure Cverbatim(S, cs, cl)
+  if cl === begincl[cs] & /cl.terminator then
+    cl := begincl[cs] :=
+      verbatim_cl(cl.output, "\\end{" || cs || "}", cl.html, cl.translate_blank)
+  emit_text(S, tag(\cl.html))
+  delay_newtext(S)
+  do_verbatim(S, cl)
+  return
+end
+#line 1128 "l2h.nw"
+procedure do_verbatim(S, cl)
+  if cl.output(S, tab(find(cl.terminator)), cl) then {
+    =cl.terminator
+    emit_text(S, endtag(\cl.html))
+    undelay_newtext(S)
+  } else {
+     cl.output(S, tab(0), cl)
+     before_next_newtext(S, do_verbatim, [S, cl])
+  }
+  return
+end
+#line 1142 "l2h.nw"
+procedure escape_HTML_specials(S, s, cl)
+  s ? {
+    while emit_text(S, tab(upto('&<>" '))) do
+      case move(1) of {
+        "\"" : emit_text(S, "&quot;")
+        "&"  : emit_text(S, "&amp;")
+        "<"  : emit_text(S, "&lt;")
+        ">"  : emit_text(S, "&gt;")
+        " "  : emit_text(S, if \cl.translate_blank then "&middot;" else " ")
+      }
+    emit_text(S, tab(0))
+  }
+  return
+end
+#line 1160 "l2h.nw"
+procedure Cverb(S, cs, cl)
+  Cverbatim(S, cs, verbatim_cl(escape_HTML_specials, move(1), "tt", cl))
+  return
+end
+#line 1166 "l2h.nw"
+procedure Cverbatiminput(S, cs, cl)
+  local filename, f, line
+  if ="{" & filename := tab(upto('}')) & ="}" then {
+    f := \open(filename) | { emit_text(S, "<strong>Could not read file</strong> <tt>")
+                             escape_HTML_specials(S, filename, cl)
+                             emit_text(S, "</tt>")
+                             return
+                           }
+    emit_text(S, "\n<pre>\n")
+    while line := read(f) do {
+      escape_HTML_specials(S, line, cl)
+      emit_text(S, "\n")
+    }
+    emit_text(S, "</pre>\n")
+    close(f)
+  }
+  return
+end
+#line 1190 "l2h.nw"
+procedure csarg(S)
+  return  2(="{", tab(bal('}', '{', '}')), ="}") |
+           (optwhite(), 
+               if ="\\" then 
+                 "\\" || (tab(many(S.csletters)) | move(1))
+               else
+                 move(1))
+end
+#line 1225 "l2h.nw"
+procedure apply_args(S, p, as, args_wanted)
+  delay_newtext(S)
+  do_apply_args(S, closure(p, as), args_wanted, [], "", 0)
+  return
+end
+
+procedure do_apply_args(S, cl, wanted_count, args_seen, current_arg, brace_depth)
+  local open_comment
+  # invariant : we have an open brace
+#  pushtrace("APPLY")
+  while *args_seen < wanted_count & not pos(0) do {
+    while *args_seen < wanted_count & brace_depth = 0 & not pos(0) do {
+      tab(many(' \t\n'))
+      case c := move(1) of {
+        "\\" : put(args_seen, "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1))
+        "{"  :  { current_arg := "" ; brace_depth := 1 }
+        "}"  :  { error("Insufficient arguments to macro ", macro.name) }
+        "%"  :  if tab(upto('\n')) then ="\n" else open_comment := tab(0)
+        default : put(args_seen, c)
+      }
+    }
+    while brace_depth > 0 & not pos(0) do {
+      current_arg ||:= tab(upto('\\{}%') | 0)
+      case move(1) of {
+        "%"  :  if tab(upto('\n')) then ="\n" else open_comment := tab(0)
+        "\\" : current_arg ||:= "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1)
+        "{"  :  { current_arg ||:= "{" ; brace_depth +:= 1 }
+        "}"  :  { brace_depth -:= 1
+		  if brace_depth > 0 then
+		    current_arg ||:= "}"
+		  else {
+		    put(args_seen, current_arg)
+		    current_arg := ""
+		  }
+		}
+      }
+    }
+  }
+  if *args_seen = wanted_count then {
+    undelay_newtext(S)
+    cl.proc ! (cl.args ||| args_seen)
+  } else if \open_comment then {
+    delay_newtext(S)
+    before_next_newtext(S, skip_comment_and_continue,
+	[S, closure(do_apply_args, [S, cl, wanted_count, args_seen,
+				    current_arg, brace_depth])])
+  } else
+    before_next_newtext(S, do_apply_args, [S, cl, wanted_count, args_seen,
+					   current_arg, brace_depth])
+#  poptrace()
+  return
+end
+#line 1284 "l2h.nw"
+procedure skip_comment_and_continue(S, cl)
+  tab(upto('\n') | 0)
+  if pos(0) then
+    before_next_newtext(S, skip_comment_and_continue, [S, cl])
+  else {
+    ="\n"
+    undelay_newtext(S)
+#    <take actions appropriate to new text>>
+  }
+  return
+end    
+#line 1316 "l2h.nw"
+procedure Cnewline(S)
+  tab(many(' \t'))
+  if match("\n") then implicit_paragraph(S)
+  if pos(0) then before_next_newtext(S, Cnewline, [S])
+end
+#line 1325 "l2h.nw"
+procedure skipblanks(S)
+  tab(many(' \t'))
+  if ="\n" then Cnewline(S)
+  else if pos(0) then before_next_newtext(S, skipblanks, [S])
+end
+#line 1334 "l2h.nw"
+procedure implicit_paragraph(S, cs, cl)
+  if S.mode ~== "V" then {
+    S.mode := "V"
+    Cparagraph(S)
+  }
+  cs_ignore(S, cs, \cl)
+end
+#line 1347 "l2h.nw"
+procedure stop_skipping(S)
+  while S.newtext[1].proc === (Cnewline|skipblanks) do pop(S.newtext)
+end
+#line 1357 "l2h.nw"
+record item_cl(before, after, ifnone)
+
+procedure Citem(S, cs, cl)
+  if pos(0) then 
+    after_next_newtext(S, Citem, [S, cs, cl])
+  else if ="[" then {
+    delay_newtext(S)
+    with_upto_bracket(S, "", convert_bracketed, cl)
+  } else {
+    skipblanks(S)
+    emit_text(S, cl[1].ifnone)
+    \liststack[1] := \liststack[1] + 1
+  }
+end
+#line 1372 "l2h.nw"
+procedure convert_bracketed(S, contents, cl)
+  emit_text(S, cl[1].before || 
+            convert(converter("H"), "{" || contents || "}") || 
+            cl[1].after)
+  optwhite()
+end
+#line 1379 "l2h.nw"
+global liststack, suspendstack
+#line 1388 "l2h.nw"
+procedure listenv(env, html)
+  begintab[env] := Clist
+  begincl[env] := html
+  endtab[env] := Clist_end
+  endcl[env] := html
+end
+  
+procedure push_item_closure(cs)
+  push(csclosure["item"], 
+    if cs == "description" then item_cl("<dt>", "<dd>", "<dt><dd>")
+    else                        item_cl("<li>", "--", "<li>"))
+end
+
+procedure Clist(S, cs, cl)
+  push(liststack, 1)
+  push_item_closure(cs)
+  emit_text(S, tag(cl))
+end
+
+procedure Cresume(S, cs, cl)
+  local n, env
+  (="{", env := tab(upto('}')), ="}") | error("botched \\resume{...}")
+  n := pop(suspendstack) | error("\\resume not balanced by corresponding \\suspend")
+  push(liststack, n)
+  push_item_closure(env)
+  if env == "enumerate" then
+    emit_text(S, tag(begincl[env] || " start=\"" || n || "\""))
+  else
+    emit_text(S, tag(begincl[env]))
+end
+
+procedure Clist_end(S, cs, cl)
+  emit_text(S, endtag(cl))
+  pop(csclosure["item"])
+  pop(liststack)
+end
+
+procedure Csuspend(S, cs, cl)
+  local env
+  (="{", env := tab(upto('}')), ="}") | error("botched \\suspend{...}")
+  emit_text(S, endtag(endcl[env]))
+  pop(csclosure["item"])
+  push(suspendstack, pop(liststack))
+end
+#line 1437 "l2h.nw"
+global labels_seen
+
+procedure Clabel(S, cs, cl)
+  initial /labels_seen := set()
+  insert(labels_seen, l := csarg(S)) | fail
+  emit_text(S, "<a name=\"" || l || "\"><b>[*]</b></a>")
+end
+
+procedure Cref(S, cs, cl)
+  local prefix, prefix_tag
+  initial /labels_seen := set()
+  prefix_tag := (\cl)[1] | ""
+  prefix := (\cl)[2] | ""
+  l := prefix || csarg(S) | fail
+  emit_text(S, prefix_tag || "<a href=\"#" || l || "\">[" || 
+                 (if member(labels_seen, l) then "&lt;-" else "-&gt;") || "]</a>")
+end
+#line 1463 "l2h.nw"
+procedure Ccite(S, cs, cl, bracketed_text)
+  if ="[" then {
+    delay_newtext(S)
+    with_upto_bracket(S, "", do_cite, cl)
+  } else
+    do_cite(S, &null, cl)
+end
+
+procedure do_cite(S, commentary, cl)
+  local key
+  if \commentary then
+    optwhite()
+  if pos(0) then before_next_newtext(S, do_cite, [S, commentary, cl])
+  else {
+    key := csarg(S)
+    \commentary := convert(converter("H"), "{" || \commentary || "}")
+    emit_text(S, "<b>[cite&nbsp;")
+    key ? {
+      while k := tab(upto(",")) & ="," do
+        emit_text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>, ")
+      if k := tab(0) then
+        emit_text(S, "<a href=\"#NWcite-" || k || "\">" || k || "</a>")
+    }
+    emit_text(S, ", <i>" || \commentary || "</i>")
+    emit_text(S, "]</b>")
+  }
+end
+#line 1491 "l2h.nw"
+procedure Cbibitem(S, cs, cl)
+  local label, key
+  static counter
+  initial counter := 0
+  if ="[" then {
+    delay_newtext(S)
+    with_upto_bracket(S, "", finish_bibitem, [])
+  } else {
+    label := "<b>[" || (counter +:= 1) || "]</b>"
+    apply_args(S, do_bibitem_key, [S, label], 1)
+  }
+end
+
+procedure do_bibitem_key(S, label, key)
+  return emit_text(S, "<a name=\"NWcite-" || key || "\">" || label || "</a> ")
+end
+
+procedure finish_bibitem(S, contents, args)
+  local key, label
+  optwhite()
+  label := convert(converter("H"), "{" || contents || "}")
+  key := apply_args(S, do_bibitem_key, [S, label], 1)
+end
+#line 1529 "l2h.nw"
+record ifrec(on_else, on_fi)
+#line 1538 "l2h.nw"
+procedure Ciffalse(S, cs, cl)
+#error("### \\", cs, " -> false (S.ignoring === ", image(S.ignoring) ? {="procedure "; tab(0)}, ")")
+  push(S.ifstack, ifrec(S.ignoring, S.ignoring))
+  S.ignoring := 1
+end
+
+procedure Ciftrue(S, cs, cl)
+#error("### \\", cs, " -> true (S.ignoring === ", image(S.ignoring) ? {="procedure "; tab(0)}, ")")
+  push(S.ifstack, ifrec(1, S.ignoring))
+end
+
+procedure Celse(S, cs, cl)
+  S.ignoring := S.ifstack[1].on_else
+#error("### \\else -> S.ignoring === ", image(S.ignoring) ? {="procedure "; tab(0)})
+end
+
+procedure Cfi(S, cs, cl)
+  S.ignoring := S.ifstack[1].on_fi
+#error("### \\fi -> S.ignoring === ", image(S.ignoring) ? {="procedure "; tab(0)})
+  pop(S.ifstack)
+end
+#line 1563 "l2h.nw"
+procedure Cnewif(S, cs, cl)
+  local newif, newcs
+  tab(many(' \t\n'))
+  if pos(0) then
+    after_next_newtext(S, Cnewif, [S, cs, cl])
+  else {
+    newif := csarg(S)
+    newif ?
+      if ="\\if" & newcs := tab(many(S.csletters)) & pos(0) then {
+        
+#line 1580 "l2h.nw"
+cstab[newcs || "false"] := Csetif
+cstab[newcs || "true"]  := Csetif
+cstab["if" || newcs] := Ciffalse
+#line 1573 "l2h.nw"
+      } else
+        error("\\newif argument botch: " || newif)
+  }
+end
+#line 1584 "l2h.nw"
+procedure Csetif(S, cs, cl)
+  local base, tag
+  if cs ? (base := tab(find("true"|"false")), tag := =("true"|"false"), pos(0)) then {
+    cstab["if" || base] := if tag == "true" then Ciftrue else Ciffalse
+  } else {
+    error("This can't happen --- setif botch (not urgent)")
+  }
+end
+#line 1598 "l2h.nw"
+procedure Cuppercase(S, cs, cl)
+  l := map(csarg(S), &lcase, &ucase) | fail
+  emit_text(S, l)
+end
+#line 1613 "l2h.nw"
+record table_info(index,	# number of this cell in the row
+		  alignment,	# the alignment of this cell 
+		  width,	# how many columns this cell will span
+		  alignments,	# default alignments for this table
+		  brace_depth,	# size of S.closes after start of cell
+		  cell_text)	# value of S.text to use to scan this cell
+#line 1637 "l2h.nw"
+procedure start_table_cell(S, text)
+  local this, attributes
+
+  text ? {
+    tab(many(' \t\n'))
+    if pos(0) then return
+  }
+# write(&errout, "starting cell with ", image(text))
+
+  this := S.tables[1] | fatal("starting cell with no current table")
+  S.text := this.cell_text
+
+if /(\this).brace_depth then write(&errout, "starting table cell, ", image(this), " has null brace depth")
+  # use this to start the current cell
+  if this.index = 1 then emit_text(S, "<tr>")
+  attributes := \this.alignment | aligneq("top")
+  if this.width > 1 then attributes ||:= " colspan=" || this.width
+  emit_text(S, "<td" || attributes || ">")
+
+  # now update state for the next cell
+  this.index +:= this.width  # advance to next cell
+  this.alignment := this.alignments[this.index] | &null
+  this.width := 1
+  # can't set cell_text until we hit &
+
+  
+#line 915 "l2h.nw"
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+#line 1663 "l2h.nw"
+  emit_text(S, text)
+  return
+end
+#line 1670 "l2h.nw"
+procedure ampersand(S)
+  local this
+  this := S.tables[1]
+  
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 1674 "l2h.nw"
+  if /this then
+    emit_text(S, " --- ")
+  else {
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    emit_text(S, "</td>")
+    if S.text ~=== start_table_cell then
+       this.cell_text := S.text
+    S.text := start_table_cell
+    this.brace_depth := *S.closes + 1 # will open at start of cell
+#write(&errout, "set brace depth for ", image(this))
+  }
+  tab(many(' \t\n'))
+##  write(&errout, " past &, text = ", image(S.text), ", next = ",
+##  	 image(&subject[&pos:0]))
+  return
+end
+#line 1699 "l2h.nw"
+procedure Cbackback(S, cs, cl)
+  local this
+  this := S.tables[1]
+  cs_ignore(S, cs, "[", Cbackback_continue, [S, this])
+end
+
+procedure Cbackback_continue(S, this)
+#if /(\this).brace_depth then write(&errout, image(this), " has null brace depth")
+  if /this | *S.closes > this.brace_depth then { # ordinary \\
+    S.text(S, "<br>")
+  } else {			# row terminator
+## write(&errout, "ending row with ", image(&subject[&pos:0]))
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 1713 "l2h.nw"
+    emit_text(S, "</td></tr>\n")
+    tab(many(' \t\n'))
+    if S.text ~=== start_table_cell then
+      this.cell_text := S.text
+    this.index := 1
+    this.alignment := this.alignments[this.index] | &null
+    this.width := 1
+    S.text := start_table_cell
+    this.brace_depth := *S.closes + 1 # about to open
+  }
+end
+#line 1727 "l2h.nw"
+procedure Chline(S, cs, cl)
+  if \S.tables[1] then return
+  else emit_text(S, "<hr>")
+  return
+end
+#line 1737 "l2h.nw"
+procedure Ctabular_end(S, cs, cl)
+  local this
+  if S.text ~=== start_table_cell | S.tables[1].index > 1 then {# row in progress
+    emit_text(S, "")  # be sure cell gets started, even if empty
+    
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 1742 "l2h.nw"
+    emit_text(S, "</td></tr>")
+  }
+  if S.text === start_table_cell then # abort it
+    S.text := S.tables[1].cell_text
+  emit_text(S, "</table>")
+  xxx := pop(S.tables)
+#write(&errout, "popped ", image(xxx))
+  return
+end
+#line 1754 "l2h.nw"
+procedure Ctabular(S, cs, cl)
+  cs_ignore(S, cs, cl, Ctabular_continue, [S])
+  return
+end
+
+procedure Ctabular_continue(S)
+  a := csarg() # alignment
+#write(&errout, "Alignment ", a)
+  emit_text(S, if upto('|', a) then "<table border>" else "<table>")
+  emit_text(S, "<!-- alignment is " || a || "-->")
+  a := alignments(a)
+  emit_text(S, "<!-- " || *a || " columns-->")
+  push(S.tables, table_info(1, a[1] | "l", 1, a, *S.closes+1, S.text))
+#write(&errout, "pushed ", image(S.tables[1]))
+  S.text := start_table_cell
+  optwhite()
+  return
+end
+#line 1777 "l2h.nw"
+procedure tabular(env, ignore)
+  begintab[env] := Ctabular
+  begincl[env] := ignore
+  endtab[env] := Ctabular_end
+  endcl[env] := ignore
+end
+#line 1786 "l2h.nw"
+procedure aligneq(a)
+  return " align=\"" || a || "\""
+end
+
+procedure valigneq(a)
+  return " valign=\"" || a || "\""
+end
+
+procedure alignments(s)
+  a := []
+  s ? {
+    while not pos(0) do
+      case move(1) of {
+	"l" | "X" | "Y" | "p" :
+            { put(a, aligneq("left") || valigneq("top")); skip_bracket() }
+	"c" : put(a, aligneq("center"))
+	"r" : put(a, aligneq("right"))
+	"m" : { put(a, aligneq("left") || valigneq("center")); skip_bracket() }
+	"b" : { put(a, aligneq("left") || valigneq("bottom")); skip_bracket() }
+	"@" | "<" | ">" | "!" : skip_bracket()
+        "|" : &null
+        default : &null		# unrecognized...
+      }
+  }
+  return a
+end
+#line 1813 "l2h.nw"
+procedure skip_bracket()
+  if ="{" then {
+    n := 1
+    while n > 0 & not pos(0) do {
+      tab(upto('{}\\') | 0)
+      case move(1) of {
+        "{" : n +:= 1
+	"}" : n -:= 1
+	"\\" : move(1)
+      }
+    }
+  }
+  return
+end
+#line 1831 "l2h.nw"
+procedure Cmulticolumn(S, cs, cl)
+  local this
+  this := S.tables[1]
+  n := integer(csarg()) | error("\\multicolumn or \\multispan not followed by integer")
+  if cs == "multicolumn" then a := alignments(csarg())
+# write(&errout, "\\", cs, "  n = ", n, ",  a = ", (\a)[1] | "???", 
+#      ", text = ", image(S.text))
+  if /this then return		# \multicolumn without table?
+  this.width := n
+  this.alignment := (\a)[1]
+  return
+end
+
+procedure Cspan(S, cs, cl)
+  (\S.tables[1]).width +:= 1
+  return
+end
+#line 1850 "l2h.nw"
+procedure Cnoalign(S, cs, cl)
+  apply_args(S, finish_noalign, [S], 1)
+  return
+end
+
+procedure finish_noalign(S, arg)
+  return if \S.ignoring then "" else 
+  accumulate_text(S, "<br>" || convert(converter("V"), "{" || arg || "}") || "<br>")
+end
+#line 1862 "l2h.nw"
+procedure auxfile(cs, ext, placeholder, header, trailer, ignore)
+  cstab[cs] := Cauxfile
+  csclosure[cs] := aux_cl(ext, placeholder, header, trailer, \ignore | "")
+end
+#line 1869 "l2h.nw"
+record aux_cl(ext, placeholder, header, trailer, ignore)
+
+procedure Cauxfile(S, cs, cl)
+  local auxfile, T
+  if auxfile := open(basename(\curfile) || "." || cl.ext) then {
+    T := converter("V")
+    Cmakeatletter(T)
+    S.text(S, \cl.header)
+    while line := read(auxfile) do 
+      S.text(S, convert(T, line || "\n"))
+    close(auxfile)
+    S.text(S, \cl.trailer)
+  } else {
+    S.text(S, \cl.placeholder)
+  }
+  cs_ignore(S, cs, cl.ignore)
+  if \auxfile then return
+end
+#line 1888 "l2h.nw"
+procedure basename(name)
+  reverse(name) ? {
+    tab(upto('.')) & ="."
+    return reverse(tab(0))
+  }
+end
+#line 1901 "l2h.nw"
+procedure Ctableofcontents(S, cs, cl)
+  S.mode := "V"
+  Cauxfile(S, cs, cl)
+  set_toclevel(S)
+end
+#line 1910 "l2h.nw"
+procedure set_toclevel(S, l)
+  static toclevel, initiallevel
+  if /initiallevel := \l then
+    S.text(S, "<ul compact>")
+  if /l := \initiallevel then
+    S.text(S, "</ul>")
+  if /l then return  # never set a level
+  /toclevel := l
+  while toclevel < l do {
+    S.text(S, "<ul compact>")
+    toclevel +:= 1
+  }
+  while toclevel > l do {
+    S.text(S, "</ul>")
+    toclevel -:= 1
+  }
+  return
+end
+#line 1931 "l2h.nw"
+procedure Ccontentsline(S, cs, cl) 
+  local type, level
+  static leveltab
+  initial { 
+#line 1945 "l2h.nw"
+l := ["part", "chapter", "section", "subsection", "subsubsection", 
+      "paragraph", "subparagraph"]
+leveltab := table()
+every i := 1 to *l do
+  leveltab[l[i]] := i - 2  # making section level 1
+#line 1934 "l2h.nw"
+                                                       }
+  l := \leveltab[csarg()] | fail
+  if l > \countertab["tocdepth"] then
+    cs_ignore(S, cs, "{{") # skip this one
+  else {
+    set_toclevel(S, l)
+    S.text(S, "<li>")
+    after_next_open(S, after_next_close, [S, cs_ignore, [S, cs, "{"]])
+  }
+end
+#line 1953 "l2h.nw"
+global countertab
+
+procedure Csetcounter(S, cs, cl)
+  local counter
+  (counter := csarg(), countertab[counter] := integer(csarg())) | 
+	cs_ignore(S, cs, "{{")
+end
+#line 1967 "l2h.nw"
+global accent_name, accent_valid
+#line 1998 "l2h.nw"
+procedure accent(cs)
+  cstab[cs] := Caccent
+end
+
+procedure Caccent(S, cs, cl)
+  static warned
+  initial warned := table()
+  arg := csarg(S) | return
+  if arg == "\\i" then arg := "i"
+  if arg == "\\j" then arg := "j"
+  if *arg = 1 & any(accent_valid[cs], arg) then
+    S.text(S, "&" || arg || accent_name[cs] || ";")
+  else {
+    
+#line 2016 "l2h.nw"
+/warned[cs] := set()
+if not member(warned[cs], arg) then {
+  write(&errout, "Warning: Can't handle \\", cs, " with arg `", arg, "'")
+  insert(warned[cs], arg)
+}
+#line 2012 "l2h.nw"
+    S.text(S, arg)
+  }
+end
+#line 2026 "l2h.nw"
+procedure fontchange(tex, html)
+  cstab[tex] := Cfontchange
+  csclosure[tex] := html
+end
+#line 2031 "l2h.nw"
+procedure Cfontchange(S, tex, html)
+  S.text(S, tag(html))
+  before_next_close(S, emit_text, [S, endtag(html)])
+end
+#line 2051 "l2h.nw"
+procedure ignore(cs, template)
+  /template := ""
+  cstab[cs] := cs_ignore
+  csclosure[cs] := template
+end
+
+procedure ignoreenv(env, template)
+  /template := ""
+  begintab[env] := cs_ignore
+  begincl[env] := template
+  endtab[env] := do_nothing
+end
+#line 2070 "l2h.nw"
+procedure cs_ignore(S, cs, template, proc, args)
+  local saved_ignore
+  saved_ignore := S.ignoring
+  S.ignoring := 1
+  if type(template) == "integer" then template := repl("{", template)
+  return do_ignore(S, template, saved_ignore, proc, args)
+end
+#line 2084 "l2h.nw"
+procedure do_ignore(S, template, saved_ignore, proc, args)
+  if *template > 0 then
+    if optwhite() & pos(0) then
+      after_next_newtext(S, do_ignore, [S, template, saved_ignore, proc, args])
+    else
+      case template[1] of {
+        "{" : { S.ignoring := 1
+                after_next_open(S, ignore_til_close, 
+			              [S, template[2:0], saved_ignore, proc, args])
+              }
+        "A" : { csarg(S) # had better be in one input
+                do_ignore(S, template[2:0], saved_ignore, proc, args)
+              }
+        "[" : if optwhite() & ="[" then {
+                delay_newtext(S)
+		with_upto_bracket(S, "", ignore_bracket_plus,
+  		                            [S, template[2:0], saved_ignore, proc, args])
+              } else
+                do_ignore(S, template[2:0], saved_ignore, proc, args)
+        "C" : # a total cheat, means ``copy optional arg''
+              if optwhite() & ="[" then {
+                S.ignoring := &null
+                delay_newtext(S)
+		with_upto_bracket(S, "", copy_bracket_plus,
+  		                            [S, template[2:0], saved_ignore, proc, args])
+              } else
+                do_ignore(S, template[2:0], saved_ignore, proc, args)
+        "=" : { delay_newtext(S)
+                eat_assignment(S, do_ignore, [S, template[2:0], saved_ignore, proc,args])
+              }
+        "*" : { (="*", optwhite())
+                do_ignore(S, template[2:0], saved_ignore, proc, args)
+              }
+        "(" : { (="(", tab(upto(')')), =")", optwhite())
+                do_ignore(S, template[2:0], saved_ignore, proc, args)
+              }
+      }
+  else {
+    S.ignoring := saved_ignore
+    (\proc)!(\args)
+  }
+end
+
+procedure ignore_til_close(S, template, saved_ignore, proc, args)
+  before_next_close(S, do_ignore, [S, template, saved_ignore, proc, args])
+end
+#line 2133 "l2h.nw"
+procedure do_nothing(S, cs, cl)
+  return
+end
+#line 2144 "l2h.nw"
+procedure with_upto_bracket(S, bracketed_text, proc, args)
+  bracketed_text ||:= tab(upto(']') | 0)
+  if pos(0) then
+    before_next_newtext(S, with_upto_bracket, [S, bracketed_text, proc, args])
+  else {
+    ="]"
+    undelay_newtext(S)
+    (\proc)(S, bracketed_text, args)
+  }
+  return
+end    
+#line 2158 "l2h.nw"
+procedure ignore_bracket_plus(S, contents, args)
+  # contents are ignored
+  do_ignore!args
+end
+#line 2164 "l2h.nw"
+procedure copy_bracket_plus(S, contents, args)
+  local should_ignore
+  should_ignore := args[3] | fail  # saved_ignore arg to do_ignore
+  if /should_ignore then
+    S.text(S, convert(converter("H"), "{" || contents || "}"))
+  do_ignore!args
+end
+#line 2177 "l2h.nw"
+procedure eat_assignment(S, proc, args)
+  static decimal_chars, hex_chars, oct_chars
+  initial {
+    decimal_chars := &digits ++ '.,+-'
+    hex_chars := &digits ++ 'abcdefABCDEF'
+    oct_chars := '0124567'
+  }
+  optwhite()
+  ="="		# so what if we swallow multiple = signs
+  optwhite()
+  if pos(0) then {
+    before_next_newtext(S, eat_assignment, [S, proc, args])
+    return
+  } else if glue() then { # finished
+  } else if any(decimal_chars) then {
+    tab(many(decimal_chars))
+    optwhite()
+    if ="\\" then
+      tab(many(S.csletters)) | move(1)
+    # else assume assignment of the form \hangafter=2
+  } else if ="\"" then {
+    tab(many(hex_chars)) & optwhite()
+  } else if ="\'" then {
+    tab(many(oct_chars)) & optwhite()
+  } else if =("\\"|"`\\") then
+    tab(many(S.csletters)) | move(1)
+  undelay_newtext(S)
+  (\proc)!args
+end
+#line 2207 "l2h.nw"
+procedure dimen()
+  static decimal_chars
+  initial decimal_chars := &digits ++ '.,'
+  suspend (optwhite(), 
+           if any('+-') then (move(1), optwhite()) else "",
+           tab(many(decimal_chars)), optwhite(), 
+           (="true", optwhite()) | &null,
+           =("em"|"ex"|"pt"|"pc"|"in"|"bp"|"cm"|"mm"|"dd"|"cc"|"sp"|"mu"))
+end
+#line 2217 "l2h.nw"
+procedure glue() 
+  suspend (dimen(), 
+           (optwhite(), ="plus",  dimen()) | "", 
+           (optwhite(), ="minus", dimen()) | "")
+end
+#line 2231 "l2h.nw"
+procedure substitution(tex, html, ignore_template)
+  # ignore mode for now
+  cstab[tex] := Cemit_ig
+  csclosure[tex] := emit_ig_cl(html, \ignore_template | "")
+end
+#line 2239 "l2h.nw"
+record emit_ig_cl(html, template)
+
+procedure Cemit_ig(S, cs, cl)
+  emit_text(S, cl.html)
+  if *cl.template > 0 then 
+    cs_ignore(S, cs, cl.template)
+end
+#line 2249 "l2h.nw"
+procedure activesubst(char, html, ignore_template)
+  local S
+  # ignore mode for now
+  activetab[char] := Cemit_ig
+  activeclosure[char] := emit_ig_cl(html, \ignore_template | "")
+  S := \dynamic_add_hack | return
+  if upto(S.activechars, char) then return # already active
+  if S.activechars ++:= cset(char) then {
+    before_next_close(S, delete_active_char, [S, char])
+  } else impossible("ugh")
+  return
+end
+
+procedure delete_active_char(S, char)
+  S.activechars --:= char
+  return
+end
+#line 2282 "l2h.nw"
+procedure envblock(env, left, right, ignore_template)
+  /ignore_template := ""
+  begintab[env] := Cemit_ig
+  begincl[env] := emit_ig_cl(if /right then tag(left) else left, ignore_template)
+  endtab[env] := Cemit
+  endcl[env] := if /right then endtag(left) else right
+end
+#line 2291 "l2h.nw"
+procedure Cemit(S, cs, cl)
+  S.text(S, cl)
+end
+#line 2303 "l2h.nw"
+record blockpair(left, right, ignore)
+
+procedure argblock(tex, html, right, ignore)
+  # called as is envblock
+  /ignore := ""
+  cstab[tex] := Cblock
+  csclosure[tex] := 
+    if /right then blockpair (tag(html),  endtag(html), ignore)
+    else blockpair (html, right, ignore)
+end
+#line 2316 "l2h.nw"
+procedure argblockv(tex, html, right, ignore)
+  argblock(tex, html, right, ignore)
+  cstab[tex] := CblockV
+end
+#line 2321 "l2h.nw"
+procedure Cblock(S, cs, cl, done_ignoring)
+  if /done_ignoring & *cl.ignore > 0 then {
+    cs_ignore(S, cs, cl.ignore, Cblock, [S, cs, cl, 1])
+  } else if pos(0) then {
+    after_next_newtext(S, do_cs, [S, cs, cl])
+  } else if match("{") then {
+    S.text(S, cl.left)
+    after_next_open(S, before_next_close, [S, emit_text, [S, cl.right]])
+  } else {
+#    S.text(S, cl.left || csarg(S) || cl.right)
+    apply_args(S, Cblock_continue, [S, cl], 1)
+  }
+  return
+end
+
+procedure Cblock_continue(S, cl, title)
+  S.text (S, cl.left || title || cl.right)
+  return
+end
+#line 2341 "l2h.nw"
+procedure CblockV(S, cs, cl)
+  S.mode := "V"
+  Cblock(S, cs, cl)
+  return
+end
+#line 2353 "l2h.nw"
+record macro_defn(name, arg_count, body, mode)
+#line 2357 "l2h.nw"
+record raw_arg(number)
+record converted_arg(number, mode)
+#line 2361 "l2h.nw"
+procedure expand_macro(S, macro, args)
+  every a := !macro.body do 
+    case type(a) of {
+      "string"  : emit_text(S, a)
+      "raw_arg" : emit_text(S, args[a.number]) | impossible("missing arg")
+      "converted_arg" : S.text(S, convert(S, "{" || args[a.number] || "}"))
+    }
+#  poptrace()
+  return
+end
+#link pushtrace
+#line 2375 "l2h.nw"
+procedure do_macro(S, macro, args_seen, current_arg, brace_depth)
+  # invariant : we have an open brace
+#  write(&errout, "scanning args for macro ", macro.name)  
+#  write(&errout, "seen ", *args_seen, " want ", macro.arg_count)  
+  while *args_seen < macro.arg_count & not pos(0) do {
+    while *args_seen < macro.arg_count & brace_depth = 0 & not pos(0) do {
+#  write(&errout, "seen ", *args_seen, " want ", macro.arg_count,
+#	 " current ", image(current_arg), " braces ", brace_depth)  
+      tab(many(' \t\n'))
+      case c := move(1) of {
+        "\\" : put(args_seen, "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1))
+        "{"  :  { current_arg := "" ; brace_depth := 1 }
+        "}"  :  { error("Insufficient arguments to macro ", macro.name) }
+        default : put(args_seen, c)
+      }
+    }
+    while brace_depth > 0 & not pos(0) do {
+#  write(&errout, "seen ", *args_seen, " want ", macro.arg_count,
+#	 " current ", image(current_arg), " braces ", brace_depth)  
+      current_arg ||:= tab(upto('\\{}') | 0)
+      case move(1) of {
+        "\\" : current_arg ||:= "\\" ||
+                 if pos(0) then ""
+                 else if any(S.csletters) then tab(many(S.csletters))
+                 else move(1)
+        "{"  :  { current_arg ||:= "{" ; brace_depth +:= 1 }
+        "}"  :  { brace_depth -:= 1
+		  if brace_depth > 0 then
+		    current_arg ||:= "}"
+		  else {
+		    put(args_seen, current_arg)
+		    current_arg := ""
+		  }
+		}
+      }
+    }
+  }
+#  write(&errout, "seen ", *args_seen, " want ", macro.arg_count,
+#	 " current ", image(current_arg), " braces ", brace_depth)  
+  if *args_seen = macro.arg_count then {
+#    write(&errout, "Arguments for macro ", macro.name, ":")
+#    every write(&errout, "\t", image(!args_seen))
+    expand_macro(S, macro, args_seen)
+    undelay_newtext(S)
+  } else
+    before_next_newtext(S, do_macro, [S, macro, args_seen, current_arg, brace_depth])
+  return
+end
+#line 2428 "l2h.nw"
+procedure Cmacro(S, cs, cl)
+#  pushtrace("MACRO")
+  delay_newtext(S)
+#   apply_args(S, closure(expand_macro, [cl]), cl.arg_count)
+  do_macro(S, cl, [], "", 0)
+  return
+end
+#line 2439 "l2h.nw"
+procedure macro(name, arg_count, body, mode)
+  m := macro_defn(name, arg_count, parse_body(body), mode)
+  cstab[name] := Cmacro
+  csclosure[name] := m
+  return
+end      
+
+procedure begin_macro(env, arg_count, body, mode)
+  m := macro_defn(env, arg_count, parse_body(body), mode)
+  begintab[env] := Cmacro
+  begincl[env] := m
+  return
+end      
+
+procedure parse_body(body)
+  b := []
+  body ? {
+    put(b, tab(upto('#') | 0))
+    while ="#" do {
+      put(b, ="#" | (="$", raw_arg(argnum())) | converted_arg(argnum())) |
+	                                    error("malformed macro arg #", tab(0))
+      put(b, tab(upto('#') | 0))
+    }
+  }
+  return b
+end
+
+procedure argnum()
+  if any(&digits) then return integer(move(1)) else fail
+end
+#line 2472 "l2h.nw"
+procedure l2h_macro(name, count, body[])
+  count := integer(count) |
+      return error("must give # of arguments to l2h macro ", name)
+  s := ""
+  every s ||:= " " || (1(b := !body, type(b) == "string"))
+  s := s[2:0] # strip leading space if any
+  return macro(name, count, s)
+end
+#line 2482 "l2h.nw"
+procedure l2h_environment(env, count, body[])
+  count := integer(count) |
+      return error("must give # of arguments to l2h environment ", env)
+  s := ""
+  every s ||:= " " || (1(b := !body, type(b) == "string"))
+  s := s[2:0] # strip leading space if any
+  return begin_macro(env, count, s)
+end
+#line 2497 "l2h.nw"
+record table_closure(args, amp, open, close)
+
+procedure table_env(env, args, amp, open, close)
+  begintab[env] := Ctable
+  begincl[env] := table_closure(args, amp, 
+                                      if /close then tag(\open)    | &null else open,
+                                      if /close then endtag(\open) | &null else close)
+  endtab[env] := Ctable_end
+  endcl[env] := []
+end
+#line 2508 "l2h.nw"
+procedure Ctable(S, env, cl)
+  local amp
+##  amp := S.ampersand
+##  S.ampersand := cl.amp
+  S.text(S, \cl.open)
+  push(endcl[env], amp)
+  cs_ignore(S, env, cl.args)
+end
+
+procedure Ctable_end(S, env, cl)
+#  S.ampersand := pop(cl)
+  S.text(S, \begincl[env].close)
+end
+#line 2524 "l2h.nw"
+procedure Cepsfig(S, cs, cl)
+  apply_args(S, do_epsfig, [S], 1)
+end
+
+procedure do_epsfig(S, arg) 
+  local args 
+  args := []
+  arg ? 
+    while not pos(0) do {
+      tab(many(' \t\n'))
+      put(args, eqsplit(tab(upto(',') | 0)))
+    }
+  if a := !args & a.name == ("file"|"figure") then
+    emit_text(S, "<a href=" || image(a.value) || "><b>[</b>PostScript figure " ||
+	          a.value || "<b>]</b></a>")
+  else
+    emit_text(S, "<b>[</b>Ill-understood PostScript figure<b>]</b>")
+end
+
+record apair(name, value)
+
+procedure eqsplit(s)
+  p := apair()
+  s ? (p.name := tab(upto('=')), ="=", p.value := tab(0))
+  return p
+end
+#line 2552 "l2h.nw"
+procedure Cincludegraphics(S, cs, cl)
+  local saved_ignore
+  saved_ignore := S.ignoring
+  S.ignoring := 1
+  do_ignore(S, "[", saved_ignore, apply_args, [S, do_includegraphics, [S], 1])
+end
+
+procedure do_includegraphics(S, arg) 
+  local base, ext
+  if arg ? (base := tab(find(ext := ".ps" | ".eps" | ".epsi")), =ext, pos(0)) then
+    emit_text(S, "<a href=" || image(arg) || "><b>[</b>PostScript figure " ||
+	          arg || "<b>]</b></a>")
+  else if arg ? (base := tab(find(ext := ".png" | ".gif" | ".jpg")), =ext, pos(0)) then
+    emit_text(S, "<img src=" || image(arg) || ">")
+  else
+    emit_text(S, "<b>[</b>Ill-understood graphics<b>]</b>")
+end
+#line 2574 "l2h.nw"
+procedure let(lhs, rhs)
+  cstab[lhs] := cstab[rhs]
+  csclosure[lhs] := csclosure[rhs]
+end
+
+procedure let_closure(lhs, cl[])
+  csclosure[lhs] := if *cl = 1 then cl[1] else cl
+end
+
+procedure letenv(lhs, rhs)
+  begintab[lhs] := begintab[rhs]
+  endtab[lhs] := endtab[rhs]
+  begincl[lhs] := begincl[rhs]
+  endcl[lhs] := endcl[rhs]
+end
+#line 2595 "l2h.nw"
+procedure tag(html)
+   return "<" || html || ">"
+end
+
+procedure endtag(html)
+  return "</" || html || ">"
+end
+#line 2605 "l2h.nw"
+procedure Ccomment(S)
+  if *S.comment > 0 then {
+    S.text(S, "<!--")
+    S.comment ? {
+      while S.text(S, tab(find("--"))) do {
+        move(2)
+        S.text(S, "- - ")
+      }
+      S.text(S, tab(0))
+    }
+    S.text(S, "-->")
+  }
+  S.comment := ""
+  return
+end
+#line 2621 "l2h.nw"
+procedure Cparagraph(S)
+  S.text(S, "<p>")
+end
+#line 2625 "l2h.nw"
+procedure Cmath(S)
+  
+#line 915 "l2h.nw"
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+#line 2627 "l2h.nw"
+  S.text(S, "<i>")
+end
+
+procedure Cmath_end(S)
+  S.text(S, "</i>")
+  
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 2633 "l2h.nw"
+end
+#line 2635 "l2h.nw"
+procedure Cdisplaymath(S)
+  
+#line 915 "l2h.nw"
+push(S.closes, []) # fresh set of closing tasks
+while c := get(S.open) do
+  c.proc!c.args
+#line 2637 "l2h.nw"
+  S.text(S, "<blockquote><i>")
+end
+
+procedure Cdisplaymath_end(S)
+  S.text(S, "</i></blockquote>")
+  
+#line 919 "l2h.nw"
+while c := get(S.closes[1]) do
+  c.proc!c.args
+pop(S.closes)
+#line 2643 "l2h.nw"
+end
+#line 2645 "l2h.nw"
+procedure Cmakeatletter(S)
+  S.csletters ++:= '@'
+end
+
+procedure Cmakeatother(S)
+  S.csletters --:= '@'
+end
+#line 2655 "l2h.nw"
+procedure Ckill(S, cs, cl)
+  S.the_text := ""
+end
+#line 2673 "l2h.nw"
+global csfunctions
+#line 2700 "l2h.nw"
+global dynamic_add_hack
+procedure parse_dynamic_add(S)
+   if (optwhite(), =("l2h"|"sl2h"), skipwhite(), 
+       p := tab(upto(' \t')), 
+#line 2717 "l2h.nw"
+((p := \csfunctions[p]) | 
+{ dynamic_warn(p); fail })
+#line 2703 "l2h.nw"
+                                                                                 , 
+       skipwhite(), any(~'\n')) then {
+     a := []
+     while (any(~'\n'), l := tab(upto(' \t\n') | 0)) do {
+       put(a, if p === (l2h_macro|l2h_environment) then l else map(l, "#", " "))
+       skipwhite()
+     }
+     dynamic_add_hack := S
+     p!a
+     dynamic_add_hack := &null
+     return
+   }
+end
+#line 2720 "l2h.nw"
+procedure dynamic_warn(p)
+  static badprocs
+  initial badprocs := set()
+  if not member(badprocs, p) then {
+    write(&errout, "Warning: % l2h ", p, " not recognized -- ignored")
+    insert(badprocs, p)
+  }
+end
+#line 2732 "l2h.nw"
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+#line 2737 "l2h.nw"
+procedure skipwhite()
+  suspend tab(many(' \t'))
+end
+#line 2829 "l2h.nw"
+global errstatus
+procedure error(args[])
+  errstatus := 1
+  return write!([&errout, (\curfile || ":") | "line ", curline, ": "] ||| args)
+end
+#line 2878 "l2h.nw"
+procedure fatal(L[])
+  write!(["@fatal l2h "] ||| L)
+  write!([&errout, "noweb error in l2h: "] ||| L)
+  exit(1)
+end
+#line 2885 "l2h.nw"
+procedure rcsinfo () 
+  return "$Id: l2h.nw,v 1.24 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end
+#line 2745 "l2h.nw"
+procedure main(args)
+  local line
+  errstatus := 0
+  every arg := !args do
+    case arg of {
+      "-show-unknowns" : show_unknowns := 1
+      "-html-quotes"   : html_quotes := 1
+      default : fatal("unknown arg ", image(arg))
+    }
+  while line := read() do
+    apply(filter, line)
+  warn_unknown(\unknown_set, "control sequences", "\\")
+  warn_unknown(\unknown_envs, "environments", "{", "}")
+  if errstatus > 0 then
+    write("@fatal l2h Error occurred in l2h conversion")
+  exit(errstatus)
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 2771 "l2h.nw"
+global curfile, curline
+
+procedure filter(name, arg) 
+  static S, code
+  initial S := converter("V")
+###  write("               mode ", S.mode)
+  case name of {
+    "begin"    : {
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2778 "l2h.nw"
+                         ; if match("code ", arg) then code := 1}
+    "end"      : {if match("docs ", arg) then 
+#line 2795 "l2h.nw"
+if S.mode ~== "V" then write("@text <p>")
+#line 2780 "l2h.nw"
+                  
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2780 "l2h.nw"
+                         ; code := &null; S.mode := "V"}
+    "quote"    : { outtext("\0" ? convert(S)) }
+    "endquote" : { outtext("\1" ? convert(S)) }
+    "file"     : {
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2783 "l2h.nw"
+                         ; curfile := arg; curline := 1}
+    "line"     : {
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2784 "l2h.nw"
+                         ; curline := integer(arg)}
+    "defn"     : { write("@", name, " ", convert_use_or_def(arg)) }
+    "use"      : { write("@", name, " ", convert_use_or_def(arg)) }
+    "text"     : {if \code then 
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2787 "l2h.nw"
+                                        else outtext(arg ? convert(S)) }
+    "nl"       : {if \code then 
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2788 "l2h.nw"
+                                        else outtext("\n" ? convert(S)); curline +:= 1}
+    "fatal"    : {
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2789 "l2h.nw"
+                         ; exit(1)}
+    default    : {
+#line 2817 "l2h.nw"
+write("@", name, (" " || \arg) | "")
+#line 2790 "l2h.nw"
+                         }
+  }
+  return
+end
+#line 2799 "l2h.nw"
+procedure convert_use_or_def(s)
+  r := ""
+  s ? {
+    while r ||:= quickconv(tab(find("[["))) do {
+      (r ||:= ="[[") | fatal("impossible missing [[")
+      (r ||:= tab(find("]]")) || tab(many(']'))) |
+                fatal("impossible missing ]] in ", image(s))
+    }
+    return r || quickconv(tab(0))
+  }
+end
+
+procedure quickconv(s)
+  static C
+  initial C := converter("H")
+  return 1(("{" || s || "}" ? convert(C)), reset(C))
+end
+#line 2819 "l2h.nw"
+procedure outtext(s)
+  s ? 
+    while not pos(0) do
+      if ="\n" then write("@nl")
+      else if ="\0" then write("@quote")
+      else if ="\1" then write("@endquote")
+      else write("@text ", tab(upto('\n\0\1') | 0))
+  return
+end
