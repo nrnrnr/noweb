@@ -21,8 +21,6 @@ If we liked we could try to hack this by creating a predefined module that
 expands to an at sign, but I won't bother.
 
 <<*>>=
-static char rcsid[] = "$Id: markup.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,8 +33,6 @@ static char rcsname[] = "$Name: v2_12 $";
 <<data definitions>>
 
 <<C functions>>
-<<suppress warnings about [[rcsid]] and [[rcsname]]>>=
-(void)(rcsid); (void)(rcsname);
 @ 
 To quote from the man page:
 \begin{quote} 
@@ -72,7 +68,6 @@ int starts_doc(char *);
 char *first_doc_line(char *);
 <<C functions>>=
 int starts_doc(char *line) {
-    <<suppress warnings about [[rcsid]] and [[rcsname]]>>
     return (*line==at_sign && (line[1]=='\0' || isspace(line[1])));
 }
 

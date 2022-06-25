@@ -14,8 +14,6 @@ of the length of the longest line.
 [[getline_nw]] reuses the same internal buffers over and over, so subsequent
 calls destroy the results of previous calls.
 <<*>>=
-static char rcsid[] = "$Id: getline.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #define START_SIZE 128                  /* initial buffer size */
 
 #include <stdio.h>
@@ -58,8 +56,6 @@ char *getline_nw (FILE *fp) {
         if (fgets(buf1+strlen(buf1),buf_size-strlen(buf1),fp)==NULL)
             return buf1; /* end of file */
     }
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return buf1;
 }
 <<C functions>>=

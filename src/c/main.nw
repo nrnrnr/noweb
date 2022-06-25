@@ -4,8 +4,6 @@
 \section{Tangling}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: main.nw,v 2.25 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -46,8 +44,6 @@ int main(int argc, char **argv) {
 	  emit_module_named(stdout, argv[i]+2, locformat);
 
     nowebexit(NULL);
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return errorlevel;  /* slay warning */
 }
 @

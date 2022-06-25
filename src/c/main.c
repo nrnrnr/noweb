@@ -1,6 +1,4 @@
 #line 7 "main.nw"
-static char rcsid[] = "$Id: main.nw,v 2.25 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -11,7 +9,7 @@ static char rcsname[] = "$Name: v2_12 $";
 #include "modules.h"
 #include "modtrees.h"
 
-#line 25 "main.nw"
+#line 23 "main.nw"
 int main(int argc, char **argv) {
     int i;
     char *locformat = "";
@@ -24,10 +22,10 @@ int main(int argc, char **argv) {
 
     for (i=1; i<argc; i++) {
         
-#line 55 "main.nw"
+#line 51 "main.nw"
 if (*argv[i]=='-') {
     
-#line 71 "main.nw"
+#line 67 "main.nw"
     switch (argv[i][1]) {
         case 't': /* set tab size or turn off */
             if (isdigit(argv[i][2]))
@@ -47,16 +45,16 @@ if (*argv[i]=='-') {
         default:
             errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
      }
-#line 57 "main.nw"
+#line 53 "main.nw"
 } else {
     
-#line 92 "main.nw"
+#line 88 "main.nw"
 errormsg(Warning,
     "I can't handle arguments yet, so I'll just ignore `%s'",argv[i]);
 
-#line 59 "main.nw"
+#line 55 "main.nw"
 }
-#line 37 "main.nw"
+#line 35 "main.nw"
     }
 
     read_defs(stdin);                        /* read all the definitions */
@@ -69,7 +67,5 @@ errormsg(Warning,
 	  emit_module_named(stdout, argv[i]+2, locformat);
 
     nowebexit(NULL);
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return errorlevel;  /* slay warning */
 }

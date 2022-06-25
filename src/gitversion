@@ -1,0 +1,3 @@
+#!/bin/sh
+
+echo "Git version: $(git describe --abbrev=20  --dirty --always --tags)"

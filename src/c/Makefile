@@ -7,23 +7,22 @@ CFLAGS=
 
 # after installation, make doc.dvi for literate version
 
-FINDUSESOBJS=columns.o errors.o finduses.o match.o getline.o recognize.o
+FINDUSESOBJS=columns.o errors.o finduses.o match.o getline.o recognize.o gitversion.o
 MNTOBJS=mnt.o getline.o match.o modules.o modtrees.o notangle.o \
-	strsave.o errors.o columns.o
+	strsave.o errors.o columns.o gitversion.o
 TANGLEOBJS=notangle.o getline.o match.o modules.o modtrees.o strsave.o \
-	main.o errors.o columns.o
-MARKUPOBJS=markmain.o strsave.o markup.o errors.o getline.o columns.o
+	main.o errors.o columns.o gitversion.o
+MARKUPOBJS=markmain.o strsave.o markup.o errors.o getline.o columns.o gitversion.o
 FILES=markmain.nw markup.nw \
 	main.nw notangle.nw match.nw mnt.nw modules.nw modtrees.nw \
 	finduses.nw recognize.nw \
-	getline.nw columns.nw errors.nw strsave.nw
+	getline.nw columns.nw errors.nw strsave.nw gitversion.o
 
 SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
 	modules.h notangle.h recognize.h strsave.h \
 	columns.c errors.c getline.c finduses.c main.c markmain.c markup.c match.c \
 	mnt.c modtrees.c modules.c notangle.c nwmktemp.c recognize.c \
-	strsave.c markup.ps
-NAME='name of RCS version'
+	strsave.c markup.ps gitversion.o
 
 NOTANGLE=notangle
 SHELL=/bin/sh
@@ -89,12 +88,16 @@ doc.ps: doc.dvi
 markup.ps: markmain.nw
 	notangle -Rmarkup.dot markmain.nw | dot -Tps > $@
 
-FPOBJS=fakepretty.o pretty.o errors.o getline.o match.o strsave.o columns.o
+FPOBJS=fakepretty.o pretty.o errors.o getline.o match.o strsave.o columns.o gitversion.o
 
 fakepretty.o: pretty.h
 
 fakepretty: $(FPOBJS)
 	$(CC) $(CFLAGS) -o $@ $(FPOBJS)
+
+
+gitversion.c: ../gitversion ../../.git/refs/heads/master
+	echo 'const char gitversion[] = "'"$$(../gitversion)"'";' > $@
 
 
 columns.o:      columns.h

@@ -1,8 +1,7 @@
 #!/bin/sh
 # Copyright 1991 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
-# $Id: noweb.nw,v 1.3 1997/09/13 20:29:56 nr Exp $
-# $Name:  $
+# Git version: v2_12-19-g40f02fe6ad62d366ff88-dirty
 LIB=|LIBDIR|
 markup=$LIB/markup mntopt=-L status=0 tex=1 output=1
 while [ $# -gt 0 ]; do

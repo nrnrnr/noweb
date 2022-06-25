@@ -29,9 +29,9 @@ FFOORRMMAATT OOFF NNOOWWEEBB FFIILLEESS
        <<_c_h_u_n_k _n_a_m_e>>=
        on a line by itself.  The double left angle bracket (<<) must be in the
        first column.  Chunks are terminated by the beginning of another chunk,
-       or by end of file.  If the first line in the file  does  not  mark  the
-       beginning  of a chunk, it is assumed to be the first line of a documen‐
-       tation chunk.
+       or by end of file.  If the first line in the file does not mark the be‐
+       ginning  of a chunk, it is assumed to be the first line of a documenta‐
+       tion chunk.
 
        Documentation chunks contain text  that  is  ignored  by  _n_o_t_a_n_g_l_e  and
        copied verbatim to standard output by _n_o_w_e_a_v_e (except for quoted code).
@@ -73,8 +73,8 @@ TTAANNGGLLIINNGG
        options have effects only on one or the other.  The options are:
 
        --RR_n_a_m_e Expand the <<<<_n_a_m_e>>>> code chunk.  The --RR option can be  repeated,
-              in  which  case  each  chunk is written to the output.  If no --RR
-              option is given, expand the chunk named  <<<<*>>>>.
+              in which case each chunk is written to the output.  If no --RR op‐
+              tion is given, expand the chunk named  <<<<*>>>>.
 
        --LL_f_o_r_m_a_t
               Emit line number indications at chunk boundaries.  A line number
@@ -85,9 +85,9 @@ TTAANNGGLLIINNGG
               inserted between the percent sign and the `LL', in which case the
               line number will be adjusted by that amount.  If _f_o_r_m_a_t is omit‐
               ted,  the default format is that accepted by the C preprocessor:
-              `##lliinnee %%LL ""%%FF""%%NN'.  When using  the  --LL_f_o_r_m_a_t  option,  _n_o_t_a_n_g_l_e
-              ensures  that  all  text appears in the same column in input and
-              output.  _n_o_u_n_t_a_n_g_l_e ignores this option.
+              `##lliinnee %%LL ""%%FF""%%NN'.  When using the --LL_f_o_r_m_a_t option, _n_o_t_a_n_g_l_e en‐
+              sures that all text appears in the same column in input and out‐
+              put.  _n_o_u_n_t_a_n_g_l_e ignores this option.
 
               Common format strings include:
                  C              --LL''##lliinnee %%LL ""%%FF""%%NN''
@@ -100,9 +100,9 @@ TTAANNGGLLIINNGG
               thing sensible with ##lliinnee in its input, see the sshhaarrpplliinnee filter
               in the examples directory.
 
-       --tt_k    Copy tabs untouched from input  to  output,  and  use  tabs  for
-              indentation,  assuming  stops every _k columns.  By default, tabs
-              are expanded to spaces with stops every 8 columns.
+       --tt_k    Copy tabs untouched from input to output, and use tabs  for  in‐
+              dentation, assuming stops every _k columns.  By default, tabs are
+              expanded to spaces with stops every 8 columns.
 
        --ffiilltteerr _c_m_d
               Filter the _n_o_w_e_b source through _c_m_d after converting it to  tool
@@ -113,18 +113,18 @@ TTAANNGGLLIINNGG
 
        --mmaarrkkuupp _p_a_r_s_e_r
               Use _p_a_r_s_e_r to parse the input file.  Enables use of noweb  tools
-              on  files  in  other  formats;  for example, the nnuummaarrkkuupp parser
-              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
-              information.  For experts only.
+              on  files in other formats; for example, the nnuummaarrkkuupp parser un‐
+              derstands _n_u_w_e_b(1) format.  See _n_o_w_e_b_f_i_l_t_e_r_s(7) for more  infor‐
+              mation.  For experts only.
 
        --aawwkk || --cc || --iiccnn || --iiccoonn || --mmll || --mm33 || --ppaassccaall || --ff7777 || --ff9900 || --tteexx
               When  _n_o_u_n_t_a_n_g_l_e  transforms documentation chunks into comments,
-              use the comment  format  of  the  language  named.   --cc  is  the
-              default.  _n_o_t_a_n_g_l_e ignores these options.
+              use the comment format of the language named.   --cc  is  the  de‐
+              fault.  _n_o_t_a_n_g_l_e ignores these options.
 
        --ww_n    When  _n_o_u_n_t_a_n_g_l_e  transforms documentation chunks into comments,
-              create comments on lines of  width  _n.   _n_o_t_a_n_g_l_e  ignores  this
-              option.
+              create comments on lines of width _n.  _n_o_t_a_n_g_l_e ignores this  op‐
+              tion.
 
 WWEEAAVVIINNGG
        Output  from _n_o_w_e_a_v_e can be used in _T_e_X documents that \\iinnppuutt nnwwmmaacc,, in
@@ -147,8 +147,8 @@ WWEEAAVVIINNGG
 
        _n_o_w_e_a_v_e  has  options that dictate choice of formatter and that support
        different formatting idioms and tools.   Basic  options  are  described
-       here;  options  related  to  index  and cross-reference information are
-       described in the INDEXING AND CROSS-REFERENCE section.
+       here;  options related to index and cross-reference information are de‐
+       scribed in the INDEXING AND CROSS-REFERENCE section.
 
        --llaatteexx Emit LaTeX, including wrapper in aarrttiiccllee style  with  the  nnoowweebb
               package and page style. (Default)
@@ -189,9 +189,9 @@ WWEEAAVVIINNGG
 
        --mmaarrkkuupp _p_a_r_s_e_r
               Use  _p_a_r_s_e_r to parse the input file.  Enables use of noweb tools
-              on files in other formats;  for  example,  the  nnuummaarrkkuupp  parser
-              understands  _n_u_w_e_b(1)  format.   See  _n_o_w_e_b_f_i_l_t_e_r_s(7)  for  more
-              information.  For experts only.
+              on files in other formats; for example, the nnuummaarrkkuupp parser  un‐
+              derstands  _n_u_w_e_b(1) format.  See _n_o_w_e_b_f_i_l_t_e_r_s(7) for more infor‐
+              mation.  For experts only.
 
        --ooppttiioonn _o_p_t
               Adds \\nnoowweebbooppttiioonnss{{_o_p_t}} to the _L_a_T_e_X header.  See  _n_o_w_e_b_s_t_y_l_e_(_1_)
@@ -222,19 +222,19 @@ IINNDDEEXXIINNGG AANNDD CCRROOSSSS--RREEFFEERREENNCCEE
        cross-reference information for  chunks  and  for  programming-language
        identifiers.   Identifier definitions may be marked by hand using back‐
        ticks (`); the --ffiilltteerr bbttddeeffnn option recognizes  these  markings.   For
-       some  languages,  definitions  may  be  found  automatically  using the
-       --aauuttooddeeffss option.  This section describes the indexing and cross-refer‐
-       ence options; it might well be skipped on first reading.
+       some  languages,  definitions may be found automatically using the --aauu‐‐
+       ttooddeeffss option.  This section describes the indexing and cross-reference
+       options; it might well be skipped on first reading.
 
        --xx     For  _L_a_T_e_X_, add a page number to each chunk name identifying the
               location of that chunk's definition,  and  emit  cross-reference
-              information  relating  definitions  and  uses.  For _H_T_M_L_, create
-              hypertext links between uses and definitions  of  chunks.   When
+              information relating definitions and uses.  For _H_T_M_L_, create hy‐
+              pertext links between uses  and  definitions  of  chunks.   When
               nnoowweeaavvee --xx is used with _L_a_T_e_X_, the control sequence \\nnoowweebbcchhuunnkkss
               expands to a sorted list of all code chunks.
 
-       --iinnddeexx Build  cross-reference  information  (or  hypertext  links)  for
-              defined  identifiers.   Definitions are those found in the input
+       --iinnddeexx Build cross-reference information (or hypertext links)  for  de‐
+              fined  identifiers.   Definitions  are  those found in the input
               files by --aauuttooddeeffss _l_a_n_g_u_a_g_e or by --ffiilltteerrbtdefn.  Requires _L_a_T_e_X
               or  _H_T_M_L_.   --iinnddeexx  implies  --xx;;  including  both  will generate
               strange-looking output.  _n_o_w_e_a_v_e does not generate  cross-refer‐
@@ -249,8 +249,8 @@ IINNDDEEXXIINNGG AANNDD CCRROOSSSS--RREEFFEERREENNCCEE
 
        --aauuttooddeeffss _l_a_n_g
               Discover  identifier  definitions automatically.  Code in chunks
-              must be in  language  _l_a_n_g.   Permissible  _l_a_n_gs  vary  but  may
-              include tteexx or iiccoonn..  Useless without --iinnddeexx,, which it must pre‐
+              must be in language _l_a_n_g.  Permissible _l_a_n_gs vary  but  may  in‐
+              clude  tteexx  or iiccoonn..  Useless without --iinnddeexx,, which it must pre‐
               cede.
 
        --sshhoowwaauuttooddeeffss

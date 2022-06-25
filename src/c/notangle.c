@@ -1,8 +1,6 @@
 #line 18 "notangle.nw"
-static char rcsid[] = "$Id: notangle.nw,v 2.25 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #define MAX_MODNAME 255
-#line 23 "notangle.nw"
+#line 21 "notangle.nw"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,30 +13,28 @@ static char rcsname[] = "$Name: v2_12 $";
 #include "match.h"
 #include "notangle.h"
 
-#line 163 "notangle.nw"
+#line 159 "notangle.nw"
 static void warn_dots(char *modname);          /* warn about names ending in ... */
 
-#line 182 "notangle.nw"
+#line 178 "notangle.nw"
 void insist(char *line, char *keyword, char *msg);
 
-#line 37 "notangle.nw"
+#line 35 "notangle.nw"
 void emit_module_named (FILE *out, char *rootname, char *locformat) {
     Module root = NULL; /* ptr to root module */
 
     root = lookup(rootname);
     
-#line 167 "notangle.nw"
+#line 163 "notangle.nw"
 if (root==NULL) {
     errormsg(Fatal, "The root module <<%s>> was not defined.", rootname);
     return;
 }
-#line 42 "notangle.nw"
+#line 40 "notangle.nw"
     (void) expand(root,0,0,0,locformat,out);
     putc('\n',out);                     /* make output end with newline */
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
 }
-#line 58 "notangle.nw"
+#line 54 "notangle.nw"
 void read_defs(FILE *in) {
     char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
                                          [[""]] if no module is being read */ 
@@ -49,13 +45,13 @@ void read_defs(FILE *in) {
     while ((line = getline_nw(in)) != NULL) {
         if (is_keyword(line, "fatal")) exit(1);
         
-#line 103 "notangle.nw"
+#line 99 "notangle.nw"
 if (is_keyword(line, "nl") || is_index(line, "nl")) {
     loc.lineno++;
-#line 115 "notangle.nw"
+#line 111 "notangle.nw"
 } else if (is_keyword(line,"file")) {
     
-#line 128 "notangle.nw"
+#line 124 "notangle.nw"
 { char temp[MAX_MODNAME+1];
   if (strlen(line) >= MAX_MODNAME + strlen("@file "))
     overflow("file name size");
@@ -63,44 +59,44 @@ if (is_keyword(line, "nl") || is_index(line, "nl")) {
   temp[strlen(temp)-1]='\0';
   loc.filename = strsave(temp);
 }
-#line 117 "notangle.nw"
+#line 113 "notangle.nw"
     loc.lineno = 1;
 } else if (is_keyword(line, "line")) {
     
-#line 136 "notangle.nw"
+#line 132 "notangle.nw"
 { char temp[MAX_MODNAME+1];
   if (strlen(line) >= MAX_MODNAME + strlen("@line "))
     overflow("file name size");
   strcpy(temp,line+strlen("@line "));
   temp[strlen(temp)-1]='\0';
   
-#line 145 "notangle.nw"
+#line 141 "notangle.nw"
 { char *p;
   for (p = temp; *p; p++)
     if (!isdigit(*p)) 
       errormsg(Error, "non-numeric line number in `@line %s'", temp);
 }
-#line 142 "notangle.nw"
+#line 138 "notangle.nw"
   loc.lineno = atoi(temp);
 }
-#line 120 "notangle.nw"
+#line 116 "notangle.nw"
     loc.lineno--;
-#line 106 "notangle.nw"
+#line 102 "notangle.nw"
 } 
 if (!is_begin(line, "code"))
     continue;
-#line 68 "notangle.nw"
+#line 64 "notangle.nw"
         
-#line 99 "notangle.nw"
+#line 95 "notangle.nw"
 do { line = getline_nw(in);
 } while (line != NULL && !is_keyword(line,"defn") && !is_keyword(line,"text"));
-#line 69 "notangle.nw"
+#line 65 "notangle.nw"
         insist(line,"defn","code chunk had no definition line");
         
-#line 125 "notangle.nw"
+#line 121 "notangle.nw"
 strcpy(modname,line+strlen("@defn "));
 modname[strlen(modname)-1]='\0';
-#line 71 "notangle.nw"
+#line 67 "notangle.nw"
         warn_dots(modname);       /* names ending in ... aren't like web */
         modptr = insert(modname); /* find or add module in table */
 
@@ -120,10 +116,10 @@ modname[strlen(modname)-1]='\0';
             } else if (is_index(line, "nl")) {
                 loc.lineno++;
             
-#line 115 "notangle.nw"
+#line 111 "notangle.nw"
 } else if (is_keyword(line,"file")) {
     
-#line 128 "notangle.nw"
+#line 124 "notangle.nw"
 { char temp[MAX_MODNAME+1];
   if (strlen(line) >= MAX_MODNAME + strlen("@file "))
     overflow("file name size");
@@ -131,59 +127,59 @@ modname[strlen(modname)-1]='\0';
   temp[strlen(temp)-1]='\0';
   loc.filename = strsave(temp);
 }
-#line 117 "notangle.nw"
+#line 113 "notangle.nw"
     loc.lineno = 1;
 } else if (is_keyword(line, "line")) {
     
-#line 136 "notangle.nw"
+#line 132 "notangle.nw"
 { char temp[MAX_MODNAME+1];
   if (strlen(line) >= MAX_MODNAME + strlen("@line "))
     overflow("file name size");
   strcpy(temp,line+strlen("@line "));
   temp[strlen(temp)-1]='\0';
   
-#line 145 "notangle.nw"
+#line 141 "notangle.nw"
 { char *p;
   for (p = temp; *p; p++)
     if (!isdigit(*p)) 
       errormsg(Error, "non-numeric line number in `@line %s'", temp);
 }
-#line 142 "notangle.nw"
+#line 138 "notangle.nw"
   loc.lineno = atoi(temp);
 }
-#line 120 "notangle.nw"
+#line 116 "notangle.nw"
     loc.lineno--;
-#line 90 "notangle.nw"
+#line 86 "notangle.nw"
             } else if (!is_keyword(line, "index"))
                 
-#line 184 "notangle.nw"
+#line 180 "notangle.nw"
 errorat(loc.filename, loc.lineno, Error, "botched code chunk `%s'", line);
-#line 92 "notangle.nw"
+#line 88 "notangle.nw"
             line = getline_nw(in);
         }
         
-#line 178 "notangle.nw"
+#line 174 "notangle.nw"
 if (line==NULL) {
     impossible("End of file occurred in mid-module");
 }
-#line 95 "notangle.nw"
+#line 91 "notangle.nw"
     }
 }
-#line 156 "notangle.nw"
+#line 152 "notangle.nw"
 static
 void warn_dots(char *modname) {
   if (!strcmp(modname+strlen(modname)-3,"...")) 
     errormsg(Warning, "Module name <<%s>> isn't completed as in web", 
              modname);
 }
-#line 172 "notangle.nw"
+#line 168 "notangle.nw"
 void insist(char *line, char *keyword, char *msg) {
   
-#line 178 "notangle.nw"
+#line 174 "notangle.nw"
 if (line==NULL) {
     impossible("End of file occurred in mid-module");
 }
-#line 174 "notangle.nw"
+#line 170 "notangle.nw"
   if (!is_keyword(line,keyword))
     impossible(msg);
 }

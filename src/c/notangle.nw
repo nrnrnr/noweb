@@ -15,8 +15,6 @@ details later.
 <<header>>=
 void emit_module_named (FILE *out, char *rootname, char *locformat);
 <<*>>=
-static char rcsid[] = "$Id: notangle.nw,v 2.25 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #define MAX_MODNAME 255
 @
 <<*>>=
@@ -41,8 +39,6 @@ void emit_module_named (FILE *out, char *rootname, char *locformat) {
     <<quit if we couldn't find the root>>
     (void) expand(root,0,0,0,locformat,out);
     putc('\n',out);                     /* make output end with newline */
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
 }
 @ 
 We loop looking for the start of a code chunk.

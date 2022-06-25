@@ -1,6 +1,4 @@
 #line 5 "finduses.nw"
-static char rcsid[] = "$Id: finduses.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,26 +7,26 @@ static char rcsname[] = "$Name: v2_12 $";
 #include "match.h"
 #include "getline.h"
 #include "recognize.h"
-#line 21 "finduses.nw"
+#line 19 "finduses.nw"
 static Recognizer nwindex;
 #define ALPHANUM "_'@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#"
 #define SYMBOLS "!%^&*-+:=|~<>./?`"
 /* note $ and \ both delimiters */
-#line 29 "finduses.nw"
+#line 27 "finduses.nw"
 static int showquotes = 1;
-#line 96 "finduses.nw"
+#line 93 "finduses.nw"
 typedef struct line_and_outfile {
     char *line;
     FILE *out;
 } LineOut;
-#line 65 "finduses.nw"
+#line 62 "finduses.nw"
 static void read_ids(FILE *in);
-#line 101 "finduses.nw"
+#line 98 "finduses.nw"
 static void add_use_markers(FILE *in, FILE *out);
-#line 153 "finduses.nw"
+#line 150 "finduses.nw"
 static void write_index_use(void *closure, char *id, char *instance);
 static char *emit_up_to(FILE *f, char *s, char *limit);
-#line 33 "finduses.nw"
+#line 31 "finduses.nw"
 int main(int argc, char **argv) {
     FILE *fp;
     int i;
@@ -42,18 +40,18 @@ int main(int argc, char **argv) {
     nwindex = new_recognizer(ALPHANUM, SYMBOLS);
     if (i == argc) {
        
-#line 76 "finduses.nw"
+#line 73 "finduses.nw"
 {   FILE *tmp = tmpfile();
     char *line;
     if (tmp == NULL) 
-#line 156 "finduses.nw"
+#line 153 "finduses.nw"
 errormsg(Fatal, "%s: couldn't open temporary file\n", progname);
-#line 79 "finduses.nw"
+#line 76 "finduses.nw"
     while ((line = getline_nw(stdin)) != NULL) {
         if (fputs(line, tmp) == EOF) 
-#line 158 "finduses.nw"
+#line 155 "finduses.nw"
 errormsg(Fatal, "%s: error writing temporary file\n", progname);
-#line 81 "finduses.nw"
+#line 78 "finduses.nw"
         if (is_index(line, "defn")) {
             if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
             add_ident(nwindex, line+1+5+1+4+1);
@@ -68,10 +66,10 @@ errormsg(Fatal, "%s: error writing temporary file\n", progname);
     stop_adding(nwindex);
     add_use_markers(tmp, stdout);
 }
-#line 46 "finduses.nw"
+#line 44 "finduses.nw"
     } else {
        
-#line 57 "finduses.nw"
+#line 54 "finduses.nw"
 for (; i < argc; i++)
     if ((fp=fopen(argv[i],"r"))==NULL)
         errormsg(Error, "%s: couldn't open file %s\n", progname, argv[i]);
@@ -79,15 +77,14 @@ for (; i < argc; i++)
         read_ids(fp);
         fclose(fp);
     }
-#line 48 "finduses.nw"
+#line 46 "finduses.nw"
        stop_adding(nwindex);
        add_use_markers(stdin, stdout);
     }
     nowebexit(NULL);
-    (void)(rcsid); (void)(rcsname);   /* slay warnings */
     return errorlevel;                /* slay warning */
 }
-#line 67 "finduses.nw"
+#line 64 "finduses.nw"
 static void read_ids(FILE *in) {
     char *line;
     while ((line = getline_nw(in)) != NULL) {
@@ -95,7 +92,7 @@ static void read_ids(FILE *in) {
         add_ident(nwindex, line);
     }
 }
-#line 103 "finduses.nw"
+#line 100 "finduses.nw"
 static void add_use_markers(FILE *in, FILE *out) {
     char *line;
     int incode = 0;
@@ -115,14 +112,14 @@ static void add_use_markers(FILE *in, FILE *out) {
             fprintf(out, "%s", line);
     }       
 }
-#line 134 "finduses.nw"
+#line 131 "finduses.nw"
 static void write_index_use(void *closure, char *id, char *instance) {
   LineOut *info = (LineOut *) closure;
   info->line = emit_up_to(info->out, info->line, instance);
   fprintf(info->out, "@index use %s\n", id);
   info->line = emit_up_to(info->out, info->line, instance + strlen(id));
 }
-#line 141 "finduses.nw"
+#line 138 "finduses.nw"
 static char *emit_up_to(FILE *f, char *s, char *limit) {
   if (s < limit) {
     char saved = *limit;

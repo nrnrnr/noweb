@@ -11,8 +11,6 @@ Module lookup (char *modname);  /* return ptr to module or NULL */
 void apply_each_module(void (*fun)(Module));
      /* apply [[fun]] to each module in the tree */
 <<*>>= 
-static char rcsid[] = "$Id: modtrees.nw,v 2.24 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -31,8 +29,6 @@ static struct tnode *root=NULL;
 <<Function declarations>>
 <<*>>= 
 Module insert (char *modname) {
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return insert_tree (&root, modname);
 }
 

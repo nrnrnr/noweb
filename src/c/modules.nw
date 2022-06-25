@@ -47,8 +47,6 @@ Module newmodule (char *modname) {
     return p;
 }
 <<*>>=
-static char rcsid[] = "$Id: modules.nw,v 2.26 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -87,8 +85,6 @@ newmodpart(int type, char *s, Location *loc) {
     }
     if (loc) p->loc = *loc;
     p->next = NULL;
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return p;
 }
 <<C functions>>=

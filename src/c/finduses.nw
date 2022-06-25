@@ -2,8 +2,6 @@
 \section{Scanning for uses of identifiers}
 \subsection{Main program}
 <<*>>=
-static char rcsid[] = "$Id: finduses.nw,v 1.22 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +47,6 @@ int main(int argc, char **argv) {
        add_use_markers(stdin, stdout);
     }
     nowebexit(NULL);
-    (void)(rcsid); (void)(rcsname);   /* slay warnings */
     return errorlevel;                /* slay warning */
 }
 @

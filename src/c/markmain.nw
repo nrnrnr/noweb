@@ -63,8 +63,6 @@ static void print_pair(FILE *out, char *name, char *value) {
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
 <<*>>=
-static char rcsid[] = "$Id: markmain.nw,v 2.29 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -574,8 +572,6 @@ int main(int argc, char **argv) {
     else
         markup(stdin,stdout,"");
     nowebexit(NULL);
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return errorlevel;          /* slay warning */
 }
 @

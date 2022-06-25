@@ -19,14 +19,17 @@ boot:
 checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
-noweave: noweave.nw
-	notangle -R$@ noweave.nw > $@
+gitversion.nw: ../gitversion ../../.git/refs/heads/master
+	(echo "<<git version>>="; ../gitversion) > $@
 
-notangle: notangle.nw
-	notangle -R$@ notangle.nw > $@
+noweave: noweave.nw gitversion.nw
+	notangle -R$@ noweave.nw gitversion.nw > $@
 
-noweb: noweb.nw
-	notangle -R$@ noweb.nw > $@
+notangle: notangle.nw gitversion.nw
+	notangle -R$@ notangle.nw gitversion.nw > $@
+
+noweb: noweb.nw gitversion.nw
+	notangle -R$@ noweb.nw gitversion.nw > $@
 
 noroff toroff tmac.w: roff.nw
 	noweb -t roff.nw

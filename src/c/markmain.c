@@ -1,6 +1,4 @@
 #line 66 "markmain.nw"
-static char rcsid[] = "$Id: markmain.nw,v 2.29 2008/10/06 01:03:05 nr Exp nr $";
-static char rcsname[] = "$Name: v2_12 $";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +41,7 @@ static void print_pair(FILE *out, char *name, char *value) {
         fprintf(out, "%c%s\n", low_at_sign, name);
 }
 
-#line 80 "markmain.nw"
+#line 78 "markmain.nw"
 void markup (FILE* in, FILE *out, char *filename) {
     State state = Docs;         /* what we are reading */
     int quoting = 0;            /* currently quoting code? */
@@ -58,23 +56,23 @@ void markup (FILE* in, FILE *out, char *filename) {
                                          [[""]] if no module is being read */ 
 
     
-#line 120 "markmain.nw"
+#line 118 "markmain.nw"
 print_pair(out, "file", filename);
 print_state(out, Begin, state, count);
 while ((line = getline_expand(in)) != NULL) {
     lineno++;
     
-#line 171 "markmain.nw"
+#line 169 "markmain.nw"
 missing_newline = line[strlen(line)-1] != '\n';
-#line 125 "markmain.nw"
+#line 123 "markmain.nw"
     if (starts_code(line, filename, lineno)) {
         
-#line 541 "markmain.nw"
+#line 539 "markmain.nw"
 if (quoting) {
     errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
     quoting = 0;
 }
-#line 127 "markmain.nw"
+#line 125 "markmain.nw"
         print_state(out, End, state, count);
         count++;
         state = Code;
@@ -84,7 +82,7 @@ if (quoting) {
         print_pair(out,"nl",0);     /* could be implicit but this is better */
     } else if (is_def(line)) {
         
-#line 527 "markmain.nw"
+#line 525 "markmain.nw"
 line = remove_def_marker(line);
 while (*line && isspace(*line)) line++;
 while (*line) {
@@ -98,18 +96,18 @@ while (*line) {
   line = s;
 }
 print_index(out, Newline, 0);
-#line 136 "markmain.nw"
+#line 134 "markmain.nw"
         if (state == Code)
             state = CodeIndex;
     } else {
         if (starts_doc(line) || state == CodeIndex) {
             
-#line 541 "markmain.nw"
+#line 539 "markmain.nw"
 if (quoting) {
     errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
     quoting = 0;
 }
-#line 141 "markmain.nw"
+#line 139 "markmain.nw"
             print_state(out, End, state, count);
             count++;
             state = Docs;       /* always reading docs after a stop */
@@ -118,13 +116,13 @@ if (quoting) {
                 line = first_doc_line(line);
         }
         {   
-#line 180 "markmain.nw"
+#line 178 "markmain.nw"
 char *p, *s, *t, c;
 static char *buf;
 static int buflen = 0;
-#line 149 "markmain.nw"
+#line 147 "markmain.nw"
             
-#line 258 "markmain.nw"
+#line 256 "markmain.nw"
 #define LA1 '<'
 #define LA2 '<'
 #define RA1 '>'
@@ -134,14 +132,14 @@ static int buflen = 0;
 #define RS1 ']'
 #define RS2 ']'
 #define ESC '@'
-#line 271 "markmain.nw"
+#line 269 "markmain.nw"
 #define next(L) do {           c = *t++; goto L; } while (0)
 #define copy(L) do { *s++ = c; c = *t++; goto L; } while (0)
-#line 277 "markmain.nw"
+#line 275 "markmain.nw"
 #define lexassert(E) ((void)0)
-#line 150 "markmain.nw"
+#line 148 "markmain.nw"
             
-#line 504 "markmain.nw"
+#line 502 "markmain.nw"
 if (buf == NULL)
   checkptr(buf = (char *) malloc(buflen = 128));
 if (buflen < strlen(line) + 1 + 2) {
@@ -149,221 +147,221 @@ if (buflen < strlen(line) + 1 + 2) {
     buflen *= 2;
   checkptr(buf = (char *) realloc(buf, buflen));
 }
-#line 185 "markmain.nw"
+#line 183 "markmain.nw"
 p = s = buf+2;
 t = line;
 c = *t++;
-#line 151 "markmain.nw"
+#line 149 "markmain.nw"
             
-#line 205 "markmain.nw"
+#line 203 "markmain.nw"
 if (c == ESC && *t == ESC) { *s++ = ESC; c = *++t; ++t; }
-#line 152 "markmain.nw"
+#line 150 "markmain.nw"
             if (state == Code || quoting) 
                 goto convert_code;
             else
                 goto convert_docs;
             
-#line 295 "markmain.nw"
+#line 293 "markmain.nw"
 convert_docs:
 t: lexassert(state == Docs && !quoting);
    if (c == ESC) next(at);
    if (c == LA1) next(la);
    if (c == LS1) next(ls);
    
-#line 241 "markmain.nw"
+#line 239 "markmain.nw"
 if (c == '\0') {
   
-#line 512 "markmain.nw"
+#line 510 "markmain.nw"
 if (s > p) {
   *s = 0;
   print_pair(out, "text", p);
 }
 s = p = buf + 2;
-#line 243 "markmain.nw"
+#line 241 "markmain.nw"
   goto done_converting;
 }
-#line 301 "markmain.nw"
+#line 299 "markmain.nw"
    copy(t);
-#line 309 "markmain.nw"
+#line 307 "markmain.nw"
 at: if (c == LA1) next(atla);
     if (c == LS1) next(atls);
     if (c == RA1) next(atra);
     if (c == RS1) next(atrs);
     *s++ = ESC; goto t;
-#line 318 "markmain.nw"
+#line 316 "markmain.nw"
 atls: if (c == LS2) { *s++ = LS1; *s++ = LS2; next(t); }
      *s++ = ESC; *s++ = LS1; goto t;
-#line 324 "markmain.nw"
+#line 322 "markmain.nw"
 atla: if (c == LA2) { *s++ = LA1; *s++ = LA2; next(t); }
       *s++ = ESC; *s++ = LA1; goto t;
-#line 330 "markmain.nw"
+#line 328 "markmain.nw"
 atrs: if (c == RS2) { *s++ = RS1; *s++ = RS2; next(t); }
      *s++ = ESC; *s++ = RS1; goto t;
-#line 336 "markmain.nw"
+#line 334 "markmain.nw"
 atra: if (c == RA2) { *s++ = RA1; *s++ = RA2; next(t); }
       *s++ = ESC; *s++ = RA1; goto t;
-#line 342 "markmain.nw"
+#line 340 "markmain.nw"
 la: if (c == LA2) {
       
-#line 524 "markmain.nw"
+#line 522 "markmain.nw"
 errorat(filename, lineno, Error, "unescaped << in documentation chunk");
-#line 344 "markmain.nw"
+#line 342 "markmain.nw"
       *s++ = LA1; *s++ = LA2; next(t);
     }
     *s++ = LA1; goto t;
-#line 354 "markmain.nw"
+#line 352 "markmain.nw"
 ls: lexassert(state == Docs);
     if (c == LS2) {
       
-#line 512 "markmain.nw"
+#line 510 "markmain.nw"
 if (s > p) {
   *s = 0;
   print_pair(out, "text", p);
 }
 s = p = buf + 2;
-#line 357 "markmain.nw"
+#line 355 "markmain.nw"
       quoting = 1; last_open_quote = lineno; print_pair(out, "quote", 0); 
       next(c);
     }
     *s++ = LS1;
     goto t;
-#line 371 "markmain.nw"
+#line 369 "markmain.nw"
 convert_code:
 c: lexassert(state == Code || quoting);
    if (c == RS1 && quoting) next(crs);
    if (c == LA1) next(cla);
    if (c == ESC) next(cat);
    
-#line 241 "markmain.nw"
+#line 239 "markmain.nw"
 if (c == '\0') {
   
-#line 512 "markmain.nw"
+#line 510 "markmain.nw"
 if (s > p) {
   *s = 0;
   print_pair(out, "text", p);
 }
 s = p = buf + 2;
-#line 243 "markmain.nw"
+#line 241 "markmain.nw"
   goto done_converting;
 }
-#line 377 "markmain.nw"
+#line 375 "markmain.nw"
    copy(c);
-#line 385 "markmain.nw"
+#line 383 "markmain.nw"
 cat: if (c == LA1) next(catla);
      if (c == RA1) next(catra);
      *s++ = ESC; goto c;
-#line 392 "markmain.nw"
+#line 390 "markmain.nw"
 catla: if (c == LA2) { *s++ = LA1; *s++ = LA2; next(c); }
        *s++ = ESC; *s++ = LA1; goto c;
-#line 398 "markmain.nw"
+#line 396 "markmain.nw"
 catra: if (c == RA2) { *s++ = RA1; *s++ = RA2; next(c); }
        *s++ = ESC; *s++ = RA1; goto c;
-#line 406 "markmain.nw"
+#line 404 "markmain.nw"
 crs: if (c == RS2) next(ce);
      *s++ = RS1; goto c;
-#line 412 "markmain.nw"
+#line 410 "markmain.nw"
 ce: lexassert(quoting);
     if (c == RS2) copy(ce);
     quoting = 0; 
-#line 512 "markmain.nw"
+#line 510 "markmain.nw"
 if (s > p) {
   *s = 0;
   print_pair(out, "text", p);
 }
 s = p = buf + 2;
-#line 414 "markmain.nw"
+#line 412 "markmain.nw"
                                                  print_pair(out, "endquote", 0);
     goto t;
-#line 422 "markmain.nw"
+#line 420 "markmain.nw"
 cla: if (c == LA2) { 
-#line 512 "markmain.nw"
+#line 510 "markmain.nw"
 if (s > p) {
   *s = 0;
   print_pair(out, "text", p);
 }
 s = p = buf + 2;
-#line 422 "markmain.nw"
+#line 420 "markmain.nw"
                                                      next(u); }
      *s++ = LA1; goto c;
-#line 433 "markmain.nw"
+#line 431 "markmain.nw"
 u: lexassert(state == Code || quoting);
    if (c == LS1) copy(uls);
    if (c == RS1 && quoting) next(urs);
    if (c == RA1) next(ura);
    if (c == '\0') { /* premature end --- it's not a use after all */
      
-#line 499 "markmain.nw"
+#line 497 "markmain.nw"
 lexassert(p == buf + 2);
 p -= 2;
 p[0] = LA1;
 p[1] = LA2;
-#line 439 "markmain.nw"
+#line 437 "markmain.nw"
      goto c;
    }
    copy(u);
-#line 446 "markmain.nw"
+#line 444 "markmain.nw"
 urs: lexassert(quoting);
      if (c == RS2) { /* premature end --- it's not a use after all */
        
-#line 499 "markmain.nw"
+#line 497 "markmain.nw"
 lexassert(p == buf + 2);
 p -= 2;
 p[0] = LA1;
 p[1] = LA2;
-#line 449 "markmain.nw"
+#line 447 "markmain.nw"
        next(ce); 
      }
      *s++ = RS1; goto u;
-#line 456 "markmain.nw"
+#line 454 "markmain.nw"
 uls: if (c == LS2) copy(uc);
      goto u;
-#line 463 "markmain.nw"
+#line 461 "markmain.nw"
 uc: lexassert(quoting || state == Code);
     if (c == RS1) copy(ucrs);
     if (c == '\0') {
       
-#line 499 "markmain.nw"
+#line 497 "markmain.nw"
 lexassert(p == buf + 2);
 p -= 2;
 p[0] = LA1;
 p[1] = LA2;
-#line 467 "markmain.nw"
+#line 465 "markmain.nw"
       goto c;
     }
     copy(uc);
-#line 474 "markmain.nw"
+#line 472 "markmain.nw"
 ucrs: if (c == RS2) copy(uce);
       goto uc;
-#line 480 "markmain.nw"
+#line 478 "markmain.nw"
 uce: if (c == RS2) copy(uce);
      goto u;
-#line 486 "markmain.nw"
+#line 484 "markmain.nw"
 ura: if (c == RA2) { 
-#line 519 "markmain.nw"
+#line 517 "markmain.nw"
 *s = 0;
 print_pair(out, "use", p);
 s = p = buf + 2;
-#line 486 "markmain.nw"
+#line 484 "markmain.nw"
                                                     next(c); }
      *s++ = RA1; goto u;
-#line 157 "markmain.nw"
+#line 155 "markmain.nw"
           done_converting: 
             (void)0;
         }
     }
 }
-#line 541 "markmain.nw"
+#line 539 "markmain.nw"
 if (quoting) {
     errorat(filename, last_open_quote, Warning, "open quote `[[' never closed");
     quoting = 0;
 }
-#line 173 "markmain.nw"
+#line 171 "markmain.nw"
 if (missing_newline) print_pair(out, "nl",0);
-#line 164 "markmain.nw"
+#line 162 "markmain.nw"
 print_state(out, End, state, count);
-#line 94 "markmain.nw"
+#line 92 "markmain.nw"
 }
-#line 550 "markmain.nw"
+#line 548 "markmain.nw"
 int main(int argc, char **argv) {
     FILE *fp;
     int i;
@@ -372,14 +370,14 @@ int main(int argc, char **argv) {
     for (i = 1; i < argc && argv[i][0] == '-' && argv[i][1] != 0; i++)
         switch(argv[i][1]) {
             case 't': 
-#line 583 "markmain.nw"
+#line 579 "markmain.nw"
 if (isdigit(argv[i][2]))
     tabsize = atoi(argv[i]+2);
 else if (argv[i][2]==0)
     tabsize = 0;                /* no tabs */
 else 
     errormsg(Error, "%s: ill-formed option %s", progname, argv[i]);
-#line 557 "markmain.nw"
+#line 555 "markmain.nw"
                                         break;
             default : errormsg(Error, "%s: unknown option -%c", progname, argv[i][1]);
                       break;
@@ -400,7 +398,5 @@ else
     else
         markup(stdin,stdout,"");
     nowebexit(NULL);
-    (void)rcsid; /* avoid a warning */
-    (void)rcsname; /* avoid a warning */
     return errorlevel;          /* slay warning */
 }
