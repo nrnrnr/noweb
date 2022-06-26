@@ -5,7 +5,7 @@
 CC=gcc
 CFLAGS=-ansi -pedantic -O -Wall -Werror
 # If you have Icon, you should use the Icon versions of the noweb pipeline.
-# Set LIBSRC=icon
+#LIBSRC=icon
 LIBSRC=awk
 # If you are lucky enough to have an Icon compiler icont, use ICONC=iconc
 ICONC=icont
@@ -102,12 +102,12 @@ install-code: install-shell
 	mkdir -p $(BIN) $(LIB)
 	strip c/nt c/markup c/mnt c/finduses c/nwmktemp
 	cp c/nt c/markup c/mnt c/finduses c/nwmktemp $(LIB)
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) install)
+	(cd $(LIBSRC) && $(MAKE) "ICONT=$(ICONT)" "ICONC=$(ICONC)" LIB=$(LIB) BIN=$(BIN) install)
 	(cd lib && $(MAKE) LIB=$(LIB) install)
 
 uninstall-code: uninstall-shell
 	rm -f $(LIB)/nt $(LIB)/markup $(LIB)/mnt $(LIB)/finduses
-	(cd $(LIBSRC) && $(MAKE) ICONT=$(ICONT) ICONC=$(ICONC) LIB=$(LIB) BIN=$(BIN) uninstall)
+	(cd $(LIBSRC) && $(MAKE) "ICONT=$(ICONT)" "ICONC=$(ICONC)" LIB=$(LIB) BIN=$(BIN) uninstall)
 	(cd lib && $(MAKE) LIB=$(LIB) uninstall)
 install-man:
 	mkdir -p $(MANDIR) $(MAN7DIR)
