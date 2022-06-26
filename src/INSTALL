@@ -26,25 +26,35 @@ either Icon or Awk, but Icon is better:
 
 To build noweb:
 
-  1) First point to compilers to be used to built the tools and
+  1) First point to compilers to be used to build the tools and
      library by setting these variables in the Makefile:
        CC         the name of an ANSI C compiler
-       LIBSRC	  'awk' or 'icon', depending on which library you want
+       CFLAGS     flags for your C compiler
+       LIBSRC     'awk' or 'icon', depending on which library you want
+       ICONC      your Icon compiler and flags, for when LIBSRC=icon
+       ICONT      your Icon translator and flags, for when LIBSRC=icon
 
      Now choose locations for the noweb files, and set the appropriate
      variables in the Makefile:
        BIN        on $PATH, will hold notangle, noweave, noroots, ...
        LIB        a directory to store markup, nt, noxref, ...
-       MAN        man pages will go in $MAN/man1
+       MAN        man pages will go in $MAN/man1 and $MAN/man7
        TEXINPUTS  a directory TeX will look for nwmac.tex and noweb.sty
        ELISP      a directory for noweb-mode.el, for emacs 19 and up
-     All of these files are *output* files, where noweb will place
+     All of these are *output* directories, where noweb will place
      binaries and man pages that are customized for your installation.
      Therefore you should:
        - make sure you have permission to write to these directories
        - refrain from making them point into the noweb source distribution
        - arrange for BIN to be on your $PATH and MAN to be on your $MANPATH
      If you don't use emacs, just leave ELISP set to /dev/null.
+
+     Instead of editing the Makefile, you can create a shell script that
+     invokes make with the proper variables.  `nwmake' is an example of
+     such a script; I use it to install noweb at Princeton using the Icon
+     cross-referencer and our local C compiler.  If you make your own
+     script, call it something else so it won't get overwritten by the
+     default nwmake when you unbundle a new distribution.
 
   2) If your modern awk is called something other than `nawk', run the
      `awkname' script to change all references to nawk.  For example,
@@ -72,7 +82,7 @@ To build noweb:
      `contrib' hierarchy.  Get it, set the LIB variable in the
      Makefile, and type 'make all install'.  If you just want the
      nuweb parser, try
-	 (cd ../contrib/norman; make LIB=$LIB all install)
+         (cd ../contrib/norman && make LIB=$LIB all install)
      where $LIB is the noweb LIB directory.
 
   6) On some installations, (e.g., Unix teTeX), you may have to run
@@ -81,12 +91,5 @@ To build noweb:
   7) You can clean up by typing `make clean'.  If you wish, you can
      remove the pre-built sources by typing `make clobber', but then
      you will be unable to build noweb unless you already have noweb.
-
-Instead of editing the Makefile, you can create a shell script that
-invokes make with the proper variables.  `nwmake' is an example of
-such a script; I use it to install noweb at Princeton using the Icon
-cross-referencer and our local C compiler.  If you make your own
-script, call it something else so it won't get overwritten by the
-default nwmake when you unbundle a new distribution.
 
 If you encounter a problem building noweb, try the FAQ file.
