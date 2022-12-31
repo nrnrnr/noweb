@@ -11,9 +11,9 @@
 \newdimen\nwmarginglue
 \nwmarginglue=0.3in
 \def\nwtagstyle{\footnotesize\Rm}
-\def\nwgitversion{|GITVERSION|}
 % make \hsize in code sufficient for 88 columns
-\setbox0=\hbox{\tt m}
+% Change \tt to \ttfamily
+\setbox0=\hbox{\ttfamily m}
 \newdimen\codehsize
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
@@ -90,16 +90,22 @@ I'll try to avoid such incompatible changes in the future.}%
 \def\nowebindex{\message{<Warning: You need noweave -index to use \string\nowebindex>}}
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
+% Replaced \tt with \ttfamily
+% Replaced \rm with \rmfamily
+% Replaced \it with \itshape
+% Replaced \bf with \bfseries
 \ifx\documentstyle\undefined
-  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % plain
+  \let\Rm=\rmfamily \let\It=\itshape \let\Tt=\ttfamily  % plain
 \else\ifx\selectfont\undefined
-  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
+\let\Rm=\rmfamily \let\It=\itshape \let\Tt=\ttfamily    % LaTeX OFSS
+
 \else                                       % LaTeX NFSS
-  \def\Rm{\reset@font\rm}
-  \def\It{\reset@font\it}
-  \def\Tt{\reset@font\tt}
-  \def\Bf{\reset@font\bf}
+  \def\Rm{\reset@font\rmfamily}
+  \def\It{\reset@font\itshape}
+  \def\Tt{\reset@font\ttfamily}
+  \def\Bf{\reset@font\bfseries}
 \fi\fi
+
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
 \def\nwbackslash{\char92}
 \def\nwlbrace{\char123}
