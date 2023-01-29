@@ -36,7 +36,8 @@ which code is set, and [[\codemargin]], which is the amount by which
 it is indented.\stylehook
 <<kernel>>=
 % make \hsize in code sufficient for 88 columns
-\setbox0=\hbox{\tt m}
+% Change \tt to \ttfamily
+\setbox0=\hbox{\ttfamily m}
 \newdimen\codehsize
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
@@ -218,15 +219,19 @@ extra [[\reset@font]] does no harm.]
 <<kernel>>=
 % here is support for the new-style (capitalized) font-changing commands
 % thanks to Dave Love
+% Replaced \tt with \ttfamily
+% Replaced \rm with \rmfamily
+% Replaced \it with \itshape
+% Replaced \bf with \bfseries
 \ifx\documentstyle\undefined
-  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % plain
+  \let\Rm=\rmfamily \let\It=\itshape \let\Tt=\ttfamily  % plain
 \else\ifx\selectfont\undefined
-  \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
+  \let\Rm=\rmfamily \let\It=\itshape \let\Tt=\ttfamily  % LaTeX OFSS
 \else                                       % LaTeX NFSS
-  \def\Rm{\reset@font\rm}
-  \def\It{\reset@font\it}
-  \def\Tt{\reset@font\tt}
-  \def\Bf{\reset@font\bf}
+  \def\Rm{\reset@font\rmfamily}
+  \def\It{\reset@font\itshape}
+  \def\Tt{\reset@font\ttfamily}
+  \def\Bf{\reset@font\bfseries}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
 @ 
@@ -967,10 +972,10 @@ We no longer use Rainer's new expandable definitions of [[\ref]] and
 elapsed that this should no longer be necessary.
 <<old noweb.sty>>=
 % RmS 92/08/14: made \ref and \pageref robust
-\def\ref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
+\def\ref#1{\@ifundefined{r@#1}{{\bfseries ??}<<warn of undefined reference to [[#1]]>>}%
     {\expandafter\expandafter\expandafter
      \@car\csname r@#1\endcsname\@nil\null}}
-\def\pageref#1{\@ifundefined{r@#1}{{\bf ??}<<warn of undefined reference to [[#1]]>>}%
+\def\pageref#1{\@ifundefined{r@#1}{{\bfseries ??}<<warn of undefined reference to [[#1]]>>}%
      {\expandafter\expandafter\expandafter
       \@cdr\csname r@#1\endcsname\@nil\null}}
 \def\@refpair#1{\@ifundefined{r@#1}{{0}{0}<<warn of undefined reference to [[#1]]>>}%
