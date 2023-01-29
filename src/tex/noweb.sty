@@ -158,11 +158,15 @@ I'll try to avoid such incompatible changes in the future.}%
     \@@par
     \def\par{\leavevmode\null \@@par \penalty\nwcodepenalty}%
     \obeylines
+%    \@noligs   \ifx\verbatim@nolig@list\undefined\else
+%                 \let\do=\nw@makeother \verbatim@nolig@list \do@noligs\`
+%               \fi
+%    \setupcode \frenchspacing \@vobeyspaces
+  \nowebsize \setupcode
     \@noligs   \ifx\verbatim@nolig@list\undefined\else
                  \let\do=\nw@makeother \verbatim@nolig@list \do@noligs\`
                \fi
     \setupcode \frenchspacing \@vobeyspaces
-  \nowebsize \setupcode
   \let\maybehbox\mbox }
   \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
   \let\nowebsize=\normalsize

@@ -356,8 +356,9 @@ be broken anyhow (even within chunk names because of the
   <<[[\trivlist]] clich\'e (\`a la {\Tt verbatim})>>
   \linewidth\codehsize
   <<[[\obeylines]] setup>>
-  <<zap ligatures, fix spaces>>
+%  <<zap ligatures, fix spaces>>
   \nowebsize \setupcode
+  <<zap ligatures, fix spaces>>
   \let\maybehbox\mbox }
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
