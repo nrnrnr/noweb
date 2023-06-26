@@ -355,7 +355,9 @@ be broken anyhow (even within chunk names because of the
   \endtrivlist}
 @ This is just common code between [[\nwbegincode]] and [[webcode]].
 <<noweb.sty>>=
+\newdimen\@nwbegincodelinewidth
 \def\@begincode{%
+  \@nwbegincodelinewidth=\linewidth
   <<[[\trivlist]] clich\'e (\`a la {\Tt verbatim})>>
   \linewidth\codehsize
   <<[[\obeylines]] setup>>
