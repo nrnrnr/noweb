@@ -1,3 +1,5 @@
+support for LaTeX is updated to use \rmfamily, \bfseries, and so on
+Fixed indentation issue https://github.com/nrnrnr/noweb/issues/24 
 CHANGES FOR VERSION 2.12
 l2h and sl2h now support rules from booktabs package
 l2h and sl2h now deal with \suspend and \resume from package mdwlist
