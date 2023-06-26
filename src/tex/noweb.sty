@@ -13,7 +13,11 @@
 \def\nwtagstyle{\footnotesize\Rm}
 \def\nwgitversion{|GITVERSION|}
 % make \hsize in code sufficient for 88 columns
-\setbox0=\hbox{\tt m}
+\ifx\ttfamily\undefined
+  \setbox0=\hbox{\tt m}
+\else
+  \setbox0=\hbox{\ttfamily m}
+\fi
 \newdimen\codehsize
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
@@ -95,10 +99,10 @@ I'll try to avoid such incompatible changes in the future.}%
 \else\ifx\selectfont\undefined
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
 \else                                       % LaTeX NFSS
-  \def\Rm{\reset@font\rm}
-  \def\It{\reset@font\it}
-  \def\Tt{\reset@font\tt}
-  \def\Bf{\reset@font\bf}
+  \def\Rm{\reset@font\rmfamily}
+  \def\It{\reset@font\itshape}
+  \def\Tt{\reset@font\ttfamily}
+  \def\Bf{\reset@font\bfseries}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
 \def\nwbackslash{\char92}
@@ -144,7 +148,9 @@ I'll try to avoid such incompatible changes in the future.}%
   \@begincode
 }{%
   \endtrivlist}
+\newdimen\@nwbegincodelinewidth
 \def\@begincode{%
+  \@nwbegincodelinewidth=\linewidth
     \trivlist \item[]%
     \leftskip\@totalleftmargin \advance\leftskip\codemargin
     \rightskip\hsize \advance\rightskip -\codehsize
@@ -153,11 +159,11 @@ I'll try to avoid such incompatible changes in the future.}%
     \@@par
     \def\par{\leavevmode\null \@@par \penalty\nwcodepenalty}%
     \obeylines
+  \nowebsize \setupcode
     \@noligs   \ifx\verbatim@nolig@list\undefined\else
                  \let\do=\nw@makeother \verbatim@nolig@list \do@noligs\`
                \fi
     \setupcode \frenchspacing \@vobeyspaces
-  \nowebsize \setupcode
   \let\maybehbox\mbox }
   \newskip\nwcodetopsep \nwcodetopsep = 3pt plus 1.2pt minus 1pt
   \let\nowebsize=\normalsize
@@ -349,11 +355,11 @@ I'll try to avoid such incompatible changes in the future.}%
 \newcount\@nwpagecount
 \def\@nwfirstpagel#1{% label
   \@ifundefined{r@#1}{\@warning{Reference `#1' on page \thepage \space undefined}%
-                      \nwix@cons\nw@pages{\\{\bf ??}}}{%
+                      \nwix@cons\nw@pages{\\{\bfseries ??}}}{%
     \edef\@tempa{\noexpand\@nwfirstpage\subpagepair{#1}{#1}}\@tempa}}
 \def\@nwnextpagel#1{% label
   \@ifundefined{r@#1}{\@warning{Reference `#1' on page \thepage \space undefined}%
-                      \nwix@cons\nw@pages{\\{\bf ??}}}{%
+                      \nwix@cons\nw@pages{\\{\bfseries ??}}}{%
     \edef\@tempa{\noexpand\@nwnextpage\subpagepair{#1}{#1}}\@tempa}}
 \def\@pagesl#1{%  list of labels
   \gdef\nw@pages{}\@nwpagecount=0

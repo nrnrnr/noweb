@@ -91,7 +91,11 @@
 
 \def\nwgitversion{|GITVERSION|}
 % make \hsize in code sufficient for 88 columns
-\setbox0=\hbox{\tt m}
+\ifx\ttfamily\undefined
+  \setbox0=\hbox{\tt m}
+\else
+  \setbox0=\hbox{\ttfamily m}
+\fi
 \newdimen\codehsize
 \codehsize=91\wd0 % 88 columns wasn't enough; I don't know why
 \newdimen\codemargin
@@ -173,10 +177,10 @@ I'll try to avoid such incompatible changes in the future.}%
 \else\ifx\selectfont\undefined
   \let\Rm=\rm \let\It=\it \let\Tt=\tt       % LaTeX OFSS
 \else                                       % LaTeX NFSS
-  \def\Rm{\reset@font\rm}
-  \def\It{\reset@font\it}
-  \def\Tt{\reset@font\tt}
-  \def\Bf{\reset@font\bf}
+  \def\Rm{\reset@font\rmfamily}
+  \def\It{\reset@font\itshape}
+  \def\Tt{\reset@font\ttfamily}
+  \def\Bf{\reset@font\bfseries}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
 \def\nwbackslash{\char92}
