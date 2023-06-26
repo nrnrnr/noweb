@@ -1,10 +1,10 @@
-# Copyright 1995-2006 by Norman Ramsey.  All rights reserved.
+# Copyright 1995-2023 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 #
 # Don't edit this file; you should be editing the Makefiles in the
 # src and contrib directories.
 
-VERSION=2.12
+VERSION=2.13
 SHELL=/bin/sh
 CINAME=-Nv`echo $(VERSION) | tr . _`
 CIMSG=-f -m'standard checkin preparing to export version $(VERSION)'
