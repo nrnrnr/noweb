@@ -23,6 +23,13 @@ either Icon or Awk, but Icon is better:
     (This breaking change was put in to enable the Awk and Icon codes
     to generate *identical* outputs, for regression testing.)
 
+  - As of version 2.13, the `c/Makefile` contains a GNU-ism.
+    If you don't have GNU Make, you'll need to find the use of
+    `$(wildcard ...)` and expand it manually.  If you're not using
+    `git`, remove the dependency.  If you are using git,
+    change the invocation of `wildcard` to hold just the path 
+    name to `master`.
+
 
 To build noweb:
 

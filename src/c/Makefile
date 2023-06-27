@@ -92,7 +92,7 @@ doc.ps: doc.dvi
 markup.ps: markmain.nw
 	notangle -Rmarkup.dot markmain.nw | dot -Tps > $@
 
-gitversion.c: ../gitversion ../../.git/refs/heads/master
+gitversion.c: ../gitversion $(wildcard ../../.git/refs/heads/master)
 	echo 'const char gitversion[] = "'"$$(../gitversion -prefix)"'";' > $@
 
 

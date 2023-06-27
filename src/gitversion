@@ -5,4 +5,22 @@ case $1 in
   *) prefix="" ;;
 esac
 
-echo "$prefix$(git describe --abbrev=20  --dirty --always --tags)"
+notversioned="${prefix}Not under Git versioning"
+
+search=.
+
+while [ ! -r "$search/.gitversionmark" ]; do
+  search="$search/.."
+  case $search in
+    ./../../../../../../..*) echo "$0: Cannot find git version mark"
+                             echo "$notversioned"
+                             exit 
+                             ;;
+  esac
+done
+
+if [ -r "$search/.git/refs/heads/master" ]; then
+  echo "$prefix$(git describe --abbrev=20  --dirty --always --tags)"
+else
+  echo "$notversioned"
+fi

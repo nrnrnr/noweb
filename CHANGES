@@ -1,4 +1,5 @@
 CHANGES FOR VERSION 2.13
+binaries now track which git version they are
 support for LaTeX is updated to use \rmfamily, \bfseries, and so on
 Fixed indentation issue https://github.com/nrnrnr/noweb/issues/24 
 add \@nwbegincodelinewidth to help typeset code chunks in list items
