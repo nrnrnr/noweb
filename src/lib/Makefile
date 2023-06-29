@@ -8,11 +8,11 @@ CIMSG=
 RCSFILES=emptydefn toascii.nw unmarkup Makefile nwmtime pipedocs h2a btdefn
 
 all: toascii
-	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
+	chmod +x unmarkup emptydefn nwmtime pipedocs h2a btdefn
 
 install: all
-	cp unmarkup emptydefn nwmtime btdefn $(LIB)
-	for i in pipedocs toascii h2a; do \
+	cp unmarkup emptydefn toascii nwmtime btdefn $(LIB)
+	for i in pipedocs h2a; do \
 	  sed "s@|LIBDIR|@$(LIB)@g" $$i > $(LIB)/$$i && chmod +x $(LIB)/$$i; \
 	done
 

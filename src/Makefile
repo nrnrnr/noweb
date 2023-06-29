@@ -38,8 +38,6 @@ MANDIR=$(MAN)/man$(MANEXT)
 MAN7DIR=$(MAN)/man$(MAN7EXT)
 CATDIR=$(MAN)/cat$(MANEXT)
 CAT7DIR=$(MAN)/cat$(MAN7EXT)
-LIBNAME=$(LIB)
-TEXNAME=$(TEXINPUTS)
 NORMALPAGES=cpif nodefs noroots noweb noindex nuweb2noweb notangle noroff sl2h htmltoc
 NORMAL7PAGES=nowebstyle nowebfilters
 LINKPAGES=noweave nountangle
@@ -64,10 +62,10 @@ uninstall: uninstall-code uninstall-man uninstall-tex uninstall-elisp
 install-shell:
 	mkdir -p $(BIN) $(LIB)
 	for i in noweb notangle $(WEAVE) nountangle nodefs noroots nuweb2noweb cpif htmltoc noroff; do \
-	  sed "s@|LIBDIR|@$(LIBNAME)@;s@|GITVERSION|@$(GITVERSION)@" shell/$$i > $(BIN)/$$i && chmod +x $(BIN)/$$i; \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|GITVERSION|@$(GITVERSION)@" shell/$$i > $(BIN)/$$i && chmod +x $(BIN)/$$i; \
 	done
 	for i in toroff; do \
-	  sed "s@|LIBDIR|@$(LIBNAME)@" shell/$$i > $(LIB)/$$i && chmod +x $(LIB)/$$i; \
+	  sed "s@|LIBDIR|@$(LIB)@" shell/$$i > $(LIB)/$$i && chmod +x $(LIB)/$$i; \
 	done
 	cp shell/tmac.w $(LIB)
 
@@ -101,10 +99,10 @@ uninstall-code: uninstall-shell
 install-man:
 	mkdir -p $(MANDIR) $(MAN7DIR)
 	for i in $(NORMALPAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.1 > $(MANDIR)/$$i.$(MANEXT); \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.1 > $(MANDIR)/$$i.$(MANEXT); \
 	done
 	for i in $(NORMAL7PAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.7 > $(MAN7DIR)/$$i.$(MAN7EXT); \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.7 > $(MAN7DIR)/$$i.$(MAN7EXT); \
 	done
 	for i in $(LINKPAGES); do \
 	  rm -f $(MANDIR)/$$i.$(MANEXT); \
@@ -124,10 +122,10 @@ uninstall-man:
 install-gzipped-man:
 	mkdir -p $(MANDIR) $(MAN7DIR)
 	for i in $(NORMALPAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.1 | gzip -9 > $(MANDIR)/$$i.$(MANEXT).gz; \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.1 | gzip -9 > $(MANDIR)/$$i.$(MANEXT).gz; \
 	done
 	for i in $(NORMAL7PAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.7 | gzip -9 > $(MAN7DIR)/$$i.$(MAN7EXT).gz; \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.7 | gzip -9 > $(MAN7DIR)/$$i.$(MAN7EXT).gz; \
 	done
 	for i in $(LINKPAGES); do \
 	  rm -f $(MANDIR)/$$i.$(MANEXT).gz; \
@@ -138,10 +136,10 @@ install-preformat-man:
 	-echo "Warning: install-preformat-man is obsolete, even on Slackware systems" 1>&2
 	mkdir -p $(CATDIR) $(CAT7DIR)
 	for i in $(NORMALPAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.txt | gzip > $(CATDIR)/$$i.$(MANEXT).gz; \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.txt | gzip > $(CATDIR)/$$i.$(MANEXT).gz; \
 	done
 	for i in $(NORMAL7PAGES); do \
-	  sed -e "s@|LIBDIR|@$(LIBNAME)@" -e "s@|TEXINPUTS|@$(TEXNAME)@" xdoc/$$i.txt | gzip > $(CAT7DIR)/$$i.$(MAN7EXT).gz; \
+	  sed "s@|LIBDIR|@$(LIB)@;s@|TEXINPUTS|@$(TEXINPUTS)@" xdoc/$$i.txt | gzip > $(CAT7DIR)/$$i.$(MAN7EXT).gz; \
 	done
 	for i in $(LINKPAGES); do \
 	  rm -f $(CATDIR)/$$i.$(MANEXT).gz; \
