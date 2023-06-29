@@ -20,7 +20,9 @@ boot:
 
 install: all
 	cp $(LIBEXECSBARE) $(LIB)
-	for i in $(LIBEXECSDEP); do sed "s@|LIBDIR|@$(LIB)@" "$$i" > $(LIB)/"$$i"; chmod +x $(LIB)/$$i; done
+	for i in $(LIBEXECSDEP); do \
+	  sed "s@|LIBDIR|@$(LIB)@" $$i > $(LIB)/$$i && chmod +x $(LIB)/$$i; \
+	done
 	cp $(BINEXECS) $(BIN)
 
 uninstall:
