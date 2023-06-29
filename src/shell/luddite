@@ -1,6 +1,6 @@
 #!/bin/sh
 # set -x
-LIB=+LIBDIR+
+LIB=|LIBDIR|
 opt= arg=
 comment='function comment(s) {
     gsub("\\*/", "* /", s)
