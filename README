@@ -9,7 +9,8 @@ The most convenient way to get noweb is to install it from a package;
 the procedure for building noweb from source dates from 1989, and it is
 both baroque and brittle.  If you must build noweb from source, change
 to the `src' directory and follow the instructions in the file INSTALL.
-(Windows users, look for http://www.jim-pettigrew.com/noweb/install.)
+(Windows users, you're on your own, but you might find it useful to check 
+https://web.archive.org/web/20190415151640/http://www.jim-pettigrew.com/noweb/install.)
 
 
 WHAT'S NEW IN VERSION 2.13
