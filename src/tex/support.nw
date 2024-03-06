@@ -1842,10 +1842,33 @@ Hence:
 \end{quote}
 \end{quote}
 @
+
+@
+\subsubsection{Support for Swedish}
+
+This is a translation to Swedish by Daniel Bosk \verb+<daniel@bosk.se>+.
+<<language support>>=
+\def\nwopt@english{%
+  \def\@nwlangdepdef{Denna definition fortsätter}%
+  \def\@nwlangdepcud{Denna kod används}%
+  \def\@nwlangdeprtc{Rotstycke (används inte i detta dokument)}%
+  \def\@nwlangdepcwf{Denna kod skrivs till fil}%
+  \def\@nwlangdepchk{stycke}%
+  \def\@nwlangdepchks{stycken}%
+  \def\@nwlangdepin{i}%
+  \def\@nwlangdepand{och}%
+  \def\@nwlangdepuss{Använder}%
+  \def\@nwlangdepusd{använd}%
+  \def\@nwlangdepnvu{aldrig använd}%
+  \def\@nwlangdepdfs{Definierar}%
+  \def\@nwlangdepnvd{aldrig definierad}%
+}
+@ 
+
 @ \iffalse
 <<man page: [[\noweboptions]]>>=
 .TP
-.B english, french, german, portuges, icelandic
+.B english, french, german, portuges, icelandic, swedish
 Write cross-reference information in the language specified.
 Defaults to 
 .B english.
