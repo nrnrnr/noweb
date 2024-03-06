@@ -1848,7 +1848,7 @@ Hence:
 
 This is a translation to Swedish by Daniel Bosk \verb+<daniel@bosk.se>+.
 <<language support>>=
-\def\nwopt@english{%
+\def\nwopt@swedish{%
   \def\@nwlangdepdef{Denna definition fortsätter}%
   \def\@nwlangdepcud{Denna kod används}%
   \def\@nwlangdeprtc{Rotstycke (används inte i detta dokument)}%
