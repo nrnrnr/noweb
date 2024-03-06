@@ -1851,7 +1851,9 @@ This is a translation to Swedish by Daniel Bosk \verb+<daniel@bosk.se>+.
 \def\nwopt@swedish{%
   \def\@nwlangdepdef{Denna definition fortsätter}%
   \def\@nwlangdepcud{Denna kod används}%
-  \def\@nwlangdeprtc{Rotstycke (används inte i detta dokument)}%
+  \def\@nwlangdeprtc{%
+    Rotstycke (används inte någon annanstans i detta dokument)%
+  }%
   \def\@nwlangdepcwf{Denna kod skrivs till fil}%
   \def\@nwlangdepchk{stycke}%
   \def\@nwlangdepchks{stycken}%
