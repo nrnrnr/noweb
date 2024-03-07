@@ -1863,7 +1863,7 @@ This is a translation to Swedish by Daniel Bosk \verb+<daniel@bosk.se>+.
   \def\@nwlangdepusd{använd}%
   \def\@nwlangdepnvu{aldrig använd}%
   \def\@nwlangdepdfs{Definierar}%
-  \def\@nwlangdepnvd{aldrig definierad}%
+  \def\@nwlangdepnvd{inte definierad}%
 }
 @ 
 
