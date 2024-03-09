@@ -8,18 +8,18 @@ CIMSG=
 RCSFILES=emptydefn toascii.nw unmarkup Makefile nwmtime pipedocs h2a btdefn
 
 all: toascii
-	chmod +x unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn
+	chmod +x unmarkup emptydefn nwmtime pipedocs h2a btdefn
 
 install: all
-	cp unmarkup emptydefn nwmtime btdefn $(LIB)
-	sed 's@|LIBDIR|@$(LIB)@g' pipedocs > $(LIB)/pipedocs
-	sed 's@|LIBDIR|@$(LIB)@g' toascii > $(LIB)/toascii
-	sed 's@|LIBDIR|@$(LIB)@g' h2a > $(LIB)/h2a
-	chmod +x $(LIB)/pipedocs $(LIB)/toascii $(LIB)/h2a
+	cp unmarkup emptydefn toascii nwmtime btdefn $(LIB)
+	for i in pipedocs h2a; do \
+	  sed "s@|LIBDIR|@$(LIB)@g" $$i > $(LIB)/$$i && chmod +x $(LIB)/$$i; \
+	done
 
 uninstall:
-	for i in unmarkup emptydefn toascii nwmtime h2a btdefn; do rm -f $(LIB)/$$i; done
-	rm -f $(LIB)/pipedocs
+	for i in unmarkup emptydefn toascii nwmtime pipedocs h2a btdefn; do \
+	  rm -f $(LIB)/$$i; \
+	done
 
 source: toascii
 touch: toascii

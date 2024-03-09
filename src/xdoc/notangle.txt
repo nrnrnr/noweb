@@ -291,16 +291,16 @@ EEXXAAMMPPLLEESS
        Have fun!
 
 FFIILLEESS
-       |LIBDIR|/markup            markup preprocessor
-       |LIBDIR|/unmarkup          inverts markup
-       |LIBDIR|/nt                notangle proper
-       |LIBDIR|/finduses          find uses of identifiers for index
-       |LIBDIR|/noidx             generate index and cross-reference info
-       |LIBDIR|/toroff            back end to emit _t_r_o_f_f
-       |LIBDIR|/totex             back end to emit _T_e_X or _L_a_T_e_X
-       |LIBDIR|/tohtml            back end to emit HTML
-       |TEXINPUTS|/nwmac.tex      formatting _T_e_X macros
-       |TEXINPUTS|/noweb.sty      use in _L_a_T_e_X documents; see _n_o_w_e_b_s_t_y_l_e_(_7_)
+       |LIBDIR|/markup             markup preprocessor
+       |LIBDIR|/unmarkup           inverts markup
+       |LIBDIR|/nt                 notangle proper
+       |LIBDIR|/finduses           find uses of identifiers for index
+       |LIBDIR|/noidx              generate index and cross-reference info
+       |LIBDIR|/toroff             back end to emit _t_r_o_f_f
+       |LIBDIR|/totex              back end to emit _T_e_X or _L_a_T_e_X
+       |LIBDIR|/tohtml             back end to emit HTML
+       |TEXINPUTS|/nwmac.tex       formatting _T_e_X macros
+       |TEXINPUTS|/noweb.sty       use in _L_a_T_e_X documents; see _n_o_w_e_b_s_t_y_l_e_(_7_)
 
 SSEEEE AALLSSOO
        _c_p_i_f(1), _n_o_d_e_f_s(1), _n_o_r_o_o_t_s(1), _n_o_w_e_b(1), _n_o_i_n_d_e_x(1), _n_o_r_o_f_f(1), _n_o_w_e_b_‐

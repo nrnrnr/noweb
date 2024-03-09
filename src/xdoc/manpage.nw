@@ -320,7 +320,7 @@ To build a web page, run
 Have fun!
 .SH FILES
 .PP
-.ta \w'|TEXINPUTS|nwkernel.texxxxx'u
+.ta \w'|TEXINPUTS|/nwkernel.texxxxx'u
 .nf
 |LIBDIR|/markup	markup preprocessor
 |LIBDIR|/unmarkup	inverts markup
