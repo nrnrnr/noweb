@@ -925,7 +925,7 @@ and and update the chunk vector."
 	(end (noweb-chunk-boundary-forward)))
     (save-restriction
       (narrow-to-region beg end)
-      (if (= (char-after beg) ?<)
+      (if (equal (char-after beg) ?<)
 	  ;; Inside a code chunk
 	  (if (equal major-mode noweb-code-mode)
 	      nil
