@@ -1634,11 +1634,6 @@ Johann ``Myrkraverk'' Oskarsson" \verb+<johann@myrkraverk.com>+.
   \def\@nwlangdepcud{This code is used}%
   \def\@nwlangdeprtc{Root chunk (not used in this document)}%
   \def\@nwlangdepcwf{This code is written to file}%
-  \def\nwopt@icelandic{%
-  \def\@nwlangdepdef{This definition is continued}%
-  \def\@nwlangdepcud{This code is used}%
-  \def\@nwlangdeprtc{Root chunk (not used in this document)}%
-  \def\@nwlangdepcwf{This code is written to file}%
   \def\@nwlangdepchk{k\'{o}\dh a}%
   \def\@nwlangdepchks{k\'{o}\dh um}%
   \def\@nwlangdepin{\'{\i}}%
