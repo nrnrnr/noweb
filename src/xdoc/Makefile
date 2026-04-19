@@ -2,11 +2,11 @@ WWW=$(HOME)/www/noweb
 SHELL=/bin/sh
 .SUFFIXES: .1 .7 .txt .ps
 .1.txt:
-	nroff -man $< > $@
+	groff -Tutf8 -P-co -man $< > $@
 .1.ps:
 	psroff -t -man $< > $@
 .7.txt:
-	nroff -man $< > $@
+	groff -Tutf8 -P-co -man $< > $@
 .7.ps:
 	psroff -t -man $< > $@
 

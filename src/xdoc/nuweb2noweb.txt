@@ -1,6 +1,4 @@
-NOWEB(1)                    General Commands Manual                   NOWEB(1)
-
-
+_N_O_W_E_B(1)                    General Commands Manual                   _N_O_W_E_B(1)
 
 NNAAMMEE
        nuweb2noweb - convert nuweb files to noweb form
@@ -25,6 +23,4 @@ AAUUTTHHOORR
        Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
 
 
-
-
-                                  10/40/2008                          NOWEB(1)
+                                  10/40/2008                          _N_O_W_E_B(1)

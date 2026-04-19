@@ -1,6 +1,4 @@
-NOWEB(1)                    General Commands Manual                   NOWEB(1)
-
-
+_N_O_W_E_B(1)                    General Commands Manual                   _N_O_W_E_B(1)
 
 NNAAMMEE
        htmltoc - add table of contents to HTML document
@@ -10,9 +8,9 @@ SSYYNNOOPPSSIISS
 
 DDEESSCCRRIIPPTTIIOONN
        _h_t_m_l_t_o_c adds a table of contents to the HTML document named on the com‐
-       mand line or provided as standard input.   The  table  of  contents  is
-       inserted  between  <<ttaabblleeooffccoonntteennttss>> and <<//ttaabblleeooffccoonntteennttss>>,, which must
-       appear on lines by themselves.  Any text between those two  markers  is
+       mand  line or provided as standard input.  The table of contents is in‐
+       serted between <<ttaabblleeooffccoonntteennttss>> and <<//ttaabblleeooffccoonntteennttss>>,, which must ap‐
+       pear on lines by themselves.  Any text between  those  two  markers  is
        _d_i_s_c_a_r_d_e_d_.   These  markers  are  inserted automatically by the _s_l_2_h(1)
        filter.
 
@@ -38,6 +36,4 @@ AAUUTTHHOORR
 
        Stephen Parker provided a preliminary version.
 
-
-
-                               local 10/40/2008                       NOWEB(1)
+                               local 10/40/2008                       _N_O_W_E_B(1)

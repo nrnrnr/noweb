@@ -1,6 +1,4 @@
-NOWEB(7)               Miscellaneous Information Manual               NOWEB(7)
-
-
+_N_O_W_E_B(7)               Miscellaneous Information Manual               _N_O_W_E_B(7)
 
 NNAAMMEE
        nowebstyle - _L_a_T_e_X package for _n_o_w_e_b
@@ -40,7 +38,7 @@ DDEESSCCRRIIPPTTIIOONN
        aallpphhaassuubbppaaggee,, nnuummssuubbppaaggee,, nnoossuubbppaaggee
               Number  chunks  by  the number of the page on which they appear,
               followed by an alphabetic (numeric, not used) ``sub-page'' indi‐
-              cator.   Defaults  to aallpphhaassuubbppaaggee..  nnoossuubbppaaggee implies nnoommaarrggiinn‐‐
+              cator.  Defaults to aallpphhaassuubbppaaggee..  nnoossuubbppaaggee  implies  nnoommaarrggiinn‐‐
               ttaagg..
 
        wweebbnnuummbbeerriinngg
@@ -51,44 +49,44 @@ DDEESSCCRRIIPPTTIIOONN
               Controls  subscripting  of identifiers in code, including quoted
               code.  Selecting ssuubbssccrriippttiiddeennttss means an  identifier  appearing
               in a code chunk (or in quoted code within a documentation chunk)
-              will be subscripted with the chunk  number  of  its  definition.
-              hhyyppeerriiddeennttss  means such identifiers will be hyperlinked to their
-              definitions, provided of course that a  hypertext  package  like
-              hhyyppeerrrreeff  is  loaded.   nnoossuubbssccrriippttiiddeennttss  and nnoohhyyppeerriiddeennttss are
+              will  be  subscripted  with  the chunk number of its definition.
+              hhyyppeerriiddeennttss means such identifiers will be hyperlinked to  their
+              definitions,  provided  of  course that a hypertext package like
+              hhyyppeerrrreeff is loaded.   nnoossuubbssccrriippttiiddeennttss  and  nnoohhyyppeerriiddeennttss  are
               equivalent, and they turn off such markings.  The default is hhyy‐‐
               ppeerriiddeennttss..
 
-       ssuubbssccrriippttqquuootteeddiiddeennttss,,  nnoossuubbssccrriippttqquuootteeddiiddeennttss,, hhyyppeerrqquuootteeddiiddeennttss,, nnoo‐‐
+       ssuubbssccrriippttqquuootteeddiiddeennttss,, nnoossuubbssccrriippttqquuootteeddiiddeennttss,, hhyyppeerrqquuootteeddiiddeennttss,, nnoo‐‐
        hhyyppeerrqquuootteeddiiddeennttss
-              Controls linking of identifiers as above, but  applies  only  to
+              Controls  linking  of  identifiers as above, but applies only to
               uses of identifiers in quoted code.
 
        hhiiddeeuunnuusseeddddeeffss
-              Omit  defined  but  unused identifiers from the local identifier
+              Omit defined but unused identifiers from  the  local  identifier
               cross-reference (Preston Briggs).
 
        nnooiiddeennttxxrreeff
-              Omit the local identifier  cross-reference  which  follows  each
+              Omit  the  local  identifier  cross-reference which follows each
               code chunk.
 
        eexxtteerrnnaalliinnddeexx
               Use an index generated with _n_o_i_n_d_e_x_(_1_) (q.v.).
 
        lloonnggcchhuunnkkss
-              When  expanding  \\nnoowweebbcchhuunnkkss,,  show page numbers of definitions
+              When expanding \\nnoowweebbcchhuunnkkss,, show page  numbers  of  definitions
               and uses of each chunk.
 
-       eenngglliisshh,, ffrreenncchh,, ggeerrmmaann,, ppoorrttuuggeess,, iicceellaannddiicc
-              Write cross-reference information  in  the  language  specified.
+       eenngglliisshh,, ffrreenncchh,, ggeerrmmaann,, ppoorrttuuggeess,, iicceellaannddiicc,, sswweeddiisshh
+              Write  cross-reference  information  in  the language specified.
               Defaults to eenngglliisshh..
 
 CCOONNTTRROOLL SSEEQQUUEENNCCEESS
-       The  noweb  package  describes  a  gazillion special control sequences.
+       The noweb package describes  a  gazillion  special  control  sequences.
        Only a few are listed here.
 
        \\nneexxttcchhuunnkkllaabbeell{{ll}}
-              Associates label ll with the sub-page reference of the next  code
-              chunk.   Can  be used in for concise chunk cross-reference with,
+              Associates  label ll with the sub-page reference of the next code
+              chunk.  Can be used in for concise chunk  cross-reference  with,
               e.g., cchhuunnkk~~\\ssuubbppaaggeerreeff{{ll}}.
 
        \\nnwwaanncchhoorrttoo{{UURRLL}}{{aanncchhoorr tteexxtt}}
@@ -106,7 +104,7 @@ CCOONNTTRROOLL SSEEQQUUEENNCCEESS
               and the _l_2_h noweb filter translate the text into HTML.
 
 CCOOMMPPAATTIIBBIILLIITTYY
-       For  compatibility with plain _T_e_X, _n_o_w_e_b continues to use the old-style
+       For compatibility with plain _T_e_X, _n_o_w_e_b continues to use the  old-style
        font commands \\tttt and so on.  When used with the KOMA scripts (document
        classes  ssccrraarrttccll,  ssccrrrreepprrtt,  and  ssccrrbbooookk), _n_o_w_e_b needs the document-
        class option eennaabblleeddeepprreeccaatteeddffoonnttccoommmmaannddss.
@@ -123,6 +121,4 @@ AAUUTTHHOORR
        Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
 
 
-
-
-                               local 10/40/2008                       NOWEB(7)
+                               local 10/40/2008                       _N_O_W_E_B(7)
