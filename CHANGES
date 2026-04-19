@@ -1,3 +1,9 @@
+CHANGES SINCE VERSION 2.13
+
+PR 33, add Swedish
+Fixed issue #44, bad encodings for Icelandic and Swedish (@sirjofri, @jspitz)
+Various others as per git log.
+
 CHANGES FOR VERSION 2.13
 binaries now track which git version they are
 support for LaTeX is updated to use \rmfamily, \bfseries, and so on
