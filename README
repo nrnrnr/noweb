@@ -13,6 +13,22 @@ to the `src' directory and follow the instructions in the file INSTALL.
 https://web.archive.org/web/20190415151640/http://www.jim-pettigrew.com/noweb/install.)
 
 
+A NOTE ABOUT VERSION
+
+Noweb predates Semantic Versioning (semver.org) by more than 20 years.
+Aside from bug fixes, all versions 2.x should be compatible.  A change
+in x means either that something significant changed or that a
+significant number of years elapsed since the previous release.
+Minor versions get a suffix a, b, etc.
+
+Version 2.13 is meant to be the last numbered version; future versions
+should be referred to by git commit hash.
+
+Version 3 is available in alpha (https://github.com/nrnrnr/noweb3).
+Technology changes have rendered it mostly irrelevant, and it is not
+planned to be released.
+
+
 WHAT'S NEW IN VERSION 2.13
 
 Version 2.13 fixes issues #24 and #26 at 
