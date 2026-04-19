@@ -29,6 +29,11 @@ DDEESSCCRRIIPPTTIIOONN
               Set  code  in _L_a_T_e_X \\ssmmaallll font instead of \\nnoorrmmaallssiizzee..  Similar
               options exist for all the _L_a_T_e_X size-changing commands.
 
+       bbrreeaakkccooddee
+              Make _n_o_w_e_b use less vertical white space, at the cost of  break‐
+              ing  up  code  chunks.   White  space  left on a page is at most
+              \\nnwwbbrreeaakkccooddeessppaaccee..
+
        lloonnggxxrreeff,, sshhoorrttxxrreeff,, nnooxxrreeff
               Choose a style  for  chunk  cross-reference.   Long  style  uses
               small  paragraphs  after  each  chunk, as in Knuth.  Short style

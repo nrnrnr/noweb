@@ -47,6 +47,13 @@ Similar options exist for all the
 .I LaTeX
 size-changing commands.
 .TP
+.B breakcode
+Make 
+.I noweb
+use less vertical white space, at the cost of breaking up code chunks.
+White space left on a page is at most
+.B "\\\\nwbreakcodespace."
+.TP
 .B longxref, shortxref, noxref
 Choose a style for chunk cross-reference.
 Long style uses  small paragraphs after each chunk, as in Knuth.
