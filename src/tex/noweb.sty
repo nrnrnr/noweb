@@ -795,22 +795,30 @@ I'll try to avoid such incompatible changes in the future.}%
 \newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
 %%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
 %%\renewcommand\@nw@hyperref@anc[1]{}  % nr
-\newcommand\nwhyperreference{%
+\DeclareRobustCommand\nwhyperreference[2]{%
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
-       {\global\let\nwhyperreference\@gobble}
-       {\global\let\nwhyperreference\@nw@hyper@ref}}
-    {\global\let\nwhyperreference\@nw@hyperref@ref}%
-  \nwhyperreference
+       {#2}%
+       {\@nw@hyper@ref{#1}{#2}}}%
+    {\@nw@hyperref@ref{#1}{#2}}%
 }
 
-\newcommand\nwblindhyperanchor{%
+\DeclareRobustCommand\nwblindhyperanchor[1]{%
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
-       {\global\let\nwblindhyperanchor\@gobble}
-       {\global\let\nwblindhyperanchor\@nw@hyper@anc}}
-    {\global\let\nwblindhyperanchor\@nw@hyperref@anc}%
-  \nwblindhyperanchor
+       {}%
+       {\@nw@hyper@anc{#1}}}%
+    {\@nw@hyperref@anc{#1}}%
+}
+\AtBeginDocument{%
+  \@ifundefined{pdfstringdefDisableCommands}{}{%
+    \pdfstringdefDisableCommands{%
+      \def\nwlinkedidentq#1#2{#1}%
+      \def\nwlinkedidentc#1#2{#1}%
+      \let\Tt\relax
+      \let\nwendquote\relax
+    }%
+  }%
 }
 \newcommand\nwanchorto{%
   \begingroup\let\do\@makeother\dospecials

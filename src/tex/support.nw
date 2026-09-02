@@ -1473,29 +1473,64 @@ There are two sets of support for hypertext.
 \newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
 %%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
 %%\renewcommand\@nw@hyperref@anc[1]{}  % nr
-@ We define the independent macros [[\nwhyperreference]] and
- [[\nwblindhyperanchor]],
-which test for the presence of one of these two packages, 
-redefine themselve accordingly, and re-invoke themselves.
+@ The package-independent macros [[\nwhyperreference]] and
+[[\nwblindhyperanchor]] dispatch to whichever of the two packages is
+loaded, or fall back to plain text (respectively nothing) if neither
+is.
+The test cannot run while \texttt{noweb.sty} is being loaded, because
+the hypertext package is conventionally loaded \emph{after} this one;
+the dispatch must therefore be deferred until the macros are used.
+
+An earlier version deferred the test by having each macro run it once,
+globally [[\let]] itself to the chosen backend, and re-invoke itself.
+That trick fails in moving arguments: a linked identifier in a section
+title is \emph{expanded} into the table of contents, the running
+heads, and the PDF bookmarks, and expansion never executes the
+[[\let]], so \texttt{hyperref}'s internals leaked into places where
+they are undefined.
+Starting with \texttt{hyperref} from {\TeX} Live 2025 that is a fatal
+error (issue~48).
+Instead we declare the macros robust, so they are written into moving
+arguments unexpanded, and simply repeat the (cheap)
+[[\@ifundefined]] tests at each call.
 <<noweb.sty>>=
-\newcommand\nwhyperreference{%
+\DeclareRobustCommand\nwhyperreference[2]{%
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
-       {\global\let\nwhyperreference\@gobble}
-       {\global\let\nwhyperreference\@nw@hyper@ref}}
-    {\global\let\nwhyperreference\@nw@hyperref@ref}%
-  \nwhyperreference
+       {#2}%
+       {\@nw@hyper@ref{#1}{#2}}}%
+    {\@nw@hyperref@ref{#1}{#2}}%
 }
 
-\newcommand\nwblindhyperanchor{%
+\DeclareRobustCommand\nwblindhyperanchor[1]{%
   \@ifundefined{hyperlink}
     {\@ifundefined{hyperreference}
-       {\global\let\nwblindhyperanchor\@gobble}
-       {\global\let\nwblindhyperanchor\@nw@hyper@anc}}
-    {\global\let\nwblindhyperanchor\@nw@hyperref@anc}%
-  \nwblindhyperanchor
+       {}%
+       {\@nw@hyper@anc{#1}}}%
+    {\@nw@hyperref@anc{#1}}%
 }
-@ 
+@ Robustness keeps \texttt{hyperref} from crashing, but PDF bookmarks
+are plain strings: \texttt{hyperref} flattens each section title with
+[[\pdfstringdef]], which warns about and drops every command it does
+not recognize, garbling the bookmark text.
+So we teach it how to flatten our markup: a linked identifier reduces
+to the identifier itself, and the font and spacing macros used in
+quoted code vanish.
+[[\pdfstringdefDisableCommands]] exists only under \texttt{hyperref},
+which is loaded after \texttt{noweb.sty}, so we postpone the test
+until [[\begin{document}]].
+<<noweb.sty>>=
+\AtBeginDocument{%
+  \@ifundefined{pdfstringdefDisableCommands}{}{%
+    \pdfstringdefDisableCommands{%
+      \def\nwlinkedidentq#1#2{#1}%
+      \def\nwlinkedidentc#1#2{#1}%
+      \let\Tt\relax
+      \let\nwendquote\relax
+    }%
+  }%
+}
+@
 \subsection{Support for hypertext translation to HTML}
 <<noweb.sty>>=
 \newcommand\nwanchorto{%
