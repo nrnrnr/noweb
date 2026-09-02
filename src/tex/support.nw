@@ -1468,9 +1468,23 @@ There are two sets of support for hypertext.
 \newcommand\@nw@hyper@anc{\blindhyperanchor} % naras
 @ Norman Ramsey wrote support for the \texttt{hyperrref} package (May
  1998).
+
+Both calls end in [[\relax]] because of \texttt{beamer}: its article
+mode (\texttt{beamerarticle}) redefines [[\hyperlink]] and
+[[\hypertarget]] to accept an overlay specification \emph{after} the
+mandatory arguments, as in [[\hyperlink{target}{text}<2->]].
+A linked identifier in a code chunk is followed directly by whatever
+code comes next, so a line like [[nymutt close<enter>]] in a
+\texttt{muttrc} weaves to [[\hyperlink{noweb.X}{close}<enter>]], and
+\texttt{beamer} silently takes [[<enter>]] as an overlay
+specification that is never current: both the identifier and the
+[[<enter>]] vanish from the typeset code.
+An anchor would lose its target the same way.
+The [[\relax]] is what \texttt{beamer} sees instead of [[<]], and it
+typesets as nothing.
 <<noweb.sty>>=
-\newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}}  % nr
-\newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
+\newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}\relax}  % nr
+\newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}\relax}  % nr
 %%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
 %%\renewcommand\@nw@hyperref@anc[1]{}  % nr
 @ We define the independent macros [[\nwhyperreference]] and

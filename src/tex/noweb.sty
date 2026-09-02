@@ -791,8 +791,8 @@ I'll try to avoid such incompatible changes in the future.}%
 \let\nwopt@longchunks\@nwlongchunkstrue
 \newcommand\@nw@hyper@ref{\hyperreference} % naras
 \newcommand\@nw@hyper@anc{\blindhyperanchor} % naras
-\newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}}  % nr
-\newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}}  % nr
+\newcommand\@nw@hyperref@ref[2]{\hyperlink{noweb.#1}{#2}\relax}  % nr
+\newcommand\@nw@hyperref@anc[1]{\hypertarget{noweb.#1}{\relax}\relax}  % nr
 %%\renewcommand\@nw@hyperref@ref[2]{{#2}}  % nr
 %%\renewcommand\@nw@hyperref@anc[1]{}  % nr
 \newcommand\nwhyperreference{%
