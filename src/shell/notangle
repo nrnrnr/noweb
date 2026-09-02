@@ -3,6 +3,8 @@
 # See file COPYRIGHT for more information.
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= markopt= filters=
+nl='
+'
 while [ $# -gt 0 ]; do
         case $1 in
         -gitversion) echo "|GITVERSION|" ; exit ;;
@@ -11,7 +13,7 @@ while [ $# -gt 0 ]; do
         -t)  ;; # this is default
         -t*) markopt="$markopt -t" ; opt="$opt '$1'" ;;
                 # copy tabs at markup, use width given in notangle
-        -filter) filters="$filters $2 | " ; shift ;;
+        -filter) filters="$filters$2$nl" ; shift ;;
         -markup) markup="$2" ; shift ;;
         -)   arg="$arg '$1'" ;;
         -L*) opt="$opt -t '$1'" ; markopt="$markopt -t" ;;
@@ -22,5 +24,39 @@ while [ $# -gt 0 ]; do
 done
 PATH="$PATH:$LIB" 
 export PATH
-eval "$markup $markopt $arg | $filters $LIB/nt $opt "'; rc=$?'
+statusfile=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" 1>&2; exit 1; }
+trap 'rm -f "$statusfile"' 0 1 2 15
+pipeline=
+stage=0
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  stage=`expr $stage + 1`
+  pipeline="$pipeline{ $f || echo \"$stage \$?\" >>\"\$statusfile\"; } | "
+done
+IFS=$oldIFS
+eval "{ $markup $markopt $arg || echo \"0 \$?\" >>\"\$statusfile\"; } | $pipeline$LIB/nt $opt"
+rc=$?
+failedstatus=
+if [ -s "$statusfile" ]; then
+  oldIFS=$IFS
+  IFS=$nl
+  for line in `sort -n "$statusfile"`; do
+    IFS=$oldIFS
+    set -- $line
+    stage=$1 status=$2
+    if [ "$status" -ne 141 ]; then
+      if [ "$stage" -eq 0 ]; then
+        cmd="$markup $markopt $arg"
+      else
+        cmd=`printf '%s\n' "$filters" | sed -n "${stage}p"`
+      fi
+      echo "$0: pipeline stage $stage ($cmd) failed with status $status" 1>&2
+      if [ -z "$failedstatus" ]; then failedstatus=$status; fi
+    fi
+    IFS=$nl
+  done
+  IFS=$oldIFS
+fi
+if [ -n "$failedstatus" ]; then exit $failedstatus; fi
 exit $rc

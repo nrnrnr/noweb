@@ -3,10 +3,19 @@
 # Copyright 1993 by Norman Ramsey.  All rights reserved.
 # See file COPYRIGHT for more information.
 LIB=|LIBDIR|
+# markup and the autodefs filter record a nonzero status in a temporary
+# file, so that a failing filter fails nodefs instead of printing an
+# empty list with sed's status; see noweave.nw for the idiom.
+statusfile=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" 1>&2; exit 1; }
+trap 'rm -f "$statusfile"' 0 1 2 15
+rc=0
 case $1 in 
   -auto|-autodefs) 
     newfilter="$LIB/autodefs.$2" ; shift ; shift
-    $LIB/markup "$@" | $newfilter | sed -n 's/^@index defn //p'
+    { $LIB/markup "$@" || echo "markup $?" >>"$statusfile"; } |
+    { $newfilter || echo "$newfilter $?" >>"$statusfile"; } |
+    sed -n 's/^@index defn //p'
+    rc=$?
     ;;
   -showauto|-showautodefs)
     foundautodefs=
@@ -22,7 +31,17 @@ case $1 in
     fi
     ;;
   *)
-    $LIB/markup "$@" | sed -n 's/^@index defn //p'
+    { $LIB/markup "$@" || echo "markup $?" >>"$statusfile"; } |
+    sed -n 's/^@index defn //p'
+    rc=$?
     ;;
 esac
-exit $?
+if [ -s "$statusfile" ]; then
+  while read cmd status; do
+    if [ "$status" -ne 141 ]; then
+      echo "$0: $cmd failed with status $status" 1>&2
+      exit $status
+    fi
+  done < "$statusfile"
+fi
+exit $rc

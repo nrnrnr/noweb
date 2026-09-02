@@ -277,6 +277,16 @@ encounters a chunk name within documentation, it assumes that this
 indicates an error, usually misspelling ``@<<name@>>=''.
 Other error messages should be self-explanatory.
 .PP
+.IR notangle ,
+.I nountangle
+and
+.I noweave
+exit with a nonzero status when any stage of their pipeline fails:
+.IR markup ,
+a filter, or the final stage (the tangler or the back end).
+The status is that of the failing stage nearest the front of the
+pipeline, and a message names the stage.
+.PP
 It is incorrect to refer to a chunk that is never
 defined, but it is OK for chunks to be defined and not used.
 .SH EXAMPLES

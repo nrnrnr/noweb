@@ -6,6 +6,8 @@
 <<copyright notice>>
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= markopt= filters=
+nl='
+'
 while [ $# -gt 0 ]; do
 	case $1 in
         -gitversion) echo "|GITVERSION|" ; exit ;;
@@ -14,7 +16,7 @@ while [ $# -gt 0 ]; do
 	-t)  ;; # this is default
         -t*) markopt="$markopt -t" ; opt="$opt '$1'" ;;
 		# copy tabs at markup, use width given in notangle
-	-filter) filters="$filters $2 | " ; shift ;;
+	-filter) filters="$filters$2$nl" ; shift ;;
 	-markup) markup="$2" ; shift ;;
 	-)   arg="$arg '$1'" ;;
 	-L*) opt="$opt -t '$1'" ; markopt="$markopt -t" ;;
@@ -25,5 +27,61 @@ while [ $# -gt 0 ]; do
 done
 PATH="$PATH:$LIB" 
 export PATH
-eval "$markup $markopt $arg | $filters $LIB/nt $opt "'; rc=$?'
+<<create the status file for the pipeline stages>>
+<<build the filter pipeline from [[filters]]>>
+eval "{ $markup $markopt $arg || echo \"0 \$?\" >>\"\$statusfile\"; } | $pipeline$LIB/nt $opt"
+rc=$?
+<<exit with the status of the first failed stage>>
+@
+The pipeline is [[markup]], the [[-filter]]s in order, and [[nt]].
+Its exit status would be [[nt]]'s alone, which hides a filter that
+dies half-way: [[nt]] tangles whatever arrived and exits~0, or
+complains about a missing root chunk and exits with a status that
+has nothing to do with the cause.  So every stage before [[nt]] runs
+in braces that record its number and status in a temporary file if
+it exits nonzero, exactly as [[noweave]] does (see
+\texttt{noweave.nw} for the full discussion, including why entries
+with status 141---upstream stages killed by [[SIGPIPE]] after a later
+stage stopped reading---are ignored).  Filters are collected one per
+line so that each can be wrapped as a unit; a filter command contains
+spaces but never a newline.
+<<create the status file for the pipeline stages>>=
+statusfile=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" 1>&2; exit 1; }
+trap 'rm -f "$statusfile"' 0 1 2 15
+@
+Each wrapped filter ends in [[|]], so the tangler simply follows.
+<<build the filter pipeline from [[filters]]>>=
+pipeline=
+stage=0
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  stage=`expr $stage + 1`
+  pipeline="$pipeline{ $f || echo \"$stage \$?\" >>\"\$statusfile\"; } | "
+done
+IFS=$oldIFS
+@
+<<exit with the status of the first failed stage>>=
+failedstatus=
+if [ -s "$statusfile" ]; then
+  oldIFS=$IFS
+  IFS=$nl
+  for line in `sort -n "$statusfile"`; do
+    IFS=$oldIFS
+    set -- $line
+    stage=$1 status=$2
+    if [ "$status" -ne 141 ]; then
+      if [ "$stage" -eq 0 ]; then
+        cmd="$markup $markopt $arg"
+      else
+        cmd=`printf '%s\n' "$filters" | sed -n "${stage}p"`
+      fi
+      echo "$0: pipeline stage $stage ($cmd) failed with status $status" 1>&2
+      if [ -z "$failedstatus" ]; then failedstatus=$status; fi
+    fi
+    IFS=$nl
+  done
+  IFS=$oldIFS
+fi
+if [ -n "$failedstatus" ]; then exit $failedstatus; fi
 exit $rc

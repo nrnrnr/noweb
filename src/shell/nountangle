@@ -5,6 +5,8 @@
 # set -x
 LIB=|LIBDIR|
 markup=$LIB/markup opt= arg= filters=
+nl='
+'
 width=72 subst='gsub("\\*/", "* /", s)' format='/* %%-%ds */'
 
 while [ $# -gt 0 ]; do
@@ -22,7 +24,7 @@ while [ $# -gt 0 ]; do
         -tex)    format='%%%% %%-%ds' ;         subst=' ' ;;
         -L*) ;; # deliberately ignore requests for #line
         -w[0-9][0-9]*)    width=`echo $1 | sed 's/^-w//'` ;;
-	-filter) filters=" $filters | $2 " ; shift ;;
+	-filter) filters="$filters$2$nl" ; shift ;;
 	-markup) markup="$2" ; shift ;;
 	-)  arg="$arg '$1'" ;;
         -*) opt="$opt '$1'" ;;
@@ -31,7 +33,9 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-PATH="$PATH:$LIB" eval "$markup $arg $filters" |
+# The awk program that turns documentation into comments, as a function
+# so that it can be one stage of the accounted pipeline below.
+commentout() {
 nawk 'BEGIN { line = 0; capture = 0; format=sprintf("'"$format"'",'"$width"') }
 
 function comment(s) {
@@ -65,5 +69,48 @@ function grab(s) {
 
 /^@defn / { holding[line] = holding[line] "<"substr($0,7)">=" # (line should be blank)
             print ; defn_pending = 1 ; next }
-{ print }' |
+{ print }'
+}
+
+PATH="$PATH:$LIB"
+export PATH
+# Every stage before nt records its number and status in a temporary
+# file if it exits nonzero, so that a failing filter fails nountangle
+# instead of leaving nt's status as the only verdict; see noweave.nw.
+statusfile=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" 1>&2; exit 1; }
+trap 'rm -f "$statusfile"' 0 1 2 15
+pipeline=
+stage=0
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  stage=`expr $stage + 1`
+  pipeline="$pipeline{ $f || echo \"$stage \$?\" >>\"\$statusfile\"; } | "
+done
+IFS=$oldIFS
+awkstage=`expr $stage + 1`
+eval "{ $markup $arg || echo \"0 \$?\" >>\"\$statusfile\"; } | $pipeline{ commentout || echo \"$awkstage \$?\" >>\"\$statusfile\"; }" |
 eval "$LIB/nt $opt"
+rc=$?
+failedstatus=
+if [ -s "$statusfile" ]; then
+  oldIFS=$IFS
+  IFS=$nl
+  for line in `sort -n "$statusfile"`; do
+    IFS=$oldIFS
+    set -- $line
+    stage=$1 status=$2
+    if [ "$status" -ne 141 ]; then
+      if [ "$stage" -eq 0 ]; then cmd="$markup $arg"
+      elif [ "$stage" -eq "$awkstage" ]; then cmd="nawk (commenting out documentation)"
+      else cmd=`printf '%s\n' "$filters" | sed -n "${stage}p"`
+      fi
+      echo "$0: pipeline stage $stage ($cmd) failed with status $status" 1>&2
+      if [ -z "$failedstatus" ]; then failedstatus=$status; fi
+    fi
+    IFS=$nl
+  done
+  IFS=$oldIFS
+fi
+if [ -n "$failedstatus" ]; then exit $failedstatus; fi
+exit $rc
