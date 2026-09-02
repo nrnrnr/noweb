@@ -1,0 +1,23 @@
+This example program raises an error so that we can check that
+[[nolinemap]] maps the traceback back to this file.
+
+<<example.py>>=
+def f():
+    <<raise an error>>
+
+print(<<the answer>>)
+f()
+@
+
+The error itself lives in its own chunk.  It is a chunk of a single
+line, so its splice carries no marker and anchors to the line that
+uses it: the traceback should point at the use, line 6.
+<<raise an error>>=
+raise ValueError("expect example.nw line 6")
+@
+
+A chunk used in the middle of a line must splice cleanly, with no
+marker breaking the line:
+<<the answer>>=
+6*7
+@

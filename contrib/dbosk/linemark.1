@@ -1,0 +1,97 @@
+.TH LINEMARK 1 "" "noweb contrib"
+.SH NAME
+linemark \- insert source-location comments into noweb code chunks
+.SH SYNOPSIS
+.B notangle
+\fB\-filter\fP '\fBlinemark\fP
+[\fB\-L\fP \fIfmt\fP]
+[\fB\-c\fP \fIleader\fP]
+[\fB\-e\fP]'
+\fIfile\fP ...
+.SH DESCRIPTION
+.I linemark
+is a
+.IR noweb (1)
+filter that inserts a comment line, by default
+.BR "# %L \(dq%F\(dq" ,
+wherever the tangled output jumps to a different place in the noweb
+source: after the first line of every code chunk (announcing its
+second, so that a chunk spliced into the middle of a line never has
+its first line broken), before continuation definitions of the same
+chunk, and after every line that uses another chunk.
+Tangle
+.I without
+the
+.B \-L
+option and indentation is preserved, which makes the filter suitable
+for indentation-sensitive languages such as Python, for which
+.B notangle \-L
+produces broken output.
+Comment-only lines are exempt from Python's indentation rules, so the
+inserted lines are harmless.
+Use
+.IR nolinemap (1)
+to translate tool messages that point into the tangled files back to
+the noweb sources.
+.SH OPTIONS
+.TP
+.B \-L \fIfmt\fP
+Set the marker format.
+.B %L
+expands to the source line number,
+.B %F
+to the source file name, and
+.B %%
+to a percent sign; these are the escapes of
+.BR "notangle \-L" ,
+except that
+.B %N
+is not supported, because a marker is always exactly one line.
+The default is
+.BR "# %L \(dq%F\(dq" .
+.TP
+.B \-c \fIleader\fP
+Use
+.I leader
+as the comment leader in the default format:
+.B \-c //
+gives
+.BR "// %L \(dq%F\(dq" .
+When both options are given,
+.B \-L
+wins.
+.TP
+.B \-e, \-\-eager
+Place every chunk's marker before its first line, as earlier
+versions did, and mark after backslash continuations too.
+A chunk spliced into the middle of a line then carries the marker
+inside the broken line, and a marker after a continuation severs
+it, so this suits only consumers that post-process the tangled text
+and repair both themselves (vim-noweb's shadow buffers do); in
+exchange they get an exact map, with no lines anchored across a
+splice.
+.TP
+.B \-h, \-\-help
+Print a help message and exit.
+.SH EXAMPLE
+.nf
+notangle -Rfoo.py -filter linemark foo.nw > foo.py
+nolinemap python3 foo.py
+.fi
+.SH BUGS
+The first line of a chunk is anchored by counting from the marker
+before its use site, so an error on it is reported at the line using
+the chunk rather than at its definition.
+The same counting covers any leading lines of a chunk that end in a
+backslash: a marker there would sever the continuation, so it is
+delayed until a line without one, and messages pointing into the
+delayed run come out shifted by the length of the splice detour.
+A chunk whose first line opens a multi-line string cannot be
+protected the same way; the delayed marker lands inside the string.
+The very first line of the tangled file has no marker before it at
+all; messages pointing there are not translated.
+.SH SEE ALSO
+.IR nolinemap (1),
+.IR notangle (1)
+.SH AUTHOR
+Daniel Bosk <dbosk@kth.se>

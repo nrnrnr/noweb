@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# linemark [-L fmt] [-c leader] -- insert source-location comments
+# into code chunks, so that the output of notangle (without -L!) can
+# be mapped back to the .nw source by nolinemap.  See nolinemap.nw.
+#
+# sample usage:
+#   notangle -filter linemark foo.nw > foo.py
+
+usage() {
+  cat <<'EOF'
+usage: linemark [-L fmt] [-c leader] [-e]
+
+noweb filter: insert source-location comments into code chunks, so
+that output of tools running on the tangled files can be mapped back
+to the .nw sources by nolinemap(1).  Unlike notangle -L, indentation
+is preserved, so it suits languages like Python.
+
+  -L fmt      marker format; %L = line, %F = file, %% = percent
+              (default: # %L "%F")
+  -c leader   comment leader for the default format (default: #)
+  -e, --eager eager markers: mark the first line of every chunk too,
+              even where that lands a marker inside a spliced line;
+              for consumers that post-process the output
+  -h, --help  print this help and exit
+
+sample usage:
+  notangle -filter linemark foo.nw > foo.py
+  nolinemap python3 foo.py
+EOF
+}
+fmt=
+leader='#'
+eager=
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    -L)   [ $# -ge 2 ] ||
+            { echo "linemark: option -L needs an argument" 1>&2; exit 1; }
+          fmt="$2"; shift 2 ;;
+    -L?*) fmt="${1#-L}"; shift ;;
+    -c)   [ $# -ge 2 ] ||
+            { echo "linemark: option -c needs an argument" 1>&2; exit 1; }
+          leader="$2"; shift 2 ;;
+    -c?*) leader="${1#-c}"; shift ;;
+    -e|--eager) eager=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    --)   shift; break ;;
+    -*)   echo "linemark: unknown option $1" 1>&2; usage 1>&2; exit 1 ;;
+    *)    break ;;
+  esac
+done
+[ -n "$fmt" ] || fmt="$leader"' %L "%F"'
+AWK="${AWK-nawk}"
+command -v "$AWK" >/dev/null 2>&1 || AWK=awk
+LINEMARK_FMT="$fmt" LINEMARK_EAGER="$eager" "$AWK" '
+BEGIN { fmt = ENVIRON["LINEMARK_FMT"]; lineno = 1
+        eager = ENVIRON["LINEMARK_EAGER"] + 0 }
+function marker(    out, i, c) {
+  out = ""
+  for (i = 1; i <= length(fmt); i++) {
+    c = substr(fmt, i, 1)
+    if (c == "%" && i < length(fmt)) {
+      i++; c = substr(fmt, i, 1)
+      if (c == "L")      out = out lineno
+      else if (c == "F") out = out file
+      else if (c == "%") out = out "%"
+      else               out = out "%" c
+    } else out = out c
+  }
+  print "@text " out
+  print "@nl"
+  pending = 0
+}
+/^@file /       { file = substr($0, 7); lineno = 1; print; next }
+/^@line /       { lineno = $2 + 0; print; next }
+/^@begin code / { code = 1; bs = 0; contline = 0; print; next }
+/^@end code /   { code = 0; afterdefn = 0; sawuse = 0; firstdef = 0
+                  pending = 0; print; next }
+/^@defn /       { name = substr($0, 7)
+                  if (eager || (name in seen)) afterdefn = 1
+                  else { seen[name] = 1; firstdef = 1 }
+                  print; next }
+/^@use /        { if (code && pending && (eager || !contline)) marker()
+                  if (code) { sawuse = 1; bs = 0 }
+                  print; next }
+/^(@nl|@index nl)$/ {
+  if (code && pending && (eager || !contline)) marker()
+  print
+  lineno++
+  if (code && (afterdefn || sawuse || firstdef == 2)) {
+    pending = 1; afterdefn = 0; sawuse = 0; firstdef = 0
+  }
+  if (code && firstdef == 1) firstdef = 2
+  if (code) { contline = bs; bs = 0 }
+  next
+}
+/^@text /       { if (code && pending && (eager || !contline)) marker()
+                  if (code) bs = ($0 ~ /\\$/)
+                  print; next }
+{ print }
+' "$@"

@@ -1,5 +1,8 @@
 CHANGES SINCE VERSION 2.13
 
+contrib/dbosk: linemark filter and nolinemap (alias noerr), an
+  indentation-preserving alternative to -L for languages like Python
+  (issue #41, @dbosk)
 PR 33, add Swedish
 Fixed issue #44, bad encodings for Icelandic and Swedish (@sirjofri, @jspitz)
 Various others as per git log.

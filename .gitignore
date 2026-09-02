@@ -34,3 +34,6 @@ src/c/*.o
 /src/shell/gitversion.nw
 /src/c/gitversion.c
 /src/tex/gitversion.nw
+/contrib/dbosk/example.py
+/contrib/dbosk/example-eager.py
+/contrib/dbosk/test.out

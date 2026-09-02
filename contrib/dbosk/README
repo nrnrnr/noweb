@@ -1,0 +1,28 @@
+nolinemap.nw   Source of two companion tools for languages, like
+               Python, whose indentation notangle's -L option cannot
+               preserve (see issue #41):
+
+linemark       a noweb filter that inserts source-location comments
+               (default `# %L "%F"') at the start of each code chunk
+               and after each line that uses a chunk.  Tangle WITHOUT
+               -L and indentation survives.
+
+nolinemap      runs a command (or filters stdin) and rewrites
+               messages that point into tangled files so that they
+               point into the .nw sources, translating columns too.
+               Works for compilers, interpreters, linters, editor
+               quickfix streams.  Also understands #line directives,
+               so it works for notangle -L output as well.  Installed
+               also under the alias `noerr', after the old Perl tool
+               it supersedes.
+
+example.nw     test fixture; run `make test' (needs python3).
+
+Man pages linemark.1 and nolinemap.1 tangle from nolinemap.nw too;
+`make install LIB=... MAN=...' installs them (skipped when MAN is
+empty, as when driven by contrib/Makefile), with noerr.1 linked to
+nolinemap.1.  Both commands answer -h.
+
+Typical use:
+    notangle -filter linemark foo.nw > foo.py
+    nolinemap python3 foo.py

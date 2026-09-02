@@ -1,0 +1,68 @@
+.TH NOLINEMAP 1 "" "noweb contrib"
+.SH NAME
+nolinemap \- map messages about tangled files back to noweb sources
+.SH SYNOPSIS
+.B nolinemap
+[\fB\-L\fP \fIfmt\fP]
+[\fB\-c\fP \fIleader\fP]
+[\fB\-\-\fP]
+[\fIcommand\fP [\fIarg\fP ...]]
+.SH DESCRIPTION
+.I nolinemap
+reads the output of a compiler, interpreter, linter, or any other
+tool, finds references to files tangled by
+.IR notangle (1),
+and rewrites them so that they point into the noweb sources, using
+the location comments inserted by the
+.IR linemark (1)
+filter.
+It also understands #line directives, so it serves
+.B notangle \-L
+output as well.
+It recognizes Python tracebacks and \fIfile\fP:\fIline\fP[:\fIcolumn\fP]
+references; columns are translated too, by comparing the indentation
+of the tangled line and its source line.
+References to files that do not exist or contain no markers pass
+through untouched.
+.PP
+With a
+.IR command ,
+nolinemap runs it, translates both its standard output and standard
+error, and exits with the command's exit status, so it can wrap
+commands in a Makefile transparently.
+Without one it translates standard input, for use in a pipe.
+.PP
+nolinemap is also installed under the alias
+.IR noerr ,
+after the older Perl program it supersedes.
+.SH OPTIONS
+.TP
+.B \-L \fIfmt\fP
+The marker format that was used when tangling; see
+.IR linemark (1).
+The default is
+.BR "# %L \(dq%F\(dq" .
+.TP
+.B \-c \fIleader\fP
+The comment leader that was given to
+.B linemark \-c
+when tangling.
+.TP
+.B \-h, \-\-help
+Print a help message and exit.
+.SH EXAMPLES
+.nf
+notangle -Rfoo.py -filter linemark foo.nw > foo.py
+nolinemap python3 foo.py
+make 2>&1 | nolinemap
+.fi
+.SH BUGS
+A hand-written comment that happens to match the marker format
+exactly is indistinguishable from a marker and skews the mapping
+until the next real marker.
+Column translation counts a tab as one column.
+.SH SEE ALSO
+.IR linemark (1),
+.IR notangle (1)
+.SH AUTHOR
+Daniel Bosk <dbosk@kth.se>

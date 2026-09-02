@@ -1,6 +1,6 @@
 SHELL=/bin/sh
 LIB=/dev/null  # to be overridden
-DIRS=davelove jonkrom leew norman
+DIRS=davelove dbosk jonkrom leew norman
 
 # don't do kostas; it requires gnu make (ugh)
 

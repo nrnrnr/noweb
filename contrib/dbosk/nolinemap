@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""Translate messages that point into files tangled by noweb so
+that they point into the .nw sources instead.
+
+Usage: nolinemap [-L fmt] [-c leader] [--] [command arg ...]
+
+With a command, run it, translate its output, and exit with its exit
+status.  Without one, translate standard input.  See nolinemap.nw.
+"""
+
+import argparse
+import bisect
+import os
+import re
+import subprocess
+import sys
+import threading
+
+DEFAULT_FMT = '# %L "%F"'
+BUILTIN_MARKERS = [
+    re.compile(r'^[ \t]*#[ \t]*line[ \t]+(?P<line>\d+)[ \t]+"(?P<file>[^"]*)"'),
+    re.compile(r'^[ \t]*#[ \t]+(?P<line>\d+)[ \t]+"(?P<file>[^"]*)"'),
+]
+PYTHON_RE = re.compile(r'^(?P<pre>\s*File ")(?P<file>[^"]+)'
+                       r'(?P<mid>", line )(?P<line>\d+)(?P<rest>.*)$')
+COLON_RE = re.compile(r'(?P<file>[A-Za-z0-9_.+/-]+):(?P<line>\d+)'
+                      r'(?::(?P<col>\d+))?')
+
+def fmt_to_regex(fmt):
+    """Compile a marker format such as '# %L "%F"' to a regex."""
+    parts = [r"^[ \t]*"]
+    has_line = False
+    i = 0
+    while i < len(fmt):
+        c = fmt[i]
+        if c == "%" and i + 1 < len(fmt):
+            escape = fmt[i + 1]
+            if escape == "L":
+                parts.append(r"(?P<line>\d+)")
+                has_line = True
+                i += 2
+                continue
+            if escape == "F":
+                parts.append(r"(?P<file>.*?)")
+                i += 2
+                continue
+            if escape == "%":
+                parts.append(re.escape("%"))
+                i += 2
+                continue
+        parts.append(re.escape(c))
+        i += 1
+    parts.append(r"[ \t\r]*$")
+    if not has_line:
+        raise SystemExit("nolinemap: marker format lacks %L: " + fmt)
+    return re.compile("".join(parts))
+def pump(src, dst, translator):
+    """Copy `src` to `dst`, translating each line."""
+    for raw in src:
+        line = raw.rstrip("\r\n")
+        ending = raw[len(line):]
+        dst.write(translator.translate(line) + ending)
+        dst.flush()
+def main():
+    """Run nolinemap; return the exit status."""
+    parser = argparse.ArgumentParser(
+        prog="nolinemap",
+        description="Translate messages pointing into tangled files "
+                    "so that they point into the .nw sources.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="examples:\n"
+               "  notangle -Rfoo.py -filter linemark foo.nw > foo.py\n"
+               "  nolinemap python3 foo.py     # run mode, keeps exit"
+               " status\n"
+               "  make 2>&1 | nolinemap        # pipe mode\n"
+               "also installed under the alias noerr")
+    parser.add_argument("-L", dest="fmt", metavar="fmt", default=None,
+                        help="marker format used when tangling "
+                             "(default: %s)"
+                             % DEFAULT_FMT.replace("%", "%%"))
+    parser.add_argument("-c", dest="leader", metavar="leader",
+                        default=None,
+                        help="marker comment leader (default: '#')")
+    parser.add_argument("command", nargs=argparse.REMAINDER,
+                        help="command to run and translate; "
+                             "default: translate standard input")
+    args = parser.parse_args()
+    if args.fmt is not None:
+        fmt = args.fmt
+    elif args.leader is not None:
+        fmt = args.leader + ' %L "%F"'
+    else:
+        fmt = DEFAULT_FMT
+    translator = Translator([fmt_to_regex(fmt)] + BUILTIN_MARKERS)
+    command = args.command
+    if command and command[0] == "--":
+        command = command[1:]
+    if not command:
+        pump(sys.stdin, sys.stdout, translator)
+        return 0
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True)
+    except OSError as error:
+        sys.stderr.write("nolinemap: %s: %s\n" % (command[0], error))
+        return 127
+    pumps = [
+        threading.Thread(target=pump,
+                         args=(process.stdout, sys.stdout, translator)),
+        threading.Thread(target=pump,
+                         args=(process.stderr, sys.stderr, translator)),
+    ]
+    for thread in pumps:
+        thread.start()
+    for thread in pumps:
+        thread.join()
+    return process.wait()
+
+class SourceMap:
+    """The location markers found in one tangled file."""
+
+    def __init__(self, path, lines, markers):
+        self.dir = os.path.dirname(path)
+        self.lines = lines
+        self.points = [m[0] for m in markers]
+        self.targets = [(m[1], m[2]) for m in markers]
+
+    def resolve(self, lineno):
+        """Map tangled line `lineno` to (source file, source line).
+
+        The source file is None when the markers name no file.
+        Returns None when `lineno` lies before the first marker.
+        """
+        i = bisect.bisect_right(self.points, lineno) - 1
+        if i < 0:
+            return None
+        marker_line = self.points[i]
+        src_line, src_file = self.targets[i]
+        if lineno == marker_line:
+            return (src_file, src_line)
+        return (src_file, src_line + (lineno - marker_line - 1))
+    def line_text(self, lineno):
+        """Return the text of tangled line `lineno`, or None."""
+        if 1 <= lineno <= len(self.lines):
+            return self.lines[lineno - 1]
+        return None
+class Translator:
+    """Rewrite file/line references using cached source maps."""
+
+    def __init__(self, marker_regexes):
+        self.marker_regexes = marker_regexes
+        self.maps = {}
+        self.nw_cache = {}
+
+    def get_map(self, path):
+        """Return the SourceMap for `path`, or None."""
+        if path not in self.maps:
+            self.maps[path] = self.build_map(path)
+        return self.maps[path]
+
+    def build_map(self, path):
+        """Parse `path` for markers; None if absent, unreadable, bare."""
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+        except OSError:
+            return None
+        markers = []
+        for lineno, text in enumerate(lines, start=1):
+            for regex in self.marker_regexes:
+                match = regex.match(text)
+                if match:
+                    src_file = match.groupdict().get("file") or None
+                    markers.append((lineno, int(match.group("line")), src_file))
+                    break
+        if not markers:
+            return None
+        return SourceMap(path, lines, markers)
+    def nw_line(self, path, hint_dir, lineno):
+        """Return line `lineno` of .nw file `path`, or None."""
+        for candidate in (path, os.path.join(hint_dir, path)):
+            if candidate not in self.nw_cache:
+                try:
+                    with open(candidate, encoding="utf-8",
+                              errors="replace") as f:
+                        self.nw_cache[candidate] = f.read().splitlines()
+                except OSError:
+                    self.nw_cache[candidate] = None
+            lines = self.nw_cache[candidate]
+            if lines is not None:
+                if 1 <= lineno <= len(lines):
+                    return lines[lineno - 1]
+                return None
+        return None
+
+    def shift_column(self, smap, tangled_line, nw_file, nw_line, column):
+        """Shift `column` by the indentation difference of the lines."""
+        tangled = smap.line_text(tangled_line)
+        source = self.nw_line(nw_file, smap.dir, nw_line) \
+            if nw_file else None
+        if tangled is None or source is None:
+            return column
+        def indentation(text):
+            return len(text) - len(text.lstrip(" \t"))
+        return max(1, column + indentation(source) - indentation(tangled))
+    def translate(self, line):
+        """Rewrite all translatable references in one message line."""
+        match = PYTHON_RE.match(line)
+        if match:
+            resolved = self.resolve(match.group("file"),
+                                    int(match.group("line")))
+            if resolved is None:
+                return line
+            nw_file, nw_lineno = resolved
+            return (match.group("pre") + nw_file + match.group("mid")
+                    + str(nw_lineno) + match.group("rest"))
+        return COLON_RE.sub(self.colon_reference, line)
+
+    def resolve(self, path, lineno):
+        """Map `path`:`lineno` to (nw file, nw line), or None."""
+        smap = self.get_map(path)
+        if smap is None:
+            return None
+        resolved = smap.resolve(lineno)
+        if resolved is None:
+            return None
+        nw_file, nw_lineno = resolved
+        return (nw_file or path, nw_lineno)
+
+    def colon_reference(self, match):
+        """Translate one file:line[:column] match."""
+        path = match.group("file")
+        lineno = int(match.group("line"))
+        resolved = self.resolve(path, lineno)
+        if resolved is None:
+            return match.group(0)
+        nw_file, nw_lineno = resolved
+        result = "%s:%d" % (nw_file, nw_lineno)
+        if match.group("col") is not None:
+            column = self.shift_column(self.get_map(path), lineno,
+                                       nw_file, nw_lineno,
+                                       int(match.group("col")))
+            result += ":%d" % column
+        return result
+
+if __name__ == "__main__":
+    sys.exit(main())
