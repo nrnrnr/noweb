@@ -2,6 +2,7 @@
 \section{Finding definitions in MMIX}
 <<*>>=
 procedure main(args)
+  defnslanguages := set(["mmix"])
   go()
 end
 <<*>>=

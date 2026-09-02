@@ -1,0 +1,115 @@
+# Python 3 support in noweb: the fib example
+
+fib.nw is a literate program that demonstrates noweb's Python 3
+support.  It defines two root chunks, <<[[fib.py]]>> and
+<<[[Makefile]]>>, so the Fibonacci program and its build file are
+tangled from the same literate source, and each is woven with its own
+syntax highlighting (Python and Make).
+
+It exercises three pieces of noweb:
+
+- autolang: annotates each chunk with its language (noweave
+  -autolang), so the autodefs filter below skips non-Python chunks
+  and the index stays free of foreign identifiers.
+- autodefs.python3: finds Python definitions automatically, for the
+  identifier index and cross-references (noweave -autodefs python3).
+- tominted: typesets each code chunk with the minted LaTeX package,
+  choosing the lexer per chunk (noweave -filter tominted).
+
+## Requirements
+
+- noweb built with the Icon tools (for autodefs.python3)
+- Python 3 and Pygments (for tominted/minted)
+- LaTeX with the minted package; compile with pdflatex -shell-escape
+
+fib.nw loads minted through the noweb package, with
+`\usepackage[minted]{noweb}` in its preamble, so there is no separate
+`\usepackage{minted}` line to remember.  When noweb generates the
+preamble instead (a weave without `-delay`), pass `noweave -option
+minted` to get the same effect.  The `-minted` shorthand bundles that
+option with `-filter tominted`, so `noweave ... -index -minted fib.nw`
+is enough for a highlighted weave.
+
+## Building
+
+Highlighted PDF (definitions index and chunk cross-references):
+
+```bash
+noweave -delay -autolang -autodefs python3 -index -filter tominted \
+    fib.nw > fib.tex
+pdflatex -shell-escape fib.tex
+pdflatex -shell-escape fib.tex
+```
+
+Classic noweb rendering, with identifier *uses* hyperlinked inside
+code (minted owns the code body in the highlighted version, so use
+links inside code exist only in this mode):
+
+```bash
+noweave -delay -autolang -autodefs python3 -index fib.nw > fib-xref.tex
+pdflatex -shell-escape fib-xref.tex
+pdflatex -shell-escape fib-xref.tex
+```
+
+The examples' Makefile wires both: `make fib.tex fib-xref.tex`.
+
+## Linked references inside docstrings (optional)
+
+In the plain highlighted PDF, a chunk reference *inside* a Python
+string (like the docstring chunk in fib.nw) is shown as literal
+`<<...>>` text: Pygments' escape mechanism refuses to work inside
+string tokens. The bundled custom lexer lifts that limitation, so
+even the docstring reference is typeset as a linked chunk
+reference:
+
+```bash
+make fib-linked.pdf
+```
+
+This needs one-time setup, because minted treats loading custom
+lexer files as arbitrary code execution. Whitelist the lexer by
+hash in `~/.config/latexminted/.latexminted_config` (or
+`~/.latexminted_config`):
+
+```bash
+mkdir -p ~/.config/latexminted
+printf '{"custom_lexers": {"noweb_lexer.py": "%s"}}\n' \
+    "$(sha256sum noweb_lexer.py | cut -d' ' -f1)" \
+    > ~/.config/latexminted/.latexminted_config
+```
+
+The hash must be updated whenever noweb_lexer.py changes. The
+lexer file itself (tangled from src/lib/tominted.nw and installed
+with noweb) must be readable from the directory where pdflatex
+runs; the Makefile copies it here.
+
+## Tangling
+
+The chunk names include the brackets, and make needs real tabs, so:
+
+```bash
+notangle -R'[[fib.py]]' fib.nw > fib.py
+notangle -t8 -R'[[Makefile]]' fib.nw > Makefile
+```
+
+(`-t8` copies tabs through; by default notangle expands them to
+spaces, which breaks make.)  `make fib-run` in this directory tangles
+both into the fib/ subdirectory and runs the tangled Makefile's test
+target.
+
+## What autodefs.python3 indexes
+
+By default (module-level interface):
+
+- top-level `def` and `async def` functions: `fib`, `main`
+- top-level classes
+- top-level simple assignments `NAME = value`: `DEFAULT_COUNT`
+
+With `-local` (noweave -filter 'autodefs.python3 -local' -index), it
+additionally indexes methods and nested functions.  Function-local
+variables, tuple unpacking, attribute assignments and annotated
+assignments are never indexed.
+
+Note that the index of fib.pdf also lists `PYTHON` and `COUNT` from
+the Makefile chunk: -autodefs applies to every code chunk, and make's
+variable assignments match the Python assignment pattern.

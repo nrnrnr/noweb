@@ -1,0 +1,254 @@
+\section{Finding definitions in Rust}
+
+This program extracts definition names from Rust source code for use
+with noweb's indexing capabilities.  When invoked with the
+[[-autodefs rust]] option to [[noweave]], it automatically identifies
+and indexes Rust definitions: functions, types, traits, modules,
+constants and macros.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs rust -index myfile.nw > myfile.tex
+\end{verbatim}
+
+To additionally index methods inside [[impl]] blocks and other nested
+items:
+\begin{verbatim}
+noweave -filter 'autodefs.rust -local' -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Design decisions}
+
+Rust declares every item with a leading keyword---[[fn]], [[struct]],
+[[enum]], [[trait]], [[type]], [[mod]], [[union]], [[const]],
+[[static]] and [[macro_rules!]]---which makes recognition a matter of
+keyword dispatch rather than grammar analysis.  The keyword may be
+preceded by qualifiers: a visibility ([[pub]], [[pub(crate)]],
+[[pub(in path)]]) and the function qualifiers [[unsafe]], [[async]],
+[[default]] and [[extern "ABI"]].
+
+Rust delimits scope with braces, not indentation, but conventionally
+formatted code (and everything [[rustfmt]] touches) indents nested
+items.  We borrow the Python filter's heuristic: an unindented item is
+part of the module's interface and always indexed, an indented
+one---typically a method in an [[impl]] block---is indexed only with
+the [[-local]] flag.
+
+We intentionally never index:
+\begin{itemize}
+\item [[impl]] blocks, which implement existing names rather than
+      define new ones (their methods are the [[-local]] case above);
+\item [[let]] bindings, which are locals;
+\item [[use]] declarations, which import names defined elsewhere;
+\item the discard name [[_]], as in [[const _: () = ...]].
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["rust", "rs"])
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language; chunks without an annotation
+are still scanned, so nothing changes for documents woven without
+[[autolang]].
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks and scans each one for definitions.
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process Rust code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing Rust code}
+
+As in the Python filter, whether the line is indented must be
+recorded before the whitespace is skipped.  Attribute lines
+([[#[derive(...)]]]) and comments declare nothing, so they end the
+scan early; otherwise we work through the qualifiers to the item
+keyword, and the keyword tells us where the name is.
+
+<<process Rust code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if any('#') | ="//" then return
+  <<skip visibility and function qualifiers>>
+  if w := rust_ident() then
+    case w of {
+      "fn" | "struct" | "enum" | "trait" | "mod" | "union" | "type" : {
+        <<index the following name>>
+      }
+      "const" : {
+        tab(many(' \t'))
+        if w2 := rust_ident() then
+          if w2 == "fn" then {
+            <<index the following name>>
+          } else
+            <<index [[w2]] itself>>
+      }
+      "static" : {
+        tab(many(' \t'))
+        (="mut", any(' \t'), tab(many(' \t'))) | ""
+        if w2 := rust_ident() then
+          <<index [[w2]] itself>>
+      }
+      "macro_rules" : {
+        if ="!" then {
+          <<index the following name>>
+        }
+      }
+    }
+}
+@
+
+The [[const]] keyword is the one ambiguous case: it qualifies a
+function ([[const fn name]]) and it declares a constant
+([[const NAME: T = v]]).  One identifier of lookahead resolves it:
+if the word after [[const]] is [[fn]], the name follows; otherwise
+that word is the name.
+
+<<index the following name>>=
+{
+  tab(many(' \t'))
+  if ident := rust_ident() then
+    if \showlocal | \toplevel then
+      writedefn(ident)
+}
+<<index [[w2]] itself>>=
+{
+  if w2 ~== "_" & (\showlocal | \toplevel) then
+    writedefn(w2)
+}
+@
+
+\subsection{Qualifiers}
+
+Visibility may carry a parenthesized scope, [[pub(crate)]] or
+[[pub(in path)]], which we skip up to its closing parenthesis;
+[[extern]] may carry an ABI string, [[extern "C"]].  The qualifiers
+can stack ([[pub async unsafe fn]]), hence the loop.  Requiring
+whitespace (or the parenthesis) after each keyword keeps identifiers
+that merely start with one, such as a function named [[publish]],
+out of the qualifier match.
+
+<<skip visibility and function qualifiers>>=
+while (="pub", any(' (\t')) |
+      (=("unsafe"|"async"|"default"), any(' \t')) |
+      (="extern", any(' "\t')) do {
+  if ="(" then (tab(upto(')')), move(1))
+  tab(many(' \t'))
+  if ="\"" then (tab(upto('"')), move(1), tab(many(' \t')))
+}
+@
+
+\subsection{Utility procedures}
+
+A Rust identifier consists of letters, digits and underscores and
+must not start with a digit.  (Raw identifiers, [[r#type]], are rare
+and not recognized.)
+
+<<*>>=
+procedure rust_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+@
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: rustdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Example}
+
+Given this Rust code in a noweb chunk:
+\begin{verbatim}
+<<sample code>>=
+pub struct Fib {
+    curr: u64,
+    next: u64,
+}
+
+impl Iterator for Fib {
+    type Item = u64;
+
+    fn next(&mut self) -> Option<u64> {
+        ...
+    }
+}
+
+pub fn fib() -> Fib {
+    Fib { curr: 0, next: 1 }
+}
+
+const LIMIT: u64 = 100;
+@
+\end{verbatim}
+
+Without [[-local]], the index will contain [[Fib]], [[fib]] and
+[[LIMIT]].  With [[-local]], it additionally includes the indented
+[[Item]] and [[next]] from the [[impl]] block.  The fields [[curr]]
+and [[next]] of the struct are never indexed.
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Multi-line constructs are not understood: a line inside a
+      string literal or block comment that looks like an item is
+      indexed as if it were code.
+\item Struct fields, enum variants and trait associated items are
+      not indexed (except as the [[-local]] indentation heuristic
+      happens to catch them).
+\item Macros other than [[macro_rules!]] definitions---including
+      items \emph{generated} by macros---are invisible.
+\item Generic parameters and lifetimes are not part of the indexed
+      name; [[fn name<'a, T>]] indexes [[name]], which is the useful
+      part.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

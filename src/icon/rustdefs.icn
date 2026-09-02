@@ -1,0 +1,177 @@
+#line 56 "rustdefs.nw"
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["rust", "rs"])
+  go()
+end
+#line 76 "rustdefs.nw"
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      
+#line 98 "rustdefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if any('#') | ="//" then return
+  
+#line 163 "rustdefs.nw"
+while (="pub", any(' (\t')) |
+      (=("unsafe"|"async"|"default"), any(' \t')) |
+      (="extern", any(' "\t')) do {
+  if ="(" then (tab(upto(')')), move(1))
+  tab(many(' \t'))
+  if ="\"" then (tab(upto('"')), move(1), tab(many(' \t')))
+}
+#line 104 "rustdefs.nw"
+  if w := rust_ident() then
+    case w of {
+      "fn" | "struct" | "enum" | "trait" | "mod" | "union" | "type" : {
+        
+#line 139 "rustdefs.nw"
+{
+  tab(many(' \t'))
+  if ident := rust_ident() then
+    if \showlocal | \toplevel then
+      writedefn(ident)
+}
+#line 108 "rustdefs.nw"
+      }
+      "const" : {
+        tab(many(' \t'))
+        if w2 := rust_ident() then
+          if w2 == "fn" then {
+            
+#line 139 "rustdefs.nw"
+{
+  tab(many(' \t'))
+  if ident := rust_ident() then
+    if \showlocal | \toplevel then
+      writedefn(ident)
+}
+#line 114 "rustdefs.nw"
+          } else
+            
+#line 146 "rustdefs.nw"
+{
+  if w2 ~== "_" & (\showlocal | \toplevel) then
+    writedefn(w2)
+}
+#line 116 "rustdefs.nw"
+      }
+      "static" : {
+        tab(many(' \t'))
+        (="mut", any(' \t'), tab(many(' \t'))) | ""
+        if w2 := rust_ident() then
+          
+#line 146 "rustdefs.nw"
+{
+  if w2 ~== "_" & (\showlocal | \toplevel) then
+    writedefn(w2)
+}
+#line 122 "rustdefs.nw"
+      }
+      "macro_rules" : {
+        if ="!" then {
+          
+#line 139 "rustdefs.nw"
+{
+  tab(many(' \t'))
+  if ident := rust_ident() then
+    if \showlocal | \toplevel then
+      writedefn(ident)
+}
+#line 126 "rustdefs.nw"
+        }
+      }
+    }
+}
+#line 83 "rustdefs.nw"
+    }
+  }
+  return
+end
+#line 179 "rustdefs.nw"
+procedure rust_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+#line 195 "rustdefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: rustdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+#line 14 "defns.nw"
+global defnslanguages
+
+procedure go()
+  local line, chunklang
+  while line := read() do {
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 53 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 58 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 60 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 70 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

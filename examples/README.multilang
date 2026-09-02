@@ -1,0 +1,103 @@
+# Stacked autodefs filters: the multilang example
+
+multilang.nw implements Euclid's greatest-common-divisor algorithm in
+five languages---C++, Rust, Haskell, Java and shell---with a Makefile
+that builds them.  Where fib.nw shows `-autolang` making one autodefs
+filter skip the chunks it does not understand, this example shows the
+other half of the mechanism: the language scanners *stacked*, one per
+language, so each chunk is indexed by the scanner for its own
+language---and the whole stack assembled by `-autolang` alone.
+
+It is the worked example (and de facto regression test) for the
+language scanners added alongside autolang: autodefs.cpp,
+autodefs.rust, autodefs.haskell, autodefs.java, autodefs.sh and
+autodefs.make.  If a scanner stops finding definitions, the woven
+index changes.
+
+## One command finds every language
+
+Because `-autolang` already determines each chunk's language, it can
+also choose the autodefs filters.  Given `-index`, it runs its
+inference once before the weave, collects the languages the document
+actually contains, and stacks the matching scanner for each---so one
+command indexes all six languages and names none of them:
+
+```bash
+noweave -delay -autolang -index \
+    -filter 'tominted -lexer noweb_lexer.py' multilang.nw > multilang.tex
+```
+
+This once required two builds.  Six scanners plus the index filters
+(finduses and noidx) plus tominted overflowed noweave's old fixed
+filter slots, so the languages had to be split across a highlighted
+pass and a classic one.  The pipeline now grows without a fixed
+ceiling, so the scanners fit in a single weave, and discovery removes
+the need to list them.  A hand-written `-autodefs` is still honored
+and merged with the discovered set without duplication.
+
+## Requirements
+
+- noweb built with the Icon tools (for the autodefs filters) and the
+  autolang/tominted filters
+- Python 3 and Pygments (for tominted/minted, the highlighted build)
+- LaTeX with the minted package; compile the highlighted build with
+  pdflatex -shell-escape.  multilang.nw loads minted through the noweb
+  package (`\usepackage[minted]{noweb}`), so no separate
+  `\usepackage{minted}` line is needed; for a noweb-generated preamble
+  pass `noweave -option minted` instead
+- to *run* the tangled programs: a C++ compiler and /bin/sh are
+  enough; rustc, ghc and javac only if you want to build those
+  versions too
+
+## Building
+
+One highlighted weave indexes all six languages; `-autolang` supplies
+the scanners, so no `-autodefs` appears:
+
+```bash
+noweave -delay -autolang -index \
+    -filter 'tominted -lexer noweb_lexer.py' multilang.nw > multilang.tex
+pdflatex -shell-escape multilang.tex
+pdflatex -shell-escape multilang.tex
+```
+
+The examples' Makefile wires this as `make multilang.pdf`.  The
+highlighted build needs the one-time latexminted setup for the custom
+lexer described in README.python.  Dropping the tominted filter (and
+`-shell-escape`) gives the classic, unhighlighted rendering with the
+same six-language index.
+
+## Tangling and running
+
+Each implementation is a root chunk named like its file, so it tangles
+on its own; make needs real tabs, so the Makefile uses `-t8`:
+
+```bash
+notangle -R'[[gcd.cpp]]'  multilang.nw > gcd.cpp
+notangle -t8 -R'[[Makefile]]' multilang.nw > Makefile
+```
+
+`make multilang-tangle` tangles every implementation into a
+`multilang/` subdirectory (so the tangled Makefile does not clobber
+the examples' one).  There, `make` compiles and runs the C++ version
+and `make run-sh` runs the shell version; both print
+`gcd(462, 1071) = 21`.  The Rust, Haskell and Java files tangle and
+compile but are left for the reader to run.
+
+## What each filter indexes here
+
+- autodefs.cpp: the template function `gcd`, the struct `Ratio` and
+  `main` by default; the indented `reduce` method only with
+  `-autodefs 'cpp -local'`.
+- autodefs.rust: `gcd` and `Ratio` by default; `reduce` with `-local`.
+  The `impl` block is never indexed---it implements a name rather than
+  defining one.
+- autodefs.haskell: `gcd'` once (its signature and two equations are
+  folded into a single entry) and the type `Ratio`.
+- autodefs.java: the class `Gcd` by default; the method `gcd` with
+  `-local`.
+- autodefs.sh: the function `gcd` and the column-zero variable
+  `steps`; the indented locals inside the function are not indexed.
+- autodefs.make: the variables `CXX` and `CXXFLAGS` and the targets
+  `all`, `gcd`, `run-sh` and `clean`; recipe lines (which begin with a
+  tab) are skipped.

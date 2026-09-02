@@ -1,0 +1,145 @@
+#line 58 "makedefs.nw"
+procedure main(args)
+  defnslanguages := set(["make", "makefile", "gmake", "bmake", "bsdmake"])
+  go()
+end
+#line 78 "makedefs.nw"
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      
+#line 106 "makedefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  if any('\t') then return            # recipe line, shell code
+  tab(many(' '))
+  if any('#.') then return            # comment, special target, BSD directive
+
+  while =("override"|"export"|"unexport"|"private") & any(' \t') do
+    tab(many(' \t'))
+  if (="define", any(' \t')) then {
+    tab(many(' \t'))
+    if w := make_word() then writedefn(w)
+    return
+  }
+
+  targets := []
+  while w := make_word() do {
+    if member(directives, w) then return
+    put(targets, w)
+    tab(many(' \t'))
+    if tab(many(':')) then {
+      if ="=" then {                  # := ::= :::=
+        
+#line 147 "makedefs.nw"
+if *targets = 1 then writedefn(targets[1])
+#line 128 "makedefs.nw"
+      }
+      else {
+        
+#line 154 "makedefs.nw"
+every w := !targets do
+  if not upto('%$', w) then writedefn(w)
+#line 131 "makedefs.nw"
+      }
+      return
+    }
+    if =("?="|"+="|"!="|"=") then {
+      
+#line 147 "makedefs.nw"
+if *targets = 1 then writedefn(targets[1])
+#line 136 "makedefs.nw"
+      return
+    }
+  }
+}
+#line 85 "makedefs.nw"
+    }
+  }
+  return
+end
+#line 162 "makedefs.nw"
+global directives
+procedure make_word()
+  static wchars
+  initial {
+    wchars := &letters ++ &digits ++ '_./-@~'
+    directives := set(["include", "sinclude", "-include",
+                       "ifeq", "ifneq", "ifdef", "ifndef",
+                       "else", "endif", "endef", "vpath", "undefine"])
+  }
+  if any(wchars) then
+    return tab(many(wchars))
+  else
+    fail
+end
+#line 189 "makedefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: makedefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+#line 14 "defns.nw"
+global defnslanguages
+
+procedure go()
+  local line, chunklang
+  while line := read() do {
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 53 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 58 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 60 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 70 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

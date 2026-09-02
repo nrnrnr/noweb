@@ -1,0 +1,375 @@
+\section{Finding definitions in Python 3}
+
+This program extracts definition names from Python 3 source code for use
+with noweb's indexing capabilities.  When invoked with the
+[[-autodefs python3]] option to [[noweave]], it automatically identifies
+and indexes Python definitions: functions, classes, and module-level
+variables.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs python3 -index myfile.nw > myfile.tex
+\end{verbatim}
+
+To additionally index methods and nested functions:
+\begin{verbatim}
+noweave -filter 'autodefs.python3 -local' -index myfile.nw > myfile.tex
+\end{verbatim}
+(The bare filter name works because [[noweave]] adds the noweb library
+directory to [[PATH]] before running filters.)
+
+After building and installing noweb, the filter is available as
+[[$LIB/autodefs.python3]], where [[$LIB]] is the noweb library
+directory (typically [[/usr/local/lib/noweb]] or similar).
+
+\subsection{Overview}
+
+Python is a dynamically-typed language where definitions can appear in
+several forms:
+\begin{itemize}
+\item Function definitions using [[def]] (including [[async def]])
+\item Class definitions using [[class]]
+\item Method definitions (functions inside classes)
+\item Decorated definitions (using [[@decorator]] syntax)
+\item Assignment statements at module level
+\end{itemize}
+
+The primary challenge in extracting Python definitions is handling the
+language's significant whitespace.  Unlike C or Pascal, Python uses
+indentation to define scope, so the indentation of a line determines
+whether it defines part of a module's public interface or a local
+detail.  We exploit this: a definition is \emph{top-level} exactly when
+its line has no leading whitespace.
+
+\subsection{Design decisions}
+
+By default, this program indexes only what constitutes the module-level
+interface:
+\begin{enumerate}
+\item Top-level function definitions ([[def]] and [[async def]])
+\item Top-level class definitions
+\item Top-level simple assignments of the form [[NAME = value]],
+      which is how Python modules define constants
+\end{enumerate}
+Decorated definitions are indexed too; decorator lines themselves match
+none of the patterns above, and the decorated [[def]] or [[class]] on
+the following line is recognized as usual.
+
+When invoked with the [[-local]] flag, the program additionally indexes
+indented function and class definitions, that is, methods and nested
+functions.
+
+We intentionally never index:
+\begin{itemize}
+\item Import statements, though they create names
+\item Indented assignments, which are local variables of functions
+      (indexing them would bury the interesting entries in noise)
+\item Tuple-unpacking assignments such as [[a, b = 0, 1]]
+\item Attribute assignments such as [[self.name = value]]
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]:
+\begin{enumerate}
+\item A [[main]] procedure processes command-line arguments
+\item A [[go]] procedure (from [[defns.nw]]) reads the noweb stream
+\item A [[prepass]] procedure sees each line before it is written
+\item A [[postpass]] procedure sees each line after it is written
+\item A [[writedefn]] procedure (from [[defns.nw]]) emits index entries
+\end{enumerate}
+
+The filter reads a noweb markup stream from standard input and writes
+it to standard output, interspersing [[@index defn]] commands to mark
+definitions.
+
+<<*>>=
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["python", "python3"])
+  go()
+end
+@
+
+The main entry point processes command-line arguments.  The [[-local]]
+flag enables extraction of methods and nested functions.  The [[go]]
+procedure is provided by [[defns.nw]].
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of
+chunks annotated (with the [[@language]] keyword, by an upstream
+filter such as [[autolang]]) as some other language: a Makefile
+variable or a Haskell binding matches the assignment pattern below
+just as well as a Python constant does, and skipping foreign chunks
+is the only way to tell them apart.  Chunks without an annotation
+are still scanned, so nothing changes for documents woven without
+[[autolang]].
+
+\subsection{The postpass procedure}
+
+The [[postpass]] procedure is called for each line of the noweb markup
+stream.  It receives the markup command name and its argument.  The key
+commands are:
+\begin{itemize}
+\item [[@begin code]] -- marks the start of a code chunk
+\item [[@begin docs]] -- marks the start of a documentation chunk
+\item [[@text]] -- contains actual line content
+\end{itemize}
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial {
+    kind := "bogus"
+  }
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process Python code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing Python code}
+
+Python definitions follow specific patterns.  We scan each line for
+these patterns.  Because indentation decides whether a definition is
+top-level, we must record whether the line starts with whitespace
+\emph{before} we skip over that whitespace; once [[tab(many(' \t'))]]
+has consumed the indentation, the information is gone from the scanning
+position.  The [[toplevel]] flag carries that information to the
+extraction chunks below.
+
+Assignments are only extracted from top-level lines: an indented
+assignment is a local variable (or a class attribute), which we have
+decided not to index.  Function and class definitions, by contrast, are
+extracted wherever they appear, and the decision whether to index an
+indented one is deferred to the extraction chunk, where the [[-local]]
+flag is consulted.
+
+<<process Python code line>>=
+arg ? {
+  # Skip empty lines and comments
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))  # skip leading whitespace
+  if any('#') then return
+
+  if ="async " then tab(many(' \t'))  # async def is still a def
+  if =("def "|"class ") then {
+    <<extract function or class name>>
+  }
+  else if \toplevel then {
+    <<extract assignment if appropriate>>
+  }
+}
+@
+
+\subsection{Extracting function and class names}
+
+When we find [[def]] or [[class]], we extract the identifier that
+follows.  A top-level definition is always indexed; an indented one
+(a method or a nested function) is indexed only when [[-local]] was
+given, so that the default index presents the module's interface
+rather than its internals.
+
+<<extract function or class name>>=
+{
+  tab(many(' \t'))  # skip whitespace after keyword
+  if ident := python_ident() then
+    if \showlocal | \toplevel then
+      writedefn(ident)
+}
+@
+
+\subsection{Extracting assignments}
+
+A top-level assignment of the form [[NAME = value]] defines a module
+constant or variable, so it belongs in the index alongside functions
+and classes.  We only handle this simple form.  After the identifier
+and optional whitespace we require a single [[=]]: requiring the [[=]]
+rejects tuple unpacking ([[a, b = 0, 1]], where a comma follows the
+identifier), attribute assignments ([[self.name = value]], where a dot
+follows), annotated assignments ([[x: int = 1]], where a colon
+follows), and augmented assignments ([[x += 1]], where the operator
+character precedes the [[=]]); rejecting a second [[=]] avoids false
+matches on comparisons ([[x == 42]]).
+
+<<extract assignment if appropriate>>=
+{
+  if ident := python_ident() then {
+    tab(many(' \t'))  # optional whitespace before =
+    if ="=" & not any('=') then
+      writedefn(ident)
+  }
+}
+@
+
+\subsection{Utility procedures}
+
+\subsubsection{Python identifier matching}
+
+A Python identifier consists of letters, digits, and underscores, and
+must not start with a digit.  (We ignore the non-ASCII identifiers
+permitted by PEP~3131; they are rare in practice.)  Private identifiers
+often start with underscores, and special methods use double
+underscores, e.g.\ [[__init__]]; both are matched by the same rule.
+
+<<*>>=
+procedure python_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits
+  }
+  # Must start with letter or underscore
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+@
+
+\subsubsection{Prepass handling}
+
+The prepass is called before each line is written.  We use it
+minimally, to flush any pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+@
+
+\subsection{Version information}
+
+<<*>>=
+procedure rcsinfo ()
+  return "$Id: python3defs.nw,v 1.1 2026/06/10 12:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Example}
+
+Given this Python code in a noweb chunk:
+\begin{verbatim}
+<<sample code>>=
+def calculate(x, y):
+    """Calculate something."""
+    return x + y
+
+class DataProcessor:
+    def __init__(self, data):
+        self.data = data
+
+    def process(self):
+        return [calculate(x, x) for x in self.data]
+
+CONSTANT = 42
+@
+\end{verbatim}
+
+Without [[-local]], the index will contain: [[calculate]],
+[[DataProcessor]], and [[CONSTANT]].
+
+With [[-local]], it additionally includes [[__init__]] and
+[[process]].  The local names inside the methods, and the attribute
+assignment [[self.data = data]], are never indexed.
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Multi-line constructs are not understood.  In particular, the
+      filter does not track string state, so a line inside a docstring
+      or triple-quoted string that happens to look like a definition
+      (e.g.\ a documented example reading [[def f():]]) is indexed as
+      if it were code.
+\item Scope is not tracked precisely: all indented definitions are
+      treated the same with [[-local]], whether they are methods,
+      nested functions, or deeper.
+\item Annotated assignments like [[x: int = 1]] are not indexed; only
+      the plain [[NAME = value]] form is recognized.
+\item Lambda expressions create anonymous functions and are not
+      indexed.  This is by design, since lambdas have no name to index.
+\item Comprehensions and generator expressions bind internal variables,
+      which are not indexed.  These are implementation details not
+      useful in an index.
+\item Type annotations in function signatures are not processed
+      separately.  Type hints like [[def foo(x: int) -> str]] work
+      fine; we extract [[foo]].
+\item Decorators are ignored when deciding whether to index something.
+      The decorated function or class name is indexed regardless of
+      its decorators.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.
+
+\subsection{Comparison with other language filters}
+
+Compared to the C filter ([[autodefs.cee]]):
+\begin{itemize}
+\item Python is simpler in some ways: no pointer declarators, no
+      complex type specifiers, no forward declarations.
+\item Python is more complex in others: significant whitespace,
+      decorators, multiple ways to create names ([[def]], [[class]],
+      assignment).
+\item The C filter must handle the complexity of C's declarator
+      syntax, while the Python filter must handle indentation levels.
+\end{itemize}
+
+Compared to the Icon filter ([[autodefs.icon]]):
+\begin{itemize}
+\item Both are relatively clean languages with simple definition
+      syntax.
+\item Icon uses [[procedure]] and [[record]], Python uses [[def]] and
+      [[class]].
+\item Both support a local/global distinction via the [[-local]]
+      command-line flag.
+\item Python's decorator syntax has no Icon equivalent.
+\end{itemize}
+
+\subsection{Implementation notes}
+
+\subsubsection{Why not use Python's ast module?}
+
+One might ask: why write a simple pattern matcher instead of using
+Python's [[ast]] module to parse the code properly?  Several reasons:
+
+\begin{enumerate}
+\item This filter is written in Icon, not Python, to match noweb's
+      architecture where the standard filters are written in Icon.
+\item The noweb stream processes line-by-line markup, not complete
+      Python files.  Code chunks are fragments, often not
+      syntactically complete programs.
+\item Simple pattern matching handles the vast majority of cases
+      correctly and fails gracefully on the rest.
+\item A full parser would need to handle incomplete code, syntax
+      errors, and multiple Python versions.
+\end{enumerate}
+
+The pattern-matching approach is robust enough for literate
+programming, where code is typically well-formatted and properly
+structured.
+
+\subsubsection{String scanning in Icon}
+
+Icon's string scanning facility is perfect for this task.  The
+expression [[arg ? expr]] sets the subject string to [[arg]] and the
+scanning position to 1 while evaluating [[expr]].  Functions like
+[[tab()]], [[many()]], and [[=]] advance the position and extract
+substrings.
+
+For example, [[tab(many(' '))]] skips leading spaces by moving the
+position past all space characters.  Then [[=("def ")]] succeeds if
+the next characters are exactly [[def]] followed by a space, advancing
+past them.
+
+This gives us a clean, declarative way to specify patterns without
+complex regular expressions.

@@ -1,0 +1,446 @@
+\section{Finding definitions in C++}
+
+This program extracts definition names from C++ source code for use
+with noweb's indexing capabilities.  When invoked with the
+[[-autodefs cpp]] option to [[noweave]], it automatically identifies
+and indexes C++ definitions: types, templates, namespaces, functions,
+methods and macros.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs cpp -index myfile.nw > myfile.tex
+\end{verbatim}
+
+To additionally index members defined inside class bodies:
+\begin{verbatim}
+noweave -filter 'autodefs.cpp -local' -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Why not [[autodefs.c]]?}
+
+The C filter ([[autodefs.cee]]) understands ANSI~C: it parses
+specifiers and declarators and finds functions, [[typedef]]s and
+[[#define]]s.  Applied to C++ it misses exactly what makes C++
+C++---classes, templates, namespaces, [[using]] aliases, and method
+definitions qualified with [[::]].  This filter recognizes those
+forms.  The two filters split the language annotations between them:
+[[autodefs.c]] takes chunks annotated as C, this filter takes chunks
+annotated as C++, so a document mixing both languages can stack
+[[-autodefs c -autodefs cpp]] without double-indexing either kind of
+chunk.
+
+Rather than porting the C filter's declarator parser to the much
+larger C++ declaration grammar---which would amount to writing a
+C++ parser in Icon---this filter uses the keyword-and-shape
+heuristics of the newer filters (Rust, Java): C++'s type, template
+and namespace declarations are keyword-led and reliable to spot,
+and function definitions are recognized by the identifier directly
+before a parenthesis on a line that ends in an opening brace.
+
+\subsection{Design decisions}
+
+The following forms are indexed:
+\begin{enumerate}
+\item Type declarations: [[class]], [[struct]], [[union]] and
+      [[enum]] (including [[enum class]]) introduce the name that
+      follows---unless the name is directly followed by [[;]],
+      which makes it a forward declaration, declaring nothing new.
+\item Namespaces: [[namespace A::B {]] indexes the qualified name
+      [[A::B]]; anonymous namespaces have no name to index.
+\item Templates: a [[template<...>]] prefix is skipped (with its
+      angle brackets balanced), and the declaration behind it is
+      processed as usual, so [[template<class T> class Vec]]
+      indexes [[Vec]].
+\item Aliases: [[using Alias = ...]] indexes [[Alias]];
+      [[typedef ... Name;]] indexes the last identifier before the
+      semicolon (or, for function-pointer typedefs, the identifier
+      after [[(*]]).
+\item Macros: [[#define NAME]] indexes [[NAME]], as the C filter
+      does.
+\item Functions and methods: on a line ending in [[{]], the first
+      identifier directly followed by [[(]] is the defined name;
+      [[void Foo::bar(int) {]] indexes [[bar]], a constructor
+      [[Foo::Foo() : x(0) {]] indexes the second [[Foo]] before the
+      member initializers.
+\end{enumerate}
+
+C++ delimits scope with braces, but conventionally formatted code
+indents members, so we borrow the Python filter's heuristic: an
+unindented definition is always indexed, an indented one---a method
+defined inside its class body, a nested class---only with
+[[-local]].  Out-of-class method definitions sit at column~0 and are
+therefore part of the default index, which suits the common
+header/implementation split.
+
+We intentionally never index:
+\begin{itemize}
+\item forward declarations ([[class Foo;]]) and function prototypes
+      (lines ending in [[;]])---the trailing brace is what tells a
+      definition from a declaration or a call;
+\item destructors and [[operator]] overloads, whose names are not
+      plain identifiers;
+\item member variables, enumerators and template parameters;
+\item names introduced by [[using namespace]], which imports
+      existing names rather than defining new ones.
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["cpp", "c++", "cxx", "cc"])
+  <<initialize character sets and keyword sets>>
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language; chunks without an annotation
+are still scanned, so nothing changes for documents woven without
+[[autolang]].  The set deliberately excludes plain [[c]], which
+[[autodefs.c]] handles---see above.
+
+The character and keyword sets are initialized in [[main]] rather
+than lazily, because the function heuristic scans with [[cpp_alpha]]
+before it ever calls [[cpp_ident]].
+
+<<initialize character sets and keyword sets>>=
+cpp_alpha := &letters ++ '_'
+cpp_alnum := cpp_alpha ++ &digits
+typekeywords := set(["class", "struct", "union", "enum"])
+stmtkeywords := set(["if", "while", "for", "switch", "catch",
+                     "return", "new", "delete", "throw", "sizeof",
+                     "else", "do", "try", "operator"])
+@
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks and scans each one for definitions.
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process C++ code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing C++ code}
+
+Whether the line is indented decides whether a definition is local,
+so it is recorded before the whitespace is skipped.  The preprocessor
+is handled first ([[#define]] indexes, every other directive is
+inert), then comments, then an optional [[template<...>]] prefix,
+then the keyword-led forms; what survives all of those gets the
+function heuristic.
+
+<<process C++ code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if ="#" then {
+    tab(many(' \t'))
+    if (="define", any(' \t')) then {
+      tab(many(' \t'))
+      writedefn(cpp_ident())
+    }
+    return
+  }
+  if ="//" then return
+  <<skip a [[template<...>]] prefix>>
+  <<skip storage and access qualifiers>>
+  if (="using", any(' \t')) then {
+    <<index a using alias>>
+    return
+  }
+  if (="typedef", any(' \t')) then {
+    <<index a typedef name>>
+    return
+  }
+  if (="namespace", any(' \t{')) then {
+    <<index a namespace name>>
+    return
+  }
+  if w := cpp_ident() then {
+    if member(typekeywords, w) then {
+      <<index a type name>>
+      return
+    }
+    <<back up to before [[w]]>>
+  }
+  <<maybe index a function or method definition>>
+}
+@
+
+The identifier scan for the type keywords consumes the word, but the
+function heuristic below wants to scan the whole remainder of the
+line itself; moving the position back is simpler than threading the
+already-consumed word through the heuristic.
+
+<<back up to before [[w]]>>=
+move(-*w)
+@
+
+\subsection{Templates and qualifiers}
+
+A template prefix ends at the [[>]] that balances its opening [[<]];
+template parameters can nest ([[template<template<class> class C>]]),
+so the angle brackets are counted rather than searched.  A template
+declaration split over two lines---prefix on one, declaration on the
+next---needs no extra state: the next line is scanned on its own and
+the declaration is recognized as usual.
+
+<<skip a [[template<...>]] prefix>>=
+if (="template", optwhite(), any('<')) then {
+  move(1)
+  depth := 1
+  while depth > 0 do {
+    tab(upto('<>')) | return
+    if ="<" then depth +:= 1
+    else { =">"; depth -:= 1 }
+  }
+  tab(many(' \t'))
+}
+@
+
+Storage classes, [[inline]], [[constexpr]] and friends may precede
+any of the declaration forms; access specifiers label whole regions
+and never carry a name on the same line worth special treatment, so
+all of them are simply skipped.  As in the other filters, requiring
+whitespace after the keyword keeps identifiers that merely start
+with one out of the match.
+
+<<skip storage and access qualifiers>>=
+while (=("static"|"inline"|"constexpr"|"consteval"|"constinit"|
+         "extern"|"friend"|"virtual"|"explicit"|"export"|
+         "public"|"protected"|"private"|"typename"), any(' \t:')) do {
+  tab(many(' \t:'))
+}
+@
+
+\subsection{The declaration forms}
+
+[[using Alias = ...]] defines [[Alias]]; [[using namespace ...]] and
+plain [[using std::swap;]] import existing names and are skipped.
+The [[=]] is what separates the defining form from the importing
+ones.
+
+<<index a using alias>>=
+{
+  tab(many(' \t'))
+  if a := cpp_ident() then {
+    tab(many(' \t'))
+    if ="=" then
+      if \showlocal | \toplevel then
+        writedefn(a)
+  }
+}
+@
+
+A [[typedef]] names its type at the end: the last identifier before
+the closing [[;]]---except for function-pointer typedefs, where the
+name hides after [[(*]].  This is a heuristic, not a declarator
+parser; it covers the two shapes that account for nearly all
+typedefs in practice.
+
+<<index a typedef name>>=
+{
+  rest := tab(0)
+  rest ? {
+    if tab(find("(*") + 2) then {
+      tab(many(' \t'))
+      n := cpp_ident()
+    }
+    else {
+      while tab(upto(cpp_alpha)) do n := cpp_ident()
+    }
+    if \showlocal | \toplevel then
+      writedefn(\n)
+  }
+}
+@
+
+A namespace name may be qualified ([[namespace A::B {]]); the
+qualified name is the definition, so the colons are kept.  An
+anonymous namespace offers no name and is skipped.
+
+<<index a namespace name>>=
+{
+  tab(many(' \t'))
+  if n := tab(many(cpp_alnum ++ ':')) then
+    if \showlocal | \toplevel then
+      writedefn(n)
+}
+@
+
+The name of a [[class]]/[[struct]]/[[union]]/[[enum]] follows the
+keyword, except that [[enum class]] and [[enum struct]] interpose a
+second keyword.  A name directly followed by [[;]] is a forward
+declaration and indexes nothing; anything else---a base clause, the
+opening brace, [[final]]---means a definition.
+
+<<index a type name>>=
+{
+  tab(many(' \t'))
+  (=("class"|"struct"), any(' \t'), tab(many(' \t'))) | ""
+  if t := cpp_ident() then {
+    tab(many(' \t'))
+    if not any(';') then
+      if \showlocal | \toplevel then
+        writedefn(t)
+  }
+}
+@
+
+\subsection{The function heuristic}
+
+The line must end with an opening brace---or with [[{}]], the shape
+of an inline empty body such as a delegating constructor---to count
+as a definition; prototypes and calls end with [[;]].  The first
+identifier directly
+followed by [[(]] is the name: in [[void Foo::bar(int x) {]] the
+scan passes [[void]] and [[Foo]] (followed by [[:]], not [[(]]) and
+stops at [[bar]].  Identifiers preceded by [[.]], [[->]] or [[~]]
+are member accesses or destructors, and statement keywords cover
+[[if (x) {]] and friends.  A preceding [[:]] must \emph{not}
+reject---that is exactly the qualified-name case.
+
+<<maybe index a function or method definition>>=
+{
+  t := trim(arg, ' \t')
+  if t[-1] == "{" | t[-2:0] == "{}" then {
+    prev := ""
+    while tab(upto(cpp_alpha)) do {
+      prevc := &subject[&pos - 1] | ""
+      id := cpp_ident() | break
+      if any('(') then {
+        if member(stmtkeywords, id) | prevc == ("." | ">" | "~") |
+           prev == ("new" | "return" | "throw") then return
+        if \showlocal | \toplevel then
+          writedefn(id)
+        return
+      }
+      prev := id
+    }
+  }
+}
+@
+
+\subsection{Utility procedures}
+
+A C++ identifier consists of letters, digits and underscores and
+must not start with a digit.
+
+<<*>>=
+global cpp_alpha, cpp_alnum, typekeywords, stmtkeywords
+procedure cpp_ident()
+  if any(cpp_alpha) then
+    return tab(many(cpp_alnum))
+  else
+    fail
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+@
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: cppdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Example}
+
+Given this C++ code in a noweb chunk:
+\begin{verbatim}
+<<sample code>>=
+namespace math::seq {
+
+template<typename T>
+class Fib {
+public:
+    Fib() : curr_(0), next_(1) {}
+    T next();
+private:
+    T curr_, next_;
+};
+
+template<typename T>
+T Fib<T>::next() {
+    T value = curr_;
+    curr_ = next_;
+    next_ = value + next_;
+    return value;
+}
+
+using FibL = Fib<long>;
+enum class State { On, Off };
+
+}  // namespace math::seq
+
+int main() {
+    math::seq::FibL fib;
+    while (running) {
+        process(fib.next());
+    }
+}
+@
+\end{verbatim}
+
+Without [[-local]], the index will contain [[math::seq]], [[next]]
+(the out-of-class definition at column~0) and [[main]].  With
+[[-local]], it additionally includes [[Fib]], the inline constructor
+[[Fib]], [[FibL]] and [[State]], which are indented inside the
+namespace and class.  The calls to [[process]] and [[fib.next()]],
+the prototype [[T next();]] and the members are never indexed.
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Function headers split over several lines are missed: the name
+      and the trailing brace must be on the same line.
+\item Declarations inside a one-line class body
+      ([[class C { void f() {} };]]) index only the class, and a
+      one-line function whose body has content
+      ([[int f() { return 0; }]]) is missed entirely---only the
+      empty inline body [[{}]] is recognized.
+\item Destructors and [[operator]] overloads are not indexed.
+\item Strings and block comments are not tracked: a line inside
+      either that looks like a declaration is indexed as if it were
+      code.
+\item A namespace indents its content in most styles, so names
+      declared inside it often need [[-local]]; out-of-class method
+      definitions and [[main]] conventionally sit at column~0 and do
+      not.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

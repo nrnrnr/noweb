@@ -1,0 +1,275 @@
+\documentclass{article}
+\usepackage[minted]{noweb}
+\pagestyle{noweb}
+\title{Greatest common divisor:\\
+  one function, six languages, indexed by one command}
+\author{Daniel Bosk}
+\begin{document}
+\maketitle
+
+@ \section{Introduction}
+
+This example is the companion to [[fib.nw]].  Where that document
+shows [[-autolang]] making a single [[-autodefs]] filter \emph{skip}
+the chunks it does not understand, this one shows the other half of
+the same mechanism: the definition scanners \emph{stacked}, one per
+language, so that each chunk is indexed by the scanner for its own
+language---and the whole stack assembled by [[-autolang]] alone.
+
+The document implements Euclid's algorithm for the greatest common
+divisor once in each of six languages---C++, Rust, Haskell, Java and
+shell, together with a Makefile that builds them.  Each
+implementation is a root chunk named like a file, e.g.\
+[[gcd.cpp]] or [[Gcd.java]].  That naming is load-bearing:
+[[autolang]] infers a chunk's language from its filename-like name
+and annotates the chunk with it, and the scanner for that language
+then finds the definitions in exactly those chunks.
+
+The algorithm is deliberately the same throughout---[[while b]] is
+nonzero, replace the pair with [[b]] and [[a mod b]]---so that what
+varies between sections is only the language and what its definition
+scanner reports, not the problem being solved.
+
+\subsection{One command finds every language}
+
+Because [[autolang]] already determines each chunk's language, it can
+also choose the [[-autodefs]] filters.  Given [[-index]],
+[[-autolang]] runs its inference once before the weave, collects the
+set of languages the document actually contains, and adds the
+matching scanner for each.  The whole document is therefore woven,
+highlighted and indexed by one command that names no language:
+
+\begin{verbatim}
+noweave -delay -autolang -index \
+    -filter 'tominted -lexer noweb_lexer.py' multilang.nw > multilang.tex
+\end{verbatim}
+
+[[autolang]] discovers C++, Rust, Haskell, Java, shell and make, and
+stacks [[autodefs.cpp]] through [[autodefs.make]] ahead of the index
+filters, so every chunk is indexed by the scanner for its own
+language.
+
+That convenience rests on a more basic one.  Six scanners alongside
+the index filters and the [[tominted]] highlighter once overflowed
+[[noweave]]'s fixed filter slots, which forced a document like this to
+be woven twice, splitting the languages across two passes.  The
+pipeline now grows without a fixed ceiling, so the scanners fit in a
+single weave; discovery then removes the need to list them.  A
+hand-written [[-autodefs]] still works---it is merged with the
+discovered set and never stacked twice---for the rare chunk whose
+language [[autolang]] cannot infer.
+
+\section{C++}
+
+The C++ version makes [[gcd]] a function template so it works for any
+integer type, and adds a [[Ratio]] whose [[reduce]] method calls it.
+The template prefix is what [[autodefs.cpp]] must step over to reach
+the name; a filter built for ANSI~C ([[autodefs.c]]) would not, which
+is why C++ has its own scanner.
+
+<<[[gcd.cpp]]>>=
+#include <iostream>
+#include <cstdlib>
+
+template<typename T>
+T gcd(T a, T b) {
+    while (b != 0) {
+        T t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+struct Ratio {
+    long num, den;
+    void reduce() {
+        long g = gcd(num, den);
+        num /= g;
+        den /= g;
+    }
+};
+
+int main(int argc, char** argv) {
+    long a = argc > 1 ? std::atol(argv[1]) : 462;
+    long b = argc > 2 ? std::atol(argv[2]) : 1071;
+    std::cout << gcd(a, b) << "\n";
+    return 0;
+}
+@
+
+In the index, [[gcd]], [[Ratio]] and [[main]] are the column-zero
+definitions the default weave reports.  The [[reduce]] method is
+indented inside [[Ratio]], so it is found only under
+[[-autodefs 'cpp -local']], the same interface-versus-internals rule
+the Python and Rust scanners follow.
+
+\section{Rust}
+
+Rust spells out the mutable state the algorithm needs; the [[Ratio]]
+here carries its [[reduce]] in a separate [[impl]] block rather than
+in the type body, which is the idiomatic split and a second place a
+method can hide from the default index.
+
+<<[[gcd.rs]]>>=
+pub fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+struct Ratio {
+    num: u64,
+    den: u64,
+}
+
+impl Ratio {
+    fn reduce(&mut self) {
+        let g = gcd(self.num, self.den);
+        self.num /= g;
+        self.den /= g;
+    }
+}
+@
+
+[[autodefs.rust]] indexes [[gcd]] and [[Ratio]] by default and adds
+[[reduce]] under [[-local]].  The [[impl]] block itself is never
+indexed: it implements an existing name rather than defining a new
+one.
+
+\section{Haskell}
+
+Haskell drops the loop for two pattern-matching equations.  This is
+the case that would most mislead a line-oriented scanner: the name
+[[gcd']] appears three times---once in the signature and once per
+equation---but it is one definition.
+
+<<[[Gcd.hs]]>>=
+module Gcd (gcd') where
+
+data Ratio = Ratio Integer Integer
+
+gcd' :: Integer -> Integer -> Integer
+gcd' a 0 = a
+gcd' a b = gcd' b (a `mod` b)
+@
+
+[[autodefs.haskell]] folds the signature and the two equations into
+a single index entry for [[gcd']], and indexes the type [[Ratio]].
+The data constructor (also spelled [[Ratio]]) is not indexed
+separately---constructors would need the right-hand side of [[data]]
+to be parsed, which the scanner deliberately does not do.
+
+\section{Java}
+
+Java wraps the function in a class, so the public name a reader looks
+up is the class; the method is an implementation detail of it.
+
+<<[[Gcd.java]]>>=
+public class Gcd {
+    public static long gcd(long a, long b) {
+        while (b != 0) {
+            long t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+@
+
+[[autodefs.java]] indexes the type [[Gcd]] by default.  The method
+[[gcd]] is found only under [[-local]], recognized by the heuristic
+that a definition's line ends in an opening brace---which is also how
+the scanner avoids indexing the method \emph{calls} that end in one.
+
+\section{Shell}
+
+The shell version shows the indentation rule the scanners share, in
+the one language where it bites hardest.  A shell function is global
+no matter how deeply its [[gcd]] line is nested, so functions are
+indexed at any indentation; an assignment, by contrast, is indexed
+only at column zero, because an indented one is almost always a
+variable local to some function's body.
+
+<<[[gcd.sh]]>>=
+#!/bin/sh
+steps=0
+gcd() {
+    a=$1
+    b=$2
+    while [ "$b" -ne 0 ]; do
+        steps=$((steps + 1))
+        t=$b
+        b=$((a % b))
+        a=$t
+    done
+    echo "$a"
+}
+
+gcd "$@"
+@
+
+[[autodefs.sh]] indexes the function [[gcd]] and the column-zero
+variable [[steps]].  The indented [[a]], [[b]] and [[t]] inside the
+function are not indexed---they are exactly the local detail the
+column-zero rule is meant to suppress.
+
+\section{The build file}
+
+The Makefile is itself a chunk, so the document explains the program
+and how to build it in one place.  It compiles the C++ version and
+can run the shell one; the other implementations tangle but are left
+for the reader to build.
+
+A word of warning when tangling: make requires recipe lines to start
+with a tab, but [[notangle]] expands tabs to spaces by default.
+Tangle this chunk with [[notangle -t8]], which copies tabs through.
+
+<<[[Makefile]]>>=
+CXX=c++
+CXXFLAGS=-O2
+
+all: gcd
+
+gcd: gcd.cpp
+	$(CXX) $(CXXFLAGS) -o gcd gcd.cpp
+
+run-sh: gcd.sh
+	sh gcd.sh 462 1071
+
+clean:
+	rm -f gcd
+@
+
+[[autodefs.make]] indexes the variables [[CXX]] and [[CXXFLAGS]] and
+the targets [[all]], [[gcd]], [[run-sh]] and [[clean]].  The recipe
+lines beneath the targets begin with a tab and are skipped: they are
+shell commands run by make, not make definitions, and would be
+indexed by [[autodefs.sh]] instead if this chunk were shell.
+
+\section{Building this document}
+
+A single weave highlights every chunk and indexes every language;
+[[-autolang]] supplies the scanners, so no [[-autodefs]] appears:
+\begin{verbatim}
+noweave -delay -autolang -index \
+    -filter 'tominted -lexer noweb_lexer.py' multilang.nw > multilang.tex
+pdflatex -shell-escape multilang.tex
+\end{verbatim}
+The examples' Makefile wires this as [[make multilang.pdf]]; the
+highlighted build needs the one-time [[latexminted]] setup described
+in [[README.python]].  Dropping the [[tominted]] filter (and the
+[[-shell-escape]]) gives the classic, unhighlighted rendering with the
+same six-language index.
+
+\section{Chunks and identifiers}
+
+\nowebchunks
+
+\nowebindex
+
+\end{document}

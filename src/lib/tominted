@@ -1,0 +1,561 @@
+#!/usr/bin/env python3
+"""Noweave filter that typesets code chunks with the minted package.
+
+Reads a noweb markup stream on stdin and writes it to stdout,
+replacing the body of every code chunk of known language with a
+``minted`` environment.  Intended to run as the last filter of
+``noweave``, after ``-index``.  See nowebfilters(7).
+"""
+
+import sys
+
+LEXERS_BY_NAME = {
+    "Makefile": "make",
+    "makefile": "make",
+    "GNUmakefile": "make",
+    "Dockerfile": "docker",
+    "CMakeLists.txt": "cmake",
+}
+LEXERS_BY_EXT = {
+    ".py": "python",
+    ".pyw": "python",
+    ".mk": "make",
+    ".c": "c",
+    ".h": "c",
+    ".icn": "icon",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".sml": "sml",
+    ".tex": "latex",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".ts": "typescript",
+    ".java": "java",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".cs": "csharp",
+    ".go": "go",
+    ".rs": "rust",
+    ".rb": "ruby",
+    ".php": "php",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".kts": "kotlin",
+    ".scala": "scala",
+    ".hs": "haskell",
+    ".ml": "ocaml",
+    ".mli": "ocaml",
+    ".lua": "lua",
+    ".pl": "perl",
+    ".pm": "perl",
+    ".r": "r",
+    ".R": "r",
+    ".jl": "julia",
+    ".sql": "sql",
+    ".html": "html",
+    ".css": "css",
+    ".json": "json",
+    ".yml": "yaml",
+    ".yaml": "yaml",
+    ".toml": "toml",
+    ".md": "markdown",
+    ".zig": "zig",
+    ".dart": "dart",
+    ".ex": "elixir",
+    ".exs": "elixir",
+    ".erl": "erlang",
+    ".f90": "fortran",
+    ".f95": "fortran",
+}
+LEXER_RULES = []   # list of (compiled regex, lexer alias)
+try:
+    from pygments.lexers import find_lexer_class_for_filename
+except ImportError:
+    find_lexer_class_for_filename = None
+PYGMENTS_ALIASES = {}
+CONFLICT = object()
+LANGUAGE_SYNONYMS = {
+    "c++": "cpp",
+    "sh": "bash",
+    "caml": "ocaml",
+}
+PYTHON_LEXERS = {"python", "python3", "py", "py3"}
+STRING_DELIMITERS = ('"""', "'''")
+import re
+
+INTERPRETERS = {
+    "python": "python", "python3": "python", "python2": "python",
+    "sh": "bash", "bash": "bash", "dash": "bash", "ksh": "bash",
+    "zsh": "bash", "perl": "perl", "ruby": "ruby",
+    "node": "javascript", "nodejs": "javascript",
+    "awk": "awk", "gawk": "awk", "sed": "sed", "lua": "lua",
+    "php": "php", "Rscript": "r", "psql": "sql", "mysql": "sql",
+    "sqlite3": "sql",
+}
+HEREDOC_RE = re.compile(r'<{2}[-~]?\s*(["\'\\]?)([A-Za-z_]\w*)\1\s*$')
+ASSIGNMENT_RE = re.compile(r'\w+=')
+DELIMITER_TAGS = {
+    "py": "python", "python": "python", "python3": "python",
+    "sh": "bash", "bash": "bash", "sql": "sql",
+    "js": "javascript", "node": "javascript",
+    "rb": "ruby", "ruby": "ruby", "pl": "perl", "perl": "perl",
+    "lua": "lua", "php": "php", "awk": "awk", "sed": "sed", "r": "r",
+}
+INLINE_CODE_RE = re.compile(r'(\S+)\s+-[ce]\s+["\']?\s*$')
+def lexer_for_chunk(name):
+    """Return the Pygments lexer for chunk ``name``, or None.
+
+    A user-supplied rule matching the whole name wins first.
+    Otherwise the chunk name may use noweb's ``[[...]]`` quoting and
+    may contain directory separators; only the basename decides, and
+    names the built-in tables do not cover are matched against
+    Pygments' filename patterns when Pygments is installed.
+    """
+    for pattern, lexer in LEXER_RULES:
+        if pattern.search(name):
+            return lexer
+    if name.startswith("[[") and name.endswith("]]"):
+        name = name[2:-2]
+    basename = name.rsplit("/", 1)[-1]
+    if basename in LEXERS_BY_NAME:
+        return LEXERS_BY_NAME[basename]
+    dot = basename.rfind(".")
+    if dot >= 0 and basename[dot:] in LEXERS_BY_EXT:
+        return LEXERS_BY_EXT[basename[dot:]]
+    return pygments_lexer_for_chunk(basename)
+def pygments_lexer_for_chunk(basename):
+    """Return the alias of Pygments' lexer for ``basename``, or None."""
+    if find_lexer_class_for_filename is None:
+        return None
+    if basename not in PYGMENTS_ALIASES:
+        cls = find_lexer_class_for_filename(basename)
+        PYGMENTS_ALIASES[basename] = (
+            cls.aliases[0] if cls is not None and cls.aliases else None)
+    return PYGMENTS_ALIASES[basename]
+def parse(line):
+    """Split a markup line into (keyword, argument).
+
+    The argument is None when the line is only ``@keyword``.
+    """
+    space = line.find(" ")
+    if space < 0:
+        return line[1:], None
+    return line[1:space], line[space + 1:]
+def chunk_languages(lines):
+    """Compute chunk languages and string-embedded use sites.
+
+    Returns a pair ``(langs, plain_uses)``.  ``langs`` maps chunk
+    names to Pygments lexer names: languages are seeded from
+    ``@language`` annotations, filename-like chunk names, shebang
+    lines, and the lexical context each chunk is used in (heredoc
+    bodies, interpreter ``-c`` arguments, make recipes), then
+    propagated to the chunks they use, transitively; chunks with
+    conflicting inherited languages are omitted.  ``plain_uses``
+    is the set of indices into ``lines`` of the ``@use`` lines
+    that sit inside a Python string literal and must be rendered
+    as plain text.
+    """
+    uses = {}
+    langs = {}
+    explicit = set()
+    edges = []
+    current = None
+    in_code = False
+    in_string = {}
+    previous_line = line_so_far = ""
+    shebang_checked = set()
+    for index, line in enumerate(lines):
+        keyword, arg = parse(line)
+        if keyword == "begin" and arg.startswith("code"):
+            in_code = True
+            current = None
+        elif keyword == "end" and arg.startswith("code"):
+            in_code = False
+            current = None
+        elif in_code and keyword == "defn":
+            current = arg
+            uses.setdefault(current, set())
+            in_string.setdefault(current, False)
+            previous_line = line_so_far = ""
+            if current not in explicit:
+                lexer = lexer_for_chunk(current)
+                if lexer is not None:
+                    langs[current] = lexer
+        elif in_code and keyword == "language" and current is not None:
+            langs[current] = LANGUAGE_SYNONYMS.get(arg, arg)
+            explicit.add(current)
+        elif in_code and keyword == "text" and current is not None:
+            flips = sum((arg or "").count(d) for d in STRING_DELIMITERS)
+            if flips % 2:
+                in_string[current] = not in_string[current]
+            if current not in shebang_checked:
+                shebang_checked.add(current)
+                if current not in explicit and lexer_for_chunk(current) is None:
+                    shebang = shebang_language(arg or "")
+                    if shebang is not None:
+                        langs[current] = shebang
+                        explicit.add(current)
+            line_so_far += arg or ""
+        elif in_code and keyword == "use" and current is not None:
+            uses[current].add((arg, in_string[current]))
+            edges.append((current, arg, in_string[current], index))
+            context = context_language(line_so_far, previous_line,
+                                       langs.get(current))
+            if context is not None and arg not in explicit \
+                    and lexer_for_chunk(arg) is None:
+                langs[arg] = context
+                explicit.add(arg)
+        elif in_code and keyword == "nl" and current is not None:
+            previous_line, line_so_far = line_so_far, ""
+    worklist = list(langs)
+    while worklist:
+        parent = worklist.pop()
+        lang = langs[parent]
+        if lang is CONFLICT:
+            continue
+        for child, embedded in uses.get(parent, ()):
+            if child in explicit or lexer_for_chunk(child) is not None:
+                continue
+            if embedded and lang in PYTHON_LEXERS:
+                inherited = "text"
+            else:
+                inherited = lang
+            if child not in langs:
+                langs[child] = inherited
+                worklist.append(child)
+            elif langs[child] is not CONFLICT and langs[child] != inherited:
+                langs[child] = CONFLICT
+    plain_uses = set()
+    for parent, child, embedded, index in edges:
+        if embedded and langs.get(parent) in PYTHON_LEXERS:
+            plain_uses.add(index)
+    return ({name: lang for name, lang in langs.items()
+             if lang is not CONFLICT},
+            plain_uses)
+def interpreter_language(word):
+    """Return the lexer name for interpreter ``word``, or None.
+
+    Any directory prefix is ignored, so ``/usr/bin/python3`` and
+    ``python3`` map alike.
+    """
+    return INTERPRETERS.get(word.rsplit("/", 1)[-1])
+def shebang_language(text):
+    """Return the language a ``#!`` line names, or None."""
+    if not text.startswith("#!"):
+        return None
+    tokens = text[2:].split()
+    if not tokens:
+        return None
+    interpreter = tokens[0]
+    if interpreter.rsplit("/", 1)[-1] == "env" and len(tokens) > 1:
+        interpreter = tokens[1]
+    return interpreter_language(interpreter)
+def heredoc_opener(line):
+    """Return ``(command, delimiter)`` if ``line`` opens a heredoc."""
+    match = HEREDOC_RE.search(line)
+    if match is None:
+        return None
+    command = ""
+    for token in line.split():
+        if ASSIGNMENT_RE.match(token):
+            continue
+        command = token
+        break
+    return command, match.group(2)
+def delimiter_language(delimiter):
+    """Return the language a heredoc delimiter names, or None."""
+    tag = delimiter.lower()
+    for suffix in ("eof", "end", "eot", "doc", "here", "text"):
+        if tag.endswith(suffix) and tag != suffix:
+            tag = tag[:-len(suffix)]
+            break
+    return DELIMITER_TAGS.get(tag)
+def heredoc_language(command, delimiter):
+    """Return a heredoc body's language: interpreter, delimiter, text."""
+    return (interpreter_language(command)
+            or delimiter_language(delimiter)
+            or "text")
+def interpreter_argument_language(before):
+    """Language of an interpreter run ``cmd -c``/``-e`` here, or None.
+
+    ``before`` is the text preceding the chunk use on its own line.
+    """
+    match = INLINE_CODE_RE.search(before)
+    if match is None:
+        return None
+    return interpreter_language(match.group(1))
+def context_language(before, previous, using_language):
+    """Language a use site imposes on the used chunk, or None.
+
+    ``before`` is the text before the use on its line, ``previous``
+    the preceding logical line, ``using_language`` the language of
+    the chunk doing the using.
+    """
+    if before.strip():
+        return interpreter_argument_language(before)
+    opener = heredoc_opener(previous)
+    if opener is not None:
+        return heredoc_language(*opener)
+    if before and using_language == "make":
+        return "bash"
+    return None
+def add_mapping(argument):
+    """Add a lexer rule or table mapping from a command-line argument.
+
+    ``re:regex=lexer`` appends a rule matched against the whole
+    chunk name; ``.ext=lexer`` and ``name=lexer`` extend the
+    extension and basename tables.  Returns False when ``argument``
+    is none of those forms.
+    """
+    if argument.startswith("re:"):
+        pattern, sep, value = argument[3:].rpartition("=")
+        if not sep:
+            return False
+        LEXER_RULES.append((re.compile(pattern), value))
+        return True
+    key, sep, value = argument.partition("=")
+    if not sep:
+        return False
+    if key.startswith("."):
+        LEXERS_BY_EXT[key] = value
+    else:
+        LEXERS_BY_NAME[key] = value
+    return True
+TEX_SPECIALS = {
+    "\\": "{\\nwbackslash}",
+    "{": "{\\nwlbrace}",
+    "}": "{\\nwrbrace}",
+    "$": "{\\$}",
+    "&": "{\\&}",
+    "#": "{\\#}",
+    "^": "{\\char94}",
+    "_": "{\\_}",
+    "%": "{\\%}",
+    "~": "{\\char126}",
+}
+ESCAPE_CANDIDATES = "|!?;^&@:*+"
+CATCODE_RESET = (
+    "\\catcode37=14\\relax\\catcode126=13\\relax"
+    "\\catcode36=3\\relax\\catcode38=4\\relax"
+    "\\catcode35=6\\relax\\catcode94=7\\relax"
+    "\\catcode95=8\\relax\\catcode13=5\\relax"
+)
+LIST_SPACING_RESET = "\\partopsep=0pt\\relax"
+ENV_OPTIONS = "xleftmargin=\\codemargin,vspace=0pt"
+MINTED_END = "\\end{" + "minted}"
+WRAPPER_NAMES = ["nwminted", "nwmintedalt", "nwmintedcode"]
+CUSTOM_LEXER = None
+ESCAPE_LEFT = "\ue000"
+ESCAPE_RIGHT = "\ue001"
+def render_use(name, label):
+    """Return totex's LaTeX for a chunk reference inside code."""
+    tex = "\\LA{}" + conv_quotes(name)
+    if label is not None:
+        tex += "~{\\nwtagstyle{}\\subpageref{" + label + "}}"
+    return tex + "\\RA{}"
+def tex_literal(text):
+    """Escape ``text`` for LaTeX like totex's TeXliteral."""
+    return "".join(TEX_SPECIALS.get(c, c) for c in text)
+def conv_quotes(name):
+    """Convert noweb's [[...]] quoting in a chunk name to LaTeX."""
+    out = ""
+    rest = name
+    while True:
+        head, sep, rest = rest.partition("[[")
+        out += tex_literal(head)
+        if not sep:
+            return out
+        inner, sep, rest = rest.partition("]]")
+        if not sep:
+            return out + tex_literal("[[" + inner)
+        # Like totex, extra ]s before the closing ]] stay inside.
+        while rest.startswith("]"):
+            inner += "]"
+            rest = rest[1:]
+        out += "\\code{}" + tex_literal(inner) + "\\edoc{}"
+def rewrite_chunk(chunk, lang, out, start, plain_uses):
+    """Rewrite one code chunk to use a minted environment.
+
+    ``chunk`` is the list of raw markup lines from ``@begin code``
+    through ``@end code``, beginning at index ``start`` of the
+    stream; ``lang`` is the Pygments lexer name; ``plain_uses``
+    holds the stream indices of string-embedded uses; the
+    rewritten lines are appended to ``out``.
+
+    A chunk containing minted's own end marker is typeset in a wrapper
+    environment instead; see ``wrapper_definition``.  Its definition is
+    emitted before the chunk, since noweb's code mode makes spaces
+    active, which would break the definition.
+    """
+    code_text = "".join((parse(l)[1] or "") for l in chunk
+                        if parse(l)[0] == "text")
+    environment = "minted"
+    if MINTED_END in code_text:
+        environment = next((name for name in WRAPPER_NAMES
+                            if "\\end{" + name + "}" not in code_text),
+                           WRAPPER_NAMES[0])
+        out.append("@literal " + wrapper_definition(environment))
+    position = 0
+    while position < len(chunk):
+        line = chunk[position]
+        position += 1
+        if parse(line)[0] == "language":
+            continue
+        out.append(line)
+        if parse(line)[0] == "nl":
+            break
+    body = []
+    current_line = []
+    relocated = []
+    held = []
+    trailer = []
+    while position < len(chunk):
+        line = chunk[position]
+        keyword, arg = parse(line)
+        if keyword == "end":
+            trailer = chunk[position:]
+            break
+        elif keyword == "text":
+            relocated.extend(held)
+            held = []
+            current_line.append(("text", arg or ""))
+        elif keyword == "nl":
+            relocated.extend(held)
+            held = []
+            body.append(current_line)
+            current_line = []
+        elif keyword == "use":
+            label = None
+            if held and (parse(held[-1])[1] or "").startswith("ref "):
+                label = parse(held.pop())[1][len("ref "):]
+                if held and (parse(held[-1])[1] or "").startswith("label "):
+                    held.pop()
+            relocated.extend(held)
+            held = []
+            if CUSTOM_LEXER is None and start + position in plain_uses:
+                current_line.append(("text", "<<" + arg + ">>"))
+            else:
+                current_line.append(("use", arg, render_use(arg, label)))
+        elif keyword == "language":
+            pass
+        else:
+            held.append(line)
+        position += 1
+    relocated.extend(held)
+    if current_line:
+        body.append(current_line)
+    delimiter = None
+    if CUSTOM_LEXER is None and any(
+            part[0] == "use" for line in body for part in line):
+        code_text = "".join(part[1] for line in body
+                            for part in line if part[0] == "text")
+        for candidate in ESCAPE_CANDIDATES:
+            if candidate not in code_text:
+                delimiter = candidate
+                break
+        if delimiter is None:
+            print("tominted: warning: no usable escape delimiter; "
+                  "chunk references will not be linked", file=sys.stderr)
+    options = ENV_OPTIONS
+    if CUSTOM_LEXER is None:
+        lexer = lang
+        if delimiter is not None:
+            options += ",escapeinside={" + delimiter + delimiter + "}"
+    else:
+        lexer = CUSTOM_LEXER + ":" + lexer_class(lang)
+    if environment != "minted":
+        begin = ("\\begin{" + environment + "}{" + options + "}{"
+                 + lexer + "}")
+    else:
+        begin = "\\begin{minted}[" + options + "]{" + lexer + "}"
+    out.append("@literal " + CATCODE_RESET + LIST_SPACING_RESET + begin)
+    out.append("@nl")
+    for line in body:
+        parts = []
+        for part in line:
+            if part[0] == "text":
+                parts.append(part[1])
+            elif CUSTOM_LEXER is not None:
+                parts.append(ESCAPE_LEFT + part[2] + ESCAPE_RIGHT)
+            elif delimiter is not None:
+                parts.append(delimiter + part[2] + delimiter)
+            else:
+                parts.append("<<" + part[1] + ">>")
+        out.append("@literal " + "".join(parts))
+        out.append("@nl")
+    out.append("@literal \\end{" + environment + "}")
+    out.append("@nl")
+    out.extend(relocated)
+    out.extend(trailer)
+def wrapper_definition(name):
+    """Return LaTeX defining wrapper environment ``name`` once."""
+    return ("\\ifcsname " + name + "\\endcsname\\else"
+            "\\newenvironment{" + name + "}[2]"
+            "{\\VerbatimEnvironment\\begin{minted}[#1]{#2}}"
+            "{" + MINTED_END + "}\\fi")
+def lexer_class(lang):
+    """Return the noweb_lexer.py class name wrapping ``lang``.
+
+    Mirrors ``_class_name`` in noweb_lexer.py: non-alphanumeric
+    runs are word breaks and every word is capitalized.
+    """
+    words = "".join(c if c.isalnum() else " " for c in lang).split()
+    return "Noweb" + "".join(w.capitalize() for w in words) + "Lexer"
+def rewrite_stream(lines, langs, plain_uses):
+    """Return the rewritten markup stream as a list of lines."""
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        keyword, arg = parse(line)
+        if keyword == "begin" and arg.startswith("code"):
+            start = i
+            chunk = []
+            while True:
+                chunk.append(lines[i])
+                keyword, arg = parse(lines[i])
+                i += 1
+                if keyword == "end" and arg.startswith("code"):
+                    break
+            name = next((parse(l)[1] for l in chunk
+                         if parse(l)[0] == "defn"), None)
+            lang = langs.get(name)
+            if lang is None:
+                out.extend(l for l in chunk
+                           if parse(l)[0] != "language")
+            else:
+                rewrite_chunk(chunk, lang, out, start, plain_uses)
+        else:
+            out.append(line)
+            i += 1
+    return out
+def main():
+    """Filter a noweb markup stream from stdin to stdout."""
+    global CUSTOM_LEXER
+    arguments = sys.argv[1:]
+    while arguments:
+        argument = arguments.pop(0)
+        if argument == "-lexer":
+            if not arguments:
+                print("tominted: -lexer requires a path",
+                      file=sys.stderr)
+                sys.exit(1)
+            CUSTOM_LEXER = arguments.pop(0)
+            continue
+        if not add_mapping(argument):
+            print("tominted: unknown argument:", argument,
+                  file=sys.stderr)
+            sys.exit(1)
+    lines = sys.stdin.read().split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    langs, plain_uses = chunk_languages(lines)
+    for line in rewrite_stream(lines, langs, plain_uses):
+        print(line)
+
+if __name__ == "__main__":
+    main()

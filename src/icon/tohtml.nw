@@ -239,6 +239,7 @@ if ="@quote"    & pos(0) then 	{ quoting := 1   ; writes(braw, "<code>")        
 if ="@endquote" & pos(0) then 	{ quoting := nil ; writes("</code>", eraw)       } else
 <<others>>=
 if ="@file "                  then { filename := tab(0); <<clear [[lastxref*]]>> } else
+if ="@language "              then {                                             } else
 if ="@literal "               then { writes(tab(0))                              } else
 if ="@header html "           then { <<write HTML header>>		         } else
 if ="@trailer html" & pos(0)  then { <<write HTML trailer>>		         } else

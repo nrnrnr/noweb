@@ -1,57 +1,80 @@
-#line 2 "pascaldefs.nw"
-global showlocal
+#line 61 "shdefs.nw"
 procedure main(args)
-  showlocal := !args == "-local"
-  defnslanguages := set(["pascal", "delphi"])
+  defnslanguages := set(["sh", "bash", "shell", "zsh", "ksh", "dash"])
   go()
 end
-#line 9 "pascaldefs.nw"
+#line 83 "shdefs.nw"
 procedure postpass(name, arg)
   static kind
-  initial { kind := "bogus" }
+  initial kind := "bogus"
   case name of {
     "begin" : arg ? kind := tab(upto(' ')|0)
-    "text" : if kind == "code" then arg ?
-        if (optwhite(), =("function "|"procedure "), not hasword(arg, "forward")) then{
-            tab(many(' '))
-            writedefn(tab(upto(' ():;')))
-        } else if (optwhite(), x := allupper(), optwhite(), ="=") then {
-            writedefn(x)
-        }
+    "text" : if kind == "code" then {
+      
+#line 113 "shdefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if any('#') then return
+
+  if (="function", any(' \t')) then {
+    tab(many(' \t'))
+    if ident := sh_ident() then
+      return writedefn(ident)
+  }
+  if \toplevel then {
+    
+#line 151 "shdefs.nw"
+if (=("export"|"readonly"|"declare"|"typeset"|"alias"), any(' \t')) then {
+  tab(many(' \t'))
+  while any('-') do {
+    tab(upto(' \t') | 0)
+    tab(many(' \t'))
+  }
+}
+#line 126 "shdefs.nw"
+  }
+  if ident := sh_ident() then {
+    if (="+" | "") & ="=" & not any('=') then {
+      if \toplevel then return writedefn(ident)
+    }
+    else {
+      tab(many(' \t'))
+      if (="(", optwhite(), =")") then
+        return writedefn(ident)
+    }
+  }
+}
+#line 90 "shdefs.nw"
+    }
   }
   return
 end
-
-procedure prepass(name, arg)
-  if name == "end" then writedefn(&null) # force newline
-end
-
-procedure words()
-  static alnum
-  initial alnum := &letters ++ &digits ++ '_'
-  suspend if any(alnum) then tab(many(alnum))
-          else if pos(0) then fail
-          else if tab(upto(alnum)) then words()
-end
-
-procedure hasword(s, w)
-  suspend (tab(0) ? words()) == w
+#line 168 "shdefs.nw"
+procedure sh_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
 end
 
 procedure optwhite()
   suspend tab(many(' \t')) | ""
 end
-
-procedure allupper()
-  static uppers
-  initial uppers := &ucase ++ &digits ++ '_'
-  suspend tab(many(uppers))
+#line 188 "shdefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
 end
 
-
-procedure rcsinfo () 
-  return "$Id: pascaldefs.nw,v 1.17 2008/10/06 01:03:05 nr Exp nr $" ||
-         "$Name: v2_12 $"
+procedure rcsinfo ()
+  return "$Id: shdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
 end
 #line 14 "defns.nw"
 global defnslanguages

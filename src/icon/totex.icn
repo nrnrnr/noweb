@@ -16,7 +16,7 @@ text := 1
 useitemstab := table()
 #line 149 "totex.nw"
 defns := table("")
-#line 336 "totex.nw"
+#line 337 "totex.nw"
 TeXspecials := '\\{}$&#^_ ~%'
 #line 19 "totex.nw"
   delay := !args == "-delay"
@@ -53,11 +53,11 @@ text := 1
                                                                                 }
                           if \quoting then writes("\\nwnewline")
 			  
-#line 201 "totex.nw"
+#line 202 "totex.nw"
 if \pendinguses | \pendingprev | \pendingnext then {
   writes("\\nwstartdeflinemarkup")
   
-#line 208 "totex.nw"
+#line 209 "totex.nw"
 if \pendinguses then {
   dumpitems(useitems, "nwusesondefline")
 }
@@ -65,7 +65,7 @@ if \pendingprev | \pendingnext then {
   writes("\\nwprevnextdefs{", \pendingprev | "\\relax", "}{", 
                               \pendingnext | "\\relax", "}")
 }
-#line 204 "totex.nw"
+#line 205 "totex.nw"
   writes("\\nwenddeflinemarkup")
   pendinguses := pendingprev := pendingnext := &null
 }
@@ -74,17 +74,17 @@ if \pendingprev | \pendingnext then {
 #line 71 "totex.nw"
 if ="@begin code " then	{ code := 1     ; writes("\\nwbegincode{", tab(0), "}")
                           
-#line 177 "totex.nw"
+#line 178 "totex.nw"
 every defitems | useitems := []
 notused := &null
 #line 72 "totex.nw"
                                                                                  } else
 if ="@end code "   then { 
-#line 184 "totex.nw"
+#line 185 "totex.nw"
 dumpitems(defitems, "nwalsodefined")
 dumpitems(useitems, "nwused")
 writes("\\nwnotused{", \notused, "}")
-#line 177 "totex.nw"
+#line 178 "totex.nw"
 every defitems | useitems := []
 notused := &null
 #line 74 "totex.nw"
@@ -100,7 +100,7 @@ if ="@defn " then 	{ writes("\\sublabel{", \lastxreflabel, "}")
 			  pendinguses := 1
 			  lastdefnlabel := lastxreflabel
 			  
-#line 216 "totex.nw"
+#line 217 "totex.nw"
 every lastxreflabel | lastxrefref := &null
 #line 131 "totex.nw"
                           defns[thischunk] := "plus"                           } else
@@ -122,13 +122,13 @@ if ="@use " then 	{ writes("\\LA{}", convquotes(name := tab(0)),
                                  ("~" || label2tag(\lastxrefref)) | "",
                                  "\\RA{}")
 			  
-#line 216 "totex.nw"
+#line 217 "totex.nw"
 every lastxreflabel | lastxrefref := &null
 #line 140 "totex.nw"
                                                             } else
-#line 175 "totex.nw"
+#line 176 "totex.nw"
 if ="@xref "               then { 
-#line 189 "totex.nw"
+#line 190 "totex.nw"
 if ="label "               then { lastxreflabel := tab(0)			} else
 if ="ref "                 then { lastxrefref   := tab(0)			} else
 if ="begindefs"   & pos(0) then {                            		        } else
@@ -140,7 +140,7 @@ if ="enduses"     & pos(0) then { useitemstab[thischunk] := useitems	        } e
 if ="notused "             then { notused := tab(0)                             } else
 if ="nextdef "             then { pendingnext := tab(0)                         } else
 if ="prevdef "             then { pendingprev := tab(0)                         } else
-#line 294 "totex.nw"
+#line 295 "totex.nw"
 if ="beginchunks" & pos(0) then { 						  } else
 if ="chunkbegin "          then { label := tab(upto(' ')); =" "
                                   writes("\\nwixlogsorted{c}{{", convquotes(tab(0)),
@@ -149,173 +149,174 @@ if ="chunkuse "            then { writes("\\nwixu{", tab(0), "}")		  } else
 if ="chunkdefn "           then { writes("\\nwixd{", tab(0), "}")		  } else
 if ="chunkend"    & pos(0) then { write("}}%")				          } else
 if ="endchunks"   & pos(0) then {     					          } else
-#line 175 "totex.nw"
+#line 176 "totex.nw"
                                                   
-#line 218 "totex.nw"
+#line 219 "totex.nw"
 warn_unknown("xref " || tab(upto(' \t') | 0))
-#line 175 "totex.nw"
+#line 176 "totex.nw"
                                                                                 } else
-#line 232 "totex.nw"
+#line 233 "totex.nw"
 if ="@index "               then { 
-#line 240 "totex.nw"
+#line 241 "totex.nw"
 if ="nl" & pos(0)          then        { write(if \code then "\\eatline" else "%")}else
 if =("defn "|"localdefn ") then 
-#line 244 "totex.nw"
-/noindex &
-#line 241 "totex.nw"
-                                       { 
-#line 253 "totex.nw"
-writes("\\nosublabel{", \lastxreflabel, "}")
-writes("\\nwindexdefn{\\nwixident{", TeXliteral(name := tab(0)), "}}{", indexlabel(name), "}{",
-	\lastxrefref, "}")
-#line 216 "totex.nw"
-every lastxreflabel | lastxrefref := &null
-#line 241 "totex.nw"
-                                                                                 } else
-if ="use "                 then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
 #line 242 "totex.nw"
                                        { 
-#line 261 "totex.nw"
+#line 254 "totex.nw"
+writes("\\nosublabel{", \lastxreflabel, "}")
+writes("\\nwindexdefn{\\nwixident{", TeXliteral(name := tab(0)), "}}{", indexlabel(name), "}{",
+	\lastxrefref, "}")
+#line 217 "totex.nw"
+every lastxreflabel | lastxrefref := &null
+#line 242 "totex.nw"
+                                                                                 } else
+if ="use "                 then 
+#line 245 "totex.nw"
+/noindex &
+#line 243 "totex.nw"
+                                       { 
+#line 262 "totex.nw"
 if /code & /quoting then {
   writes("\\protect\\nosublabel{", \lastxreflabel, "}")
   writes("\\protect\\nwindexuse{\\nwixident{", TeXliteral(name := tab(0)), "}}{", 
                 indexlabel(name), "}{", \lastxrefref, "}")
 }
 lastindexref := lastxrefref
-#line 216 "totex.nw"
+#line 217 "totex.nw"
 every lastxreflabel | lastxrefref := &null
-#line 242 "totex.nw"
+#line 243 "totex.nw"
                                                                                  } else
-#line 272 "totex.nw"
+#line 273 "totex.nw"
 if ="begindefs" & pos(0) then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
-#line 272 "totex.nw"
+#line 273 "totex.nw"
                                      { 
-#line 184 "totex.nw"
+#line 185 "totex.nw"
 dumpitems(defitems, "nwalsodefined")
 dumpitems(useitems, "nwused")
 writes("\\nwnotused{", \notused, "}")
-#line 177 "totex.nw"
+#line 178 "totex.nw"
 every defitems | useitems := []
 notused := &null
-#line 273 "totex.nw"
+#line 274 "totex.nw"
                                        writes("\\nwidentdefs{")                   } else
 if ="isused "            then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
-#line 274 "totex.nw"
+#line 275 "totex.nw"
                                      { "handled by latex"                         } else
 if ="defitem "           then 
-#line 244 "totex.nw"
-/noindex &
-#line 275 "totex.nw"
-                                     { i := tab(0); 
-#line 284 "totex.nw"
-writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
-#line 275 "totex.nw"
-                                                                                  } else
-if ="enddefs"   & pos(0) then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
 #line 276 "totex.nw"
-                                     { writes("}")                                } else
-if ="beginuses" & pos(0) then 
-#line 244 "totex.nw"
+                                     { i := tab(0); 
+#line 285 "totex.nw"
+writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
+#line 276 "totex.nw"
+                                                                                  } else
+if ="enddefs"   & pos(0) then 
+#line 245 "totex.nw"
 /noindex &
 #line 277 "totex.nw"
+                                     { writes("}")                                } else
+if ="beginuses" & pos(0) then 
+#line 245 "totex.nw"
+/noindex &
+#line 278 "totex.nw"
                                      { 
-#line 184 "totex.nw"
+#line 185 "totex.nw"
 dumpitems(defitems, "nwalsodefined")
 dumpitems(useitems, "nwused")
 writes("\\nwnotused{", \notused, "}")
-#line 177 "totex.nw"
+#line 178 "totex.nw"
 every defitems | useitems := []
 notused := &null
-#line 278 "totex.nw"
+#line 279 "totex.nw"
                                        writes("\\nwidentuses{"); ulist := []      } else
 if ="isdefined "         then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
-#line 279 "totex.nw"
+#line 280 "totex.nw"
                                      { "latex finds the definitions"              } else
 if ="useitem "           then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
-#line 280 "totex.nw"
+#line 281 "totex.nw"
                                      { i := tab(0); 
-#line 284 "totex.nw"
+#line 285 "totex.nw"
 writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
-#line 280 "totex.nw"
+#line 281 "totex.nw"
                                                                                 
                                         put(ulist, i);                            } else
 if ="enduses"   & pos(0) then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
-#line 282 "totex.nw"
+#line 283 "totex.nw"
                                      { writes("}"); 
-#line 286 "totex.nw"
+#line 287 "totex.nw"
 every i := !ulist do 
   writes("\\nwindexuse{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}{", \lastdefnlabel, "}")
-#line 282 "totex.nw"
+#line 283 "totex.nw"
                                                                                   } else
-#line 303 "totex.nw"
+#line 304 "totex.nw"
 if ="beginindex"  & pos(0) then 
-#line 244 "totex.nw"
-/noindex &
-#line 303 "totex.nw"
-                                       { 					  } else
-if ="entrybegin "          then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
 #line 304 "totex.nw"
+                                       { 					  } else
+if ="entrybegin "          then 
+#line 245 "totex.nw"
+/noindex &
+#line 305 "totex.nw"
                                        { label := tab(upto(' ')); =" "; name := tab(0)
 										 write("\\nwixlogsorted{i}{{\\nwixident{", TeXliteral(name),
 										 "}}{", indexlabel(name), "}}%")	          } else
 if ="entryuse "            then 
-#line 244 "totex.nw"
-/noindex &
-#line 307 "totex.nw"
-                                       { "handled by latex"	                  } else
-if ="entrydefn "           then 
-#line 244 "totex.nw"
+#line 245 "totex.nw"
 /noindex &
 #line 308 "totex.nw"
-                                       { "handled by latex"                       } else
-if ="entryend"    & pos(0) then 
-#line 244 "totex.nw"
+                                       { "handled by latex"	                  } else
+if ="entrydefn "           then 
+#line 245 "totex.nw"
 /noindex &
 #line 309 "totex.nw"
-                                       {                                          } else
-if ="endindex"    & pos(0) then 
-#line 244 "totex.nw"
+                                       { "handled by latex"                       } else
+if ="entryend"    & pos(0) then 
+#line 245 "totex.nw"
 /noindex &
 #line 310 "totex.nw"
                                        {                                          } else
-#line 232 "totex.nw"
+if ="endindex"    & pos(0) then 
+#line 245 "totex.nw"
+/noindex &
+#line 311 "totex.nw"
+                                       {                                          } else
+#line 233 "totex.nw"
                                                     
-#line 234 "totex.nw"
+#line 235 "totex.nw"
 warn_unknown("index " || tab(upto(' \t') | 0))
-#line 232 "totex.nw"
+#line 233 "totex.nw"
                                                                                   } else
 #line 153 "totex.nw"
 if ="@quote"    & pos(0)      then { quoting := 1     ; writes("{\\Tt{}")        } else
 if ="@endquote" & pos(0)      then { quoting := &null ; writes("\\nwendquote}")  } else
 if ="@file "                  then { filename := tab(0); 
-#line 216 "totex.nw"
+#line 217 "totex.nw"
 every lastxreflabel | lastxrefref := &null
 #line 156 "totex.nw"
                                      \delay | writes("\\nwfilename{", filename, "}")
 										 } else
 if ="@line "                  then {                                             } else
+if ="@language "              then {                                             } else
 if ="@literal "               then { writes(tab(0))                              } else
 if ="@header latex "          then { 
-#line 165 "totex.nw"
+#line 166 "totex.nw"
 writes("\\documentclass{article}\\usepackage{noweb}\\pagestyle{noweb}\\noweboptions{", tab(0),
        "}\\begin{document}")
-#line 160 "totex.nw"
+#line 161 "totex.nw"
                                                               		         } else
 if ="@header tex "            then { writes("\\input nwmac ")		         } else
 if ="@trailer latex" & pos(0) then { write("\\end{document}")		         } else
@@ -336,7 +337,7 @@ end
 procedure label2tag(label)
   return "{\\nwtagstyle{}\\subpageref{" || label || "}}"
 end
-#line 220 "totex.nw"
+#line 221 "totex.nw"
 procedure dumpitems(items, cs)
   if *\items > 0 then {
     writes("\\", cs, "{")
@@ -346,14 +347,14 @@ procedure dumpitems(items, cs)
   } else
     fail
 end
-#line 316 "totex.nw"
+#line 317 "totex.nw"
 procedure firstwrite(L[])
   write := realwrite
   put(L,
       "% ===> this file was generated automatically by noweave --- better not edit it")
   return write!L
 end
-#line 325 "totex.nw"
+#line 326 "totex.nw"
 procedure escape(line, chars, prefix)
   /prefix := "\\"
   line ? {
@@ -362,9 +363,9 @@ procedure escape(line, chars, prefix)
     return s || tab(0)
   }
 end
-#line 334 "totex.nw"
+#line 335 "totex.nw"
 global TeXspecials
-#line 357 "totex.nw"
+#line 358 "totex.nw"
 procedure TeXliteral(arg)
   static nospace, code
   initial { codes := ["\\", "nwbackslash",
@@ -394,7 +395,7 @@ procedure TeXliteral(arg)
     return s || tab(0)
   }
 end
-#line 390 "totex.nw"
+#line 391 "totex.nw"
 procedure convquotes(s)
   r := ""
   s ? {
@@ -408,7 +409,7 @@ procedure convquotes(s)
     return r || tab(0)
   }
 end
-#line 404 "totex.nw"
+#line 405 "totex.nw"
 procedure warn_unknown(tag)
   static warned
   initial warned := set()
@@ -418,12 +419,12 @@ procedure warn_unknown(tag)
   }
   return
 end
-#line 416 "totex.nw"
+#line 417 "totex.nw"
 procedure indexlabel(ident)
   static badset, trans
   initial {
     
-#line 430 "totex.nw"
+#line 431 "totex.nw"
 trans := table()
 trans[" "] := "sp"      # space
 trans["#"] := "has"     # hash
@@ -438,7 +439,7 @@ trans["_"] := "un"      # underscore
 trans["{"] := "lb"      # left brace
 trans["}"] := "rb"      # right brace
 trans["~"] := "ti"      # tilde
-#line 420 "totex.nw"
+#line 421 "totex.nw"
     badset := ''
     every badset ++:= key(trans)
   }
@@ -448,7 +449,7 @@ trans["~"] := "ti"      # tilde
     return s || tab(0)
   }
 end
-#line 445 "totex.nw"
+#line 446 "totex.nw"
 procedure fatal(L[])
   write!([&errout, "noweb error in tohtml: "] ||| L)
   exit(1)

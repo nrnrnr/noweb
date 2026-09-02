@@ -1,0 +1,118 @@
+\documentclass{article}
+\usepackage[minted]{noweb}
+\pagestyle{noweb}
+\title{Labeled chunk names:\\
+  classifying chunks whose names are not filenames}
+\author{Daniel Bosk}
+\begin{document}
+\maketitle
+
+@ \section{Introduction}
+
+This example is a companion to [[embedded.nw]].  There a chunk's
+language is imposed by \emph{where it is used}; here it is imposed by
+\emph{what its name is told to mean}.  The case is common in test-driven
+literate programs: a module lives in a chunk named for its file, like
+[[greet.py]], and its tests live in a sibling chunk whose name carries a
+label in front of the same file reference.  Such a name is not itself a
+filename, so [[autolang]] cannot guess its language---and deliberately
+does not try, because the guess would often be wrong: a chunk that
+\emph{references} [[greet.py]] may be Python that imports it or a shell
+script that runs it.
+
+The remedy is a rule.  [[noweave]]'s [[-langrule]] option (the
+[[re:regex=lexer]] form of [[autolang]], described in [[autolang.nw]])
+labels every chunk whose name matches a regular expression.  Because the
+regex is matched against the \emph{whole} chunk name, the label in front
+of the file reference is what the rule keys on---so two chunks that embed
+the same [[greet.py]] can be classified differently:
+
+\begin{description}
+\item[The module] [[greet.py]] is a filename, so it needs no rule:
+  [[autolang]] reads it as [[python]] from the name.
+\item[The unit test] a chunk labeled \emph{test} is Python (it imports
+  the module and asserts), classified by a rule mapping that label to
+  [[python]].
+\item[The smoke check] a chunk labeled \emph{check} is a POSIX shell
+  script (it runs the module and inspects the output), classified by a
+  second rule mapping \emph{that} label to [[bash]].
+\end{description}
+
+The pay-off is again in the index: with each chunk labeled,
+[[autodefs.python3]] scans the module and the test, [[autodefs.sh]]
+scans the shell check, and neither claims the other's identifiers.
+Without the rules the test and the check would be unlabeled, every
+[[autodefs]] filter would scan them, and [[autodefs.make]] could even
+read a Python [[for]] line as a Makefile rule.
+
+\section{The module}
+
+[[greet.py]] is an ordinary root chunk named for its file, so its
+language follows from the name with no rule at all.
+
+<<[[greet.py]]>>=
+def greet(name):
+    """Return a greeting addressed to ``name``."""
+    return f"hello, {name}"
+@
+
+\section{The unit test}
+
+The test imports the module and checks one example.  Its chunk name,
+\emph{test} followed by the quoted file reference, is not a filename, so
+the weave is told to treat names of that shape as Python.  The rule is
+\begin{verbatim}
+-langrule 'test \[\[.*\.py\]\]=python'
+\end{verbatim}
+and with it [[autodefs.python3]] indexes the test function below.
+
+<<test [[greet.py]]>>=
+from greet import greet
+
+
+def test_greet_uses_the_name():
+    assert greet("world") == "hello, world"
+@
+
+\section{The smoke check}
+
+The smoke check runs the module through the interpreter and inspects
+the output---a shell task, even though it mentions the same Python file.
+This is why the language cannot be read off the embedded [[greet.py]]:
+the chunk is shell, not Python.  Nor does it carry a [[#!]] line for
+[[autolang]] to read (that would be the shebang case of [[embedded.nw]]);
+the label is the only signal, so a second rule keyed on \emph{check}
+supplies the language:
+\begin{verbatim}
+-langrule 'check \[\[.*\.py\]\]=bash'
+\end{verbatim}
+
+<<check [[greet.py]]>>=
+# Run the module and confirm it greets as expected.
+out=$(python3 -c 'from greet import greet; print(greet("noweb"))')
+case $out in
+  "hello, noweb") echo "ok" ;;
+  *) echo "FAIL: got '$out'" >&2; exit 1 ;;
+esac
+@
+
+\section{Building this document}
+
+A single highlighted, indexed weave applies both rules and stacks the
+two relevant scanners.  [[-langrule]] implies [[-autolang]] and may be
+repeated:
+\begin{verbatim}
+noweave -delay -autolang \
+    -langrule 'test \[\[.*\.py\]\]=python' \
+    -langrule 'check \[\[.*\.py\]\]=bash' \
+    -autodefs python3 -autodefs sh -index \
+    -filter 'tominted -lexer noweb_lexer.py' \
+    labeled.nw > labeled.tex
+pdflatex -shell-escape labeled.tex
+\end{verbatim}
+The highlighted build needs the one-time [[latexminted]] setup
+described in [[README.python]].  Drop both [[-langrule]] options to see
+the default behaviour: the test and check chunks weave unhighlighted,
+because a labeled name carries no language on its own.
+
+\end{document}

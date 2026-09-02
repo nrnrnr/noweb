@@ -18,7 +18,35 @@ FFIILLTTEERRSS
        aauuttooddeeffss..**
               _n_o_w_e_a_v_e_'_s --aauuttooddeeffss and --sshhoowwaauuttooddeeffss options use these filters,
               which  automatically find defined identifiers.  The ** stands for
-              the name of a programming language.  (Icon installation only.)
+              the name of a programming  language.   When  code  chunks  carry
+              @@llaanngguuaaggee  annotations  (see aauuttoollaanngg below), each of these fil‐
+              ters skips chunks written in languages it does  not  understand,
+              so  a  mixed-language  document no longer collects false defini‐
+              tions from foreign chunks; unannotated chunks are scanned as al‐
+              ways.  (Icon installation only.)
+
+       aauuttoollaanngg _m_a_p_p_i_n_g_s
+              The aauuttoollaanngg filter annotates every code chunk  with  the  @@llaann‐‐
+              gguuaaggee  pipeline  keyword.   The  language of a chunk is inferred
+              from its name when the name looks like a filename  (e.g.  ffiibb..ppyy
+              or  MMaakkeeffiillee),  from  a  ##!!  line when the chunk's first line is
+              one, and from the lexical context a chunk is used in — the  body
+              of  a  here-document, the argument of an interpreter run with --cc
+              or --ee, or a make recipe — which override the language  otherwise
+              inherited  through chunk uses; chunks whose language remains un‐
+              known are left unannotated.  It must run before any filter  that
+              consumes  the  annotations, such as the autodefs filters or ttoomm‐‐
+              iinntteedd;  _n_o_w_e_a_v_e's  --aauuttoollaanngg  option  places  it  first  in  the
+              pipeline  (a  plain  --ffiilltteerr always runs after the autodefs fil‐
+              ters).  The optional _m_a_p_p_i_n_g_s arguments extend the built-in lan‐
+              guage tables, each of the form _._e_x_t_=_l_e_x_e_r or _n_a_m_e_=_l_e_x_e_r, or  add
+              a  rule  of  the  form  _r_e_:_r_e_g_e_x_=_l_e_x_e_r, which labels every chunk
+              whose name matches _r_e_g_e_x and so classifies  chunks  whose  names
+              are  not  filenames  (_n_o_w_e_a_v_e's  --llaannggrruullee option supplies one);
+              languages are named by their Pygments lexer aliases.  Running it
+              twice is harmless:  already-annotated  chunks  are  left  alone.
+              (Requires  Python  3.   Pygments,  when  importable, extends the
+              built-in filename tables but is not needed.)
 
        bbttddeeffnn The bbttddeeffnn filter uses Dave Hanson's convention to mark  defini‐
               tions.  In code chunks, each defining instances of an identifier
@@ -72,40 +100,91 @@ FFIILLTTEERRSS
               library  includes the command hh22aa, which uses _l_y_n_x(1) to convert
               HTML to ASCII.
 
+       ttoommiinntteedd _m_a_p_p_i_n_g_s
+              The ttoommiinntteedd filter makes _n_o_w_e_a_v_e_'_s LaTeX  output  typeset  code
+              chunks  with  the mmiinntteedd LaTeX package, so each chunk is syntax-
+              highlighted.  The language of a chunk is inferred from its  name
+              when  the  name looks like a filename (e.g. ffiibb..ppyy or MMaakkeeffiillee),
+              from a ##!!  first line, and from the lexical context a  chunk  is
+              used in (a here-document body, an interpreter --cc/--ee argument, or
+              a  make  recipe), and is inherited through chunk uses otherwise;
+              chunks of unknown language keep the standard rendering.   Built-
+              in  tables  cover the popular languages; filenames they miss are
+              matched against Pygments' own filename patterns when Pygments is
+              importable where the filter runs, so any language  Pygments  can
+              highlight  is  recognized.  A chunk annotated with the @@llaanngguuaaggee
+              keyword (see aauuttoollaanngg above) uses  the  annotated  language  in‐
+              stead,  and  the  annotation  is removed from the stream.  Chunk
+              references inside highlighted code  remain  hyperlinked,  except
+              inside  Python  string  literals,  where a reference is shown as
+              plain noweb syntax and the referenced chunk is typeset as  plain
+              text  rather than code (suiting docstring chunks).  It should be
+              given as the last filter, after --iinnddeexx;  identifier  definitions
+              stay in the index, but identifier uses inside highlighted chunks
+              are  no longer hyperlinked.  The optional _m_a_p_p_i_n_g_s arguments ex‐
+              tend the language tables and add rules exactly as for  aauuttoollaanngg.
+              With  --lleexxeerr  _p_a_t_h  references  are rendered through the bundled
+              custom Pygments lexer (the tangled nnoowweebb__lleexxeerr..ppyy, installed  in
+              the  noweb library directory), which keeps them hyperlinked even
+              inside Python strings.  _p_a_t_h is copied into the  woven  document
+              verbatim,  so  it must name the lexer file as LaTeX will see it:
+              an absolute path, or one relative to the directory where  _p_d_f_l_a_‐
+              _t_e_x  runs.   Loading a custom lexer is a one-time setup, because
+              mmiinntteedd treats it as running arbitrary  code:  llaatteexxmmiinntteedd  loads
+              only  files  whitelisted  by SHA-256 hash under ccuussttoomm__lleexxeerrss in
+              ~~//..ccoonnffiigg//llaatteexxmmiinntteedd//..llaatteexxmmiinntteedd__ccoonnffiigg       (or       ~~//..llaa‐‐
+              tteexxmmiinntteedd__ccoonnffiigg).  With the noweb library directory in _L_I_B:
+              mkdir -p ~/.config/latexminted
+              printf '{"custom_lexers": {"noweb_lexer.py": "%s"}}\n' \
+                  "$(sha256sum LIB/noweb_lexer.py | cut -d' ' -f1)" \
+                  > ~/.config/latexminted/.latexminted_config
+              noweave -index -filter 'tominted -lexer LIB/noweb_lexer.py' foo.nw
+
+              The  key is the file's name and hash, not its path, so one entry
+              serves wherever noweb is installed; it must be updated  whenever
+              nnoowweebb__lleexxeerr..ppyy  changes (see the mmiinntteedd documentation).  The wo‐
+              ven document must load the mmiinntteedd package and be  compiled  with
+              ppddffllaatteexx  --sshheellll--eessccaappee.   The nnoowweebb package can load mmiinntteedd for
+              you: write \\uusseeppaacckkaaggee[[mmiinntteedd]]{{nnoowweebb}} when you supply  your  own
+              preamble,  or pass nnoowweeaavvee --ooppttiioonn mmiinntteedd when _n_o_w_e_a_v_e generates
+              the preamble.  LaTeX only; do not combine with --hhttmmll.  (Requires
+              Python 3 where _n_o_w_e_a_v_e runs; Pygments is needed only  where  the
+              document is compiled, by mmiinntteedd.)
+
        xxcchhuunnkkss _f_i_l_e_s
               The xxcchhuunnkkss filter pulls in code chunks from an external source.
               The _f_i_l_e_s argument lists one or more noweb files, which are used
-              only for their definitions of code chunks.  Empty chunk  defini‐
+              only  for their definitions of code chunks.  Empty chunk defini‐
               tions in the main document are replaced with the external defin‐
-              itions  of  the same name.  This filter makes it possible to in‐
-              clude the same code chunks in multiple documents,  or  even  the
+              itions of the same name.  This filter makes it possible  to  in‐
+              clude  the  same  code chunks in multiple documents, or even the
               same code chunks multiple times in the same document.  (Icon in‐
               stallation only.)
 
 PPAARRSSEERRSS
-       A  parser  converts  a source file to the noweb pipeline format, inter‐
-       preting the ``markup'' in that file.  By default,  the  tools  use  the
-       standard  noweb markup, but some installations may support nuweb markup
+       A parser converts a source file to the noweb  pipeline  format,  inter‐
+       preting  the  ``markup''  in  that file.  By default, the tools use the
+       standard noweb markup, but some installations may support nuweb  markup
        as well.  Parsers include
 
        mmaarrkkuupp Converts standard _n_o_w_e_b(1) markup to pipeline format.
 
        nnuummaarrkkuupp
-              Converts _n_u_w_e_b(1) markup to noweb pipeline format.   It  is  not
-              part  of  the  standard  installation,  but  it  can be found in
+              Converts  _n_u_w_e_b(1)  markup  to noweb pipeline format.  It is not
+              part of the standard  installation,  but  it  can  be  found  in
               _n_o_w_e_b's ccoonnttrriibb//nnoorrmmaann directory.
 
 FFIILLEESS
        All filters and parsers are stored in ||LLIIBBDDIIRR||
 
 BBUUGGSS
-       It is possible to tell ll22hh about new control sequences by putting  spe‐
-       cial  TeX  comments in one's documentation chunks, but there's no docu‐
+       It  is possible to tell ll22hh about new control sequences by putting spe‐
+       cial TeX comments in one's documentation chunks, but there's  no  docu‐
        mentation.  Use the source, Luke.
 
-       nnuummaarrkkuupp loses information, e.g., about the proper treatment  of  tabs.
-       It  also  doesn't  compensate for _n_o_t_a_n_g_l_e's newline-removal heuristic,
-       which means results on _n_u_w_e_b files may differ subtly  from  those  pro‐
+       nnuummaarrkkuupp  loses  information, e.g., about the proper treatment of tabs.
+       It also doesn't compensate for  _n_o_t_a_n_g_l_e's  newline-removal  heuristic,
+       which  means  results  on _n_u_w_e_b files may differ subtly from those pro‐
        duced by _n_u_w_e_b_.
 
        Many filters are not available in installations that use Awk instead of
@@ -119,7 +198,7 @@ VVEERRSSIIOONN
        This man page is from _n_o_w_e_b version 2.12.
 
 AAUUTTHHOORR
-       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
+       Norman  Ramsey,  Tufts  University.    Internet   address   NNoorrmmaann..RRaamm‐‐
        sseeyy@@ttuuffttss..eedduu.
        Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
 

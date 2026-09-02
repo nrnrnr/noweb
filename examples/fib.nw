@@ -1,0 +1,297 @@
+\documentclass{article}
+\usepackage[minted]{noweb}
+\pagestyle{noweb}
+\title{Fibonacci numbers:\\
+  a literate Python program with its own Makefile}
+\author{Daniel Bosk}
+\begin{document}
+\maketitle
+
+@ \section{Introduction}
+
+This example demonstrates noweb's Python~3 support.  One literate
+source file defines two root chunks, [[fib.py]] and [[Makefile]], so
+the program and its build file are tangled from the same document.  When woven with the [[tominted]] filter, each
+chunk is syntax-highlighted according to its own language---Python
+for the program, Make for the build file---while the
+[[autodefs.python3]] filter fills the identifier index at the end of
+this document.  Section~\ref{sec:other-languages} repeats the
+function in Rust, JavaScript and Haskell, each chunk again
+highlighted by its own lexer.
+
+This document can be woven in three ways from the same source;
+only the filtering varies, and the examples' Makefile has a target
+for each.  The default weave highlights each chunk with minted
+([[make fib.pdf]]):
+\begin{verbatim}
+noweave -delay -autolang -autodefs python3 -index \
+    -filter tominted fib.nw > fib.tex
+pdflatex -shell-escape fib.tex
+\end{verbatim}
+Weaving with the bundled custom Pygments lexer additionally keeps
+chunk references hyperlinked inside Python strings, such as the
+docstring reference in [[fib]] below ([[make fib-linked.pdf]];
+this needs the one-time latexminted setup described in
+[[README.python]]):
+\begin{verbatim}
+noweave -delay -autolang -autodefs python3 -index \
+    -filter 'tominted -lexer noweb_lexer.py' fib.nw \
+    > fib-linked.tex
+pdflatex -shell-escape fib-linked.tex
+\end{verbatim}
+Dropping the [[tominted]] filter altogether gives noweb's classic
+rendering, in which identifier uses inside code are hyperlinked
+too, at the price of no highlighting ([[make fib-xref.pdf]]):
+\begin{verbatim}
+noweave -delay -autolang -autodefs python3 -index \
+    fib.nw > fib-xref.tex
+pdflatex -shell-escape fib-xref.tex
+\end{verbatim}
+The roots are tangled with the chunk names exactly as they appear,
+brackets included:
+\texttt{notangle -R'[{}[fib.py]{}]' fib.nw > fib.py} and
+\texttt{notangle -t8 -R'[{}[Makefile]{}]' fib.nw > Makefile}.
+(The brackets cannot be written verbatim here: noweb would read
+them as a quotation.)  See the accompanying [[README.python]] for
+details.
+
+\section{The program}
+
+The program prints the first \(n\) Fibonacci numbers.  The whole
+file is little more than a docstring, the computation, and a small
+command-line interface; the chunk references below are filled in by
+the rest of this section.
+
+<<[[fib.py]]>>=
+"""Print the first n Fibonacci numbers."""
+
+import sys
+
+<<constants>>
+<<functions>>
+
+if __name__ == "__main__":
+    main()
+@
+
+\subsection{Computing the numbers}
+
+We compute the sequence iteratively rather than with the classic
+recursive definition: the recursion recomputes earlier numbers
+exponentially often, while the running pair [[a, b]] carries exactly
+the state one step needs, giving linear time and no recursion-depth
+limit.  The doctest in the docstring doubles as the test suite,
+which the [[test]] target of the Makefile runs.
+
+<<functions>>=
+def fib(n):
+    """Return a list of the first ``n`` Fibonacci numbers.
+
+    <<[[fib]] docstring details>>
+    """
+    numbers = []
+    a, b = 0, 1
+    while len(numbers) < n:
+        numbers.append(a)
+        a, b = b, a + b
+    return numbers
+@
+
+The body of the docstring lives in a chunk of its own.  Note how
+[[tominted]] handles it: the filter detects that the reference above
+sits inside the triple-quoted string, so the chunk below is typeset
+as plain text rather than Python---its prose would otherwise sprout
+spuriously highlighted keywords.  In the default weave the
+reference itself is shown as literal noweb syntax, because
+Pygments' escape mechanism cannot operate inside what it treats as
+a single string token.  Woven with
+[[-filter 'tominted -lexer noweb_lexer.py']] instead (the
+[[fib-linked.pdf]] target; see [[README.python]] for the one-time
+setup), the bundled custom lexer lifts that limitation and the
+reference above is typeset as a normal linked chunk reference.
+
+<<[[fib]] docstring details>>=
+The sequence starts from F(0) = 0 and F(1) = 1; each later number
+is the sum of the previous two.
+
+>>> fib(10)
+[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+>>> fib(0)
+[]
+@
+
+\subsection{The command-line interface}
+
+The count is taken from the command line so that the Makefile's
+targets can vary it; without an argument we default to
+[[DEFAULT_COUNT]].  We print the numbers on one line because that
+makes the output trivial to compare in a shell test.
+
+<<constants>>=
+DEFAULT_COUNT = 10
+@
+
+<<functions>>=
+def main():
+    """Print the first n Fibonacci numbers, n given in argv."""
+    if len(sys.argv) > 1:
+        n = int(sys.argv[1])
+    else:
+        n = DEFAULT_COUNT
+    print(" ".join(str(number) for number in fib(n)))
+@
+
+\section{The Makefile}
+
+The build file is part of the same literate program, so the
+document explains the program and how to run it in one place.  The
+[[test]] target runs the doctests in [[fib.py]]; [[doctest]] is
+silent on success, so we print a confirmation.
+
+A word of warning when tangling: make requires recipe lines to start
+with a tab character, but [[notangle]] expands tabs to spaces by
+default.  Tangle this chunk with [[notangle -t8]], which copies
+tabs (the [[README.python]] and the examples' Makefile do this).
+
+<<[[Makefile]]>>=
+PYTHON=python3
+
+<<default and test targets>>
+
+clean:
+	rm -rf __pycache__
+@
+
+The default target shows the program's ordinary output; [[test]]
+verifies it.
+
+<<default and test targets>>=
+run: fib.py
+	$(PYTHON) fib.py $(COUNT)
+
+test: fib.py
+	$(PYTHON) -m doctest fib.py
+	@echo "doctests pass"
+@
+
+The count can be overridden from the command line, e.g.\
+[[make run COUNT=20]]; if it is empty, [[fib.py]] falls back to
+[[DEFAULT_COUNT]].
+
+<<[[Makefile]]>>=
+COUNT=
+@
+
+Note what does \emph{not} appear in the identifier index below:
+[[PYTHON]] and [[COUNT]] from this Makefile, and [[fibs]] and
+[[main]] from the Haskell of Section~\ref{sec:other-languages},
+although all four match the Python filter's assignment pattern.
+The document is woven with [[-autolang]], which annotates every
+chunk with its language, and [[-autodefs python3]] skips the
+chunks annotated as make, Rust, JavaScript or Haskell.  Identifier
+\emph{uses} are still found everywhere, so the Rust and JavaScript
+[[fib]] functions are indexed as uses of the Python definition.
+Woven without [[autolang]], the foreign definitions would pollute
+the index---the usual situation in mixed-language documents;
+compare [[scanner.nw]] in this directory, which combines
+[[-autodefs c]] and [[-autodefs yacc]].
+
+\section{The same function in other languages}
+\label{sec:other-languages}
+
+[[tominted]] infers each chunk's language separately, so one
+document can showcase the same function across languages.  Each
+implementation below is a self-contained root chunk named like a
+filename---deliberately so: the implementations must not share
+chunks like [[functions]] with the Python program, because noweb
+concatenates same-named chunks and would tangle foreign code into
+[[fib.py]].  The algorithm is the running pair of the Python
+version throughout; only the syntax around it varies---until
+Haskell, where the algorithm itself changes shape.
+
+\subsection{Rust}
+
+Rust spells out what Python's tuple assignment hides: the pair is
+mutable state, so both variables are declared [[mut]].  The update
+itself still mirrors Python, since Rust's destructuring assignment
+evaluates the right-hand side before assigning, exactly like
+Python's tuple swap.
+
+<<[[fib.rs]]>>=
+fn fib(n: usize) -> Vec<u64> {
+    let mut numbers = Vec::new();
+    let (mut a, mut b) = (0u64, 1u64);
+    while numbers.len() < n {
+        numbers.push(a);
+        (a, b) = (b, a + b);
+    }
+    numbers
+}
+
+fn main() {
+    let n = std::env::args().nth(1)
+        .and_then(|arg| arg.parse().ok())
+        .unwrap_or(10);
+    let numbers: Vec<String> =
+        fib(n).iter().map(u64::to_string).collect();
+    println!("{}", numbers.join(" "));
+}
+@
+
+\subsection{JavaScript}
+
+JavaScript's array destructuring gives the same one-line pair
+update.  The count comes from [[process.argv]], whose first two
+elements are the interpreter and the script, so the user's argument
+is element two---the kind of off-by-convention detail a literate
+program gets to explain instead of leaving as a puzzle.
+
+<<[[fib.js]]>>=
+function fib(n) {
+    const numbers = [];
+    let [a, b] = [0, 1];
+    while (numbers.length < n) {
+        numbers.push(a);
+        [a, b] = [b, a + b];
+    }
+    return numbers;
+}
+
+const n = process.argv.length > 2 ? Number(process.argv[2]) : 10;
+console.log(fib(n).join(" "));
+@
+
+\subsection{Haskell}
+
+Haskell is the contrast case: no loop and no mutable pair.
+Laziness lets the sequence be defined in terms of itself---each
+element is the sum of the corresponding elements of the sequence
+and its own tail---and the caller takes as many as needed.  The
+running pair has not disappeared; it is implicit in consuming
+[[fibs]] alongside [[tail fibs]], which is why the definition needs
+the two starting values just like the loops do.
+
+<<[[fib.hs]]>>=
+import System.Environment (getArgs)
+
+fibs :: [Integer]
+fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+
+main :: IO ()
+main = do
+    args <- getArgs
+    let n = if null args then 10 else read (head args)
+    putStrLn (unwords (map show (take n fibs)))
+@
+
+Like the Python root, each chunk tangles to the file it is named
+after, e.g.\ \texttt{notangle -R'[{}[fib.rs]{}]' fib.nw > fib.rs};
+the Makefile in this document only drives the Python version.
+
+\section{Chunks and identifiers}
+
+\nowebchunks
+
+\nowebindex
+
+\end{document}

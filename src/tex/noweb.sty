@@ -108,12 +108,16 @@ I'll try to avoid such incompatible changes in the future.}%
 \def\nwbackslash{\char92}
 \def\nwlbrace{\char123}
 \def\nwrbrace{\char125}
+\DeclareOption{minted}{\AtEndOfPackage{\RequirePackage{minted}}}
+\DeclareOption*{\OptionNotUsed}% keep other options global, as before
+\ProcessOptions\relax
 \def\noweboptions#1{%
   \def\@nwoptionlist{#1}%
   \@for\@nwoption:=\@nwoptionlist\do{%
     \@ifundefined{nwopt@\@nwoption}{%
         \@latexerr{There is no such noweb option as '\@nwoption'}\@eha}{%
         \csname nwopt@\@nwoption\endcsname}}}
+\def\nwopt@minted{\RequirePackage{minted}}
 \codemargin=10pt
 \advance\codehsize by \codemargin       % make room for indentation of code
 \advance\nwdefspace by \codemargin      % and fix adjustment for def/use

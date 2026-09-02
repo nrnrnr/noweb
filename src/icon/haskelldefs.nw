@@ -1,0 +1,276 @@
+\section{Finding definitions in Haskell}
+
+This program extracts definition names from Haskell source code for
+use with noweb's indexing capabilities.  When invoked with the
+[[-autodefs haskell]] option to [[noweave]], it automatically
+identifies and indexes Haskell definitions: functions, constants,
+and type-level declarations.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs haskell -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Design decisions}
+
+Haskell's layout rule does for this filter what significant
+whitespace does for the Python one, only more strictly: every
+top-level declaration of a module starts in column~0, and everything
+that starts in column~0 (after the module header) is a top-level
+declaration.  We therefore scan only unindented lines and need no
+[[-local]] flag---indented names are [[where]]- or [[let]]-bound
+locals, which would bury the module's interface in noise.
+
+Three forms of declaration are indexed:
+\begin{enumerate}
+\item Type-level declarations: [[data]], [[newtype]], [[type]] and
+      [[class]] introduce the name that follows them (after an
+      optional context, see below).
+\item Type signatures: [[name :: Type]], including the
+      comma-separated form [[x, y :: Int]] which declares several
+      names at once.
+\item Function and value equations: a line starting with an
+      unindented identifier is a binding of that identifier.
+\end{enumerate}
+
+A function defined by multiple equations would be indexed once per
+equation---[[fib 0 = 0]], [[fib 1 = 1]], \ldots---and a signature is
+immediately followed by the equations of the very names it declares.
+Both repetitions are folded into one index entry by remembering the
+names of the most recent declaration: a set rather than a single
+name, because a comma-separated signature like [[x, y :: Int]]
+declares several names whose equations all follow it.  Only the most
+recent declaration is remembered: non-adjacent repetitions are rare
+enough in idiomatic Haskell not to be worth tracking.
+
+We intentionally never index:
+\begin{itemize}
+\item [[instance]] declarations, which implement existing names
+      rather than define new ones;
+\item data constructors and record fields, which would need real
+      parsing of the right-hand side of [[data]];
+\item operator definitions like [[(<+>) = ...]], whose names are
+      symbols rather than identifiers;
+\item [[import]]ed or [[module]]-header names.
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+procedure main(args)
+  defnslanguages := set(["haskell", "hs", "literate-haskell"])
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language: a make variable or a shell
+assignment matches the equation pattern below just as well as a
+Haskell binding does, and skipping foreign chunks is the only way to
+tell them apart.  Chunks without an annotation are still scanned, so
+nothing changes for documents woven without [[autolang]].
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks.  The equation folding above must not leak across
+chunks---the same name in two different chunks is two definitions
+worth two index entries---so the memory of the last definition is
+cleared at every chunk boundary.
+
+<<*>>=
+global lastdefs
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : {
+      arg ? kind := tab(upto(' ')|0)
+      lastdefs := set([])
+    }
+    "text" : if kind == "code" then {
+      <<process Haskell code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing Haskell code}
+
+Only unindented lines are scanned, so the layout rule has already
+done the scoping work; comments and the module header are filtered,
+and the keyword that starts the line picks the declaration form.
+
+<<process Haskell code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  if any(' \t') then return           # indented: local binding
+  if ="--" then return                # line comment
+  if w := hs_ident() then {
+    if member(hskeywords, w) then {
+      if member(typekeywords, w) then {
+        <<index the type-level name>>
+      }
+      return
+    }
+    <<index signature names or equation>>
+  }
+}
+@
+
+\subsection{Type-level declarations}
+
+The name introduced by [[data]], [[newtype]], [[type]] or [[class]]
+is the first capitalized identifier of the header---except that a
+context may precede it, as in [[class Eq a => Ord a where]], where
+the introduced name is [[Ord]] and [[Eq]] merely constrains it.  The
+context always ends with [[=>]], so we resume scanning after the
+\emph{last} [[=>]] of the line and take the first capitalized
+identifier from there.  The auxiliary keywords [[family]] and
+[[instance]] can follow the main keyword ([[type family]], [[data
+instance]]); a family declares a name like any other, but an instance
+does not, so the latter ends the scan.
+
+<<index the type-level name>>=
+{
+  rest := tab(0)
+  rest ? {
+    every p := find("=>") do tab(p + 2)
+    tab(many(' \t'))
+    if ="instance" & any(' \t') then return
+    ="family" & tab(many(' \t'))
+    tab(upto(&ucase) | 0)
+    if t := hs_ident() then {
+      writedefn(t)
+      lastdefs := set([t])
+    }
+  }
+}
+@
+
+\subsection{Signatures and equations}
+
+After a non-keyword identifier, a [[::]] (possibly shared by a
+comma-separated list of names) makes the line a type signature
+declaring every listed name; anything else makes it an equation
+binding the first identifier.  A name that repeats one declared by
+the immediately preceding declaration---another clause of the same
+function, or the equation under its own signature---adds nothing the
+index does not already have, so it is dropped; a genuinely new name
+replaces the memory.
+
+<<index signature names or equation>>=
+{
+  names := [w]
+  tab(many(' \t'))
+  while ="," do {
+    tab(many(' \t'))
+    put(names, hs_ident()) | return
+    tab(many(' \t'))
+  }
+  if ="::" then {
+    every n := !names do
+      if not member(lastdefs, n) then writedefn(n)
+    lastdefs := set(names)
+  }
+  else if *names = 1 then
+    if not member(lastdefs, w) then {
+      writedefn(w)
+      lastdefs := set([w])
+    }
+}
+@
+
+An equation whose name is in the memory leaves the memory in place
+rather than narrowing it to itself: after [[x, y :: Int]], the
+equation [[x = 1]] must not evict [[y]], whose own equation is still
+to come.
+
+\subsection{Utility procedures}
+
+A Haskell identifier consists of letters, digits, underscores and
+primes, and must not start with a digit (the prime, as in [[go']],
+has no counterpart in the other filters' languages).
+
+<<*>>=
+global hskeywords, typekeywords
+procedure hs_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits ++ '\''
+    typekeywords := set(["data", "newtype", "type", "class"])
+    hskeywords := set(["module", "import", "instance", "deriving",
+                       "foreign", "default", "infix", "infixl",
+                       "infixr", "where", "do", "let", "in", "case",
+                       "of", "if", "then", "else"]) ++ typekeywords
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+@
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: haskelldefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Example}
+
+Given this Haskell code in a noweb chunk:
+\begin{verbatim}
+<<sample code>>=
+fibs :: [Integer]
+fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+
+data Tree a = Leaf | Node (Tree a) a (Tree a)
+
+insert :: Ord a => a -> Tree a -> Tree a
+insert x Leaf = Node Leaf x Leaf
+insert x (Node l y r)
+  | x < y     = Node (insert x l) y r
+  | otherwise = Node l y (insert x r)
+@
+\end{verbatim}
+
+The index will contain [[fibs]], [[Tree]] and [[insert]], each once:
+the signatures and their equations fold together, as do the two
+[[insert]] clauses.  [[Leaf]] and [[Node]] are constructors and not
+indexed.
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Multi-line constructs are not understood: a string gap or a
+      block comment ([[{- ... -}]]) spanning lines can make an inner
+      line look like a definition.
+\item Data constructors, record fields and operator definitions are
+      not indexed.
+\item Non-adjacent equations of the same function yield duplicate
+      index entries.
+\item GADT-style declarations index the type name but none of the
+      constructors listed in the [[where]] block.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

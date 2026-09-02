@@ -7,14 +7,19 @@ CPIF=| cpif    # change to ">" to insure all sources always made
 
 LIBEXECS=totex disambiguate noidx tohtml elide l2h docs2comments \
 	autodefs.tex autodefs.icon autodefs.yacc autodefs.sml autodefs.pascal \
-	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix xchunks pipedocs
+	autodefs.promela autodefs.lrtl autodefs.asdl autodefs.mmix autodefs.python3 \
+	autodefs.sh autodefs.make autodefs.haskell autodefs.rust autodefs.java \
+	autodefs.cpp \
+	xchunks pipedocs
 LIBSPECIAL=autodefs.cee
 BINEXECS=noindex sl2h htmltoc
 EXECS=$(LIBEXECS) $(BINEXECS) $(LIBSPECIAL) pdcached
 SRCS=totex.icn disambiguate.icn noidx.icn texdefs.icn icondefs.icn \
 	yaccdefs.icn noindex.icn smldefs.icn tohtml.icn cdefs.icn elide.icn \
 	l2h.icn sl2h.icn pascaldefs.icn promeladefs.icn lrtldefs.icn asdldefs.icn \
-	mmixdefs.icn htmltoc.icn xchunks.icn docs2comments.icn pipedocs.icn pdcached.icn
+	mmixdefs.icn htmltoc.icn xchunks.icn docs2comments.icn pipedocs.icn \
+	pdcached.icn python3defs.icn shdefs.icn makedefs.icn haskelldefs.icn \
+	rustdefs.icn javadefs.icn cppdefs.icn
 
 .SUFFIXES: .nw .icn .html .tex .dvi
 .nw.icn:
@@ -38,11 +43,17 @@ install: $(EXECS)
 	cp $(LIBEXECS) $(LIB)
 	cp $(BINEXECS) $(BIN)
 	cp $(LIBSPECIAL) $(LIB)/autodefs.c
+	cp autodefs.sh $(LIB)/autodefs.bash
+	cp autodefs.python3 $(LIB)/autodefs.python
+	cp autodefs.tex $(LIB)/autodefs.latex
 
 uninstall:
 	for i in $(LIBEXECS); do rm -f $(LIB)/$$i; done
 	for i in $(BINEXECS); do rm -f $(BIN)/$$i; done
 	rm -f $(LIB)/autodefs.c
+	rm -f $(LIB)/autodefs.bash
+	rm -f $(LIB)/autodefs.python
+	rm -f $(LIB)/autodefs.latex
 
 clean:
 	rm -f *.tex *.dvi *.aux *.log *.blg *.bbl *~ *.toc *.html *.u1 *.u2
@@ -73,6 +84,20 @@ asdldefs.icn: asdldefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' asdldefs.nw defns.nw $(CPIF) $@
 mmixdefs.icn: mmixdefs.nw defns.nw
 	notangle -L'#line %-1L "%F"%N' mmixdefs.nw defns.nw $(CPIF) $@
+python3defs.icn: python3defs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' python3defs.nw defns.nw $(CPIF) $@
+shdefs.icn: shdefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' shdefs.nw defns.nw $(CPIF) $@
+makedefs.icn: makedefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' makedefs.nw defns.nw $(CPIF) $@
+haskelldefs.icn: haskelldefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' haskelldefs.nw defns.nw $(CPIF) $@
+rustdefs.icn: rustdefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' rustdefs.nw defns.nw $(CPIF) $@
+javadefs.icn: javadefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' javadefs.nw defns.nw $(CPIF) $@
+cppdefs.icn: cppdefs.nw defns.nw
+	notangle -L'#line %-1L "%F"%N' cppdefs.nw defns.nw $(CPIF) $@
 
 autodefs.tex: texdefs.icn
 	$(ICONT) -o $@ texdefs.icn
@@ -103,6 +128,27 @@ autodefs.asdl: asdldefs.icn
 
 autodefs.mmix: mmixdefs.icn
 	$(ICONT) -o $@ mmixdefs.icn
+
+autodefs.python3: python3defs.icn
+	$(ICONT) -o $@ python3defs.icn
+
+autodefs.sh: shdefs.icn
+	$(ICONT) -o $@ shdefs.icn
+
+autodefs.make: makedefs.icn
+	$(ICONT) -o $@ makedefs.icn
+
+autodefs.haskell: haskelldefs.icn
+	$(ICONT) -o $@ haskelldefs.icn
+
+autodefs.rust: rustdefs.icn
+	$(ICONT) -o $@ rustdefs.icn
+
+autodefs.java: javadefs.icn
+	$(ICONT) -o $@ javadefs.icn
+
+autodefs.cpp: cppdefs.icn
+	$(ICONT) -o $@ cppdefs.icn
 
 totex: totex.icn
 	$(ICONC) totex.icn

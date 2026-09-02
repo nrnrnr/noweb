@@ -2,6 +2,7 @@
 \section{Finding definitions in $\lambda$-RTL}
 <<*>>=
 procedure main(args)
+  defnslanguages := set(["asdl"])
   go()
 end
 <<*>>=

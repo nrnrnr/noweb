@@ -196,19 +196,26 @@ WWEEAAVVIINNGG
               for values of _o_p_t_.  Normally useful only with the --llaatteexx option,
               but --ooppttiioonn lloonnggxxrreeff works black magic with --hhttmmll..
 
-       --ddeellaayy By default, _n_o_w_e_a_v_e puts file-name and  other  information  into
+       --mmiinntteedd
+              Shorthand for --ffiilltteerr ttoommiinntteedd  together  with  --ooppttiioonn  mmiinntteedd.
+              The  filter  typesets  code  chunks with the _m_i_n_t_e_d package (see
+              _n_o_w_e_b_f_i_l_t_e_r_s(7)), and the option makes a _n_o_w_e_a_v_e-generated _L_a_T_e_X
+              preamble load _m_i_n_t_e_d.  Give it after  --iinnddeexx  so  that  _t_o_m_i_n_t_e_d
+              runs last.  _L_a_T_e_X only.
+
+       --ddeellaayy By  default,  _n_o_w_e_a_v_e  puts file-name and other information into
               the output before the first chunk of the program.  --ddeellaayy delays
               that information until after the first documentation chunk, mak‐
               ing act a little bit like the _W_E_B ``limbo.''  The option is typ‐
-              ically  used  to enable a user to put a specialized _L_a_T_e_X \\ddooccuu‐‐
+              ically used to enable a user to put a specialized  _L_a_T_e_X  \\ddooccuu‐‐
               mmeennttccllaassss command and other preamble material in the first docu‐
-              mentation chunk (i.e., _b_e_f_o_r_e the first @  sign).   This  option
+              mentation  chunk  (i.e.,  _b_e_f_o_r_e the first @ sign).  This option
               also forces trailing cross-referencing information to be emitted
-              just  before the final chunk, instead of at the end of the docu‐
-              ment; the final chunk is  expected  to  contain  \\eenndd{{ddooccuummeenntt}}..
+              just before the final chunk, instead of at the end of the  docu‐
+              ment;  the  final  chunk  is expected to contain \\eenndd{{ddooccuummeenntt}}..
               The --ddeellaayy option implies the --nn option.
 
-       --tt_k    Expand  tabs  with stops every _k columns.  (Default is to expand
+       --tt_k    Expand tabs with stops every _k columns.  (Default is  to  expand
               every 8 columns.)
 
        --tt     Copy tabs to the output.
@@ -216,43 +223,58 @@ WWEEAAVVIINNGG
        --vv     Print the pipeline and RCS info on standard error.
 
 IINNDDEEXXIINNGG AANNDD CCRROOSSSS--RREEFFEERREENNCCEE
-       When used with _L_a_T_e_X, _t_r_o_f_f, or _H_T_M_L_, _n_o_w_e_a_v_e can provide indexing  and
-       cross-reference  information  for  chunks  and for programming-language
-       identifiers.  Identifier definitions may be marked by hand using  back‐
-       ticks  (`);  the  --ffiilltteerr bbttddeeffnn option recognizes these markings.  For
-       some languages, definitions may be found automatically using  the  --aauu‐‐
+       When  used with _L_a_T_e_X, _t_r_o_f_f, or _H_T_M_L_, _n_o_w_e_a_v_e can provide indexing and
+       cross-reference information for  chunks  and  for  programming-language
+       identifiers.   Identifier definitions may be marked by hand using back‐
+       ticks (`); the --ffiilltteerr bbttddeeffnn option recognizes  these  markings.   For
+       some  languages,  definitions may be found automatically using the --aauu‐‐
        ttooddeeffss option.  This section describes the indexing and cross-reference
        options; it might well be skipped on first reading.
 
-       --xx     For  _L_a_T_e_X_, add a page number to each chunk name identifying the
-              location of that chunk's definition,  and  emit  cross-reference
+       --xx     For _L_a_T_e_X_, add a page number to each chunk name identifying  the
+              location  of  that  chunk's definition, and emit cross-reference
               information relating definitions and uses.  For _H_T_M_L_, create hy‐
-              pertext  links  between  uses  and  definitions of chunks.  When
+              pertext links between uses  and  definitions  of  chunks.   When
               nnoowweeaavvee --xx is used with _L_a_T_e_X_, the control sequence \\nnoowweebbcchhuunnkkss
               expands to a sorted list of all code chunks.
 
-       --iinnddeexx Build cross-reference information (or hypertext links)  for  de‐
-              fined  identifiers.   Definitions  are  those found in the input
+       --iinnddeexx Build  cross-reference  information (or hypertext links) for de‐
+              fined identifiers.  Definitions are those  found  in  the  input
               files by --aauuttooddeeffss _l_a_n_g_u_a_g_e or by --ffiilltteerrbtdefn.  Requires _L_a_T_e_X
-              or _H_T_M_L_.   --iinnddeexx  implies  --xx;;  including  both  will  generate
-              strange-looking  output.  _n_o_w_e_a_v_e does not generate cross-refer‐
+              or  _H_T_M_L_.   --iinnddeexx  implies  --xx;;  including  both  will generate
+              strange-looking output.  _n_o_w_e_a_v_e does not generate  cross-refer‐
               ences to identifiers that appear in quoted code (@@[[[[...@@]]]]), but
-              it does generate hypertext links.  When nnoowweeaavvee --iinnddeexx  is  used
+              it  does  generate hypertext links.  When nnoowweeaavvee --iinnddeexx is used
               with _L_a_T_e_X_, the control sequence \\nnoowweebbiinnddeexx expands to an index
               of identifiers.
 
        --iinnddeexxffrroomm _i_n_d_e_x
-              Like  --iinnddeexx,,  but  the identifiers to be indexed are taken from
+              Like --iinnddeexx,, but the identifiers to be indexed  are  taken  from
               file _i_n_d_e_x.  See _n_o_i_n_d_e_x_(_1_)_.
 
        --aauuttooddeeffss _l_a_n_g
-              Discover identifier definitions automatically.  Code  in  chunks
-              must  be  in  language _l_a_n_g.  Permissible _l_a_n_gs vary but may in‐
-              clude tteexx or iiccoonn..  Useless without --iinnddeexx,, which it  must  pre‐
+              Discover  identifier  definitions automatically.  Code in chunks
+              must be in language _l_a_n_g.  Permissible _l_a_n_gs vary  but  may  in‐
+              clude  tteexx  or iiccoonn..  Useless without --iinnddeexx,, which it must pre‐
               cede.
 
        --sshhoowwaauuttooddeeffss
               Show values of _l_a_n_g usable with --aauuttooddeeffss.
+
+       --aauuttoollaanngg
+              Annotate every code chunk with  its  programming  language,  in‐
+              ferred  from  filename-like  chunk  names  and inherited through
+              chunk uses (the aauuttoollaanngg filter; see _n_o_w_e_b_f_i_l_t_e_r_s(7)).  The  au‐
+              todefs filters then skip chunks written in languages they do not
+              understand,  keeping  foreign  identifiers  out  of the index in
+              mixed-language documents.   The  annotator  runs  first  in  the
+              pipeline no matter where the option is given.
+
+       --llaannggrruullee _r_e_g_e_x==_l_a_n_g
+              Label  every  code  chunk  whose  name matches _r_e_g_e_x as language
+              _l_a_n_g, overriding the inference.  Use it for chunks  whose  names
+              are not filenames, such as a test chunk that wraps a quoted file
+              name.  Implies --aauuttoollaanngg and may be repeated.
 
 EERRRROORR MMEESSSSAAGGEESS
        If _n_o_t_a_n_g_l_e or _n_o_w_e_a_v_e encounters a chunk name within documentation, it

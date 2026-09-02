@@ -157,6 +157,7 @@ if ="@file "                  then { filename := tab(0); <<clear [[lastxref*]]>>
                                      \delay | writes("\\nwfilename{", filename, "}")
 										 } else
 if ="@line "                  then {                                             } else
+if ="@language "              then {                                             } else
 if ="@literal "               then { writes(tab(0))                              } else
 if ="@header latex "          then { <<write {\LaTeX} header>>		         } else
 if ="@header tex "            then { writes("\\input nwmac ")		         } else

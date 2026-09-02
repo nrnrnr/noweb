@@ -26,6 +26,13 @@ The files are:
 			patterns into decision-tree pattern-matching
 			code.  tree.nw builds the decision trees;
 			dag.nw turns them into dags.
+  fib.nw		Fibonacci numbers in Python 3, together with the
+			program's own Makefile, both tangled from the same
+			literate source.  Demonstrates the python3 autodefs
+			and per-chunk syntax highlighting with the tominted
+			filter and the minted LaTeX package; see
+			README.python.  Try `make fib.pdf fib-run'.
+			Requires Icon and Python 3.
   graphs.nw		Several graphs written in jgraph (write
 			plank@cs.utk.edu for information about jgraph).
   mipscoder.nw		Part of the original MIPS code generator from

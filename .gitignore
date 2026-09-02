@@ -34,3 +34,10 @@ src/c/*.o
 /src/shell/gitversion.nw
 /src/c/gitversion.c
 /src/tex/gitversion.nw
+__pycache__/
+/examples/*.tex
+/examples/*.log
+/examples/*.pdf
+/examples/_minted/
+/examples/noweb_lexer.py
+/examples/fib/

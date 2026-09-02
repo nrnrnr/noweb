@@ -1,0 +1,257 @@
+\section{Finding definitions in Java}
+
+This program extracts definition names from Java source code for use
+with noweb's indexing capabilities.  When invoked with the
+[[-autodefs java]] option to [[noweave]], it automatically identifies
+and indexes Java type declarations, and optionally methods and
+constructors.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs java -index myfile.nw > myfile.tex
+\end{verbatim}
+
+To additionally index methods and constructors:
+\begin{verbatim}
+noweave -filter 'autodefs.java -local' -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Design decisions}
+
+Java's type declarations are keyword-led and easy to recognize:
+optional modifiers followed by [[class]], [[interface]], [[enum]],
+[[record]] or [[@interface]] and the declared name.  Types are
+indexed at \emph{any} indentation, unlike in the Python and Rust
+filters: a Java file contains exactly one top-level type and declares
+everything else nested inside it, so an unindented-only rule would
+index almost nothing.
+
+Methods and constructors have no leading keyword---a method header is
+just \emph{type name(parameters)}---so they cannot be recognized as
+reliably; they are indexed only when the [[-local]] flag asks for
+them.  The heuristic: on a line ending in an opening brace, the first
+identifier directly followed by [[(]] is the name being defined.
+Requiring the brace is what separates definitions from method
+\emph{calls}, which end in [[;]]; rejecting statement keywords
+([[if]], [[while]], [[catch]], \ldots) and identifiers preceded by
+[[.]] or [[new]] removes the remaining ways a call can end in a
+brace.
+
+We intentionally never index:
+\begin{itemize}
+\item fields and local variables;
+\item enum constants and record components;
+\item [[abstract]] and interface method declarations that end in
+      [[;]] rather than a body---the price of using the brace to
+      reject method calls;
+\item names created by [[import]] or [[package]].
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["java"])
+  <<initialize character sets and keyword sets>>
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language; chunks without an annotation
+are still scanned, so nothing changes for documents woven without
+[[autolang]].
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks and scans each one for definitions.
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process Java code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing Java code}
+
+A leading [[@]] is an annotation---inert, except that
+[[@interface]] declares an annotation type.  Leading closing braces
+([[} else {]]) are stripped so the rest of the line is scanned
+normally.  After the modifiers, a type keyword pins down a type
+declaration; failing that, the method heuristic gets its chance.
+
+<<process Java code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  tab(many(' \t}'))
+  if ="//" then return
+  if ="@" then {
+    if (="interface", any(' \t')) then {
+      tab(many(' \t'))
+      writedefn(java_ident())
+    }
+    return
+  }
+  <<skip modifiers>>
+  if (=("class"|"interface"|"enum"|"record"), any(' \t')) then {
+    tab(many(' \t'))
+    writedefn(java_ident())
+    return
+  }
+  if \showlocal then {
+    <<maybe index a method or constructor>>
+  }
+}
+@
+
+The modifier set covers member and type modifiers; [[non-sealed]]
+contains a hyphen and cannot be confused with an identifier.
+Requiring whitespace after each keeps identifiers that merely start
+with a modifier, such as [[finalize]], out of the match.
+
+<<skip modifiers>>=
+while (=("public"|"protected"|"private"|"abstract"|"final"|
+         "static"|"sealed"|"non-sealed"|"strictfp"|"native"|
+         "synchronized"|"default"), any(' \t')) do
+  tab(many(' \t'))
+@
+
+\subsection{The method heuristic}
+
+The line must end with an opening brace to count as a definition.
+We then look for the first identifier directly followed by [[(]].
+Three rejections weed out the calls that also end in a brace:
+statement keywords ([[if (x) {]]), qualified calls
+([[list.forEach(x -> {]], where a [[.]] precedes the identifier),
+and calls after [[new]] or [[return]]
+([[new Thread(() -> {]]).
+
+<<maybe index a method or constructor>>=
+{
+  t := trim(arg, ' \t')
+  if t[-1] == "{" then {
+    prev := ""
+    while tab(upto(java_alpha)) do {
+      prevc := &subject[&pos - 1] | ""
+      id := java_ident() | break
+      if any('(') then {
+        if member(stmtkeywords, id) | prevc == "." |
+           prev == ("new" | "return" | "throw") then return
+        writedefn(id)
+        return
+      }
+      prev := id
+    }
+  }
+}
+@
+
+\subsection{Utility procedures}
+
+A Java identifier consists of letters, digits, underscores and
+dollar signs, and must not start with a digit.  The character sets
+are initialized in [[main]] rather than lazily in [[java_ident]],
+because the method heuristic scans with [[java_alpha]] before it ever
+calls [[java_ident]]---lazy initialization would hand [[upto]] a null
+set on the first method line.
+
+<<initialize character sets and keyword sets>>=
+java_alpha := &letters ++ '_$'
+java_alnum := java_alpha ++ &digits
+stmtkeywords := set(["if", "while", "for", "switch", "catch",
+                     "synchronized", "return", "new", "this",
+                     "super", "do", "else", "try", "finally",
+                     "throw", "assert"])
+@
+
+<<*>>=
+global java_alpha, java_alnum, stmtkeywords
+procedure java_ident()
+  if any(java_alpha) then
+    return tab(many(java_alnum))
+  else
+    fail
+end
+@
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: javadefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Example}
+
+Given this Java code in a noweb chunk:
+\begin{verbatim}
+<<sample code>>=
+public class Fib {
+    private long curr = 0;
+    private long next = 1;
+
+    public long next() {
+        long value = curr;
+        curr = next;
+        next = value + next;
+        return value;
+    }
+
+    public static void main(String[] args) {
+        Fib fib = new Fib();
+        for (int i = 0; i < 10; i++)
+            System.out.println(fib.next());
+    }
+}
+@
+\end{verbatim}
+
+Without [[-local]], the index will contain only [[Fib]].  With
+[[-local]], it additionally includes [[next]] and [[main]].  The
+fields, the local variables and the calls to [[fib.next()]] and
+[[System.out.println()]] are never indexed.
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Method headers split over several lines are missed: the name
+      and the trailing brace must be on the same line.
+\item Abstract and interface method declarations ending in [[;]] are
+      not indexed---the trailing brace is what tells a definition
+      from a call.
+\item Strings and block comments are not tracked: a line inside
+      either that looks like a declaration is indexed as if it were
+      code.
+\item Anonymous classes are not indexed (they have no name), and a
+      method defined inside one is attributed like any other
+      [[-local]] method.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

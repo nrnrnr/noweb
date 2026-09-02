@@ -4,9 +4,10 @@ procedure rcsinfo ()
          "$Name: v2_12 $"
 end
 procedure main(args)
+  defnslanguages := set(["tex", "latex"])
   go()
 end
-#line 10 "texdefs.nw"
+#line 11 "texdefs.nw"
 procedure postpass(name, arg)
   static kind, idchars, definers, newcommand
   initial { kind := "bogus"; idchars := &letters ++ '@' 
@@ -29,44 +30,60 @@ end
 procedure prepass(name, arg)
   if name == "end" then writedefn(&null) # force newline
 end
-#line 1 "defns.nw"
+#line 14 "defns.nw"
+global defnslanguages
+
 procedure go()
-  local line
+  local line, chunklang
   while line := read() do {
-    apply(prepass, line)
-    write(line)
-    if match("@fatal ", line) then exit(1)
-    apply(postpass, line)
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
   }
 end
 
 procedure apply(pass, line)
     line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
 end
-#line 18 "defns.nw"
+#line 53 "defns.nw"
 procedure writedefn(defn, locl)
   static indextext
   initial indextext := ""
   if /defn then
     *indextext > 0 & 
-#line 31 "defns.nw"
+#line 66 "defns.nw"
 { # write("@index nl")		# don't!
   indextext := ""
 }
-#line 23 "defns.nw"
+#line 58 "defns.nw"
   else {
     if *indextext + *defn > 65 then 
-#line 31 "defns.nw"
+#line 66 "defns.nw"
 { # write("@index nl")		# don't!
   indextext := ""
 }
-#line 25 "defns.nw"
+#line 60 "defns.nw"
     write(if \locl then "@index localdefn " else "@index defn ", defn)
     indextext ||:= " " || defn
   }
   return
 end
-#line 35 "defns.nw"
+#line 70 "defns.nw"
 procedure rcsinfo_too () 
   return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
          "$Name: v2_12 $"

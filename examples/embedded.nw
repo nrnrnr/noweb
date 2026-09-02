@@ -1,0 +1,154 @@
+\documentclass{article}
+\usepackage[minted]{noweb}
+\pagestyle{noweb}
+\title{Embedded languages:\\
+  one shell script, four ways to host another language}
+\author{Daniel Bosk}
+\begin{document}
+\maketitle
+
+@ \section{Introduction}
+
+This example is a companion to [[multilang.nw]].  There, every chunk's
+language follows from its filename-like \emph{name}.  Here the
+interesting chunks have names that say nothing---[[the banner
+one-liner]], [[python summary body]]---yet each is written in a
+definite language because of \emph{where it is used}.  This is what
+[[autolang]] learns to read in Section~\ref{sec:context} of
+[[autolang.nw]]: a chunk's language can be imposed by its use site or
+by its own first line, not only by its name.
+
+The document is one small shell program, [[summarize]], that prints a
+report by hosting Python in three different ways, plus a Makefile that
+runs it.  Four chunks get their language from context rather than from
+a filename:
+
+\begin{description}
+\item[Shebang] [[summarize]] has no extension, but its first line is
+  [[#!/bin/sh]], so it is [[bash]].
+\item[Interpreter [[-c]] ] the banner is a [[python3 -c]] one-liner, so
+  its chunk is [[python]].
+\item[Here-document, by interpreter] a [[python3 -]] here-document
+  feeds Python on standard input, so its body is [[python]].
+\item[Here-document, by delimiter] a [[cat]] here-document with the
+  delimiter [[PYEOF]] writes a Python file, so its body is [[python]]
+  too---read from the delimiter, since [[cat]] names no language.
+\item[Make recipe] the Makefile's recipe is factored into a chunk;
+  indented under its target it is shell, so it is [[bash]].
+\end{description}
+
+The pay-off is in the index: with each chunk labeled, [[autodefs.sh]]
+and [[autodefs.python3]] each scan only their own chunks, and
+[[autodefs.make]] no longer mistakes a Python [[for]] or [[if]] line
+for a Makefile rule.
+
+\section{The script}
+
+[[summarize]] is the root.  Its name is not a filename Pygments
+recognises, so without the shebang it would be unlabeled; the
+[[#!/bin/sh]] line settles it as shell.
+
+<<[[summarize]]>>=
+#!/bin/sh
+set -eu
+count=$#
+
+<<print the banner>>
+<<run the python summary>>
+<<write the helper for later>>
+@
+
+\subsection{A one-liner through \texttt{python3 -c}}
+
+The banner is one line of Python, passed as the argument of
+[[python3 -c]].  Because the chunk sits right after the opening quote
+of a [[-c]] argument, it is Python, and [[autodefs.python3]] indexes
+the name it binds.
+
+<<print the banner>>=
+python3 -c "<<the banner one-liner>>"
+<<the banner one-liner>>=
+report_banner = "=== deployment report ==="; print(report_banner)
+@
+
+\subsection{A here-document on standard input}
+
+The summary is a longer Python program fed to [[python3 -]] on
+standard input.  The here-document's body is a chunk of its own,
+following the rule that the opening [[<<]] and closing delimiter stay
+together in the wrapper while the body chunk holds only the payload.
+The interpreter on the opener---[[python3]]---is what marks the body
+Python.
+
+<<run the python summary>>=
+python3 - "$count" <<'EOF'
+<<python summary body>>
+EOF
+<<python summary body>>=
+import sys
+
+
+def summarize_arguments(argv):
+    n = int(argv[1]) if len(argv) > 1 else 0
+    for i in range(n):
+        if i % 2 == 0:
+            print(f"argument {i} is even")
+    return n
+
+
+summarize_arguments(sys.argv)
+@
+
+\subsection{A here-document named by its delimiter}
+
+Sometimes the command introducing the here-document is not an
+interpreter at all.  Here [[cat]] writes a Python helper to a file for
+a later run; [[cat]] names no language, so the body's Python is read
+from the delimiter [[PYEOF]] instead---a conventional language tag in
+front of the usual [[EOF]].
+
+<<write the helper for later>>=
+cat > greet.py <<'PYEOF'
+<<the greeter helper>>
+PYEOF
+<<the greeter helper>>=
+def greet(name):
+    return f"hello, {name}"
+
+
+if __name__ == "__main__":
+    print(greet("world"))
+@
+
+\section{The Makefile}
+
+The Makefile is itself a chunk, named for the file it tangles to, so
+[[autolang]] reads it as [[make]] from the name.  Its one recipe is
+factored into [[run the report]]: indented by a tab under the target,
+that chunk is a shell recipe, so it is labeled [[bash]] and indexed by
+[[autodefs.sh]]---not [[autodefs.make]], which would otherwise claim
+it by inheritance.
+
+<<[[Makefile]]>>=
+report.txt: summarize
+	<<run the report>>
+<<run the report>>=
+out=report.txt
+sh summarize a b c > "$out"
+@
+
+\section{Building this document}
+
+A single highlighted, indexed weave exercises all four context rules
+and stacks the three relevant scanners:
+\begin{verbatim}
+noweave -delay -autolang -autodefs python3 -autodefs sh \
+    -autodefs make -index \
+    -filter 'tominted -lexer noweb_lexer.py' \
+    embedded.nw > embedded.tex
+pdflatex -shell-escape embedded.tex
+\end{verbatim}
+The highlighted build needs the one-time [[latexminted]] setup
+described in [[README.python]].
+
+\end{document}

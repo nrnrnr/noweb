@@ -3,6 +3,7 @@
 global showlocal
 procedure main(args)
   showlocal := !args == "-local"
+  defnslanguages := set(["icon"])
   go()
 end
 <<*>>=

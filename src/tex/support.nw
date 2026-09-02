@@ -262,6 +262,27 @@ needs the document-class option
 <<noweb.sty>>=
 <<kernel>>
 @
+\subsection{Package options}
+Code highlighted by the [[tominted]] filter (see nowebfilters(7)) is
+wrapped in [[minted]] environments, so the woven document must load the
+[[minted]] package in its preamble.  Rather than ask every author to
+remember a separate [[\usepackage{minted}]], we let the [[noweb]] package
+pull it in on request: writing [[\usepackage[minted]{noweb}]] loads
+[[minted]] as well.
+
+We defer the load with [[\AtEndOfPackage]] so that [[minted]] is required
+only after [[noweb.sty]] itself has finished---this keeps it clear of the
+kernel definitions above, yet the load still happens in the preamble,
+which is the only place [[minted]] permits it.  [[\DeclareOption*]] with
+[[\OptionNotUsed]] preserves the previous behaviour: before this package
+processed any options at all, anything handed to [[\usepackage{noweb}]]
+stayed a global option, and [[\OptionNotUsed]] keeps that true for every
+option other than [[minted]].
+<<noweb.sty>>=
+\DeclareOption{minted}{\AtEndOfPackage{\RequirePackage{minted}}}
+\DeclareOption*{\OptionNotUsed}% keep other options global, as before
+\ProcessOptions\relax
+@
 \subsection{Support for noweb options}
 <<noweb.sty>>=
 \def\noweboptions#1{%
@@ -270,7 +291,35 @@ needs the document-class option
     \@ifundefined{nwopt@\@nwoption}{%
         \@latexerr{There is no such noweb option as '\@nwoption'}\@eha}{%
         \csname nwopt@\@nwoption\endcsname}}}
-@ 
+@
+\subsection{Loading \texttt{minted} from the command line}
+The package option above serves authors who supply their own preamble.
+When [[noweave]] generates the wrapper instead---the default, without
+[[-delay]]---there is no author preamble to amend, so the package option
+is out of reach.  We therefore expose the same effect as a [[noweb]]
+option: [[noweave -option minted]] adds [[\noweboptions{minted}]] to the
+generated header, and the [[totex]] back end emits that [[\noweboptions]]
+in the preamble, just before [[\begin{document}]]---exactly where
+[[minted]] must be loaded.  The option is thus reachable from the command
+line for documents that have no preamble of their own.
+<<noweb.sty>>=
+\def\nwopt@minted{\RequirePackage{minted}}
+@
+\iffalse
+<<man page: [[\noweboptions]]>>=
+.TP
+.B minted
+Load the
+.I minted
+package, so that code highlighted by the
+.I tominted
+filter can be typeset.
+Usually requested as
+.B "noweave -option minted"
+when
+.I noweave
+generates the document preamble.
+@ \fi
 \subsection{Adjusting placement of code on the page}
 {\LaTeX} requires a larger [[\codehsize]] because 
 code is indented by [[\codemargin]].\stylehook
