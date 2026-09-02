@@ -5,6 +5,7 @@ procedure rcsinfo ()
          "$Name: v2_12 $"
 end
 procedure main(args)
+  defnslanguages := set(["yacc", "bison"])
   go()
 end
 

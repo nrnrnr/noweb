@@ -1,0 +1,159 @@
+#line 67 "haskelldefs.nw"
+procedure main(args)
+  defnslanguages := set(["haskell", "hs", "literate-haskell"])
+  go()
+end
+#line 90 "haskelldefs.nw"
+global lastdefs
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : {
+      arg ? kind := tab(upto(' ')|0)
+      lastdefs := set([])
+    }
+    "text" : if kind == "code" then {
+      
+#line 114 "haskelldefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  if any(' \t') then return           # indented: local binding
+  if ="--" then return                # line comment
+  if w := hs_ident() then {
+    if member(hskeywords, w) then {
+      if member(typekeywords, w) then {
+        
+#line 144 "haskelldefs.nw"
+{
+  rest := tab(0)
+  rest ? {
+    every p := find("=>") do tab(p + 2)
+    tab(many(' \t'))
+    if ="instance" & any(' \t') then return
+    ="family" & tab(many(' \t'))
+    tab(upto(&ucase) | 0)
+    if t := hs_ident() then {
+      writedefn(t)
+      lastdefs := set([t])
+    }
+  }
+}
+#line 122 "haskelldefs.nw"
+      }
+      return
+    }
+    
+#line 172 "haskelldefs.nw"
+{
+  names := [w]
+  tab(many(' \t'))
+  while ="," do {
+    tab(many(' \t'))
+    put(names, hs_ident()) | return
+    tab(many(' \t'))
+  }
+  if ="::" then {
+    every n := !names do
+      if not member(lastdefs, n) then writedefn(n)
+    lastdefs := set(names)
+  }
+  else if *names = 1 then
+    if not member(lastdefs, w) then {
+      writedefn(w)
+      lastdefs := set([w])
+    }
+}
+#line 126 "haskelldefs.nw"
+  }
+}
+#line 101 "haskelldefs.nw"
+    }
+  }
+  return
+end
+#line 205 "haskelldefs.nw"
+global hskeywords, typekeywords
+procedure hs_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits ++ '\''
+    typekeywords := set(["data", "newtype", "type", "class"])
+    hskeywords := set(["module", "import", "instance", "deriving",
+                       "foreign", "default", "infix", "infixl",
+                       "infixr", "where", "do", "let", "in", "case",
+                       "of", "if", "then", "else"]) ++ typekeywords
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+#line 227 "haskelldefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: haskelldefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+#line 14 "defns.nw"
+global defnslanguages
+
+procedure go()
+  local line, chunklang
+  while line := read() do {
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 53 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 58 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 60 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 70 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

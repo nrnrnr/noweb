@@ -6,6 +6,7 @@ procedure rcsinfo ()
          "$Name: v2_12 $"
 end
 procedure main(args)
+  defnslanguages := set(["sml"])
   go()
 end
 <<*>>=

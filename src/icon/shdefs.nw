@@ -1,0 +1,213 @@
+\section{Finding definitions in shell scripts}
+
+This program extracts definition names from POSIX shell and Bash-family
+code for use with noweb's indexing capabilities.  When invoked with the
+[[-autodefs sh]] (or [[-autodefs bash]]) option to [[noweave]], it
+automatically identifies and indexes shell definitions: functions,
+variables and aliases.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs sh -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Design decisions}
+
+A shell script defines three kinds of names worth indexing:
+\begin{enumerate}
+\item Functions, written [[name()]] (POSIX) or with the [[function]]
+      keyword (ksh, Bash, zsh).
+\item Variables, written [[NAME=value]] (also [[NAME+=value]] and
+      array assignments [[NAME=(...)]]), possibly behind an
+      [[export]], [[readonly]], [[declare]] or [[typeset]] prefix.
+\item Aliases, written [[alias name=expansion]].
+\end{enumerate}
+
+Functions are indexed wherever they appear, indented or not: unlike
+local variables, a shell function is global no matter how deeply the
+[[name()]] line is nested inside other constructs, so indentation says
+nothing about its scope.
+
+Variables and aliases, by contrast, are indexed only on unindented
+lines.  The shell itself has no such rule, but well-formatted scripts
+indent the bodies of functions and control structures, so an indented
+assignment is almost always a variable local to some function's
+execution---indexing those would bury the script's configuration
+variables in noise.  This is the same interface-versus-internals
+trade-off the Python filter makes with its top-level rule, except that
+shell has no [[-local]] escape hatch: indented shell assignments,
+unlike Python methods, do not form a secondary interface anyone needs
+an index of.
+
+We intentionally never index:
+\begin{itemize}
+\item [[local]] declarations, which are function-local by definition;
+\item [[export NAME]] or [[readonly NAME]] without [[=]], which
+      re-declare an existing variable rather than define one;
+\item names bound by [[for]] loops or [[read]], which are loop
+      variables, not interface.
+\end{itemize}
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+procedure main(args)
+  defnslanguages := set(["sh", "bash", "shell", "zsh", "ksh", "dash"])
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language: a make variable or a Python
+constant matches the assignment pattern below just as well as a shell
+variable does, and skipping foreign chunks is the only way to tell
+them apart.  We accept the whole Bourne family---[[autolang]]
+canonically emits [[bash]], but user mappings may name a specific
+shell.  Chunks without an annotation are still scanned, so nothing
+changes for documents woven without [[autolang]].
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks and scans each one for definitions.
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process shell code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing shell code}
+
+Whether the line is indented decides whether assignments are indexed,
+so we must record that before skipping the whitespace; once
+[[tab(many(' \t'))]] has consumed the indentation, the information is
+gone from the scanning position.
+
+The [[function]] keyword unambiguously starts a function definition
+(the parentheses are then optional), so it is handled first.  After
+the optional declaration prefixes, a single identifier decides
+between the remaining cases by what follows it: [[=]] (or [[+=]])
+means an assignment, [[()]] means a POSIX function definition.  The
+shell grammar itself disambiguates the same way---an assignment
+allows no whitespace before its [[=]], a function definition allows
+whitespace before its parentheses.
+
+<<process shell code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if any('#') then return
+
+  if (="function", any(' \t')) then {
+    tab(many(' \t'))
+    if ident := sh_ident() then
+      return writedefn(ident)
+  }
+  if \toplevel then {
+    <<skip declaration prefixes>>
+  }
+  if ident := sh_ident() then {
+    if (="+" | "") & ="=" & not any('=') then {
+      if \toplevel then return writedefn(ident)
+    }
+    else {
+      tab(many(' \t'))
+      if (="(", optwhite(), =")") then
+        return writedefn(ident)
+    }
+  }
+}
+@
+
+\subsection{Declaration prefixes}
+
+An assignment may sit behind [[export]], [[readonly]], [[declare]] or
+[[typeset]], the latter two with option flags such as [[-r]] or
+[[-x]]; [[alias]] introduces an alias definition with the same
+[[name=value]] shape.  We skip the keyword and any flags so the
+identifier scan that follows sees the name itself.  Requiring
+whitespace after the keyword keeps us from mangling identifiers that
+merely start with one, such as [[exporter=1]].
+
+<<skip declaration prefixes>>=
+if (=("export"|"readonly"|"declare"|"typeset"|"alias"), any(' \t')) then {
+  tab(many(' \t'))
+  while any('-') do {
+    tab(upto(' \t') | 0)
+    tab(many(' \t'))
+  }
+}
+@
+
+\subsection{Utility procedures}
+
+A shell variable or function name consists of letters, digits and
+underscores and must not start with a digit.  (Command names may
+contain more, but such names cannot appear in the definition forms we
+recognize.)
+
+<<*>>=
+procedure sh_ident()
+  static alpha, alnum
+  initial {
+    alpha := &letters ++ '_'
+    alnum := alpha ++ &digits
+  }
+  if any(alpha) then
+    return tab(many(alnum))
+  else
+    fail
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+@
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: shdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Strings and here-documents are not tracked: a line inside a
+      here-document that looks like an assignment is indexed as if it
+      were code.
+\item An environment prefix to a command, as in [[FOO=1 cmd]],
+      is indexed as a definition of [[FOO]]; the syntax is
+      indistinguishable from an assignment without parsing the whole
+      command line.
+\item Names defined by [[eval]] or sourced files are invisible.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

@@ -1,0 +1,151 @@
+#line 60 "javadefs.nw"
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["java"])
+  
+#line 178 "javadefs.nw"
+java_alpha := &letters ++ '_$'
+java_alnum := java_alpha ++ &digits
+stmtkeywords := set(["if", "while", "for", "switch", "catch",
+                     "synchronized", "return", "new", "this",
+                     "super", "do", "else", "try", "finally",
+                     "throw", "assert"])
+#line 65 "javadefs.nw"
+  go()
+end
+#line 81 "javadefs.nw"
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      
+#line 103 "javadefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  tab(many(' \t}'))
+  if ="//" then return
+  if ="@" then {
+    if (="interface", any(' \t')) then {
+      tab(many(' \t'))
+      writedefn(java_ident())
+    }
+    return
+  }
+  
+#line 132 "javadefs.nw"
+while (=("public"|"protected"|"private"|"abstract"|"final"|
+         "static"|"sealed"|"non-sealed"|"strictfp"|"native"|
+         "synchronized"|"default"), any(' \t')) do
+  tab(many(' \t'))
+#line 115 "javadefs.nw"
+  if (=("class"|"interface"|"enum"|"record"), any(' \t')) then {
+    tab(many(' \t'))
+    writedefn(java_ident())
+    return
+  }
+  if \showlocal then {
+    
+#line 149 "javadefs.nw"
+{
+  t := trim(arg, ' \t')
+  if t[-1] == "{" then {
+    prev := ""
+    while tab(upto(java_alpha)) do {
+      prevc := &subject[&pos - 1] | ""
+      id := java_ident() | break
+      if any('(') then {
+        if member(stmtkeywords, id) | prevc == "." |
+           prev == ("new" | "return" | "throw") then return
+        writedefn(id)
+        return
+      }
+      prev := id
+    }
+  }
+}
+#line 122 "javadefs.nw"
+  }
+}
+#line 88 "javadefs.nw"
+    }
+  }
+  return
+end
+#line 187 "javadefs.nw"
+global java_alpha, java_alnum, stmtkeywords
+procedure java_ident()
+  if any(java_alpha) then
+    return tab(many(java_alnum))
+  else
+    fail
+end
+#line 199 "javadefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: javadefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+#line 14 "defns.nw"
+global defnslanguages
+
+procedure go()
+  local line, chunklang
+  while line := read() do {
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 53 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 58 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 60 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 70 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

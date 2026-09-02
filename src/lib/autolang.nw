@@ -1,0 +1,862 @@
+\section{Annotating chunk languages: the autolang filter}
+\label{sec:autolang}
+
+The noweb Hacker's Guide reserves an [[@language]] keyword in the
+pipeline grammar and sketches how it should be filled in: tools
+identify the language of root chunks from their names, and a filter
+tags the remaining chunks by propagating from uses to definitions.
+That filter was never written---until now.  [[autolang]] reads the
+markup stream, infers a language for every code chunk it can, and
+writes the stream back out with an [[@language]] line added to each
+such chunk, for the filters downstream to consume.
+
+The first consumers are noweb's autodefs filters, which use the
+annotations to skip chunks written in languages they do not
+understand, so that the identifier index of a mixed-language document
+no longer collects, say, Makefile variables that happen to match
+Python's assignment syntax.  [[autolang]] must therefore run
+\emph{first}, before any filter that wants language information.
+[[noweave]]'s [[-autolang]] option arranges that (a plain [[-filter]]
+could not: noweave always places autodefs filters before the
+[[-filter]] stages):
+\begin{verbatim}
+noweave -autolang -autodefs python3 -autodefs make -index fib.nw > fib.tex
+\end{verbatim}
+The backends predate the keyword and ignore [[@language]] lines, so
+the annotations are harmless wherever nothing consumes them.
+
+Unlike noweb's other filters, which are written in Icon or awk,
+[[autolang]] is a Python~3 program.  It needs nothing beyond the
+standard library: Pygments, when it happens to be importable, extends
+the built-in filename tables (Section~\ref{sec:pygments}), but is not
+required.
+
+\subsection{Overview}
+
+The program copies the markup stream from standard input to standard
+output in two passes over the (buffered) stream:
+
+\begin{enumerate}
+\item Determine the language of every code chunk.  A chunk whose name
+      looks like a filename (e.g.\ [[fib.py]] or [[Makefile]]) gets
+      the corresponding language; every other chunk inherits the
+      language of the chunks that use it.  We must infer languages
+      ourselves because noweb's [[markup]] emits no language
+      information---the chunk names are the only hint there is.
+      Further seeds---a chunk's own shebang line, and the lexical context
+      a chunk is \emph{used} in---are described in
+      Section~\ref{sec:context}.
+      An annotation already present in the stream is honored as
+      authoritative.
+\item Copy the stream, inserting an [[@language]] line into every
+      code chunk whose language is known (Section~\ref{sec:annotate}).
+\end{enumerate}
+
+Languages are named by Pygments lexer aliases ([[python]], [[make]],
+[[bash]], \dots), which agree with the Hacker's Guide's suggested
+names for all the common languages except where the synonym table of
+Section~\ref{sec:langs} translates.  A chunk used only inside Python
+string literals is annotated [[text]]: it contains prose, not code,
+and every consumer treats it accordingly (Section~\ref{sec:strings}).
+
+The inference is kept in chunks of its own, [[inference constants]]
+and [[inference functions]], apart from the annotation logic of
+Section~\ref{sec:annotate}.  A filter that needs the same language
+map---a highlighter choosing a lexer per chunk, say---can then tangle
+from this file alongside its own source, since [[notangle]] accepts
+several files, instead of duplicating the code.
+
+\subsection{Program layout}
+
+
+<<autolang>>=
+#!/usr/bin/env python3
+"""Noweave filter that annotates code chunks with their language.
+
+Reads a noweb markup stream on stdin and writes it to stdout,
+adding an ``@language`` line to every code chunk whose language
+can be determined---from filename-like chunk names, shebang
+lines, and the lexical context each chunk is used in (heredoc
+bodies, interpreter ``-c`` arguments, make recipes), propagated
+transitively through chunk uses.  Run it as the first filter,
+before any filter that consumes language information (e.g. the
+autodefs filters).  See nowebfilters(7).
+"""
+
+import sys
+
+<<inference constants>>
+<<inference functions>>
+<<autolang functions>>
+
+if __name__ == "__main__":
+    autolang_main()
+@
+
+\subsection{Mapping chunk names to lexers}
+
+A root chunk in a tangleable literate program is conventionally named
+after the file it produces, so the chunk name is our language oracle.
+We recognize both bare filenames ([[fib.py]]) and the
+LaTeX-safe quoted convention (the chunk name itself wrapped in noweb's double square
+brackets), which we unwrap before matching.
+
+The lookup has three levels.  First come user-supplied regex
+rules, matched against the whole chunk name; a rule is how a
+labeled chunk---one whose name puts a word such as \emph{test}
+before a quoted file reference---acquires a language, since such a
+name is not itself a filename, and a matching rule also overrides
+the tables (Section~\ref{sec:mappings}).  Next come two static tables,
+mapping either an exact basename or an extension to a Pygments
+lexer name; additional table mappings can be supplied as
+command-line arguments too.  Last, when neither rules nor tables
+match, we ask Pygments itself, which knows the filename patterns of
+every language it can highlight (next section).
+
+Why keep tables at all, when Pygments already knows the answer?
+Because Pygments need not be installed where \emph{this filter}
+runs: the filter runs in the noweave pipeline, while Pygments is
+only guaranteed wherever the woven document is later compiled, and
+those can be different machines.  The tables keep the popular
+languages working with no dependencies beyond Python itself.  They
+also pin \emph{which} lexer alias we use where Pygments offers a
+choice (e.g.\ [[perl]] rather than [[prolog]] for [[.pl]]), and
+they are what the command-line mappings extend, so a user override
+always beats Pygments' opinion.
+
+<<inference constants>>=
+LEXERS_BY_NAME = {
+    "Makefile": "make",
+    "makefile": "make",
+    "GNUmakefile": "make",
+    "Dockerfile": "docker",
+    "CMakeLists.txt": "cmake",
+}
+LEXERS_BY_EXT = {
+    ".py": "python",
+    ".pyw": "python",
+    ".mk": "make",
+    ".c": "c",
+    ".h": "c",
+    ".icn": "icon",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".sml": "sml",
+    ".tex": "latex",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".ts": "typescript",
+    ".java": "java",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".cs": "csharp",
+    ".go": "go",
+    ".rs": "rust",
+    ".rb": "ruby",
+    ".php": "php",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".kts": "kotlin",
+    ".scala": "scala",
+    ".hs": "haskell",
+    ".ml": "ocaml",
+    ".mli": "ocaml",
+    ".lua": "lua",
+    ".pl": "perl",
+    ".pm": "perl",
+    ".r": "r",
+    ".R": "r",
+    ".jl": "julia",
+    ".sql": "sql",
+    ".html": "html",
+    ".css": "css",
+    ".json": "json",
+    ".yml": "yaml",
+    ".yaml": "yaml",
+    ".toml": "toml",
+    ".md": "markdown",
+    ".zig": "zig",
+    ".dart": "dart",
+    ".ex": "elixir",
+    ".exs": "elixir",
+    ".erl": "erlang",
+    ".f90": "fortran",
+    ".f95": "fortran",
+}
+@
+
+User-supplied rules live in a separate list rather than the tables
+because they are tried in order and matched as regexes, not looked
+up by key.  The empty default leaves the filename inference
+unchanged, which is what keeps a labeled chunk unlabeled until a
+rule asks for otherwise.
+
+<<inference constants>>=
+LEXER_RULES = []   # list of (compiled regex, lexer alias)
+@
+
+A matching rule wins before any filename logic.  Failing that, the
+quoting convention is unwrapped and the basename is looked up,
+first verbatim, then by extension, and finally against Pygments'
+own filename patterns.  Returning [[None]] means ``no idea'', which
+pass~1 may still resolve by inheritance.
+
+<<inference functions>>=
+def lexer_for_chunk(name):
+    """Return the Pygments lexer for chunk ``name``, or None.
+
+    A user-supplied rule matching the whole name wins first.
+    Otherwise the chunk name may use noweb's ``[[...]]`` quoting and
+    may contain directory separators; only the basename decides, and
+    names the built-in tables do not cover are matched against
+    Pygments' filename patterns when Pygments is installed.
+    """
+    for pattern, lexer in LEXER_RULES:
+        if pattern.search(name):
+            return lexer
+    if name.startswith("[[") and name.endswith("]]"):
+        name = name[2:-2]
+    basename = name.rsplit("/", 1)[-1]
+    if basename in LEXERS_BY_NAME:
+        return LEXERS_BY_NAME[basename]
+    dot = basename.rfind(".")
+    if dot >= 0 and basename[dot:] in LEXERS_BY_EXT:
+        return LEXERS_BY_EXT[basename[dot:]]
+    return pygments_lexer_for_chunk(basename)
+@
+
+\subsection{Falling back on Pygments}
+\label{sec:pygments}
+
+Any language the tables miss can still be recognized, provided
+Pygments is importable where the filter runs.  Pygments maintains
+exactly the mapping we need---filename patterns to lexers---for
+every language it supports, and since Pygments is what a
+highlighter downstream eventually runs, an alias found this way is
+one such a consumer accepts by construction.  The import is guarded: when Pygments is absent, the
+fallback silently reports no match and chunks of unknown language
+simply stay unannotated, which is the same graceful degradation the
+rest of the inference already practices.
+
+<<inference constants>>=
+try:
+    from pygments.lexers import find_lexer_class_for_filename
+except ImportError:
+    find_lexer_class_for_filename = None
+@
+
+Of a found lexer we keep the \emph{first} alias.  Any alias would
+select the same lexer, but the annotation should name each language
+one way only, so that a consumer keying on the value---or deriving a
+name from it---sees one spelling per language.
+
+Each match scans Pygments' full pattern list and may import lexer
+modules, so the result is memoized per basename.  The cache also
+stores misses: the names that recur most---ordinary chunk names
+like [[functions]], looked up once per use edge during
+propagation---are exactly the ones that match nothing.
+
+<<inference constants>>=
+PYGMENTS_ALIASES = {}
+@
+
+<<inference functions>>=
+def pygments_lexer_for_chunk(basename):
+    """Return the alias of Pygments' lexer for ``basename``, or None."""
+    if find_lexer_class_for_filename is None:
+        return None
+    if basename not in PYGMENTS_ALIASES:
+        cls = find_lexer_class_for_filename(basename)
+        PYGMENTS_ALIASES[basename] = (
+            cls.aliases[0] if cls is not None and cls.aliases else None)
+    return PYGMENTS_ALIASES[basename]
+@
+
+\subsection{Reading the markup stream}
+
+Every line of the stream is [[@keyword]] optionally followed by a
+space and an argument.  We keep the raw lines for verbatim passthrough
+and parse them on demand; parsing returns [[None]] for a missing
+argument so that callers can distinguish [[@text]] (no argument at
+all) from [[@text ]] (empty argument).
+
+<<inference functions>>=
+def parse(line):
+    """Split a markup line into (keyword, argument).
+
+    The argument is None when the line is only ``@keyword``.
+    """
+    space = line.find(" ")
+    if space < 0:
+        return line[1:], None
+    return line[1:space], line[space + 1:]
+@
+
+\subsection{Pass 1: chunk languages}
+\label{sec:langs}
+
+We scan the stream once to learn, for every code chunk, its name
+([[@defn]]) and which chunks it uses ([[@use]]).  Chunks named like
+filenames seed the language map; the languages then propagate along
+the use edges, because a chunk included into a Python file contains
+Python.  A chunk used from chunks of two different languages is
+ambiguous, so we mark it conflicting and leave it unannotated
+rather than guess wrong.  Two further sources of seeds---a chunk's own
+shebang line, and the lexical context a chunk is \emph{used} in---are
+the subject of Section~\ref{sec:context}; the scan below already
+calls into them.
+
+<<inference constants>>=
+CONFLICT = object()
+@
+
+<<inference functions>>=
+def chunk_languages(lines):
+    """Compute chunk languages and string-embedded use sites.
+
+    Returns a pair ``(langs, plain_uses)``.  ``langs`` maps chunk
+    names to Pygments lexer names: languages are seeded from
+    ``@language`` annotations, filename-like chunk names, shebang
+    lines, and the lexical context each chunk is used in (heredoc
+    bodies, interpreter ``-c`` arguments, make recipes), then
+    propagated to the chunks they use, transitively; chunks with
+    conflicting inherited languages are omitted.  ``plain_uses``
+    is the set of indices into ``lines`` of the ``@use`` lines
+    that sit inside a Python string literal and must be rendered
+    as plain text.
+    """
+    uses = {}
+    langs = {}
+    explicit = set()
+    edges = []
+    <<collect definitions, uses and string contexts>>
+    <<propagate languages along use edges>>
+    <<identify string-embedded use sites>>
+    return ({name: lang for name, lang in langs.items()
+             if lang is not CONFLICT},
+            plain_uses)
+@
+
+A [[@defn]] names the chunk that the following lines (until
+[[@end code]]) belong to, so we track the current chunk while inside
+a code chunk and attribute every [[@use]] to it.
+
+A chunk may also carry an explicit [[@language]] annotation, put
+there by an earlier filter---typically an earlier run of [[autolang]]
+itself (Section~\ref{sec:annotate}).  An annotation is better information
+than anything we could infer, so it overrides name-based seeding
+(it is collected after the [[@defn]] of its chunk) and is exempted
+from the conflict rule during propagation: the [[explicit]] set
+records which chunks are spoken for.  Annotations follow the
+pipeline grammar of the noweb Hacker's Guide, whose suggested
+values are language \emph{names}; the synonym table maps the names
+that differ from the Pygments alias we need.
+
+<<inference constants>>=
+LANGUAGE_SYNONYMS = {
+    "c++": "cpp",
+    "sh": "bash",
+    "caml": "ocaml",
+}
+@
+
+Alongside the use edges we track whether each use site sits inside
+a string literal: per chunk name, we toggle a flag on every line
+whose text contains an odd number of triple-quote delimiters.  The
+state is kept per \emph{name} rather than per chunk instance
+because noweb concatenates same-named chunks when tangling, so a
+string opened in one instance is still open in the next.  Each use
+is recorded twice: as an edge for the propagation, and---together
+with its line index and string context---in [[edges]], from which
+the plain-text use sites are computed once the languages are known.
+
+<<collect definitions, uses and string contexts>>=
+current = None
+in_code = False
+in_string = {}
+<<initialize lexical-context tracking>>
+for index, line in enumerate(lines):
+    keyword, arg = parse(line)
+    if keyword == "begin" and arg.startswith("code"):
+        in_code = True
+        current = None
+    elif keyword == "end" and arg.startswith("code"):
+        in_code = False
+        current = None
+    elif in_code and keyword == "defn":
+        current = arg
+        uses.setdefault(current, set())
+        in_string.setdefault(current, False)
+        previous_line = line_so_far = ""
+        if current not in explicit:
+            lexer = lexer_for_chunk(current)
+            if lexer is not None:
+                langs[current] = lexer
+    elif in_code and keyword == "language" and current is not None:
+        langs[current] = LANGUAGE_SYNONYMS.get(arg, arg)
+        explicit.add(current)
+    elif in_code and keyword == "text" and current is not None:
+        flips = sum((arg or "").count(d) for d in STRING_DELIMITERS)
+        if flips % 2:
+            in_string[current] = not in_string[current]
+        <<seed a chunk's language from its shebang>>
+        line_so_far += arg or ""
+    elif in_code and keyword == "use" and current is not None:
+        uses[current].add((arg, in_string[current]))
+        edges.append((current, arg, in_string[current], index))
+        <<label a chunk used in a foreign-language context>>
+    elif in_code and keyword == "nl" and current is not None:
+        previous_line, line_so_far = line_so_far, ""
+@
+
+The propagation is a straightforward worklist algorithm.  A chunk
+whose own name determines a lexer keeps it, as does a chunk with an
+[[@language]] annotation: explicit information is better than
+inheritance, and skipping such chunks also stops the propagation
+from crossing language boundaries between two root files.
+
+<<propagate languages along use edges>>=
+worklist = list(langs)
+while worklist:
+    parent = worklist.pop()
+    lang = langs[parent]
+    if lang is CONFLICT:
+        continue
+    for child, embedded in uses.get(parent, ()):
+        if child in explicit or lexer_for_chunk(child) is not None:
+            continue
+        if embedded and lang in PYTHON_LEXERS:
+            inherited = "text"
+        else:
+            inherited = lang
+        if child not in langs:
+            langs[child] = inherited
+            worklist.append(child)
+        elif langs[child] is not CONFLICT and langs[child] != inherited:
+            langs[child] = CONFLICT
+@
+
+\subsection{Chunk uses inside Python strings}
+\label{sec:strings}
+
+A literate Python program may put a docstring's text in a chunk of
+its own:
+
+\begin{verbatim}
+def fib(n):
+    """
+    <fib docstring>
+    """
+    ...
+\end{verbatim}
+(angle brackets doubled in the real source).  Treating that use like
+any other, the docstring chunk would inherit the Python lexer, yet it
+holds prose, not code: a highlighter would colour words like [[for]]
+and [[is]] as keywords, and an autodefs filter would index whatever in
+the prose happens to look like a definition.  The use site sits inside
+an open string literal, and that is the diagnosis: a chunk used inside
+a string in a Python chunk inherits the plain [[text]] lexer instead
+of Python, which every consumer treats as unhighlighted, unindexed
+text.
+
+The parity heuristic behind the string tracking is deliberately naive:
+a triple quote inside a comment or a single-quoted string fools it, and
+it does not distinguish [[''']] from [["""]] when pairing delimiters.
+Every failure mode merely degrades to the behaviour without the
+heuristic, and the common literate pattern---docstring delimiters on
+their own lines around the use---is handled correctly.  It is also
+Python-only: a chunk used inside a string literal of another language
+goes undetected and inherits that language.  Tracking every language's
+string syntax is not worth the complexity for what is, in other
+languages, a rare way to factor a program.  The conflict rule composes
+naturally: a chunk used both inside a docstring and as real code
+inherits [[text]] and a code lexer, conflicts, and stays unannotated.
+
+The scan also records, per use, whether it sat inside a string.  The
+annotator has no use for that second result---it labels chunks, not
+use sites---but a renderer sharing this inference must know which
+references sit inside strings, where it cannot typeset them as links,
+so [[chunk_languages]] returns both.
+
+<<inference constants>>=
+PYTHON_LEXERS = {"python", "python3", "py", "py3"}
+STRING_DELIMITERS = ('"""', "'''")
+@
+
+<<identify string-embedded use sites>>=
+plain_uses = set()
+for parent, child, embedded, index in edges:
+    if embedded and langs.get(parent) in PYTHON_LEXERS:
+        plain_uses.add(index)
+@
+
+\subsection{Language from lexical context}
+\label{sec:context}
+
+Name-based seeding answers \enquote{what language is this chunk?}
+from the chunk's \emph{name}.  But a chunk's language is sometimes
+fixed by \emph{where it is used}, not what it is called.  A chunk
+spliced into a shell script as the body of a here-document, or handed
+to [[python3 -c]], is written in the here-document's or the
+interpreter's language regardless of its name; and a chunk whose name
+is not filename-like---[[usage-formatter Python]], say---gets no seed
+at all, yet may carry a [[#!]] line that states its language outright.
+
+Leaving such chunks unlabeled is not merely a missed highlight.  An
+unlabeled chunk is scanned by \emph{every} autodefs filter, because
+the shared skip rule withholds only chunks annotated as some
+\emph{other} language.  A Python helper left unlabeled is therefore
+parsed as a Makefile by [[autodefs.make]], whose rule grammar matches
+any column-zero \enquote{word\dots:} line, so Python's [[for]], [[if]]
+and [[try]] lines surface as bogus index entries.  Reading the
+language from context closes that gap at the source.
+
+The four contexts share one table mapping an interpreter command---under
+any path---to a lexer name.
+
+<<inference constants>>=
+import re
+
+INTERPRETERS = {
+    "python": "python", "python3": "python", "python2": "python",
+    "sh": "bash", "bash": "bash", "dash": "bash", "ksh": "bash",
+    "zsh": "bash", "perl": "perl", "ruby": "ruby",
+    "node": "javascript", "nodejs": "javascript",
+    "awk": "awk", "gawk": "awk", "sed": "sed", "lua": "lua",
+    "php": "php", "Rscript": "r", "psql": "sql", "mysql": "sql",
+    "sqlite3": "sql",
+}
+@
+
+<<inference functions>>=
+def interpreter_language(word):
+    """Return the lexer name for interpreter ``word``, or None.
+
+    Any directory prefix is ignored, so ``/usr/bin/python3`` and
+    ``python3`` map alike.
+    """
+    return INTERPRETERS.get(word.rsplit("/", 1)[-1])
+@
+
+\paragraph{Shebang lines.}  A chunk whose name yields no language but
+whose first line is a [[#!]] interpreter line is as self-describing as
+a filename.  We read the interpreter---following the [[env]]
+indirection when present---and seed the chunk from it.  This is what
+gives a login-shell script chunk such as [[group-session]] or
+[[team-report]] (named for the file it tangles to, but with no
+recognised extension) its [[bash]] lexer.
+
+<<inference functions>>=
+def shebang_language(text):
+    """Return the language a ``#!`` line names, or None."""
+    if not text.startswith("#!"):
+        return None
+    tokens = text[2:].split()
+    if not tokens:
+        return None
+    interpreter = tokens[0]
+    if interpreter.rsplit("/", 1)[-1] == "env" and len(tokens) > 1:
+        interpreter = tokens[1]
+    return interpreter_language(interpreter)
+@
+
+The seed is applied the first time we see text for a chunk, and only
+when neither an [[@language]] annotation nor the chunk's name has
+already spoken for it---both are better evidence than a shebang.  We
+record the chunk so its continuation parts (noweb concatenates
+same-named chunks) do not re-test it, and add it to [[explicit]] so
+the propagation treats the shebang as the chunk's settled language.
+
+<<seed a chunk's language from its shebang>>=
+if current not in shebang_checked:
+    shebang_checked.add(current)
+    if current not in explicit and lexer_for_chunk(current) is None:
+        shebang = shebang_language(arg or "")
+        if shebang is not None:
+            langs[current] = shebang
+            explicit.add(current)
+@
+
+\paragraph{Here-document bodies.}  A here-document factored into its
+own chunk is recognised from the opener on the preceding line.  The
+opener regular expression writes the two left angle brackets as
+[[<{2}]] on purpose: a literal pair would be read by noweb as the
+start of a chunk reference.  The command is the opener's first word
+that is not a [[VAR=value]] environment-assignment prefix.
+
+<<inference constants>>=
+HEREDOC_RE = re.compile(r'<{2}[-~]?\s*(["\'\\]?)([A-Za-z_]\w*)\1\s*$')
+ASSIGNMENT_RE = re.compile(r'\w+=')
+@
+
+<<inference functions>>=
+def heredoc_opener(line):
+    """Return ``(command, delimiter)`` if ``line`` opens a heredoc."""
+    match = HEREDOC_RE.search(line)
+    if match is None:
+        return None
+    command = ""
+    for token in line.split():
+        if ASSIGNMENT_RE.match(token):
+            continue
+        command = token
+        break
+    return command, match.group(2)
+@
+
+The body's language comes first from the interpreter that introduces
+the heredoc (a [[python3 -]] feeding a here-document) and, failing
+that, from the delimiter itself: a delimiter such as [[PYEOF]] or
+[[SQL_END]] names its language in a conventional prefix, which we read
+after stripping a trailing [[EOF]]/[[END]]-style suffix.  When neither
+speaks, the body is labeled [[text]]---unhighlighted, and skipped by
+every autodefs filter, the safe answer for opaque data.
+
+<<inference constants>>=
+DELIMITER_TAGS = {
+    "py": "python", "python": "python", "python3": "python",
+    "sh": "bash", "bash": "bash", "sql": "sql",
+    "js": "javascript", "node": "javascript",
+    "rb": "ruby", "ruby": "ruby", "pl": "perl", "perl": "perl",
+    "lua": "lua", "php": "php", "awk": "awk", "sed": "sed", "r": "r",
+}
+@
+
+<<inference functions>>=
+def delimiter_language(delimiter):
+    """Return the language a heredoc delimiter names, or None."""
+    tag = delimiter.lower()
+    for suffix in ("eof", "end", "eot", "doc", "here", "text"):
+        if tag.endswith(suffix) and tag != suffix:
+            tag = tag[:-len(suffix)]
+            break
+    return DELIMITER_TAGS.get(tag)
+@
+
+<<inference functions>>=
+def heredoc_language(command, delimiter):
+    """Return a heredoc body's language: interpreter, delimiter, text."""
+    return (interpreter_language(command)
+            or delimiter_language(delimiter)
+            or "text")
+@
+
+\paragraph{Interpreter \texttt{-c} and \texttt{-e} arguments.}  The
+same idea covers a one-liner whose program is a chunk: [[python -c]]
+or [[perl -e]] followed by the chunk in quotes.  Here the use sits on
+the interpreter's own line, right after the opening quote, so we match
+the line up to the use.  The chunk must be the first thing inside the
+quoted argument; a program with literal text before the chunk is not
+recognised.
+
+<<inference constants>>=
+INLINE_CODE_RE = re.compile(r'(\S+)\s+-[ce]\s+["\']?\s*$')
+@
+
+<<inference functions>>=
+def interpreter_argument_language(before):
+    """Language of an interpreter run ``cmd -c``/``-e`` here, or None.
+
+    ``before`` is the text preceding the chunk use on its own line.
+    """
+    match = INLINE_CODE_RE.search(before)
+    if match is None:
+        return None
+    return interpreter_language(match.group(1))
+@
+
+\paragraph{Make recipes.}  Inside a [[make]] chunk, the recipe lines
+of a target are shell, not make.  Inline recipe text is already safe
+([[autodefs.make]] skips tab-indented lines), but a recipe factored
+into its own chunk would otherwise inherit [[make]] and be scanned by
+the wrong filter.  An indented use inside a make chunk is such a
+recipe body, and we label it [[bash]]: in a Makefile only recipes are
+indented, and the markup has already turned the recipe's leading tab
+into spaces, so any leading whitespace marks the use as a recipe.
+
+\paragraph{One decision.}  All four contexts answer the same
+question---what language does this use site impose on the chunk---so a
+single function decides it, given the text on the use's own line, the
+preceding logical line, and the using chunk's language.
+
+<<inference functions>>=
+def context_language(before, previous, using_language):
+    """Language a use site imposes on the used chunk, or None.
+
+    ``before`` is the text before the use on its line, ``previous``
+    the preceding logical line, ``using_language`` the language of
+    the chunk doing the using.
+    """
+    if before.strip():
+        return interpreter_argument_language(before)
+    opener = heredoc_opener(previous)
+    if opener is not None:
+        return heredoc_language(*opener)
+    if before and using_language == "make":
+        return "bash"
+    return None
+@
+
+The scanner reconstructs the two lines [[context_language]] needs.
+The markup splits one source line into several [[@text]] fragments
+ending at [[@nl]], so we accumulate the current logical line in
+[[line_so_far]] and remember the one before it in [[previous_line]],
+resetting both at every chunk boundary.
+
+<<initialize lexical-context tracking>>=
+previous_line = line_so_far = ""
+shebang_checked = set()
+@
+
+A context-imposed language is authoritative for the body: like an
+[[@language]] annotation it joins [[explicit]], so the propagation
+cannot later overwrite it with the using chunk's own language.  We
+label only a chunk that has no stronger evidence of its own---no
+annotation and no filename.
+
+<<label a chunk used in a foreign-language context>>=
+context = context_language(line_so_far, previous_line,
+                           langs.get(current))
+if context is not None and arg not in explicit \
+        and lexer_for_chunk(arg) is None:
+    langs[arg] = context
+    explicit.add(arg)
+@
+
+\subsection{Extending the tables from the command line}
+\label{sec:mappings}
+
+
+Additional lexer mappings can be passed as arguments of the form
+[[.ext=lexer]] or [[name=lexer]], e.g.\
+[[-filter 'autolang .rs=rust']].  Keys starting with a dot extend
+the extension table, all others the basename table.
+
+A third form, [[re:regex=lexer]], adds a rule rather than a table
+entry: the regex is matched against the whole chunk name, so it can
+label chunks whose names are not filenames---for example giving
+[[python]] to every chunk that embeds a [[.py]] file behind a
+label.  We split on the \emph{last} [[=]] so the regex may itself
+contain one, and match with [[re.search]] so an unanchored pattern
+need only occur somewhere in the name.  The parsing is part of the
+shared inference so that every consumer of the tables accepts the same
+argument forms.
+
+<<inference functions>>=
+def add_mapping(argument):
+    """Add a lexer rule or table mapping from a command-line argument.
+
+    ``re:regex=lexer`` appends a rule matched against the whole
+    chunk name; ``.ext=lexer`` and ``name=lexer`` extend the
+    extension and basename tables.  Returns False when ``argument``
+    is none of those forms.
+    """
+    if argument.startswith("re:"):
+        pattern, sep, value = argument[3:].rpartition("=")
+        if not sep:
+            return False
+        LEXER_RULES.append((re.compile(pattern), value))
+        return True
+    key, sep, value = argument.partition("=")
+    if not sep:
+        return False
+    if key.startswith("."):
+        LEXERS_BY_EXT[key] = value
+    else:
+        LEXERS_BY_NAME[key] = value
+    return True
+@
+
+\subsection{Annotating the stream}
+\label{sec:annotate}
+
+
+The main program runs pass~1 and then emits one of two views of its
+result, chosen by a [[-list]] flag.  The string-embedded use sites
+feed neither view---they matter only for rendering---so the second
+half of [[chunk_languages]]' result is dropped in both.
+
+Without [[-list]] the program annotates: it copies the stream back
+out with an [[@language]] line on every classified chunk, the job
+described above.  With [[-list]] it instead prints just the distinct
+languages it found, one per line, and copies nothing.  That second
+view exists for [[noweave]]'s sake.  A weave must decide \emph{which}
+[[autodefs]] filters to splice into its pipeline before any markup
+flows through it, yet only this inference knows which languages a
+document actually contains.  So [[noweave -autolang -index]] runs
+[[autolang -list]] as a pre-pass solely to learn that set, then adds
+one [[autodefs]] filter per language (see \texttt{noweave.nw}).  Sorting
+makes the output order independent of how the chunks happened to
+hash, which keeps the assembled pipeline---and the weave's [[-v]]
+trace of it---reproducible.
+
+<<autolang functions>>=
+def autolang_main():
+    """Annotate a markup stream, or list its languages with ``-list``."""
+    list_languages = False
+    for argument in sys.argv[1:]:
+        if argument in ("-list", "--list-languages"):
+            list_languages = True
+        elif not add_mapping(argument):
+            print("autolang: unknown argument:", argument,
+                  file=sys.stderr)
+            sys.exit(1)
+    lines = sys.stdin.read().split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    langs, _ = chunk_languages(lines)
+    if list_languages:
+        for language in sorted(set(langs.values())):
+            print(language)
+    else:
+        for line in annotate(lines, langs):
+            print(line)
+@
+
+The annotation is inserted directly after a chunk's [[@defn]] line,
+so it precedes every [[@text]] line of the chunk and a streaming
+consumer knows the language before it sees any code.  The grammar
+allows at most one [[@language]] per [[@begin code]]/[[@end code]]
+pair, so a chunk that is already annotated---for instance because
+[[autolang]] ran twice---is left alone; [[chunk_languages]] has
+already treated the existing annotation as authoritative, making a
+second run a no-op rather than an error.
+
+<<autolang functions>>=
+def annotate(lines, langs):
+    """Return ``lines`` with @language added to known chunks."""
+    out = []
+    i = 0
+    while i < len(lines):
+        keyword, arg = parse(lines[i])
+        if keyword == "begin" and arg.startswith("code"):
+            <<copy the chunk, annotating its language>>
+        else:
+            out.append(lines[i])
+            i += 1
+    return out
+@
+
+<<copy the chunk, annotating its language>>=
+chunk = []
+while True:
+    chunk.append(lines[i])
+    keyword, arg = parse(lines[i])
+    i += 1
+    if keyword == "end" and arg.startswith("code"):
+        break
+name = next((parse(l)[1] for l in chunk
+             if parse(l)[0] == "defn"), None)
+lang = langs.get(name)
+annotated = any(parse(l)[0] == "language" for l in chunk)
+for line in chunk:
+    out.append(line)
+    if (lang is not None and not annotated
+            and parse(line)[0] == "defn"):
+        out.append("@language " + lang)
+        annotated = True
+@

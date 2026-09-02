@@ -1,17 +1,52 @@
+A filter may declare the set of languages it understands by
+assigning a set of language names to [[defnslanguages]] in its
+[[main]].  When a code chunk carries an [[@language]] annotation
+(put there by an upstream filter such as \texttt{autolang}; see
+\textit{nowebfilters}(7)) naming a language outside that set, the
+chunk's [[@text]] lines are withheld from the passes: scanning a
+foreign language with this filter's patterns produces only false
+definitions.  Everything else still reaches the passes, so their
+chunk-boundary bookkeeping is unaffected, and every line is written
+out regardless.  Chunks without an annotation are scanned as
+always---a filter must keep working on streams that carry no
+language information, since annotating is optional.
+
 <<*>>=
+global defnslanguages
+
 procedure go()
-  local line
+  local line, chunklang
   while line := read() do {
-    apply(prepass, line)
-    write(line)
-    if match("@fatal ", line) then exit(1)
-    apply(postpass, line)
+    <<track [[chunklang]], the current chunk's language>>
+    if <<the line is code text in a foreign language>> then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
   }
 end
 
 procedure apply(pass, line)
     line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
 end
+@
+
+The annotation precedes the chunk's text (the grammar allows one
+[[@language]] per chunk, and \texttt{autolang} emits it directly
+after the [[@defn]]), so resetting on every [[@begin]] and
+recording on [[@language]] suffices.
+
+<<track [[chunklang]], the current chunk's language>>=
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+@
+
+<<the line is code text in a foreign language>>=
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
 @
 [[indextext]] is a hack to introduce suitable ``[[@index nl]],'' but it
 messes up the line counts!

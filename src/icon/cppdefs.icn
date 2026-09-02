@@ -1,0 +1,234 @@
+#line 97 "cppdefs.nw"
+global showlocal
+procedure main(args)
+  showlocal := !args == "-local"
+  defnslanguages := set(["cpp", "c++", "cxx", "cc"])
+  
+#line 118 "cppdefs.nw"
+cpp_alpha := &letters ++ '_'
+cpp_alnum := cpp_alpha ++ &digits
+typekeywords := set(["class", "struct", "union", "enum"])
+stmtkeywords := set(["if", "while", "for", "switch", "catch",
+                     "return", "new", "delete", "throw", "sizeof",
+                     "else", "do", "try", "operator"])
+#line 102 "cppdefs.nw"
+  go()
+end
+#line 132 "cppdefs.nw"
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      
+#line 155 "cppdefs.nw"
+arg ? {
+  if /arg | *arg = 0 then return
+  toplevel := if any(' \t') then &null else 1
+  tab(many(' \t'))
+  if ="#" then {
+    tab(many(' \t'))
+    if (="define", any(' \t')) then {
+      tab(many(' \t'))
+      writedefn(cpp_ident())
+    }
+    return
+  }
+  if ="//" then return
+  
+#line 212 "cppdefs.nw"
+if (="template", optwhite(), any('<')) then {
+  move(1)
+  depth := 1
+  while depth > 0 do {
+    tab(upto('<>')) | return
+    if ="<" then depth +:= 1
+    else { =">"; depth -:= 1 }
+  }
+  tab(many(' \t'))
+}
+#line 169 "cppdefs.nw"
+  
+#line 232 "cppdefs.nw"
+while (=("static"|"inline"|"constexpr"|"consteval"|"constinit"|
+         "extern"|"friend"|"virtual"|"explicit"|"export"|
+         "public"|"protected"|"private"|"typename"), any(' \t:')) do {
+  tab(many(' \t:'))
+}
+#line 170 "cppdefs.nw"
+  if (="using", any(' \t')) then {
+    
+#line 247 "cppdefs.nw"
+{
+  tab(many(' \t'))
+  if a := cpp_ident() then {
+    tab(many(' \t'))
+    if ="=" then
+      if \showlocal | \toplevel then
+        writedefn(a)
+  }
+}
+#line 172 "cppdefs.nw"
+    return
+  }
+  if (="typedef", any(' \t')) then {
+    
+#line 265 "cppdefs.nw"
+{
+  rest := tab(0)
+  rest ? {
+    if tab(find("(*") + 2) then {
+      tab(many(' \t'))
+      n := cpp_ident()
+    }
+    else {
+      while tab(upto(cpp_alpha)) do n := cpp_ident()
+    }
+    if \showlocal | \toplevel then
+      writedefn(\n)
+  }
+}
+#line 176 "cppdefs.nw"
+    return
+  }
+  if (="namespace", any(' \t{')) then {
+    
+#line 286 "cppdefs.nw"
+{
+  tab(many(' \t'))
+  if n := tab(many(cpp_alnum ++ ':')) then
+    if \showlocal | \toplevel then
+      writedefn(n)
+}
+#line 180 "cppdefs.nw"
+    return
+  }
+  if w := cpp_ident() then {
+    if member(typekeywords, w) then {
+      
+#line 301 "cppdefs.nw"
+{
+  tab(many(' \t'))
+  (=("class"|"struct"), any(' \t'), tab(many(' \t'))) | ""
+  if t := cpp_ident() then {
+    tab(many(' \t'))
+    if not any(';') then
+      if \showlocal | \toplevel then
+        writedefn(t)
+  }
+}
+#line 185 "cppdefs.nw"
+      return
+    }
+    
+#line 199 "cppdefs.nw"
+move(-*w)
+#line 188 "cppdefs.nw"
+  }
+  
+#line 327 "cppdefs.nw"
+{
+  t := trim(arg, ' \t')
+  if t[-1] == "{" | t[-2:0] == "{}" then {
+    prev := ""
+    while tab(upto(cpp_alpha)) do {
+      prevc := &subject[&pos - 1] | ""
+      id := cpp_ident() | break
+      if any('(') then {
+        if member(stmtkeywords, id) | prevc == ("." | ">" | "~") |
+           prev == ("new" | "return" | "throw") then return
+        if \showlocal | \toplevel then
+          writedefn(id)
+        return
+      }
+      prev := id
+    }
+  }
+}
+#line 190 "cppdefs.nw"
+}
+#line 139 "cppdefs.nw"
+    }
+  }
+  return
+end
+#line 353 "cppdefs.nw"
+global cpp_alpha, cpp_alnum, typekeywords, stmtkeywords
+procedure cpp_ident()
+  if any(cpp_alpha) then
+    return tab(many(cpp_alnum))
+  else
+    fail
+end
+
+procedure optwhite()
+  suspend tab(many(' \t')) | ""
+end
+#line 369 "cppdefs.nw"
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: cppdefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+#line 14 "defns.nw"
+global defnslanguages
+
+procedure go()
+  local line, chunklang
+  while line := read() do {
+    
+#line 42 "defns.nw"
+line ? if ="@begin " then chunklang := &null
+       else if ="@language " then chunklang := tab(0)
+#line 20 "defns.nw"
+    if 
+#line 47 "defns.nw"
+(match("@text ", line) & \defnslanguages & \chunklang &
+ not member(defnslanguages, chunklang))
+#line 20 "defns.nw"
+                                                       then
+      write(line)
+    else {
+      apply(prepass, line)
+      write(line)
+      if match("@fatal ", line) then exit(1)
+      apply(postpass, line)
+    }
+  }
+end
+
+procedure apply(pass, line)
+    line ? (="@" & pass(tab(upto(' ')|0),  if =" " then tab(0) else &null))
+end
+#line 53 "defns.nw"
+procedure writedefn(defn, locl)
+  static indextext
+  initial indextext := ""
+  if /defn then
+    *indextext > 0 & 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 58 "defns.nw"
+  else {
+    if *indextext + *defn > 65 then 
+#line 66 "defns.nw"
+{ # write("@index nl")		# don't!
+  indextext := ""
+}
+#line 60 "defns.nw"
+    write(if \locl then "@index localdefn " else "@index defn ", defn)
+    indextext ||:= " " || defn
+  }
+  return
+end
+#line 70 "defns.nw"
+procedure rcsinfo_too () 
+  return "$Id: defns.nw,v 1.18 2008/10/06 01:03:05 nr Exp nr $" ||
+         "$Name: v2_12 $"
+end

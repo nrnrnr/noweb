@@ -28,7 +28,65 @@ options use these filters, which automatically find defined identifiers.
 The 
 .B *
 stands for the name of a programming language.
+When code chunks carry
+.B @language
+annotations (see
+.B autolang
+below), each of these filters skips chunks written in languages it
+does not understand, so a mixed-language document no longer collects
+false definitions from foreign chunks; unannotated chunks are
+scanned as always.
 (Icon installation only.)
+.TP
+.BI autolang " mappings"
+The
+.B autolang
+filter annotates every code chunk with the
+.B @language
+pipeline keyword.
+The language of a chunk is inferred from its name when the name looks
+like a filename (e.g.\&
+.B fib.py
+or
+.BR Makefile ),
+from a
+.B #!
+line when the chunk's first line is one,
+and from the lexical context a chunk is used in \(em the body of a
+here-document, the argument of an interpreter run with
+.B \-c
+or
+.BR \-e ,
+or a make recipe \(em which override the language otherwise inherited
+through chunk uses; chunks whose language
+remains unknown are left unannotated.
+It must run before any filter that consumes the annotations, such
+as the autodefs filters;
+.IR noweave 's
+.B \-autolang
+option places it first in the pipeline (a plain
+.B \-filter
+always runs after the autodefs filters).
+The optional
+.I mappings
+arguments extend the built-in language tables, each of the form
+.I .ext=lexer
+or
+.IR name=lexer ,
+or add a rule of the form
+.IR re:regex=lexer ,
+which labels every chunk whose name matches
+.I regex
+and so classifies chunks whose names are not filenames
+.RI ( noweave 's
+.B \-langrule
+option supplies one);
+languages are named by their Pygments lexer aliases.
+Running it twice is harmless: already-annotated chunks are left
+alone.
+(Requires Python 3.
+Pygments, when importable, extends the built-in filename tables but is
+not needed.)
 .TP
 .B btdefn
 The

@@ -1,8 +1,16 @@
 \section{Finding definitions in ANSI C}
+
+This filter understands ANSI~C only, so it claims only chunks
+annotated as C; chunks annotated as C++ belong to [[autodefs.cpp]]
+(see [[cppdefs.nw]]), which knows about classes, templates and
+namespaces.  Splitting the annotations this way lets a document mix
+both languages and stack [[-autodefs c -autodefs cpp]] without either
+filter double-indexing the other's chunks.
 <<*>>=
 global decls_ok
 procedure main(args)
   decls_ok := !args == "-decl"
+  defnslanguages := set(["c"])
   go()
 end
 <<*>>=

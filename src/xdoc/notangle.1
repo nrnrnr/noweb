@@ -494,6 +494,40 @@ which it must precede.
 .TP
 .B \-showautodefs
 Show values of \fIlang\fP usable with \fB-autodefs\fP.
+.TP
+.B \-autolang
+Annotate every code chunk with its programming language, inferred
+from filename-like chunk names and inherited through chunk uses
+(the
+.B autolang
+filter; see
+.IR nowebfilters (7)).
+The autodefs filters then skip chunks written in languages they do
+not understand, keeping foreign identifiers out of the index in
+mixed-language documents.
+The annotator runs first in the pipeline no matter where the option
+is given.
+When combined with
+.BR \-index ,
+.B \-autolang
+also supplies the
+.B \-autodefs
+filters itself: it adds the autodefs filter for each language it
+discovers, so a mixed-language document can be indexed without naming
+any language on the command line.
+A language for which no autodefs filter is installed is simply left
+unindexed, and an explicit
+.B \-autodefs
+is honored and never duplicated.
+.TP
+.B \-langrule \fIregex\fP=\fIlang\fP
+Label every code chunk whose name matches \fIregex\fP as language
+\fIlang\fP, overriding the inference.
+Use it for chunks whose names are not filenames, such as a test
+chunk that wraps a quoted file name.
+Implies
+.B \-autolang
+and may be repeated.
 .SH ERROR MESSAGES
 If
 .I notangle

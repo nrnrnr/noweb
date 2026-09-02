@@ -254,6 +254,27 @@ IINNDDEEXXIINNGG AANNDD CCRROOSSSS--RREEFFEERREENNCCEE
        --sshhoowwaauuttooddeeffss
               Show values of _l_a_n_g usable with --aauuttooddeeffss.
 
+       --aauuttoollaanngg
+              Annotate  every  code  chunk  with its programming language, in‐
+              ferred from filename-like  chunk  names  and  inherited  through
+              chunk  uses (the aauuttoollaanngg filter; see _n_o_w_e_b_f_i_l_t_e_r_s(7)).  The au‐
+              todefs filters then skip chunks written in languages they do not
+              understand, keeping foreign identifiers  out  of  the  index  in
+              mixed-language  documents.   The  annotator  runs  first  in the
+              pipeline no matter where the option  is  given.   When  combined
+              with  --iinnddeexx,  --aauuttoollaanngg also supplies the --aauuttooddeeffss filters it‐
+              self: it adds the autodefs filter for each language  it  discov‐
+              ers,  so a mixed-language document can be indexed without naming
+              any language on the command line.  A language for which  no  au‐
+              todefs  filter is installed is simply left unindexed, and an ex‐
+              plicit --aauuttooddeeffss is honored and never duplicated.
+
+       --llaannggrruullee _r_e_g_e_x==_l_a_n_g
+              Label every code chunk whose  name  matches  _r_e_g_e_x  as  language
+              _l_a_n_g,  overriding  the inference.  Use it for chunks whose names
+              are not filenames, such as a test chunk that wraps a quoted file
+              name.  Implies --aauuttoollaanngg and may be repeated.
+
 EERRRROORR MMEESSSSAAGGEESS
        If _n_o_t_a_n_g_l_e or _n_o_w_e_a_v_e encounters a chunk name within documentation, it
        assumes   that   this   indicates   an   error,   usually   misspelling
@@ -263,28 +284,28 @@ EERRRROORR MMEESSSSAAGGEESS
        for chunks to be defined and not used.
 
 EEXXAAMMPPLLEESS
-       If you have trouble digesting this man page, you're  not  alone.   Here
-       are  a  few examples to get you started.  I'll assume you have a ffoooo..nnww
-       file with a C program in chunk <<<<ffoooo..cc>>>> and a  header  file  in  chunk
-       <<<<ffoooo..hh>>>>,  and  that  your  documentation is marked up using _l_a_t_e_x_(_1_).
+       If  you  have  trouble digesting this man page, you're not alone.  Here
+       are a few examples to get you started.  I'll assume you have  a  ffoooo..nnww
+       file  with  a  C  program in chunk <<<<ffoooo..cc>>>> and a header file in chunk
+       <<<<ffoooo..hh>>>>, and that your documentation is  marked  up  using  _l_a_t_e_x_(_1_).
        I'll show you how to build things using the most common options.
 
        To rebuild your C source, try
               nnoottaannggllee --LL --RRffoooo..cc ffoooo..nnww >> ffoooo..cc
        To rebuild your header file, try
               nnoottaannggllee --RRffoooo..hh ffoooo..nnww || ccppiiff ffoooo..hh
-       There are two compromises here.  Omitting --LL keeps ##lliinnee  out  of  your
-       header  file,  and using ccppiiff prevents the command from rewriting ffoooo..hh
-       unless the contents have changed.  Thus, this is good code to put in  a
+       There  are  two  compromises here.  Omitting --LL keeps ##lliinnee out of your
+       header file, and using ccppiiff prevents the command from  rewriting  ffoooo..hh
+       unless  the contents have changed.  Thus, this is good code to put in a
        Makefile rule.
 
        To build a printed document, run
               nnoowweeaavvee --aauuttooddeeffss cc --iinnddeexx ffoooo..nnww >> ffoooo..tteexx
-       If  you  have your own preamble, containing \\ddooccuummeennttccllaassss and all, you
+       If you have your own preamble, containing \\ddooccuummeennttccllaassss and  all,  you
        will also need the --ddeellaayy option.
 
        To build a web page, run
-              nnoowweeaavvee --ffiilltteerr ll22hh --aauuttooddeeffss cc --iinnddeexx --hhttmmll ffoooo..nnww || hhttmmllttoocc  >>
+              nnoowweeaavvee  --ffiilltteerr ll22hh --aauuttooddeeffss cc --iinnddeexx --hhttmmll ffoooo..nnww || hhttmmllttoocc >>
               ffoooo..hhttmmll
        Have fun!
 
@@ -305,11 +326,11 @@ SSEEEE AALLSSOO
        _s_t_y_l_e(7), _n_o_w_e_b_f_i_l_t_e_r_s(7)
 
 BBUUGGSS
-       _n_o_t_a_n_g_l_e  and _n_o_u_n_t_a_n_g_l_e fail if names used on the command line contain
+       _n_o_t_a_n_g_l_e and _n_o_u_n_t_a_n_g_l_e fail if names used on the command line  contain
        single quotes.
 
        Ignoring unused chunks can cause problems; if a chunk has multiple def‐
-       initions and one is misspelled, the misspelled definition  is  silently
+       initions  and  one is misspelled, the misspelled definition is silently
        ignored.  _n_o_r_o_o_t_s(1) can be used to catch this mistake.
 
 
@@ -332,13 +353,13 @@ BBUUGGSS
 
 
 
-       The  _-_L option of _n_o_t_a_n_g_l_e puts an implicit initial newline in the for‐
+       The _-_L option of _n_o_t_a_n_g_l_e puts an implicit initial newline in the  for‐
        mat string.
 
-       The default _L_a_T_e_X pagestyles don't set the width of the boxes  contain‐
-       ing  headers  and footers.  Since _n_o_w_e_b code paragraphs are extra wide,
-       this _L_a_T_e_X bug sometimes results in  extra-wide  headers  and  footers.
-       The  remedy  is  to  redefine  the  relevant ppss@@** commands; ppss@@nnoowweebb in
+       The  default _L_a_T_e_X pagestyles don't set the width of the boxes contain‐
+       ing headers and footers.  Since _n_o_w_e_b code paragraphs are  extra  wide,
+       this  _L_a_T_e_X  bug  sometimes  results in extra-wide headers and footers.
+       The remedy is to redefine  the  relevant  ppss@@**  commands;  ppss@@nnoowweebb  in
        nnoowweebb..ssttyy can be used as an example.
 
        _l_a_t_e_x_2_h_t_m_l(1) mangles some source files.
@@ -349,7 +370,7 @@ VVEERRSSIIOONN
        This man page is from _n_o_w_e_b version 2.12.
 
 AAUUTTHHOORR
-       Norman  Ramsey,  Tufts  University.    Internet   address   NNoorrmmaann..RRaamm‐‐
+       Norman   Ramsey,   Tufts   University.   Internet  address  NNoorrmmaann..RRaamm‐‐
        sseeyy@@ttuuffttss..eedduu.
        Noweb home page at hhttttpp::////wwwwww..ccss..ttuuffttss..eedduu//~~nnrr//nnoowweebb.
 

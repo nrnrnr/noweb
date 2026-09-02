@@ -1,0 +1,213 @@
+\section{Finding definitions in makefiles}
+
+This program extracts definition names from makefiles for use with
+noweb's indexing capabilities.  When invoked with the
+[[-autodefs make]] option to [[noweave]], it automatically identifies
+and indexes make definitions: variables and rule targets.
+
+\subsection{Quick start}
+
+To use this filter with noweb:
+\begin{verbatim}
+noweave -autodefs make -index myfile.nw > myfile.tex
+\end{verbatim}
+
+\subsection{Design decisions}
+
+A makefile defines two kinds of names: variables and targets.  Both
+belong in the index---a reader looking up [[NOWEAVEFLAGS.tex]] wants
+the assignment, and one looking up [[install]] wants the rule.
+
+We recognize the assignment operators of POSIX make ([[=]], and
+[[::=]] since POSIX~2024), GNU make ([[:=]], [[?=]], [[+=]], [[!=]]
+and multi-line [[define]] blocks) and BSD make (the same operator
+set), behind the GNU prefixes [[override]], [[export]], [[unexport]]
+and [[private]].  Recognizing the union of the dialects' operators is
+safe because the operators do not collide: a token that is an
+assignment in one dialect is not something else in another.
+
+Targets are the words before a [[:]] on an unindented line.  Three
+kinds of target words are skipped, because they do not define a name
+a reader would look up:
+\begin{itemize}
+\item words containing [[%]], which are pattern rules defining a
+      transformation, not a name;
+\item words containing [[$]], whose actual name depends on variable
+      expansion;
+\item lines starting with [[.]], which are special targets such as
+      [[.PHONY]], old-style suffix rules such as [[.c.o]]---and, as
+      a bonus, BSD make's [[.if]]/[[.include]] directives.
+\end{itemize}
+
+Recipe lines begin with a tab, which is how make itself tells
+commands from rules; an assignment inside a recipe is executed by the
+shell, not by make, so such lines are skipped entirely (the shell
+filter can index them when the chunk is annotated as shell).  Unlike
+the indentation-sensitive filters, a \emph{space}-indented line is
+still scanned: make variables are global, and conditional blocks are
+often indented with spaces for readability.
+
+\subsection{Implementation}
+
+The implementation follows the standard pattern for noweb autodefs
+filters, shared via [[defns.nw]]: [[main]] declares the languages the
+filter understands and calls [[go]], which feeds each line of the
+noweb stream to [[prepass]] and [[postpass]]; definitions are emitted
+with [[writedefn]].
+
+<<*>>=
+procedure main(args)
+  defnslanguages := set(["make", "makefile", "gmake", "bmake", "bsdmake"])
+  go()
+end
+@
+
+Declaring [[defnslanguages]] makes [[go]] withhold the text of chunks
+annotated (with the [[@language]] keyword, by an upstream filter such
+as [[autolang]]) as some other language: a shell or Python assignment
+matches the variable pattern below just as well as a make assignment
+does, and skipping foreign chunks is the only way to tell them apart.
+Chunks without an annotation are still scanned, so nothing changes
+for documents woven without [[autolang]].
+
+\subsection{The postpass procedure}
+
+As in the other filters, [[postpass]] watches for [[@text]] lines
+inside code chunks and scans each one for definitions.
+
+<<*>>=
+procedure postpass(name, arg)
+  static kind
+  initial kind := "bogus"
+  case name of {
+    "begin" : arg ? kind := tab(upto(' ')|0)
+    "text" : if kind == "code" then {
+      <<process make code line>>
+    }
+  }
+  return
+end
+@
+
+\subsection{Processing make code}
+
+A leading tab marks a recipe; a leading [[.]] (after optional spaces)
+marks a special target or BSD directive; [[#]] marks a comment.  All
+three end the scan before it starts.  GNU directives that happen to
+look like words ([[include]], [[ifeq]] and friends) are filtered by
+name, since nothing in their shape distinguishes them from a target.
+
+After the prefixes, a [[define]] introduces a multi-line variable, so
+the word after it is the definition.  Otherwise we collect the words
+of the line until we reach an operator: an [[=]]-family operator
+makes the first word a variable definition, a colon (not followed by
+[[=]]) makes all words collected so far targets.
+
+<<process make code line>>=
+arg ? {
+  if /arg | *arg = 0 then return
+  if any('\t') then return            # recipe line, shell code
+  tab(many(' '))
+  if any('#.') then return            # comment, special target, BSD directive
+
+  while =("override"|"export"|"unexport"|"private") & any(' \t') do
+    tab(many(' \t'))
+  if (="define", any(' \t')) then {
+    tab(many(' \t'))
+    if w := make_word() then writedefn(w)
+    return
+  }
+
+  targets := []
+  while w := make_word() do {
+    if member(directives, w) then return
+    put(targets, w)
+    tab(many(' \t'))
+    if tab(many(':')) then {
+      if ="=" then {                  # := ::= :::=
+        <<index the variable>>
+      }
+      else {
+        <<index the targets>>
+      }
+      return
+    }
+    if =("?="|"+="|"!="|"=") then {
+      <<index the variable>>
+      return
+    }
+  }
+}
+@
+
+Only a single word can precede an assignment operator, so a variable
+is indexed only when it is the sole word collected; [[a b := c]] is
+not a definition of [[a]] in any dialect.
+
+<<index the variable>>=
+if *targets = 1 then writedefn(targets[1])
+@
+
+Pattern rules and computed targets are filtered here, word by word,
+so that [[all $(EXTRA): deps]] still indexes [[all]].
+
+<<index the targets>>=
+every w := !targets do
+  if not upto('%$', w) then writedefn(w)
+@
+
+The directives that name-filtering must catch are the GNU ones; the
+BSD directives all start with a dot and never reach this point.
+
+<<*>>=
+global directives
+procedure make_word()
+  static wchars
+  initial {
+    wchars := &letters ++ &digits ++ '_./-@~'
+    directives := set(["include", "sinclude", "-include",
+                       "ifeq", "ifneq", "ifdef", "ifndef",
+                       "else", "endif", "endef", "vpath", "undefine"])
+  }
+  if any(wchars) then
+    return tab(many(wchars))
+  else
+    fail
+end
+@
+
+A make word is more liberal than an identifier in most languages:
+targets are file names, so dots, slashes, dashes and tildes all
+appear.  We deliberately leave out [[%]] and [[$]]---words containing
+them never reach the index, so excluding them lets the word scan
+terminate at the interesting boundary---and [[+]], which would
+swallow the [[+=]] operator (the cost is that a target named with a
+[[+]], such as [[g++]], is not indexed).
+
+The prepass only flushes pending index entries at chunk boundaries.
+
+<<*>>=
+procedure prepass(name, arg)
+  if name == "end" then writedefn(&null) # force newline flush
+  return
+end
+
+procedure rcsinfo ()
+  return "$Id: makedefs.nw,v 1.1 2026/06/12 00:00:00 dbosk Exp $"
+end
+@
+
+\subsection{Known limitations}
+
+\begin{enumerate}
+\item Continuation lines are not joined: a target list or assignment
+      split over backslash-continued lines is only scanned on its
+      first line.
+\item Targets defined by computed names ([[$(PROGS):]]) or pattern
+      rules cannot be resolved statically and are skipped.
+\item [[eval]]-generated rules and variables are invisible, as are
+      names defined in included files.
+\end{enumerate}
+
+These limitations reflect practical tradeoffs between complexity and
+utility for literate programming with noweb.

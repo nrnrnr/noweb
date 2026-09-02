@@ -24,8 +24,11 @@ LIB=|LIBDIR|
 <<initialization>>=
 markup=$LIB/markup backend=$LIB/totex
 wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
+autolang= autolangargs= markupcache=
 noquote="-noquote" docanchor= noindex="-noindex"
-filtera= filterb= filterc= filterd= filtere= filterf= filterg=
+filters=
+nl='
+'
 # following supported by change in totex back end
 noquote=
 @
@@ -48,6 +51,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 <<insist first-pass options are self-consistent>>
+<<insert autolang ahead of the autodefs filters>>
 if [ -z "$wrapper" ]; then wrapper=latex; fi
 eval $pass2setcmd
 shift
@@ -191,14 +195,14 @@ using_index= using_xref=
 -indexfrom) shift; noindex= ; using_index=1 ;;
 <<second pass {\tt noweave} options>>=
 -filter) 
-    newfilter="$2" ; shift ;                  <<add [[$newfilter]] (could overflow)>> ;;
--x) newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
+    newfilter="$2" ; shift ;                  <<append [[$newfilter]] to the pipeline>> ;;
+-x) newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>> ;;
 -index)  
-    newfilter="$LIB/finduses $noquote" ;      <<add [[$newfilter]] (could overflow)>>
-    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
+    newfilter="$LIB/finduses $noquote" ;      <<append [[$newfilter]] to the pipeline>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>> ;;
 -indexfrom)
-    newfilter="$LIB/finduses $noquote $2";    <<add [[$newfilter]] (could overflow)>>
-    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>>
+    newfilter="$LIB/finduses $noquote $2";    <<append [[$newfilter]] to the pipeline>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>>
     shift ;;
 <<option printout for usage>>=
 echo "-x		Use the default cross-referencer (needs LaTeX or HTML)." 1>&2
@@ -297,15 +301,128 @@ but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
 do in a portable way is [[test -r]].
 <<first pass {\tt noweave} options>>=
 -autodefs) newfilter="$LIB/autodefs.$2"
-           if [ -r $newfilter ]; then <<add [[$newfilter]] (could overflow)>>
+           if [ -r $newfilter ]; then <<append [[$newfilter]] to the pipeline>>
            else echo "$0: don't know how to find definitions for '$2'" 1>&2; exit 1
            fi
 	   shift
            ;;
 -showautodefs) <<print all legal [[-autodefs]] or complain>>; exit 1 ;;
+-autolang) autolang="$LIB/autolang" ;;
+-langrule) autolang="${autolang:-$LIB/autolang}"
+           autolangargs="$autolangargs 're:$2'"
+           shift ;;
+@
+The annotations must be in the stream before the autodefs filters
+read it, but the autodefs filters are appended during the first pass,
+before any [[-filter]] of the second pass.  [[-autolang]] is therefore
+a first-pass option, and once the first pass is done the annotator is
+prepended to the front of the pipeline so it runs first, wherever the
+option appeared on the command line.
+
+[[-langrule]] both turns the annotator on and hands it a
+[[re:regex=lexer]] rule, the form [[autolang]] uses to classify a
+chunk whose name is not a filename (see [[nowebfilters]](7)).  Each
+rule keeps its own single quotes because the assembled pipeline is
+run through a single [[eval]]: the quotes survive that
+re-tokenization, so a rule reaches [[autolang]] as one argument even
+when its regex contains spaces.  The only casualty is a regex
+containing a single quote, which this scheme cannot carry---an
+acceptable limit, as patterns over chunk names have no use for one.
+<<insert autolang ahead of the autodefs filters>>=
+if [ -n "$autolang" ]; then
+  if [ -n "$using_index" ]; then
+    <<discover languages and add their autodefs filters>>
+  fi
+  filters="$autolang$autolangargs$nl$filters"
+fi
+@
+Annotating the stream is only half of what [[-autolang]] can do: it
+also knows enough to choose the autodefs filters itself, so that a
+plain [[noweave -autolang -index]] indexes every language present
+without the user naming each one with [[-autodefs]].  The obstacle is
+timing.  The pipeline is fixed before any markup flows, yet the
+languages are not known until the inference has read the whole
+stream---a filter cannot add filters behind itself.  The only way out
+is to run the inference once \emph{ahead} of the real pipeline, purely
+to learn the language set; that is what [[autolang -list]] is for
+(see \texttt{autolang.nw}).
+
+We restrict this to weaves that index ([[using_index]]): an autodefs
+filter exists to feed [[finduses]]/[[noidx]], so without [[-index]]
+its [[@index]] lines have no consumer and would only litter the
+output.  Adding \emph{every} installed filter instead of just the
+discovered ones would be wrong, not merely wasteful: a chunk the
+inference cannot classify carries no [[@language]], and an autodefs
+filter skips only chunks whose language is known and foreign, so an
+unclassified chunk would be scanned by all of them and salt the index
+with definitions read under the wrong grammar.  Discovery adds
+exactly the filters a careful user would have typed.
+
+The pre-pass buffers [[markup]]'s output to a temporary file (made
+with noweb's own [[nwmktemp]], as the other scripts do) rather than
+running [[markup]] twice, because with no file arguments
+[[markup]] reads standard input, which a first pass would consume and
+leave empty for the second.  The same file then feeds the real run
+(see [[<<emit raw markup>>]]), so [[markup]] still parses the source
+just once.  Because that one parse now feeds \emph{both} the
+discovery and the weave, a [[markup]] that fails---malformed input,
+say---must stop the run rather than let an empty or truncated cache
+become a confidently empty weave; its exit status is checked for
+exactly that.  The list is read through [[eval]] for the same reason the
+whole pipeline is: a [[-langrule]] rule sits in [[autolangargs]]
+wrapped in single quotes, and only [[eval]] strips them so the rule
+reaches [[autolang]] as one argument.  A language with no installed
+[[autodefs.$lang]] is dropped by the [[test -r]], which is how
+languages we cannot index---and the [[text]] of prose chunks---fall
+away silently.
+
+A discovered filter must not be added when the pipeline already holds
+it, or identifiers in that language would be indexed twice.  Equal
+filenames are not a strong enough test: the autodefs filters are
+installed under several names that are byte-for-byte copies of one
+program---[[autodefs.bash]] is [[autodefs.sh]], [[autodefs.python]]
+is [[autodefs.python3]] (see [[icon/Makefile]])---and the names
+[[autolang]] emits are exactly these aliases, so [[-autolang]]'s
+discovered [[autodefs.python]] would otherwise stack on a
+hand-written [[-autodefs python3]] and double the Python entries.
+We therefore deduplicate by content: a candidate is skipped if
+[[cmp]] finds it identical to any autodefs filter already in the
+pipeline.  At this point---between the two option passes---the only
+filters present are the first-pass [[-autodefs]] ones, so the scan
+compares against exactly the hand-written filters it must not
+duplicate.
+<<discover languages and add their autodefs filters>>=
+markupcache=$($LIB/nwmktemp) || { echo "$0: Cannot create temporary file" 1>&2; exit 1; }
+trap 'rm -f "$markupcache"' 0 1 2 15
+$markup $markopts $arg > "$markupcache" || exit $?
+for lang in `eval "$autolang$autolangargs -list" < "$markupcache"`; do
+  newfilter="$LIB/autodefs.$lang"
+  if [ -r "$newfilter" ]; then
+    <<add [[$newfilter]] unless an identical filter is already present>>
+  fi
+done
+@
+The duplicate test walks [[$filters]] one filter per line and stops
+at the first identical autodefs filter.  Lines that are not autodefs
+filters (a [[-filter]] command, say) can never be a copy of one, so
+the [[case]] guard skips them before [[cmp]] is reached.
+<<add [[$newfilter]] unless an identical filter is already present>>=
+duplicate=
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  case $f in
+    "$LIB/autodefs."*)
+      if cmp -s "$f" "$newfilter"; then duplicate=1; break; fi ;;
+  esac
+done
+IFS=$oldIFS
+if [ -z "$duplicate" ]; then <<append [[$newfilter]] to the pipeline>>; fi
 <<option printout for usage>>=
 echo "-autodefs lang	Source is in language 'lang'; find definitions automatically." 1>&2
 echo "-showautodefs	List languages that can be used with -autodefs" 1>&2
+echo "-autolang	Annotate chunks with their language; with -index, add autodefs for each language found." 1>&2
+echo "-langrule re=lang	Label chunks whose name matches regex 're' as language 'lang' (implies -autolang)." 1>&2
 @ \iffalse
 <<noweave man page indexing options>>=
 .TP
@@ -322,6 +439,40 @@ which it must precede.
 .TP
 .B \-showautodefs
 Show values of \fIlang\fP usable with \fB-autodefs\fP.
+.TP
+.B \-autolang
+Annotate every code chunk with its programming language, inferred
+from filename-like chunk names and inherited through chunk uses
+(the
+.B autolang
+filter; see
+.IR nowebfilters (7)).
+The autodefs filters then skip chunks written in languages they do
+not understand, keeping foreign identifiers out of the index in
+mixed-language documents.
+The annotator runs first in the pipeline no matter where the option
+is given.
+When combined with
+.BR \-index ,
+.B \-autolang
+also supplies the
+.B \-autodefs
+filters itself: it adds the autodefs filter for each language it
+discovers, so a mixed-language document can be indexed without naming
+any language on the command line.
+A language for which no autodefs filter is installed is simply left
+unindexed, and an explicit
+.B \-autodefs
+is honored and never duplicated.
+.TP
+.B \-langrule \fIregex\fP=\fIlang\fP
+Label every code chunk whose name matches \fIregex\fP as language
+\fIlang\fP, overriding the inference.
+Use it for chunks whose names are not filenames, such as a test
+chunk that wraps a quoted file name.
+Implies
+.B \-autolang
+and may be repeated.
 @ \fi 
 Same note as above regarding [[test -x]] vs [[test -r]].
 <<print all legal [[-autodefs]] or complain>>=
@@ -476,25 +627,25 @@ INDEXING AND CROSS-REFERENCE section.
 <<man page: INDEXING AND CROSS-REFERENCE section>>=
 
 @ \fi
-<<add [[$newfilter]] (could overflow)>>=
-if   [ -z "$filtera" ]; then
-  filtera="$newfilter"
-elif [ -z "$filterb" ]; then
-  filterb="$newfilter"
-elif [ -z "$filterc" ]; then
-  filterc="$newfilter"
-elif [ -z "$filterd" ]; then
-  filterd="$newfilter"
-elif [ -z "$filtere" ]; then
-  filtere="$newfilter"
-elif [ -z "$filterf" ]; then
-  filterf="$newfilter"
-elif [ -z "$filterg" ]; then
-  filterg="$newfilter"
-else
-  echo "$0: ran out of filters" 1>&2
-  exit 1
-fi
+The pipeline is accumulated in a single variable, [[filters]], with one
+filter command per line, separated by the newline held in [[nl]].  A
+filter command may carry arguments and so contain spaces (for example
+[[-filter 'elide foo:*']] adds [[elide foo:*]]), but a newline never
+occurs inside one, which makes the newline a safe separator and lets
+the list hold arbitrarily many filters.  This is why there is no fixed
+number of filter \emph{slots}: earlier versions of this script
+enumerated a fixed maximum of seven, because a portable [[/bin/sh]]
+has no arrays, and a document that stacked enough [[-autodefs]] and
+[[-filter]] stages exhausted them with ``ran out of filters''.
+Appending a line has no such ceiling.
+
+The append must stay on one source line.  Were the newline written
+literally inside the quotes here, noweb would indent the continuation
+line to this chunk's reference column and so splice those indentation
+spaces into [[filters]]; routing the newline through [[nl]] keeps the
+assignment a single line and the variable clean.
+<<append [[$newfilter]] to the pipeline>>=
+filters="$filters$newfilter$nl"
 <<show usage>>=
 echo "Usage: $0 [options] [files]" 1>&2
 echo "Options recognized are:" 1>&2
@@ -519,30 +670,48 @@ PATH="$PATH:$LIB"
 export PATH
 <<if verbose, make noise about pipeline>>
 <<if verbose, show back end>>
-if   [ -z "$filtera" ]; then
-  $markup $markopts $arg
-elif [ -z "$filterb" ]; then
-  $markup $markopts $arg | eval $filtera
-elif [ -z "$filterc" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb
-elif [ -z "$filterd" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc
-elif [ -z "$filtere" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd
-elif [ -z "$filterf" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere
-elif [ -z "$filterg" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf
+<<build the filter pipeline from [[filters]]>>
+if [ -z "$pipeline" ]; then
+  <<emit raw markup>>
 else
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf |
-                           eval $filterg
+  <<emit raw markup>> | eval "$pipeline"
 fi
 if [ -n "$trailer" ]; then echo $trailer; fi
 )
+@
+When language discovery has run, it left [[markup]]'s output in
+[[$markupcache]]; replaying that file is exactly the second parse the
+buffer was built to avoid, so the real run reads from it instead of
+invoking [[markup]] again.  With no discovery the variable is empty
+and [[markup]] runs as before, including the standard-input case the
+buffer would otherwise be needed for.
+<<emit raw markup>>=
+if [ -n "$markupcache" ]; then cat "$markupcache"; else $markup $markopts $arg; fi
+@
+The pipeline is assembled by joining the filter lines with the shell's
+[[|]] operator.  Setting [[IFS]] to a newline makes the [[for]] loop
+iterate once per filter; newline is one of the shell's whitespace
+separators, so the trailing newline left by each append produces no
+empty final field.  (The verbose listing restores the normal [[IFS]]
+before each [[echo]], so that an empty option variable inside a
+filter command---[[$noquote]] in [[finduses $noquote]]---does not
+leave a trailing space in the printout, exactly as before.)  The
+joined string is run with a single [[eval]],
+which both interprets the [[|]] operators and re-tokenizes each
+filter's arguments---the same re-tokenization the old per-slot
+[[eval $filtera]] performed.
+<<build the filter pipeline from [[filters]]>>=
+pipeline=
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  if [ -z "$pipeline" ]; then
+    pipeline="$f"
+  else
+    pipeline="$pipeline | $f"
+  fi
+done
+IFS=$oldIFS
 <<if verbose, make noise about pipeline>>=
 if [ -n "$verbose" ]; then
   if [ -n "$header" -o -n "$trailer" ]; then
@@ -554,11 +723,8 @@ if [ -n "$verbose" ]; then
   else
     echo $markup $markopts $arg '|' 1>&2
   fi
-  if   [ -n "$filtera" ]; then echo $filtera '|' 1>&2; fi
-  if   [ -n "$filterb" ]; then echo $filterb '|' 1>&2; fi
-  if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
-  if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
-  if   [ -n "$filtere" ]; then echo $filtere '|' 1>&2; fi
-  if   [ -n "$filterf" ]; then echo $filterf '|' 1>&2; fi
-  if   [ -n "$filterg" ]; then echo $filterg '|' 1>&2; fi
+  oldIFS=$IFS
+  IFS=$nl
+  for f in $filters; do IFS=$oldIFS; echo $f '|' 1>&2; done
+  IFS=$oldIFS
 fi
