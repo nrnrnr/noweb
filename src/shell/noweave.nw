@@ -25,7 +25,9 @@ LIB=|LIBDIR|
 markup=$LIB/markup backend=$LIB/totex
 wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
 noquote="-noquote" docanchor= noindex="-noindex"
-filtera= filterb= filterc= filterd= filtere= filterf= filterg=
+filters=
+nl='
+'
 # following supported by change in totex back end
 noquote=
 @
@@ -191,14 +193,14 @@ using_index= using_xref=
 -indexfrom) shift; noindex= ; using_index=1 ;;
 <<second pass {\tt noweave} options>>=
 -filter) 
-    newfilter="$2" ; shift ;                  <<add [[$newfilter]] (could overflow)>> ;;
--x) newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
+    newfilter="$2" ; shift ;                  <<append [[$newfilter]] to the pipeline>> ;;
+-x) newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>> ;;
 -index)  
-    newfilter="$LIB/finduses $noquote" ;      <<add [[$newfilter]] (could overflow)>>
-    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>> ;;
+    newfilter="$LIB/finduses $noquote" ;      <<append [[$newfilter]] to the pipeline>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>> ;;
 -indexfrom)
-    newfilter="$LIB/finduses $noquote $2";    <<add [[$newfilter]] (could overflow)>>
-    newfilter="$LIB/noidx $docanchor $delay"; <<add [[$newfilter]] (could overflow)>>
+    newfilter="$LIB/finduses $noquote $2";    <<append [[$newfilter]] to the pipeline>>
+    newfilter="$LIB/noidx $docanchor $delay"; <<append [[$newfilter]] to the pipeline>>
     shift ;;
 <<option printout for usage>>=
 echo "-x		Use the default cross-referencer (needs LaTeX or HTML)." 1>&2
@@ -297,7 +299,7 @@ but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
 do in a portable way is [[test -r]].
 <<first pass {\tt noweave} options>>=
 -autodefs) newfilter="$LIB/autodefs.$2"
-           if [ -r $newfilter ]; then <<add [[$newfilter]] (could overflow)>>
+           if [ -r $newfilter ]; then <<append [[$newfilter]] to the pipeline>>
            else echo "$0: don't know how to find definitions for '$2'" 1>&2; exit 1
            fi
 	   shift
@@ -476,25 +478,25 @@ INDEXING AND CROSS-REFERENCE section.
 <<man page: INDEXING AND CROSS-REFERENCE section>>=
 
 @ \fi
-<<add [[$newfilter]] (could overflow)>>=
-if   [ -z "$filtera" ]; then
-  filtera="$newfilter"
-elif [ -z "$filterb" ]; then
-  filterb="$newfilter"
-elif [ -z "$filterc" ]; then
-  filterc="$newfilter"
-elif [ -z "$filterd" ]; then
-  filterd="$newfilter"
-elif [ -z "$filtere" ]; then
-  filtere="$newfilter"
-elif [ -z "$filterf" ]; then
-  filterf="$newfilter"
-elif [ -z "$filterg" ]; then
-  filterg="$newfilter"
-else
-  echo "$0: ran out of filters" 1>&2
-  exit 1
-fi
+The pipeline is accumulated in a single variable, [[filters]], with one
+filter command per line, separated by the newline held in [[nl]].  A
+filter command may carry arguments and so contain spaces (for example
+[[-filter 'elide foo:*']] adds [[elide foo:*]]), but a newline never
+occurs inside one, which makes the newline a safe separator and lets
+the list hold arbitrarily many filters.  This is why there is no fixed
+number of filter \emph{slots}: earlier versions of this script
+enumerated a fixed maximum of seven, because a portable [[/bin/sh]]
+has no arrays, and a document that stacked enough [[-autodefs]] and
+[[-filter]] stages exhausted them with ``ran out of filters''.
+Appending a line has no such ceiling.
+
+The append must stay on one source line.  Were the newline written
+literally inside the quotes here, noweb would indent the continuation
+line to this chunk's reference column and so splice those indentation
+spaces into [[filters]]; routing the newline through [[nl]] keeps the
+assignment a single line and the variable clean.
+<<append [[$newfilter]] to the pipeline>>=
+filters="$filters$newfilter$nl"
 <<show usage>>=
 echo "Usage: $0 [options] [files]" 1>&2
 echo "Options recognized are:" 1>&2
@@ -519,30 +521,39 @@ PATH="$PATH:$LIB"
 export PATH
 <<if verbose, make noise about pipeline>>
 <<if verbose, show back end>>
-if   [ -z "$filtera" ]; then
+<<build the filter pipeline from [[filters]]>>
+if [ -z "$pipeline" ]; then
   $markup $markopts $arg
-elif [ -z "$filterb" ]; then
-  $markup $markopts $arg | eval $filtera
-elif [ -z "$filterc" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb
-elif [ -z "$filterd" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc
-elif [ -z "$filtere" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd
-elif [ -z "$filterf" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere
-elif [ -z "$filterg" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf
 else
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf |
-                           eval $filterg
+  $markup $markopts $arg | eval "$pipeline"
 fi
 if [ -n "$trailer" ]; then echo $trailer; fi
 )
+@
+The pipeline is assembled by joining the filter lines with the shell's
+[[|]] operator.  Setting [[IFS]] to a newline makes the [[for]] loop
+iterate once per filter; newline is one of the shell's whitespace
+separators, so the trailing newline left by each append produces no
+empty final field.  (The verbose listing restores the normal [[IFS]]
+before each [[echo]], so that an empty option variable inside a
+filter command---[[$noquote]] in [[finduses $noquote]]---does not
+leave a trailing space in the printout, exactly as before.)  The
+joined string is run with a single [[eval]],
+which both interprets the [[|]] operators and re-tokenizes each
+filter's arguments---the same re-tokenization the old per-slot
+[[eval $filtera]] performed.
+<<build the filter pipeline from [[filters]]>>=
+pipeline=
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  if [ -z "$pipeline" ]; then
+    pipeline="$f"
+  else
+    pipeline="$pipeline | $f"
+  fi
+done
+IFS=$oldIFS
 <<if verbose, make noise about pipeline>>=
 if [ -n "$verbose" ]; then
   if [ -n "$header" -o -n "$trailer" ]; then
@@ -554,11 +565,8 @@ if [ -n "$verbose" ]; then
   else
     echo $markup $markopts $arg '|' 1>&2
   fi
-  if   [ -n "$filtera" ]; then echo $filtera '|' 1>&2; fi
-  if   [ -n "$filterb" ]; then echo $filterb '|' 1>&2; fi
-  if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
-  if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
-  if   [ -n "$filtere" ]; then echo $filtere '|' 1>&2; fi
-  if   [ -n "$filterf" ]; then echo $filterf '|' 1>&2; fi
-  if   [ -n "$filterg" ]; then echo $filterg '|' 1>&2; fi
+  oldIFS=$IFS
+  IFS=$nl
+  for f in $filters; do IFS=$oldIFS; echo $f '|' 1>&2; done
+  IFS=$oldIFS
 fi

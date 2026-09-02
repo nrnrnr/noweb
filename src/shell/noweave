@@ -5,7 +5,9 @@ LIB=|LIBDIR|
 markup=$LIB/markup backend=$LIB/totex
 wrapper= delay= args= markopts= noweboptions= autodefs= verbose= shortxref=
 noquote="-noquote" docanchor= noindex="-noindex"
-filtera= filterb= filterc= filterd= filtere= filterf= filterg=
+filters=
+nl='
+'
 # following supported by change in totex back end
 noquote=
 using_index= using_xref=
@@ -37,24 +39,7 @@ while [ $# -gt 0 ]; do
     -index)            noindex= ; using_index=1 ;;                 
     -indexfrom) shift; noindex= ; using_index=1 ;;
     -autodefs) newfilter="$LIB/autodefs.$2"
-               if [ -r $newfilter ]; then if   [ -z "$filtera" ]; then
-                                            filtera="$newfilter"
-                                          elif [ -z "$filterb" ]; then
-                                            filterb="$newfilter"
-                                          elif [ -z "$filterc" ]; then
-                                            filterc="$newfilter"
-                                          elif [ -z "$filterd" ]; then
-                                            filterd="$newfilter"
-                                          elif [ -z "$filtere" ]; then
-                                            filtere="$newfilter"
-                                          elif [ -z "$filterf" ]; then
-                                            filterf="$newfilter"
-                                          elif [ -z "$filterg" ]; then
-                                            filterg="$newfilter"
-                                          else
-                                            echo "$0: ran out of filters" 1>&2
-                                            exit 1
-                                          fi
+               if [ -r $newfilter ]; then filters="$filters$newfilter$nl"
                else echo "$0: don't know how to find definitions for '$2'" 1>&2; exit 1
                fi
                shift
@@ -119,116 +104,14 @@ shift
 while [ $# -gt 0 ]; do
   case $1 in
     -filter) 
-        newfilter="$2" ; shift ;                  if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi ;;
-    -x) newfilter="$LIB/noidx $docanchor $delay"; if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi ;;
+        newfilter="$2" ; shift ;                  filters="$filters$newfilter$nl" ;;
+    -x) newfilter="$LIB/noidx $docanchor $delay"; filters="$filters$newfilter$nl" ;;
     -index)  
-        newfilter="$LIB/finduses $noquote" ;      if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi
-        newfilter="$LIB/noidx $docanchor $delay"; if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi ;;
+        newfilter="$LIB/finduses $noquote" ;      filters="$filters$newfilter$nl"
+        newfilter="$LIB/noidx $docanchor $delay"; filters="$filters$newfilter$nl" ;;
     -indexfrom)
-        newfilter="$LIB/finduses $noquote $2";    if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi
-        newfilter="$LIB/noidx $docanchor $delay"; if   [ -z "$filtera" ]; then
-                                                    filtera="$newfilter"
-                                                  elif [ -z "$filterb" ]; then
-                                                    filterb="$newfilter"
-                                                  elif [ -z "$filterc" ]; then
-                                                    filterc="$newfilter"
-                                                  elif [ -z "$filterd" ]; then
-                                                    filterd="$newfilter"
-                                                  elif [ -z "$filtere" ]; then
-                                                    filtere="$newfilter"
-                                                  elif [ -z "$filterf" ]; then
-                                                    filterf="$newfilter"
-                                                  elif [ -z "$filterg" ]; then
-                                                    filterg="$newfilter"
-                                                  else
-                                                    echo "$0: ran out of filters" 1>&2
-                                                    exit 1
-                                                  fi
+        newfilter="$LIB/finduses $noquote $2";    filters="$filters$newfilter$nl"
+        newfilter="$LIB/noidx $docanchor $delay"; filters="$filters$newfilter$nl"
         shift ;;
   esac
   shift
@@ -255,36 +138,27 @@ if [ -n "$verbose" ]; then
   else
     echo $markup $markopts $arg '|' 1>&2
   fi
-  if   [ -n "$filtera" ]; then echo $filtera '|' 1>&2; fi
-  if   [ -n "$filterb" ]; then echo $filterb '|' 1>&2; fi
-  if   [ -n "$filterc" ]; then echo $filterc '|' 1>&2; fi
-  if   [ -n "$filterd" ]; then echo $filterd '|' 1>&2; fi
-  if   [ -n "$filtere" ]; then echo $filtere '|' 1>&2; fi
-  if   [ -n "$filterf" ]; then echo $filterf '|' 1>&2; fi
-  if   [ -n "$filterg" ]; then echo $filterg '|' 1>&2; fi
+  oldIFS=$IFS
+  IFS=$nl
+  for f in $filters; do IFS=$oldIFS; echo $f '|' 1>&2; done
+  IFS=$oldIFS
 fi
 if [ -n "$verbose" ]; then echo $backend $noindex $delay $shortxref 1>&2; fi
-if   [ -z "$filtera" ]; then
+pipeline=
+oldIFS=$IFS
+IFS=$nl
+for f in $filters; do
+  if [ -z "$pipeline" ]; then
+    pipeline="$f"
+  else
+    pipeline="$pipeline | $f"
+  fi
+done
+IFS=$oldIFS
+if [ -z "$pipeline" ]; then
   $markup $markopts $arg
-elif [ -z "$filterb" ]; then
-  $markup $markopts $arg | eval $filtera
-elif [ -z "$filterc" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb
-elif [ -z "$filterd" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc
-elif [ -z "$filtere" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd
-elif [ -z "$filterf" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere
-elif [ -z "$filterg" ]; then
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf
 else
-  $markup $markopts $arg | eval $filtera | eval $filterb | eval $filterc |
-                           eval $filterd | eval $filtere | eval $filterf |
-                           eval $filterg
+  $markup $markopts $arg | eval "$pipeline"
 fi
 if [ -n "$trailer" ]; then echo $trailer; fi
 ) |
