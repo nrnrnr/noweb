@@ -216,9 +216,15 @@ Scheme something like [[\it\tt]] will attempt to use an italic
 typewriter font.  Thus we define new commands like [[\Tt]] which will
 work with both the Plain and old and new \LaTeX{} schemes.  (Note that
 NFSS will be standard in the next version of \LaTeX.)  A problem with
-these definitions arises with NFSS: in math mode the won't work
-unless the \texttt{oldlfont} backwards-compatibility option is in effect.
-For the moment, you can get round this by using [[\mbox]].
+these definitions arose with NFSS: [[\ttfamily]] and its siblings are
+undefined in math mode, so a code quote [[[[...]]]] that fell inside
+math---a subscript, say---raised \texttt{Command \string\ttfamily
+invalid in math mode}.  We therefore make [[\Tt]] switch to the
+Plain-\TeX\ [[\tt]] in math mode, which is a font \emph{switch} and so
+is valid there (and still typesets the quoted code as typewriter),
+while keeping [[\ttfamily]] for text.  [[\Rm]], [[\It]] and [[\Bf]]
+keep their text-only definitions, as they are rarely wanted in math;
+wrap them in [[\mbox]] there if needed.
 
 If you wanted code set in a different font, you could re-define
 [[\Tt]].\stylehook{}  [\LaTeX2e actually behaves like OFSS, but the
@@ -233,7 +239,7 @@ extra [[\reset@font]] does no harm.]
 \else                                       % LaTeX NFSS
   \def\Rm{\reset@font\rmfamily}
   \def\It{\reset@font\itshape}
-  \def\Tt{\reset@font\ttfamily}
+  \def\Tt{\ifmmode\tt\else\reset@font\ttfamily\fi}
   \def\Bf{\reset@font\bfseries}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi

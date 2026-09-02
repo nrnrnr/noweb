@@ -101,7 +101,7 @@ I'll try to avoid such incompatible changes in the future.}%
 \else                                       % LaTeX NFSS
   \def\Rm{\reset@font\rmfamily}
   \def\It{\reset@font\itshape}
-  \def\Tt{\reset@font\ttfamily}
+  \def\Tt{\ifmmode\tt\else\reset@font\ttfamily\fi}
   \def\Bf{\reset@font\bfseries}
 \fi\fi
 \ifx\reset@font\undefined \let\reset@font=\relax \fi
