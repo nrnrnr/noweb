@@ -442,6 +442,8 @@ def rewrite_chunk(chunk, lang, out, start, plain_uses):
                 current_line.append(("use", arg, render_use(arg, label)))
         elif keyword == "language":
             pass
+        elif keyword == "index" and arg == "nl":
+            pass
         else:
             held.append(line)
         position += 1

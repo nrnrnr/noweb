@@ -230,6 +230,18 @@ is flushed to [[relocated]] in its original order, preserving the
 adjacency of [[@xref ref]]/[[@index]] pairs, which [[totex]]
 interprets as a unit.
 
+One anchor is dropped rather than relocated: the [[@index nl]] that
+[[markup]] emits for the newline ending an [[@ %def]] line.
+[[totex]] turns it into [[\eatline]], whose argument runs to the
+next newline.  In a classic chunk newlines are active, so that works
+and swallows the empty code line the [[@ %def]] line would otherwise
+leave.  After [[\end{minted}]], though, the catcode reset that
+opened the environment has made newlines ordinary again, so
+[[\eatline]] would read on to the next paragraph and stop with
+\enquote{Paragraph ended before \eatline was complete}.  Nothing
+needs eating there: the newline it would have removed is a harmless
+space.
+
 Each element of a body line is a tuple: [[("text", string)]] for raw
 code, or [[("use", name, tex)]] for a chunk reference, carrying both
 the rendered LaTeX and the plain chunk name so that the no-delimiter
@@ -269,6 +281,8 @@ while position < len(chunk):
         else:
             current_line.append(("use", arg, render_use(arg, label)))
     elif keyword == "language":
+        pass
+    elif keyword == "index" and arg == "nl":
         pass
     else:
         held.append(line)
