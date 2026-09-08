@@ -22,7 +22,7 @@ nawk 'BEGIN              { code=0 ; quoting=0 ; text=1; defns[0] = 0
       /^@begin docs/     { text=0 ; printf "\\nwbegindocs{%s}", substr($0, 13) }
       /^@end docs/       {          printf "\\nwenddocs{}" }
       /^@text /          { line = substr($0, 7) ; text += length - 6
-                           if (code)         printf "%s", escape_brace_bslash(line) 
+                           if (code)         printf "%s", noligatures(escape_brace_bslash(line))
                            else if (quoting) printf "%s", TeXliteral(line)
                            else              printf "%s", line
                          }
@@ -171,5 +171,13 @@ nawk 'BEGIN              { code=0 ; quoting=0 ; text=1; defns[0] = 0
         gsub(/%/,  "{\\char37}",  arg)
         gsub(/~/,  "{\\char126}", arg)
         gsub(/ /,  "\\ ",         arg)
-        return arg
+        return noligatures(arg)
+      }
+      function noligatures(s, r, i) {
+        r = ""
+        while (i = match(s, "-[-]|<[<]|>[>]|,[,]|\047[\047]|`[`]|[!?]`")) {
+          r = r substr(s, 1, i) "{}"
+          s = substr(s, i + 1)
+        }
+        return r s
       }' delay=$delay noindex=$noindex

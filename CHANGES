@@ -1,5 +1,9 @@
 CHANGES SINCE VERSION 2.13
 
+The LaTeX back end now breaks the T1 ligatures (--, <<, >>, ,,, ``, '',
+  !`, ?`) in quoted code, code chunks and the identifier index, so
+  [[--force]] no longer comes out as an en dash and [[>>>]] as a
+  guillemet with T1-encoded typewriter fonts (@dbosk)
 PR 33, add Swedish
 Fixed issue #44, bad encodings for Icelandic and Swedish (@sirjofri, @jspitz)
 Various others as per git log.

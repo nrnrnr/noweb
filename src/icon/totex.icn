@@ -37,9 +37,9 @@ else
                                  else if \code then 
 #line 93 "totex.nw"
 if /noindex & \lastindexref then 
-  "\\nwlinkedidentc{" ||   escape(line, '{}\\') || "}{" || lastindexref || "}"
+  "\\nwlinkedidentc{" ||   noligatures(escape(line, '{}\\')) || "}{" || lastindexref || "}"
 else 
-  escape(line, '{}\\')
+  noligatures(escape(line, '{}\\'))
 
 #line 85 "totex.nw"
                                  else line)
@@ -391,10 +391,30 @@ procedure TeXliteral(arg)
       else
         s ||:= "\\" || c
     }
-    return s || tab(0)
+    return noligatures(s || tab(0))
   }
 end
-#line 390 "totex.nw"
+#line 407 "totex.nw"
+procedure noligatures(s)
+  static pairs, firsts
+  initial {
+    pairs := table()
+    every c := !"`'-<>," do pairs[c] := cset(c)
+    pairs["!"] := pairs["?"] := '`'
+    firsts := ''
+    every firsts ++:= key(pairs)
+  }
+  r := ""
+  s ? {
+    while r ||:= tab(upto(firsts)) do {
+      c := move(1)
+      r ||:= c
+      if any(pairs[c]) then r ||:= "{}"
+    }
+    return r || tab(0)
+  }
+end
+#line 430 "totex.nw"
 procedure convquotes(s)
   r := ""
   s ? {
@@ -408,7 +428,7 @@ procedure convquotes(s)
     return r || tab(0)
   }
 end
-#line 404 "totex.nw"
+#line 444 "totex.nw"
 procedure warn_unknown(tag)
   static warned
   initial warned := set()
@@ -418,12 +438,12 @@ procedure warn_unknown(tag)
   }
   return
 end
-#line 416 "totex.nw"
+#line 456 "totex.nw"
 procedure indexlabel(ident)
   static badset, trans
   initial {
     
-#line 430 "totex.nw"
+#line 470 "totex.nw"
 trans := table()
 trans[" "] := "sp"      # space
 trans["#"] := "has"     # hash
@@ -438,7 +458,7 @@ trans["_"] := "un"      # underscore
 trans["{"] := "lb"      # left brace
 trans["}"] := "rb"      # right brace
 trans["~"] := "ti"      # tilde
-#line 420 "totex.nw"
+#line 460 "totex.nw"
     badset := ''
     every badset ++:= key(trans)
   }
@@ -448,7 +468,7 @@ trans["~"] := "ti"      # tilde
     return s || tab(0)
   }
 end
-#line 445 "totex.nw"
+#line 485 "totex.nw"
 procedure fatal(L[])
   write!([&errout, "noweb error in tohtml: "] ||| L)
   exit(1)

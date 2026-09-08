@@ -92,9 +92,9 @@ else
   TeXliteral(line)
 <<possibly indexed code [[line]]>>=
 if /noindex & \lastindexref then 
-  "\\nwlinkedidentc{" ||   escape(line, '{}\\') || "}{" || lastindexref || "}"
+  "\\nwlinkedidentc{" ||   noligatures(escape(line, '{}\\')) || "}{" || lastindexref || "}"
 else 
-  escape(line, '{}\\')
+  noligatures(escape(line, '{}\\'))
 
 <<@nl>>=
 if ="@nl" & pos(0) then { if /code then {<<print [[\nwdocspar]] if no [[text]]>>}
@@ -381,7 +381,47 @@ procedure TeXliteral(arg)
       else
         s ||:= "\\" || c
     }
-    return s || tab(0)
+    return noligatures(s || tab(0))
+  }
+end
+@
+Every T1-encoded typewriter font, from Computer Modern's [[ectt]]
+family through Latin Modern to Bera Mono, carries the standard T1
+ligatures: [[--]] comes out as an en dash, [[<<]] and [[>>]] as
+guillemets, [[,,]], [[``]] and [['']] as quotation marks, and [[!`]]
+and [[?`]] as inverted punctuation (Computer Modern's OT1 typewriter
+has the last two).
+{\LaTeX}'s [[\verb]] defends against this by making those characters
+active ([[\@noligs]]), which works only because [[\verb]] reads its
+text after the font has been chosen.  That is too late for us: quoted
+code may sit in a section title or in the argument of
+[[\nwlinkedidentq]], where it has been tokenized before any macro of
+ours runs, and in code chunks \verb"noweb.sty" can afford to make
+only the backquote active, since labels with hyphens in them must
+still work inside [[\csname]].  So the back end breaks the ligatures
+itself, with an empty group between the two characters of every
+ligature-forming pair (the same [[f{}i]] trick that stops any
+ligature); [[---]] is caught as two overlapping [[--]].
+This is applied to quoted code, to code chunks, and to identifiers in
+the index.
+<<*>>=
+procedure noligatures(s)
+  static pairs, firsts
+  initial {
+    pairs := table()
+    every c := !"`'-<>," do pairs[c] := cset(c)
+    pairs["!"] := pairs["?"] := '`'
+    firsts := ''
+    every firsts ++:= key(pairs)
+  }
+  r := ""
+  s ? {
+    while r ||:= tab(upto(firsts)) do {
+      c := move(1)
+      r ||:= c
+      if any(pairs[c]) then r ||:= "{}"
+    }
+    return r || tab(0)
   }
 end
 @
