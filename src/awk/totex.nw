@@ -54,7 +54,7 @@ BEGIN		   { code=0 ; quoting=0 ; text=1; <<initialization>> }
 /^@begin docs/ 	   { text=0 ; printf "\\nwbegindocs{%s}", substr($0, 13) }
 /^@end docs/       {          printf "\\nwenddocs{}" }
 /^@text /          { line = substr($0, 7) ; text += length - 6
-                     if (code)         printf "%s", escape_brace_bslash(line) 
+                     if (code)         printf "%s", noligatures(escape_brace_bslash(line))
                      else if (quoting) printf "%s", TeXliteral(line)
                      else              printf "%s", line
                    }
@@ -281,7 +281,30 @@ function TeXliteral(arg) {
   gsub(/%/,  "{\\char37}",  arg)
   gsub(/~/,  "{\\char126}", arg)
   gsub(/ /,  "\\ ",         arg)
-  return arg
+  return noligatures(arg)
 }
 @ %def TeXliteral
+@
+Every T1-encoded typewriter font has the standard T1 ligatures, which
+turn [[--]] into an en dash, [[<<]] and [[>>]] into guillemets, and
+[[,,]], [[``]], [['']], [[!`]] and [[?`]] into quotation marks and
+inverted punctuation.
+The Icon version of this program explains why the back end, and not
+\verb"noweb.sty", has to break them: quoted code may be tokenized
+before any macro of ours runs.
+We put an empty group between the two characters of every
+ligature-forming pair, restarting the search at the second character
+so that [[---]] is caught as two overlapping [[--]].
+The apostrophe is written as [[\047]] because the whole program sits
+inside single quotes in a shell script.
+<<functions>>=
+function noligatures(s, r, i) {
+  r = ""
+  while (i = match(s, "-[-]|<[<]|>[>]|,[,]|\047[\047]|`[`]|[!?]`")) {
+    r = r substr(s, 1, i) "{}"
+    s = substr(s, i + 1)
+  }
+  return r s
+}
+@ %def noligatures
 
