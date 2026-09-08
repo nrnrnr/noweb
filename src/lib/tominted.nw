@@ -114,6 +114,11 @@ def render_use(name, label):
 The two helpers below mirror [[TeXliteral]] and [[convquotes]] from
 [[totex.nw]]; they must stay in sync with it so that a chunk name is
 typeset the same whether or not its surroundings are highlighted.
+Like [[TeXliteral]], [[tex_literal]] puts an empty group between the
+two characters of every T1 ligature pair ([[--]], [[<<]], [[>>]],
+[[,,]], [[``]], [['']], [[!`]], [[?`]]), so that a quoted
+[[[[--force]]]] in a chunk name is typeset as typed and not as an en
+dash; the lookahead lets [[---]] match as two overlapping pairs.
 
 <<constants>>=
 TEX_SPECIALS = {
@@ -128,12 +133,14 @@ TEX_SPECIALS = {
     "%": "{\\%}",
     "~": "{\\char126}",
 }
+LIGATURE_PAIRS = re.compile(r"-(?=-)|<(?=<)|>(?=>)|,(?=,)|'(?=')|`(?=`)|[!?](?=`)")
 @
 
 <<functions>>=
 def tex_literal(text):
     """Escape ``text`` for LaTeX like totex's TeXliteral."""
-    return "".join(TEX_SPECIALS.get(c, c) for c in text)
+    escaped = "".join(TEX_SPECIALS.get(c, c) for c in text)
+    return LIGATURE_PAIRS.sub(lambda m: m.group(0) + "{}", escaped)
 @
 
 <<functions>>=

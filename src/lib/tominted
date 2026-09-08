@@ -337,6 +337,7 @@ TEX_SPECIALS = {
     "%": "{\\%}",
     "~": "{\\char126}",
 }
+LIGATURE_PAIRS = re.compile(r"-(?=-)|<(?=<)|>(?=>)|,(?=,)|'(?=')|`(?=`)|[!?](?=`)")
 ESCAPE_CANDIDATES = "|!?;^&@:*+"
 CATCODE_RESET = (
     "\\catcode37=14\\relax\\catcode126=13\\relax"
@@ -359,7 +360,8 @@ def render_use(name, label):
     return tex + "\\RA{}"
 def tex_literal(text):
     """Escape ``text`` for LaTeX like totex's TeXliteral."""
-    return "".join(TEX_SPECIALS.get(c, c) for c in text)
+    escaped = "".join(TEX_SPECIALS.get(c, c) for c in text)
+    return LIGATURE_PAIRS.sub(lambda m: m.group(0) + "{}", escaped)
 def conv_quotes(name):
     """Convert noweb's [[...]] quoting in a chunk name to LaTeX."""
     out = ""
